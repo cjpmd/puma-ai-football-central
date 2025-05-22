@@ -105,16 +105,18 @@
   100% { opacity: 1; }
 }
 
-.player-availability-amber {
-  @apply border-puma-amber border-2;
-}
+@layer components {
+  .player-availability-amber {
+    @apply border-puma-amber border-2;
+  }
 
-.player-availability-green {
-  @apply border-puma-green border-2;
-}
+  .player-availability-green {
+    @apply border-puma-green-500 border-2;
+  }
 
-.player-availability-red {
-  @apply border-puma-red border-2;
+  .player-availability-red {
+    @apply border-puma-red border-2;
+  }
 }
 
 .pitch {
