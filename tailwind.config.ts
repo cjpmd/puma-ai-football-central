@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,34 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Puma-AI specific colors
+				"puma-blue": {
+					50: "#e6f0fa",
+					100: "#cce1f5",
+					200: "#99c3eb",
+					300: "#66a5e1",
+					400: "#3387d7",
+					500: "#0069CD",
+					600: "#0054a4",
+					700: "#003f7b",
+					800: "#002a52",
+					900: "#001529",
+				},
+				"puma-green": {
+					50: "#e6f9ec",
+					100: "#ccf3d9",
+					200: "#99e7b3",
+					300: "#66db8c",
+					400: "#33cf66",
+					500: "#00C440",
+					600: "#009d33",
+					700: "#007626",
+					800: "#004e1a",
+					900: "#00270d",
+				},
+				"puma-amber": "#FFC107",
+				"puma-red": "#DC3545",
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
@@ -84,11 +112,21 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'ping': {
+					'75%, 100%': {
+						transform: 'scale(1.2)',
+						opacity: '0'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'ping': 'ping 1s cubic-bezier(0, 0, 0.2, 1) infinite'
+			},
+			fontFamily: {
+				sans: ['Inter', 'sans-serif'],
 			}
 		}
 	},
