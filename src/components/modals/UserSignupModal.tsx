@@ -1,17 +1,11 @@
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface UserSignupModalProps {
   isOpen: boolean;
@@ -25,32 +19,44 @@ export function UserSignupModal({ isOpen, onClose, onSignup }: UserSignupModalPr
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const { toast } = useToast();
+  const { signUp } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-
+    
     if (password !== confirmPassword) {
-      setError("Passwords do not match.");
+      toast.error("Passwords don't match", {
+        description: "Please make sure your passwords match"
+      });
       return;
     }
-
+    
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const { data, error } = await signUp(email, password, name);
       
-      // For demo, let's accept any signup
-      toast({
-        title: "Account created!",
-        description: "You've successfully signed up for Puma-AI.",
+      if (error) {
+        toast.error("Registration failed", {
+          description: error.message
+        });
+      } else if (data.session) {
+        // User was auto-logged in (if email confirmation is disabled in Supabase)
+        toast.success("Welcome to Puma-AI!", {
+          description: "Your account has been created and you are now logged in."
+        });
+        onSignup();
+      } else {
+        // Email confirmation is required
+        toast.success("Account created", {
+          description: "Please check your email to confirm your account."
+        });
+        onClose();
+      }
+    } catch (error) {
+      toast.error("Something went wrong", {
+        description: "Please try again later."
       });
-      onSignup();
-    } catch (err) {
-      setError("There was an error creating your account. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -60,103 +66,75 @@ export function UserSignupModal({ isOpen, onClose, onSignup }: UserSignupModalPr
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Create your account</DialogTitle>
+          <DialogTitle>Create an account</DialogTitle>
           <DialogDescription>
-            Join Puma-AI today and start managing your football team.
+            Sign up to start using Puma-AI.
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          {error && (
-            <div className="bg-red-50 text-red-500 px-3 py-2 rounded-md text-sm">
-              {error}
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <Input
               id="name"
-              placeholder="Enter your full name"
+              placeholder="John Smith"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="signup-email">Email</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="signup-email"
+              id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="signup-password">Password</Label>
+            <Label htmlFor="password">Password</Label>
             <Input
-              id="signup-password"
+              id="password"
               type="password"
-              placeholder="Create a password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
-
           <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm Password</Label>
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
             <Input
-              id="confirm-password"
+              id="confirmPassword"
               type="password"
-              placeholder="Confirm your password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>
-
-          <div className="text-xs text-muted-foreground">
-            By creating an account, you agree to our{" "}
-            <a href="/terms" className="text-puma-blue-500 hover:underline">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="/privacy" className="text-puma-blue-500 hover:underline">
-              Privacy Policy
-            </a>
-            .
-          </div>
-
-          <DialogFooter className="mt-6">
-            <Button
-              type="submit"
-              className="w-full bg-puma-blue-500 hover:bg-puma-blue-600"
-              disabled={isLoading}
-            >
-              {isLoading ? "Creating account..." : "Sign up"}
-            </Button>
-          </DialogFooter>
-        </form>
-
-        <div className="mt-4 text-center text-sm">
-          <span className="text-muted-foreground">Already have an account?</span>{" "}
-          <a 
-            href="/login" 
-            className="text-puma-blue-500 hover:underline"
-            onClick={(e) => {
-              e.preventDefault();
-              onClose();
-              // Open login modal
-            }}
+          <Button
+            type="submit"
+            className="w-full bg-puma-blue-500 hover:bg-puma-blue-600"
+            disabled={isLoading}
           >
-            Log in
-          </a>
-        </div>
+            {isLoading ? "Creating account..." : "Sign up"}
+          </Button>
+          <div className="text-center text-sm">
+            <span className="text-muted-foreground">Already have an account?</span>{" "}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                onClose();
+                // We'd typically open the login modal here
+              }}
+              className="text-puma-blue-500 hover:text-puma-blue-600"
+            >
+              Log in
+            </a>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

@@ -14,21 +14,19 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { UserLoginModal } from "../modals/UserLoginModal";
 import { UserSignupModal } from "../modals/UserSignupModal";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function Header() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const { user, profile, signOut } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const navigate = useNavigate();
 
-  // For demo purposes
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-    setShowLoginModal(false);
-  };
+  const isLoggedIn = !!user;
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/');
   };
 
   return (
@@ -81,18 +79,29 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src="" alt="User" />
+                    <AvatarImage src="" alt={profile?.name || "User"} />
                     <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
-                      <UserCircle className="h-6 w-6" />
+                      {profile?.name ? profile.name.substring(0, 2).toUpperCase() : <UserCircle className="h-6 w-6" />}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuLabel>
+                  {profile?.name || "My Account"}
+                  {profile?.email && (
+                    <div className="text-xs text-muted-foreground">{profile.email}</div>
+                  )}
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                   Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/teams")}>
+                  Teams
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/clubs")}>
+                  Clubs
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   <UserCircle className="mr-2 h-4 w-4" />
@@ -132,13 +141,19 @@ export function Header() {
       <UserLoginModal 
         isOpen={showLoginModal} 
         onClose={() => setShowLoginModal(false)} 
-        onLogin={handleLogin}
+        onLogin={() => {
+          setShowLoginModal(false);
+          navigate('/dashboard');
+        }}
       />
 
       <UserSignupModal
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
-        onSignup={handleLogin}
+        onSignup={() => {
+          setShowSignupModal(false);
+          navigate('/dashboard');
+        }}
       />
     </header>
   );

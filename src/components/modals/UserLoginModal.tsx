@@ -1,16 +1,11 @@
 
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 interface UserLoginModalProps {
   isOpen: boolean;
@@ -22,21 +17,29 @@ export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
+  const { signIn } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const { error } = await signIn(email, password);
       
-      // For demo, let's accept any login
-      onLogin();
-    } catch (err) {
-      setError("Invalid email or password. Please try again.");
+      if (error) {
+        toast.error("Login failed", {
+          description: error.message
+        });
+      } else {
+        toast.success("Welcome back!", {
+          description: "You've successfully logged in."
+        });
+        onLogin();
+      }
+    } catch (error) {
+      toast.error("Something went wrong", {
+        description: "Please try again later."
+      });
     } finally {
       setIsLoading(false);
     }
@@ -46,41 +49,29 @@ export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Log in to Puma-AI</DialogTitle>
+          <DialogTitle>Log in to your account</DialogTitle>
           <DialogDescription>
             Enter your credentials to access your account.
           </DialogDescription>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          {error && (
-            <div className="bg-red-50 text-red-500 px-3 py-2 rounded-md text-sm">
-              {error}
-            </div>
-          )}
-
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
-
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <a 
-                href="/forgot-password" 
-                className="text-xs text-puma-blue-500 hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  // Handle forgot password
-                }}
+              <a
+                href="#"
+                className="text-sm text-puma-blue-500 hover:text-puma-blue-600"
               >
                 Forgot password?
               </a>
@@ -88,38 +79,33 @@ export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps
             <Input
               id="password"
               type="password"
-              placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
-
-          <DialogFooter className="mt-6">
-            <Button
-              type="submit"
-              className="w-full bg-puma-blue-500 hover:bg-puma-blue-600"
-              disabled={isLoading}
-            >
-              {isLoading ? "Logging in..." : "Log in"}
-            </Button>
-          </DialogFooter>
-        </form>
-
-        <div className="mt-4 text-center text-sm">
-          <span className="text-muted-foreground">Don't have an account?</span>{" "}
-          <a 
-            href="/signup" 
-            className="text-puma-blue-500 hover:underline"
-            onClick={(e) => {
-              e.preventDefault();
-              onClose();
-              // Open signup modal
-            }}
+          <Button
+            type="submit"
+            className="w-full bg-puma-blue-500 hover:bg-puma-blue-600"
+            disabled={isLoading}
           >
-            Sign up
-          </a>
-        </div>
+            {isLoading ? "Logging in..." : "Log in"}
+          </Button>
+          <div className="text-center text-sm">
+            <span className="text-muted-foreground">Don't have an account?</span>{" "}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                onClose();
+                // We'd typically open the signup modal here
+              }}
+              className="text-puma-blue-500 hover:text-puma-blue-600"
+            >
+              Sign up
+            </a>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );
