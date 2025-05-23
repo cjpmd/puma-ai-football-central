@@ -84,7 +84,7 @@ const UserManagement = () => {
         email: profile.email || '',
         name: profile.name || '',
         phone: profile.phone || null,
-        roles: profile.roles || [],
+        roles: (profile.roles || []) as UserRole[],
         createdAt: profile.created_at
       }));
 
