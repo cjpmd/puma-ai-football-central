@@ -26,7 +26,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   onUpdate
 }) => {
   const [staff, setStaff] = useState<TeamStaff[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [newStaff, setNewStaff] = useState({
     name: '',
@@ -36,10 +36,20 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   });
   const { toast } = useToast();
 
+  // Reset state when modal opens/closes
   useEffect(() => {
     if (isOpen && team?.id) {
-      console.log('StaffManagementModal: Loading staff for team:', team.id);
+      console.log('StaffManagementModal: Modal opened for team:', team.id);
+      setStaff([]);
+      setLoading(true);
+      setIsAddingStaff(false);
+      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       loadStaff();
+    } else if (!isOpen) {
+      // Clean up state when modal closes
+      setStaff([]);
+      setIsAddingStaff(false);
+      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
     }
   }, [isOpen, team?.id]);
 
@@ -51,13 +61,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
 
     try {
-      setLoading(true);
-      console.log('StaffManagementModal: Fetching staff for team:', team.id);
+      console.log('StaffManagementModal: Loading staff for team:', team.id);
       
       const { data, error } = await supabase
         .from('team_staff')
         .select('*')
-        .eq('team_id', team.id);
+        .eq('team_id', team.id)
+        .order('created_at', { ascending: true });
 
       if (error) {
         console.error('StaffManagementModal: Database error:', error);
@@ -68,55 +78,73 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
       if (data) {
         const staffMembers: TeamStaff[] = data.map(record => {
-          // Safely handle coaching badges
-          let coachingBadges: string[] = [];
-          if (Array.isArray(record.coaching_badges)) {
-            coachingBadges = record.coaching_badges
-              .filter(badge => typeof badge === 'string')
-              .map(badge => String(badge));
-          }
-
-          // Safely handle certificates
-          let certificates: any[] = [];
-          if (Array.isArray(record.certificates)) {
-            certificates = record.certificates.map(cert => {
-              if (typeof cert === 'object' && cert !== null && !Array.isArray(cert)) {
-                const certObj = cert as Record<string, any>;
-                return {
-                  name: String(certObj.name || ''),
-                  issuedBy: String(certObj.issuedBy || ''),
-                  dateIssued: String(certObj.dateIssued || ''),
-                  expiryDate: certObj.expiryDate ? String(certObj.expiryDate) : undefined
-                };
+          try {
+            // Safely handle coaching badges
+            let coachingBadges: string[] = [];
+            if (record.coaching_badges) {
+              if (Array.isArray(record.coaching_badges)) {
+                coachingBadges = record.coaching_badges
+                  .filter(badge => typeof badge === 'string' && badge.trim().length > 0)
+                  .map(badge => String(badge));
               }
-              return {
-                name: '',
-                issuedBy: '',
-                dateIssued: '',
-                expiryDate: undefined
-              };
-            });
-          }
+            }
 
-          return {
-            id: record.id,
-            name: record.name,
-            email: record.email,
-            phone: record.phone || '',
-            role: record.role as TeamStaff['role'],
-            user_id: record.user_id || undefined,
-            coachingBadges,
-            certificates,
-            createdAt: record.created_at,
-            updatedAt: record.updated_at
-          };
+            // Safely handle certificates
+            let certificates: any[] = [];
+            if (record.certificates) {
+              if (Array.isArray(record.certificates)) {
+                certificates = record.certificates
+                  .filter(cert => cert && typeof cert === 'object')
+                  .map(cert => {
+                    const certObj = cert as Record<string, any>;
+                    return {
+                      name: String(certObj.name || ''),
+                      issuedBy: String(certObj.issuedBy || ''),
+                      dateIssued: String(certObj.dateIssued || ''),
+                      expiryDate: certObj.expiryDate ? String(certObj.expiryDate) : undefined
+                    };
+                  });
+              }
+            }
+
+            return {
+              id: record.id,
+              name: record.name || '',
+              email: record.email || '',
+              phone: record.phone || '',
+              role: record.role as TeamStaff['role'],
+              user_id: record.user_id || undefined,
+              coachingBadges,
+              certificates,
+              createdAt: record.created_at,
+              updatedAt: record.updated_at
+            };
+          } catch (parseError) {
+            console.error('StaffManagementModal: Error parsing staff record:', parseError, record);
+            // Return a minimal valid staff member
+            return {
+              id: record.id,
+              name: record.name || 'Unknown',
+              email: record.email || '',
+              phone: record.phone || '',
+              role: (record.role as TeamStaff['role']) || 'helper',
+              user_id: record.user_id || undefined,
+              coachingBadges: [],
+              certificates: [],
+              createdAt: record.created_at,
+              updatedAt: record.updated_at
+            };
+          }
         });
         
         console.log('StaffManagementModal: Processed staff:', staffMembers);
         setStaff(staffMembers);
+      } else {
+        setStaff([]);
       }
     } catch (error: any) {
       console.error('StaffManagementModal: Error loading staff:', error);
+      setStaff([]);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load team staff',
@@ -128,10 +156,31 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   };
 
   const handleAddStaff = async () => {
-    if (!newStaff.name.trim() || !newStaff.email.trim()) {
+    // Validate input
+    if (!newStaff.name.trim()) {
       toast({
-        title: 'Error',
-        description: 'Name and email are required',
+        title: 'Validation Error',
+        description: 'Staff name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!newStaff.email.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Staff email is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newStaff.email.trim())) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a valid email address',
         variant: 'destructive',
       });
       return;
@@ -149,26 +198,46 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     try {
       console.log('StaffManagementModal: Adding staff member:', newStaff);
 
+      const insertData = {
+        team_id: team.id,
+        name: newStaff.name.trim(),
+        email: newStaff.email.trim(),
+        phone: newStaff.phone.trim() || null,
+        role: newStaff.role,
+        coaching_badges: [],
+        certificates: []
+      };
+
+      console.log('StaffManagementModal: Insert data:', insertData);
+
       const { data, error } = await supabase
         .from('team_staff')
-        .insert({
-          team_id: team.id,
-          name: newStaff.name.trim(),
-          email: newStaff.email.trim(),
-          phone: newStaff.phone.trim() || null,
-          role: newStaff.role,
-        })
+        .insert(insertData)
         .select()
         .single();
 
       if (error) {
         console.error('StaffManagementModal: Insert error:', error);
+        
+        // Handle specific error cases
+        if (error.code === '23505') {
+          toast({
+            title: 'Error',
+            description: 'A staff member with this email already exists for this team',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
         throw error;
       }
 
-      console.log('StaffManagementModal: Staff member added:', data);
+      console.log('StaffManagementModal: Staff member added successfully:', data);
 
+      // Reload staff list
       await loadStaff();
+      
+      // Reset form
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       setIsAddingStaff(false);
       
@@ -186,7 +255,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
-  const handleRemoveStaff = async (staffId: string) => {
+  const handleRemoveStaff = async (staffId: string, staffName: string) => {
     try {
       console.log('StaffManagementModal: Removing staff member:', staffId);
 
@@ -200,11 +269,14 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         throw error;
       }
       
+      console.log('StaffManagementModal: Staff member removed successfully');
+      
+      // Reload staff list
       await loadStaff();
       
       toast({
         title: 'Success',
-        description: 'Staff member removed successfully',
+        description: `${staffName} has been removed from the team`,
       });
     } catch (error: any) {
       console.error('StaffManagementModal: Error removing staff:', error);
@@ -216,7 +288,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
-  function getRoleColor(role: TeamStaff['role']) {
+  const getRoleColor = (role: TeamStaff['role']) => {
     switch (role) {
       case 'manager': return 'bg-blue-500';
       case 'assistant_manager': return 'bg-purple-500';
@@ -224,14 +296,15 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       case 'helper': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
-  }
+  };
 
-  function getRoleLabel(role: TeamStaff['role']) {
+  const getRoleLabel = (role: TeamStaff['role']) => {
     return role.replace('_', ' ').split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
-  }
+  };
 
+  // Don't render if no team
   if (!team) {
     return null;
   }
@@ -251,6 +324,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
             <h3 className="text-lg font-semibold">Team Staff</h3>
             <Button 
               onClick={() => setIsAddingStaff(true)}
+              disabled={loading}
               className="bg-puma-blue-500 hover:bg-puma-blue-600"
             >
               <Plus className="h-4 w-4 mr-2" />
@@ -266,22 +340,24 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="staffName">Name</Label>
+                    <Label htmlFor="staffName">Name *</Label>
                     <Input
                       id="staffName"
                       value={newStaff.name}
                       onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Enter full name"
+                      maxLength={100}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="staffEmail">Email</Label>
+                    <Label htmlFor="staffEmail">Email *</Label>
                     <Input
                       id="staffEmail"
                       type="email"
                       value={newStaff.email}
                       onChange={(e) => setNewStaff(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="Enter email address"
+                      maxLength={255}
                     />
                   </div>
                 </div>
@@ -294,6 +370,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                       value={newStaff.phone}
                       onChange={(e) => setNewStaff(prev => ({ ...prev, phone: e.target.value }))}
                       placeholder="Enter phone number"
+                      maxLength={20}
                     />
                   </div>
                   <div className="space-y-2">
@@ -388,7 +465,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                         size="sm"
                         onClick={() => {
                           if (confirm(`Are you sure you want to remove ${staffMember.name}?`)) {
-                            handleRemoveStaff(staffMember.id);
+                            handleRemoveStaff(staffMember.id, staffMember.name);
                           }
                         }}
                         className="text-red-600 hover:text-red-700"

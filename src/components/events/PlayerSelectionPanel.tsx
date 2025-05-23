@@ -140,6 +140,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const handleSave = async () => {
     try {
       console.log('PlayerSelectionPanel: Saving selection:', selection);
+      console.log('PlayerSelectionPanel: Save parameters:', { eventId, teamId, periodNumber, teamNumber });
       setSaving(true);
 
       // Filter out player positions with "none" value
@@ -149,7 +150,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         event_id: eventId,
         team_id: teamId,
         period_number: periodNumber,
-        team_number: teamNumber,
+        team_number: teamNumber, // This is crucial for the new unique constraint
         formation: selection.formation,
         captain_id: selection.captainId === 'none' ? null : selection.captainId || null,
         player_positions: validPlayerPositions,
@@ -160,7 +161,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       console.log('PlayerSelectionPanel: Upserting data:', selectionData);
 
-      // Use the correct unique constraint fields for upsert
+      // Use the correct unique constraint fields for upsert (now includes team_number)
       const { error } = await supabase
         .from('event_selections')
         .upsert(selectionData, {
