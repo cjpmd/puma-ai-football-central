@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ const TeamManagement = () => {
 
   const handleCreateTeam = async (teamData: Partial<Team>) => {
     try {
+      console.log('Creating team with data:', teamData);
       // Insert team into the database
       const { data: teamResult, error: teamError } = await supabase
         .from('teams')
@@ -47,21 +49,30 @@ const TeamManagement = () => {
         .single();
 
       if (teamError) {
+        console.error('Team creation error:', teamError);
         throw teamError;
       }
 
+      console.log('Team created successfully:', teamResult);
+
       // Add the current user as team manager
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user) {
+        throw new Error('Unable to get current user');
+      }
+
       const { error: userTeamError } = await supabase
         .from('user_teams')
         .insert([
           {
-            user_id: (await supabase.auth.getUser()).data.user?.id,
+            user_id: userData.user.id,
             team_id: teamResult.id,
             role: 'team_manager'
           }
         ]);
 
       if (userTeamError) {
+        console.error('User team assignment error:', userTeamError);
         throw userTeamError;
       }
 
@@ -72,6 +83,7 @@ const TeamManagement = () => {
         description: `${teamData.name} has been successfully created.`,
       });
     } catch (error: any) {
+      console.error('Team creation failed:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to create team',
@@ -84,6 +96,7 @@ const TeamManagement = () => {
     if (!selectedTeam?.id) return;
     
     try {
+      console.log('Updating team with data:', teamData);
       const { error } = await supabase
         .from('teams')
         .update({
@@ -105,6 +118,7 @@ const TeamManagement = () => {
         .eq('id', selectedTeam.id);
 
       if (error) {
+        console.error('Team update error:', error);
         throw error;
       }
 
@@ -116,6 +130,7 @@ const TeamManagement = () => {
         description: `${teamData.name} has been successfully updated.`,
       });
     } catch (error: any) {
+      console.error('Team update failed:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update team',
@@ -125,25 +140,33 @@ const TeamManagement = () => {
   };
 
   const openTeamSettingsModal = (team: Team) => {
+    console.log('Opening settings for team:', team);
     setSelectedTeam(team);
     setIsSettingsModalOpen(true);
   };
 
   const openStaffModal = (team: Team) => {
+    console.log('Opening staff modal for team:', team);
     setSelectedTeam(team);
     setIsStaffModalOpen(true);
   };
 
   const openEditTeamDialog = (team: Team) => {
+    console.log('Opening edit dialog for team:', team);
     setSelectedTeam(team);
     setIsTeamDialogOpen(true);
   };
 
   const getClubName = (clubId?: string) => {
-    if (!clubId || !clubs) return 'Independent';
+    console.log('Getting club name for clubId:', clubId, 'Available clubs:', clubs);
+    if (!clubId || !clubs || clubs.length === 0) return 'Independent';
     const club = clubs.find(club => club.id === clubId);
-    return club ? club.name : 'Independent';
+    const clubName = club ? club.name : 'Independent';
+    console.log('Found club name:', clubName);
+    return clubName;
   };
+
+  console.log('TeamManagement render - teams:', teams, 'clubs:', clubs);
 
   return (
     <DashboardLayout>

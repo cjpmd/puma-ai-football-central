@@ -25,6 +25,7 @@ interface Player {
   name: string;
   squadNumber: number;
   position?: string;
+  isSelected?: boolean;
 }
 
 type PositionPlayerMap = Record<string, string>;
@@ -51,12 +52,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('PlayerSelectionPanel mounted with:', { eventId, teamId, periodNumber, teamNumber });
     loadPlayers();
     loadTeamSelection();
   }, [eventId, teamId, periodNumber, teamNumber, performanceCategoryId]);
 
   useEffect(() => {
     if (selectedFormation) {
+      console.log('Formation changed to:', selectedFormation);
       const formationPositions = getPositionsForFormation(selectedFormation, gameFormatTyped);
       setPositions(formationPositions);
     }
@@ -64,6 +67,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   const loadPlayers = async () => {
     try {
+      console.log('Loading players for team:', teamId);
+      
       const { data, error } = await supabase
         .from('players')
         .select('id, name, squad_number')
@@ -71,13 +76,67 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .eq('status', 'active')
         .order('squad_number');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading players:', error);
+        throw error;
+      }
 
-      setPlayers(data?.map(p => ({
+      console.log('Loaded players:', data);
+
+      // Check which players are already selected in other team selections for this event
+      const { data: existingSelections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select('player_positions, substitutes, team_number')
+        .eq('event_id', eventId)
+        .eq('period_number', periodNumber);
+
+      if (selectionsError) {
+        console.error('Error loading existing selections:', selectionsError);
+      }
+
+      const playersInOtherTeams = new Set<string>();
+      
+      if (existingSelections) {
+        existingSelections.forEach(selection => {
+          if (selection.team_number !== teamNumber) {
+            // Parse player positions
+            if (selection.player_positions) {
+              const positions = Array.isArray(selection.player_positions) 
+                ? selection.player_positions 
+                : JSON.parse(String(selection.player_positions || '[]'));
+              
+              positions.forEach((pos: any) => {
+                if (pos && pos.playerId) {
+                  playersInOtherTeams.add(pos.playerId);
+                }
+              });
+            }
+            
+            // Parse substitutes
+            if (selection.substitutes) {
+              const subs = Array.isArray(selection.substitutes)
+                ? selection.substitutes
+                : JSON.parse(String(selection.substitutes || '[]'));
+              
+              subs.forEach((sub: any) => {
+                if (typeof sub === 'string') {
+                  playersInOtherTeams.add(sub);
+                }
+              });
+            }
+          }
+        });
+      }
+
+      const playersWithAvailability: Player[] = data?.map(p => ({
         id: p.id,
         name: p.name,
-        squadNumber: p.squad_number
-      })) || []);
+        squadNumber: p.squad_number,
+        isSelected: playersInOtherTeams.has(p.id)
+      })) || [];
+
+      console.log('Players with availability:', playersWithAvailability);
+      setPlayers(playersWithAvailability);
     } catch (error) {
       console.error('Error loading players:', error);
       toast({
@@ -90,6 +149,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   const loadTeamSelection = async () => {
     try {
+      console.log('Loading team selection for:', { eventId, teamId, teamNumber, periodNumber });
+      
       const { data, error } = await supabase
         .from('event_selections')
         .select('*')
@@ -97,11 +158,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .eq('team_id', teamId)
         .eq('team_number', teamNumber)
         .eq('period_number', periodNumber)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') {
+        console.error('Error loading team selection:', error);
         throw error;
       }
+
+      console.log('Loaded team selection:', data);
 
       if (data) {
         setSelectedFormation(data.formation || '');
@@ -153,6 +217,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   };
 
   const handleFormationChange = (formationId: string) => {
+    console.log('Changing formation to:', formationId);
     setSelectedFormation(formationId);
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
     const newPositionStrings = newPositions.map(pos => String(pos));
@@ -168,6 +233,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   };
 
   const handlePlayerChange = (position: string, playerId: string) => {
+    console.log('Assigning player', playerId, 'to position', position);
     setPlayerPositions(prev => ({
       ...prev,
       [position]: playerId
@@ -175,21 +241,25 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   };
 
   const handleCaptainChange = (captainId: string) => {
+    console.log('Setting captain to:', captainId);
     setCaptainId(captainId === 'none' ? null : captainId);
   };
 
   const handleAddSubstitute = (playerId: string) => {
     if (playerId && playerId !== 'none' && !substitutes.includes(playerId)) {
+      console.log('Adding substitute:', playerId);
       setSubstitutes([...substitutes, playerId]);
     }
   };
 
   const handleRemoveSubstitute = (playerId: string) => {
+    console.log('Removing substitute:', playerId);
     setSubstitutes(substitutes.filter(id => id !== playerId));
   };
 
   const handleSaveTeamSelection = async () => {
     try {
+      console.log('Saving team selection...');
       setSaving(true);
       
       // Convert to simple JSON-compatible arrays
@@ -202,14 +272,25 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       const substitutesArray = substitutes.filter(Boolean);
 
+      console.log('Saving data:', {
+        playerPositionsArray,
+        substitutesArray,
+        formation: selectedFormation,
+        captain: captainId
+      });
+
       // Delete existing selection first to avoid constraint issues
-      await supabase
+      const { error: deleteError } = await supabase
         .from('event_selections')
         .delete()
         .eq('event_id', eventId)
         .eq('team_id', teamId)
         .eq('team_number', teamNumber)
         .eq('period_number', periodNumber);
+
+      if (deleteError) {
+        console.error('Error deleting existing selection:', deleteError);
+      }
 
       // Insert new selection
       const { error } = await supabase
@@ -227,12 +308,20 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           duration_minutes: 45,
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving team selection:', error);
+        throw error;
+      }
+
+      console.log('Team selection saved successfully');
 
       toast({
         title: 'Success',
         description: 'Team selection saved successfully',
       });
+      
+      // Reload players to update availability status
+      await loadPlayers();
       
       if (onSave) {
         onSave();
@@ -254,8 +343,19 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     return player ? `${player.squadNumber}. ${player.name}` : '';
   };
 
+  const getAvailablePlayers = () => {
+    return players.filter(player => !player.isSelected);
+  };
+
   if (loading) {
-    return <div>Loading player selection...</div>;
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading player selection...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -277,6 +377,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             {players.map(player => (
               <SelectItem key={player.id} value={player.id}>
                 {player.squadNumber}. {player.name}
+                {player.isSelected && ' (Selected in other team)'}
               </SelectItem>
             ))}
           </SelectContent>
@@ -302,8 +403,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                       <SelectItem 
                         key={player.id} 
                         value={player.id}
+                        disabled={player.isSelected && playerPositions[position] !== player.id}
                       >
                         {player.squadNumber}. {player.name}
+                        {player.isSelected && playerPositions[position] !== player.id && ' (Selected in other team)'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -349,8 +452,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 <SelectItem 
                   key={player.id} 
                   value={player.id}
+                  disabled={player.isSelected}
                 >
                   {player.squadNumber}. {player.name}
+                  {player.isSelected && ' (Selected in other team)'}
                 </SelectItem>
               ))}
           </SelectContent>

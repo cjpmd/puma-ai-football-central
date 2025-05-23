@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
-import { Plus, Edit, Trash2, Users, Mail, Phone, Award, UserPlus } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Mail, Phone, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   onUpdate
 }) => {
   const [staff, setStaff] = useState<TeamStaff[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
   const [newStaff, setNewStaff] = useState({
@@ -34,11 +35,75 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   const { user } = useAuth();
 
   useEffect(() => {
+    console.log('TeamStaffSettings mounted for team:', team);
     loadStaffFromDatabase();
   }, [team.id]);
 
+  const loadStaffFromDatabase = async () => {
+    try {
+      console.log('Loading staff for team:', team.id);
+      setLoading(true);
+      
+      const { data, error } = await supabase
+        .from('team_staff')
+        .select('*')
+        .eq('team_id', team.id);
+
+      if (error) {
+        console.error('Error loading staff:', error);
+        throw error;
+      }
+
+      console.log('Loaded staff data:', data);
+
+      if (data) {
+        const staffMembers: TeamStaff[] = data.map(record => {
+          console.log('Processing staff record:', record);
+          return {
+            id: record.id,
+            name: record.name,
+            email: record.email,
+            phone: record.phone || '',
+            role: record.role as TeamStaff['role'],
+            user_id: record.user_id || undefined,
+            coachingBadges: Array.isArray(record.coaching_badges) 
+              ? record.coaching_badges.map((badge: any) => 
+                  typeof badge === 'string' ? badge : badge?.name || ''
+                ).filter(Boolean)
+              : [],
+            certificates: Array.isArray(record.certificates) 
+              ? record.certificates.map((cert: any) => ({
+                  name: String(cert?.name || ''),
+                  issuedBy: String(cert?.issuedBy || ''),
+                  dateIssued: String(cert?.dateIssued || ''),
+                  expiryDate: cert?.expiryDate ? String(cert.expiryDate) : undefined
+                })).filter(cert => cert.name)
+              : [],
+            createdAt: record.created_at,
+            updatedAt: record.updated_at
+          };
+        });
+        
+        console.log('Processed staff members:', staffMembers);
+        setStaff(staffMembers);
+        onUpdate({ staff: staffMembers });
+      }
+    } catch (error) {
+      console.error('Error loading staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load team staff',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const saveStaffToDatabase = async (staffMember: TeamStaff) => {
     try {
+      console.log('Saving staff member:', staffMember);
+      
       const { error } = await supabase
         .from('team_staff')
         .upsert({
@@ -59,7 +124,12 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
           updated_at: new Date().toISOString()
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving staff member:', error);
+        throw error;
+      }
+      
+      console.log('Staff member saved successfully');
       return true;
     } catch (error) {
       console.error('Error saving staff member:', error);
@@ -72,63 +142,23 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
   };
 
-  const loadStaffFromDatabase = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('team_staff')
-        .select('*')
-        .eq('team_id', team.id);
-
-      if (error) throw error;
-
-      if (data) {
-        const staffMembers: TeamStaff[] = data.map(record => ({
-          id: record.id,
-          name: record.name,
-          email: record.email,
-          phone: record.phone || '',
-          role: record.role as TeamStaff['role'],
-          user_id: record.user_id || undefined,
-          coachingBadges: Array.isArray(record.coaching_badges) 
-            ? record.coaching_badges.map((badge: any) => 
-                typeof badge === 'string' ? badge : badge?.name || ''
-              ).filter(Boolean)
-            : [],
-          certificates: Array.isArray(record.certificates) 
-            ? record.certificates.map((cert: any) => ({
-                name: String(cert?.name || ''),
-                issuedBy: String(cert?.issuedBy || ''),
-                dateIssued: String(cert?.dateIssued || ''),
-                expiryDate: cert?.expiryDate ? String(cert.expiryDate) : undefined
-              })).filter(cert => cert.name)
-            : [],
-          createdAt: record.created_at,
-          updatedAt: record.updated_at
-        }));
-        
-        setStaff(staffMembers);
-        onUpdate({ staff: staffMembers });
-      }
-    } catch (error) {
-      console.error('Error loading staff:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load team staff',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const sendStaffInvite = async (email: string, name: string, role: string) => {
     try {
+      console.log('Checking if user exists:', email);
+      
       // Check if user already exists
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: userError } = await supabase
         .from('profiles')
         .select('id')
         .eq('email', email)
         .maybeSingle();
 
+      if (userError) {
+        console.error('Error checking for existing user:', userError);
+      }
+
       if (existingUser) {
+        console.log('User already exists:', existingUser);
         toast({
           title: 'User Already Exists',
           description: 'This user is already registered. You can add them directly.',
@@ -136,8 +166,9 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         return false;
       }
 
-      // Here you would typically send an email invitation
       // For now, we'll just show a message about the invite being sent
+      // In a real implementation, you would send an actual email invitation
+      console.log('Would send invitation to:', email);
       toast({
         title: 'Invitation Sent',
         description: `An invitation has been sent to ${email} to join as ${role}`,
@@ -157,39 +188,54 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
 
   const handleAddStaff = async () => {
     if (newStaff.name && newStaff.email) {
-      // Check if user exists and send invite if needed
-      const { data: existingUser } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', newStaff.email)
-        .maybeSingle();
+      console.log('Adding new staff member:', newStaff);
+      
+      try {
+        // Check if user exists and send invite if needed
+        const { data: existingUser, error: userError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', newStaff.email)
+          .maybeSingle();
 
-      const staffMember: TeamStaff = {
-        id: Date.now().toString(),
-        ...newStaff,
-        coachingBadges: [],
-        certificates: [],
-        user_id: existingUser?.id || undefined,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      
-      const success = await saveStaffToDatabase(staffMember);
-      
-      if (success) {
-        // Send invite if user doesn't exist
-        if (!existingUser) {
-          await sendStaffInvite(newStaff.email, newStaff.name, newStaff.role);
+        if (userError) {
+          console.error('Error checking for existing user:', userError);
         }
+
+        const staffMember: TeamStaff = {
+          id: Date.now().toString(),
+          ...newStaff,
+          coachingBadges: [],
+          certificates: [],
+          user_id: existingUser?.id || undefined,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
         
-        await loadStaffFromDatabase();
+        const success = await saveStaffToDatabase(staffMember);
         
-        setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-        setIsAddingStaff(false);
-        
+        if (success) {
+          // Send invite if user doesn't exist
+          if (!existingUser) {
+            await sendStaffInvite(newStaff.email, newStaff.name, newStaff.role);
+          }
+          
+          await loadStaffFromDatabase();
+          
+          setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+          setIsAddingStaff(false);
+          
+          toast({
+            title: 'Success',
+            description: `${staffMember.name} has been added to ${team.name}`,
+          });
+        }
+      } catch (error) {
+        console.error('Error adding staff member:', error);
         toast({
-          title: 'Success',
-          description: `${staffMember.name} has been added to ${team.name}`,
+          title: 'Error',
+          description: 'Failed to add staff member',
+          variant: 'destructive',
         });
       }
     }
@@ -197,6 +243,8 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
 
   const handleUpdateStaff = async () => {
     if (editingStaff && newStaff.name && newStaff.email) {
+      console.log('Updating staff member:', editingStaff, newStaff);
+      
       const updatedStaffMember = { 
         ...editingStaff, 
         ...newStaff, 
@@ -221,6 +269,8 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
 
   const handleRemoveStaff = async (staffId: string) => {
     try {
+      console.log('Removing staff member:', staffId);
+      
       const staffMember = staff.find(s => s.id === staffId);
       
       const { error } = await supabase
@@ -228,7 +278,10 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         .delete()
         .eq('id', staffId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing staff member:', error);
+        throw error;
+      }
       
       await loadStaffFromDatabase();
       
@@ -262,13 +315,24 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     ).join(' ');
   }
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading staff...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">Staff Management</h3>
           <p className="text-sm text-muted-foreground">
-            Manage your team's coaching staff and helpers. Invite new members or add existing users.
+            Manage your team's coaching staff and helpers. Users must have accounts to be added directly, or they can be invited via email.
           </p>
         </div>
         <Button 
@@ -290,7 +354,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
             <CardDescription>
               {editingStaff 
                 ? 'Update staff member details' 
-                : 'Add a new staff member. If they don\'t have an account, we\'ll send them an invitation.'}
+                : 'Add a new staff member. If they don\'t have an account, we\'ll send them an invitation email.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
