@@ -13,7 +13,8 @@ import { TeamStaffSettings } from './settings/TeamStaffSettings';
 import { TeamFAConnection } from './settings/TeamFAConnection';
 import { TeamKitSettings } from './settings/TeamKitSettings';
 import { TeamPerformanceSettings } from './settings/TeamPerformanceSettings';
-import { Settings, Users, Trophy, Star, Wifi, Shirt, Target } from 'lucide-react';
+import { UserManagement } from '../admin/UserManagement';
+import { Settings, Users, Trophy, Star, Wifi, Shirt, Target, UserCog } from 'lucide-react';
 
 interface TeamSettingsModalProps {
   team: Team;
@@ -72,6 +73,12 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       label: 'Kit Icons',
       icon: <Shirt className="h-4 w-4" />,
       component: <TeamKitSettings team={team} onUpdate={onUpdate} />
+    },
+    {
+      id: 'users',
+      label: 'User Management',
+      icon: <UserCog className="h-4 w-4" />,
+      component: <UserManagement />
     }
   ];
 
@@ -86,7 +93,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-7 flex-shrink-0 mb-4">
+          <TabsList className="grid w-full grid-cols-8 flex-shrink-0 mb-4">
             {settingsTabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
                 {tab.icon}

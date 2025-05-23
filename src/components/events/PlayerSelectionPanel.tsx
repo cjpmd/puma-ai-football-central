@@ -282,55 +282,41 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         existingRecordId
       });
 
+      // Use upsert for all saves to handle conflicts properly
+      const upsertData = {
+        event_id: eventId,
+        team_id: teamId,
+        team_number: teamNumber,
+        period_number: periodNumber,
+        captain_id: captainId,
+        formation: selectedFormation,
+        player_positions: playerPositionsArray,
+        substitutes: substitutesArray,
+        performance_category_id: performanceCategoryId,
+        duration_minutes: 45,
+        updated_at: new Date().toISOString()
+      };
+
+      // If we have an existing record ID, include it in the upsert
       if (existingRecordId) {
-        // Update existing record
-        const { error } = await supabase
-          .from('event_selections')
-          .update({
-            captain_id: captainId,
-            formation: selectedFormation,
-            player_positions: playerPositionsArray,
-            substitutes: substitutesArray,
-            performance_category_id: performanceCategoryId,
-            duration_minutes: 45,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingRecordId);
+        upsertData.id = existingRecordId;
+      }
 
-        if (error) {
-          console.error('Error updating team selection:', error);
-          throw error;
-        }
-      } else {
-        // Check if record exists first - use upsert to handle conflicts
-        const { data: insertData, error } = await supabase
-          .from('event_selections')
-          .upsert({
-            event_id: eventId,
-            team_id: teamId,
-            team_number: teamNumber,
-            period_number: periodNumber,
-            captain_id: captainId,
-            formation: selectedFormation,
-            player_positions: playerPositionsArray,
-            substitutes: substitutesArray,
-            performance_category_id: performanceCategoryId,
-            duration_minutes: 45,
-            updated_at: new Date().toISOString()
-          }, {
-            onConflict: 'event_id,team_id,period_number,team_number'
-          })
-          .select('id')
-          .single();
+      const { data: upsertResult, error } = await supabase
+        .from('event_selections')
+        .upsert(upsertData, {
+          onConflict: 'event_id,team_id,period_number,team_number'
+        })
+        .select('id')
+        .single();
 
-        if (error) {
-          console.error('Error upserting team selection:', error);
-          throw error;
-        }
+      if (error) {
+        console.error('Error saving team selection:', error);
+        throw error;
+      }
 
-        if (insertData) {
-          setExistingRecordId(insertData.id);
-        }
+      if (upsertResult && !existingRecordId) {
+        setExistingRecordId(upsertResult.id);
       }
 
       console.log('Team selection saved successfully');

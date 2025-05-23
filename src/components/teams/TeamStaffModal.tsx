@@ -4,7 +4,7 @@ import { Team } from '@/types/team';
 import { TeamStaffSettings } from './settings/TeamStaffSettings';
 
 interface TeamStaffModalProps {
-  team: Team;
+  team: Team | null;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (teamData: Partial<Team>) => void;
@@ -16,7 +16,7 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
   onClose,
   onUpdate
 }) => {
-  if (!team) {
+  if (!team || !isOpen) {
     return null;
   }
 
