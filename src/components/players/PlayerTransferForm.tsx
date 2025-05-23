@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -62,7 +63,7 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
           createdAt: team.created_at,
           updatedAt: team.updated_at,
           performanceCategories: team.performance_categories || [],
-          kitIcons: team.kit_icons || { home: '', away: '', training: '', goalkeeper: '' }
+          kitIcons: (team.kit_icons as { home: string; away: string; training: string; goalkeeper: string }) || { home: '', away: '', training: '', goalkeeper: '' }
         })));
         setIsLoading(false);
       } catch (error) {
