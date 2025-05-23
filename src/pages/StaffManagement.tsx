@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -64,32 +63,40 @@ const StaffManagement = () => {
 
   const fetchTeamStaff = async (teamId: string) => {
     try {
-      // Modified query to correctly join with the profiles table
-      const { data, error } = await supabase
+      // First get the user IDs with their roles
+      const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
-        .select(`
-          user_id,
-          role,
-          profiles:user_id(
-            name,
-            email
-          )
-        `)
+        .select('user_id, role')
         .eq('team_id', teamId);
 
-      if (error) throw error;
-
-      if (data) {
-        const staffMembers: StaffMember[] = data.map(item => ({
-          id: item.user_id,
-          // Access the profile data correctly through the nested profiles object
-          name: item.profiles?.name || 'Unknown',
-          email: item.profiles?.email || 'No email',
-          role: item.role as UserRole
-        }));
-
-        setTeamStaff(staffMembers);
+      if (userTeamsError) throw userTeamsError;
+      
+      if (!userTeamsData || userTeamsData.length === 0) {
+        setTeamStaff([]);
+        return;
       }
+      
+      // Get the profile data for each user
+      const userIds = userTeamsData.map(ut => ut.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+        
+      if (profilesError) throw profilesError;
+      
+      // Join the data to create staff members
+      const staffMembers: StaffMember[] = userTeamsData.map(teamUser => {
+        const userProfile = profilesData?.find(p => p.id === teamUser.user_id);
+        return {
+          id: teamUser.user_id,
+          name: userProfile?.name || 'Unknown',
+          email: userProfile?.email || 'No email',
+          role: teamUser.role as UserRole
+        };
+      });
+      
+      setTeamStaff(staffMembers);
     } catch (error: any) {
       toast.error('Failed to fetch team staff', {
         description: error.message
@@ -99,32 +106,40 @@ const StaffManagement = () => {
 
   const fetchClubStaff = async (clubId: string) => {
     try {
-      // Modified query to correctly join with the profiles table
-      const { data, error } = await supabase
+      // First get the user IDs with their roles
+      const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
-        .select(`
-          user_id,
-          role,
-          profiles:user_id(
-            name,
-            email
-          )
-        `)
+        .select('user_id, role')
         .eq('club_id', clubId);
 
-      if (error) throw error;
-
-      if (data) {
-        const staffMembers: StaffMember[] = data.map(item => ({
-          id: item.user_id,
-          // Access the profile data correctly through the nested profiles object
-          name: item.profiles?.name || 'Unknown',
-          email: item.profiles?.email || 'No email',
-          role: item.role as UserRole
-        }));
-
-        setClubStaff(staffMembers);
+      if (userClubsError) throw userClubsError;
+      
+      if (!userClubsData || userClubsData.length === 0) {
+        setClubStaff([]);
+        return;
       }
+      
+      // Get the profile data for each user
+      const userIds = userClubsData.map(uc => uc.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+        
+      if (profilesError) throw profilesError;
+      
+      // Join the data to create staff members
+      const staffMembers: StaffMember[] = userClubsData.map(clubUser => {
+        const userProfile = profilesData?.find(p => p.id === clubUser.user_id);
+        return {
+          id: clubUser.user_id,
+          name: userProfile?.name || 'Unknown',
+          email: userProfile?.email || 'No email',
+          role: clubUser.role as UserRole
+        };
+      });
+      
+      setClubStaff(staffMembers);
     } catch (error: any) {
       toast.error('Failed to fetch club staff', {
         description: error.message

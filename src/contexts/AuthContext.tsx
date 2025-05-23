@@ -150,8 +150,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         subscriptionType: team.subscription_type as SubscriptionType,
         // Cast game_format string to the GameFormat type
         gameFormat: team.game_format as GameFormat,
-        kitIcons: team.kit_icons,
-        performanceCategories: team.performance_categories,
+        // Ensure kitIcons matches the expected structure
+        kitIcons: {
+          home: team.kit_icons?.home || '',
+          away: team.kit_icons?.away || '',
+          training: team.kit_icons?.training || '',
+          goalkeeper: team.kit_icons?.goalkeeper || '',
+        },
+        performanceCategories: team.performance_categories || [],
         createdAt: team.created_at,
         updatedAt: team.updated_at
       }));
