@@ -70,7 +70,7 @@ const StaffManagement = () => {
         .select(`
           user_id,
           role,
-          profiles!inner (
+          profiles:user_id (
             id,
             name,
             email
@@ -116,7 +116,7 @@ const StaffManagement = () => {
         .select(`
           user_id,
           role,
-          profiles!inner (
+          profiles:user_id (
             id,
             name,
             email
