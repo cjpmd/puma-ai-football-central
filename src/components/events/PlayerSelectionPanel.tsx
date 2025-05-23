@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -49,6 +50,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [playerPositions, setPlayerPositions] = useState<PositionPlayerMap>({});
   const [substitutes, setSubstitutes] = useState<string[]>([]);
   const [captainId, setCaptainId] = useState<string | null>(null);
+  const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -168,6 +170,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       console.log('Loaded team selection:', data);
 
       if (data) {
+        setExistingRecordId(data.id);
         setSelectedFormation(data.formation || '');
         setCaptainId(data.captain_id);
         
@@ -201,6 +204,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setPlayerPositions(positions);
         setSubstitutes(subs);
       } else {
+        setExistingRecordId(null);
         const formations = getFormationsByFormat(gameFormatTyped);
         setSelectedFormation(formations.length > 0 ? formations[0].id : '');
       }
@@ -275,20 +279,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         playerPositionsArray,
         substitutesArray,
         formation: selectedFormation,
-        captain: captainId
+        captain: captainId,
+        existingRecordId
       });
 
-      // First, check if a record exists
-      const { data: existingRecord } = await supabase
-        .from('event_selections')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('team_id', teamId)
-        .eq('team_number', teamNumber)
-        .eq('period_number', periodNumber)
-        .maybeSingle();
-
-      if (existingRecord) {
+      if (existingRecordId) {
         // Update existing record
         const { error } = await supabase
           .from('event_selections')
@@ -301,7 +296,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             duration_minutes: 45,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingRecord.id);
+          .eq('id', existingRecordId);
 
         if (error) {
           console.error('Error updating team selection:', error);
@@ -309,7 +304,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         }
       } else {
         // Insert new record
-        const { error } = await supabase
+        const { data: insertData, error } = await supabase
           .from('event_selections')
           .insert({
             event_id: eventId,
@@ -322,11 +317,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             substitutes: substitutesArray,
             performance_category_id: performanceCategoryId,
             duration_minutes: 45,
-          });
+          })
+          .select('id')
+          .single();
 
         if (error) {
           console.error('Error inserting team selection:', error);
           throw error;
+        }
+
+        if (insertData) {
+          setExistingRecordId(insertData.id);
         }
       }
 

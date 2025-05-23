@@ -1,7 +1,7 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Team } from '@/types/team';
-import { StaffManagementModal } from './StaffManagementModal';
+import { TeamStaffSettings } from './settings/TeamStaffSettings';
 
 interface TeamStaffModalProps {
   team: Team;
@@ -17,11 +17,19 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
   onUpdate
 }) => {
   return (
-    <StaffManagementModal 
-      team={team}
-      isOpen={isOpen}
-      onClose={onClose}
-      onUpdate={onUpdate}
-    />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Staff Management - {team.name}</DialogTitle>
+          <DialogDescription>
+            Manage your team's coaching staff and helpers.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="space-y-6">
+          <TeamStaffSettings team={team} onUpdate={onUpdate} />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
