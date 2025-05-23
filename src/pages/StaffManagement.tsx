@@ -70,7 +70,7 @@ const StaffManagement = () => {
         .select(`
           user_id,
           role,
-          profiles:user_id (
+          profiles (
             id,
             name,
             email
@@ -90,12 +90,14 @@ const StaffManagement = () => {
         return;
       }
       
-      const staffMembers: StaffMember[] = userTeamsData.map(teamUser => ({
-        id: teamUser.user_id,
-        name: teamUser.profiles?.name || 'Unknown',
-        email: teamUser.profiles?.email || 'No email',
-        role: teamUser.role as UserRole
-      }));
+      const staffMembers: StaffMember[] = userTeamsData
+        .filter(teamUser => teamUser.profiles) // Filter out null profiles
+        .map(teamUser => ({
+          id: teamUser.user_id,
+          name: teamUser.profiles?.name || 'Unknown',
+          email: teamUser.profiles?.email || 'No email',
+          role: teamUser.role as UserRole
+        }));
       
       setTeamStaff(staffMembers);
     } catch (error: any) {
@@ -116,7 +118,7 @@ const StaffManagement = () => {
         .select(`
           user_id,
           role,
-          profiles:user_id (
+          profiles (
             id,
             name,
             email
@@ -136,12 +138,14 @@ const StaffManagement = () => {
         return;
       }
       
-      const staffMembers: StaffMember[] = userClubsData.map(clubUser => ({
-        id: clubUser.user_id,
-        name: clubUser.profiles?.name || 'Unknown',
-        email: clubUser.profiles?.email || 'No email',
-        role: clubUser.role as UserRole
-      }));
+      const staffMembers: StaffMember[] = userClubsData
+        .filter(clubUser => clubUser.profiles) // Filter out null profiles
+        .map(clubUser => ({
+          id: clubUser.user_id,
+          name: clubUser.profiles?.name || 'Unknown',
+          email: clubUser.profiles?.email || 'No email',
+          role: clubUser.role as UserRole
+        }));
       
       setClubStaff(staffMembers);
     } catch (error: any) {
