@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -233,7 +234,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             <FormationSelector
               gameFormat={gameFormat as any}
               selectedFormation={selection.formation}
-              onFormationChange={(formation) => setSelection(prev => ({ ...prev, formation }))}
+              onFormationChange={(formation) => setSelection(prev => ({ 
+                ...prev, 
+                formation: formation as Formation 
+              }))}
             />
           </div>
 
