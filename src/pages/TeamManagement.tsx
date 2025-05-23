@@ -20,17 +20,6 @@ const TeamManagement = () => {
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const { toast } = useToast();
 
-  // Load club names when clubs change
-  useEffect(() => {
-    if (clubs && clubs.length > 0) {
-      const clubMap = clubs.reduce((acc, club) => {
-        acc[club.id] = club.name;
-        return acc;
-      }, {} as Record<string, string>);
-      setClubNames(clubMap);
-    }
-  }, [clubs]);
-
   const handleCreateTeam = async (teamData: Partial<Team>) => {
     try {
       // Insert team into the database
