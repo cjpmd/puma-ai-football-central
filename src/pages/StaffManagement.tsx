@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -65,12 +66,13 @@ const StaffManagement = () => {
     try {
       console.log('Fetching team staff for team:', teamId);
       
+      // Updated query to properly join user_teams with profiles
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
         .select(`
           user_id,
           role,
-          profiles!user_teams_user_id_fkey (
+          profiles:user_id (
             id,
             name,
             email
@@ -113,12 +115,13 @@ const StaffManagement = () => {
     try {
       console.log('Fetching club staff for club:', clubId);
       
+      // Updated query to properly join user_clubs with profiles
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
         .select(`
           user_id,
           role,
-          profiles!user_clubs_user_id_fkey (
+          profiles:user_id (
             id,
             name,
             email
