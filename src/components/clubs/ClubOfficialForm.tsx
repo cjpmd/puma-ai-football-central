@@ -7,17 +7,28 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ClubOfficial } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
+import { sendParentInvite } from '../players/ParentInviteService';
 
 interface ClubOfficialFormProps {
   clubId: string;
   onSuccess: () => void;
   onCancel: () => void;
   official?: ClubOfficial;
+  isParentInvite?: boolean;
+  playerName?: string;
 }
 
-export const ClubOfficialForm = ({ clubId, onSuccess, onCancel, official }: ClubOfficialFormProps) => {
+export const ClubOfficialForm = ({ 
+  clubId, 
+  onSuccess, 
+  onCancel, 
+  official, 
+  isParentInvite = false,
+  playerName 
+}: ClubOfficialFormProps) => {
   const [email, setEmail] = useState(official?.profile?.email || '');
   const [role, setRole] = useState<string>(official?.role || 'admin');
+  const [parentName, setParentName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,6 +36,15 @@ export const ClubOfficialForm = ({ clubId, onSuccess, onCancel, official }: Club
     setIsSubmitting(true);
 
     try {
+      // Handle parent invite
+      if (isParentInvite && playerName) {
+        const success = await sendParentInvite(email, parentName, playerName);
+        if (success) {
+          onSuccess();
+        }
+        return;
+      }
+
       // If editing an existing official
       if (official) {
         const { error } = await supabase
@@ -86,9 +106,26 @@ export const ClubOfficialForm = ({ clubId, onSuccess, onCancel, official }: Club
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 py-2">
+      {isParentInvite && (
+        <div className="space-y-2">
+          <Label htmlFor="parentName">Parent Name</Label>
+          <Input
+            id="parentName"
+            type="text"
+            value={parentName}
+            onChange={(e) => setParentName(e.target.value)}
+            placeholder="Parent's full name"
+            required
+            disabled={isSubmitting}
+          />
+        </div>
+      )}
+
       {!official && (
         <div className="space-y-2">
-          <Label htmlFor="email">User Email</Label>
+          <Label htmlFor="email">
+            {isParentInvite ? 'Parent Email' : 'User Email'}
+          </Label>
           <Input
             id="email"
             type="email"
@@ -99,28 +136,33 @@ export const ClubOfficialForm = ({ clubId, onSuccess, onCancel, official }: Club
             disabled={isSubmitting}
           />
           <p className="text-xs text-muted-foreground">
-            The user must already have an account in the system.
+            {isParentInvite 
+              ? 'The parent will receive an invitation to create an account and access player details.'
+              : 'The user must already have an account in the system.'
+            }
           </p>
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor="role">Role</Label>
-        <Select
-          value={role}
-          onValueChange={setRole}
-          disabled={isSubmitting}
-        >
-          <SelectTrigger id="role">
-            <SelectValue placeholder="Select a role" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="admin">Club Admin</SelectItem>
-            <SelectItem value="chair">Club Chair</SelectItem>
-            <SelectItem value="secretary">Club Secretary</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      {!isParentInvite && (
+        <div className="space-y-2">
+          <Label htmlFor="role">Role</Label>
+          <Select
+            value={role}
+            onValueChange={setRole}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger id="role">
+              <SelectValue placeholder="Select a role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="admin">Club Admin</SelectItem>
+              <SelectItem value="chair">Club Chair</SelectItem>
+              <SelectItem value="secretary">Club Secretary</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="flex justify-end space-x-2 pt-4">
         <Button
@@ -138,9 +180,11 @@ export const ClubOfficialForm = ({ clubId, onSuccess, onCancel, official }: Club
         >
           {isSubmitting
             ? 'Saving...'
-            : official
-              ? 'Update Official'
-              : 'Add Official'
+            : isParentInvite
+              ? 'Send Invite'
+              : official
+                ? 'Update Official'
+                : 'Add Official'
           }
         </Button>
       </div>
