@@ -160,11 +160,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     setSelectedFormation(formationId);
     // When formation changes, keep player assignments for positions that still exist
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
+    const newPositionStrings = newPositions.map(pos => String(pos));
     
     // Use explicit PositionPlayerMap to avoid recursive type issues
     const updatedPlayerPositions: PositionPlayerMap = {};
     Object.keys(playerPositions).forEach(pos => {
-      if (newPositions.includes(pos as Position)) {
+      if (newPositionStrings.includes(pos)) {
         updatedPlayerPositions[pos] = playerPositions[pos];
       }
     });
