@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -63,12 +64,13 @@ const StaffManagement = () => {
 
   const fetchTeamStaff = async (teamId: string) => {
     try {
+      // Modified query to correctly join with the profiles table
       const { data, error } = await supabase
         .from('user_teams')
         .select(`
           user_id,
           role,
-          profiles!inner(
+          profiles:user_id(
             name,
             email
           )
@@ -80,6 +82,7 @@ const StaffManagement = () => {
       if (data) {
         const staffMembers: StaffMember[] = data.map(item => ({
           id: item.user_id,
+          // Access the profile data correctly through the nested profiles object
           name: item.profiles?.name || 'Unknown',
           email: item.profiles?.email || 'No email',
           role: item.role as UserRole
@@ -96,12 +99,13 @@ const StaffManagement = () => {
 
   const fetchClubStaff = async (clubId: string) => {
     try {
+      // Modified query to correctly join with the profiles table
       const { data, error } = await supabase
         .from('user_clubs')
         .select(`
           user_id,
           role,
-          profiles!inner(
+          profiles:user_id(
             name,
             email
           )
@@ -113,6 +117,7 @@ const StaffManagement = () => {
       if (data) {
         const staffMembers: StaffMember[] = data.map(item => ({
           id: item.user_id,
+          // Access the profile data correctly through the nested profiles object
           name: item.profiles?.name || 'Unknown',
           email: item.profiles?.email || 'No email',
           role: item.role as UserRole

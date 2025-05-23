@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { User as AppUser, Team, Club, UserRole, SubscriptionType } from '@/types';
+import { User as AppUser, Team, Club, UserRole, SubscriptionType, GameFormat } from '@/types';
 
 type AuthContextType = {
   session: Session | null;
@@ -148,7 +148,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         clubId: team.club_id,
         // Cast subscription type to ensure type safety
         subscriptionType: team.subscription_type as SubscriptionType,
-        gameFormat: team.game_format,
+        // Cast game_format string to the GameFormat type
+        gameFormat: team.game_format as GameFormat,
         kitIcons: team.kit_icons,
         performanceCategories: team.performance_categories,
         createdAt: team.created_at,
