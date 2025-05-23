@@ -48,6 +48,12 @@ export const TeamForm: React.FC<TeamFormProps> = ({
     onSubmit(formData);
   };
 
+  const handleClubChange = (value: string) => {
+    // Convert "independent" back to undefined for the database
+    const clubId = value === 'independent' ? undefined : value;
+    handleChange('clubId', clubId);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 py-4">
       <div className="grid grid-cols-1 gap-4">
@@ -99,14 +105,14 @@ export const TeamForm: React.FC<TeamFormProps> = ({
         <div className="space-y-2">
           <Label htmlFor="club">Club</Label>
           <Select 
-            value={formData.clubId || ''}
-            onValueChange={(value) => handleChange('clubId', value || undefined)}
+            value={formData.clubId || 'independent'}
+            onValueChange={handleClubChange}
           >
             <SelectTrigger id="club">
               <SelectValue placeholder="Select a club (optional)" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Independent (No Club)</SelectItem>
+              <SelectItem value="independent">Independent (No Club)</SelectItem>
               {clubs.map((club) => (
                 <SelectItem key={club.id} value={club.id}>
                   {club.name}
