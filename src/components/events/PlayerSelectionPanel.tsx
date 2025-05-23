@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -6,7 +7,7 @@ import { FormationSelector } from './FormationSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
-import { GameFormat } from '@/types';
+import { GameFormat, Position } from '@/types';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
@@ -157,7 +158,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     
     const updatedPlayerPositions: {[position: string]: string} = {};
     Object.keys(playerPositions).forEach(pos => {
-      if (newPositions.includes(pos)) {
+      if (newPositions.includes(pos as Position)) {
         updatedPlayerPositions[pos] = playerPositions[pos];
       }
     });
