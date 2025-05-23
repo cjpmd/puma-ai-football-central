@@ -16,6 +16,7 @@ export type TeamStaff = {
   email: string;
   phone?: string;
   role: 'manager' | 'assistant_manager' | 'coach' | 'helper';
+  user_id?: string; // Added this property
   coachingBadges?: string[];
   certificates?: {
     id: string;

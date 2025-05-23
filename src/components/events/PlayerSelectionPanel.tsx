@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -231,14 +230,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       if (checkError) throw checkError;
 
       if (existingData?.id) {
-        // Update existing selection
+        // Update existing selection - convert arrays to Json for database
         const { error } = await supabase
           .from('event_selections')
           .update({
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: playerPositionsArray,
-            substitutes: substitutes,
+            player_positions: playerPositionsArray as any, // Cast to any to satisfy Json type
+            substitutes: substitutes as any, // Cast to any to satisfy Json type
             performance_category_id: performanceCategoryId,
             updated_at: new Date().toISOString()
           })
@@ -246,7 +245,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
         if (error) throw error;
       } else {
-        // Create new selection
+        // Create new selection - convert arrays to Json for database
         const { error } = await supabase
           .from('event_selections')
           .insert({
@@ -256,8 +255,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             period_number: periodNumber,
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: playerPositionsArray,
-            substitutes: substitutes,
+            player_positions: playerPositionsArray as any, // Cast to any to satisfy Json type
+            substitutes: substitutes as any, // Cast to any to satisfy Json type
             performance_category_id: performanceCategoryId,
             duration_minutes: 45, // Default value
           });
