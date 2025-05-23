@@ -27,6 +27,60 @@ export interface TeamStaff {
   updatedAt?: string;
 }
 
+export type PlayerAttributeGroup = "goalkeeping" | "mental" | "physical" | "technical";
+
+export const DEFAULT_PLAYER_ATTRIBUTES: Record<PlayerAttributeGroup, string[]> = {
+  goalkeeping: [
+    'Shot Stopping',
+    'Distribution',
+    'Communication',
+    'Cross Handling',
+    'One-on-One',
+    'Footwork'
+  ],
+  mental: [
+    'Decision Making',
+    'Concentration',
+    'Leadership',
+    'Work Rate',
+    'Teamwork',
+    'Composure'
+  ],
+  physical: [
+    'Pace',
+    'Stamina',
+    'Strength',
+    'Jumping',
+    'Balance',
+    'Agility'
+  ],
+  technical: [
+    'First Touch',
+    'Passing',
+    'Shooting',
+    'Dribbling',
+    'Crossing',
+    'Tackling'
+  ]
+};
+
+export type FAProvider = 'comet' | 'matchday' | 'fulltime' | 'playmetrix' | 'custom';
+
+export interface PlayerAttribute {
+  id: string;
+  name: string;
+  group: PlayerAttributeGroup;
+  value: number;
+  enabled: boolean;
+}
+
+export interface FAConnection {
+  provider: FAProvider;
+  isConnected: boolean;
+  syncEnabled: boolean;
+  lastSync?: string;
+}
+
 export interface Team {
   id: string;
   name: string;
@@ -47,6 +101,8 @@ export interface Team {
   managerName?: string;
   managerEmail?: string;
   managerPhone?: string;
+  playerAttributes?: Record<PlayerAttributeGroup, PlayerAttribute[]>;
+  faConnection?: FAConnection;
   createdAt?: string;
   updatedAt?: string;
 }

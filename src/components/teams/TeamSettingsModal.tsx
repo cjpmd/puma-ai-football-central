@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Team } from '@/types/team';
+import { Team } from '@/types';
 import { TeamBasicSettings } from './settings/TeamBasicSettings';
 import { TeamSubscriptionSettings } from './settings/TeamSubscriptionSettings';
 import { TeamAttributeSettings } from './settings/TeamAttributeSettings';
@@ -53,19 +53,19 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       id: 'attributes',
       label: 'Player Attributes',
       icon: <Star className="h-4 w-4" />,
-      component: <TeamAttributeSettings team={team} onUpdate={onUpdate} />
+      component: <TeamAttributeSettings team={team as any} onUpdate={onUpdate} />
     },
     {
       id: 'staff',
       label: 'Staff Management',
       icon: <Users className="h-4 w-4" />,
-      component: <TeamStaffSettings team={team} onUpdate={onUpdate} />
+      component: <TeamStaffSettings team={team as any} onUpdate={onUpdate} />
     },
     {
       id: 'fa-connection',
       label: 'FA Connection',
       icon: <Wifi className="h-4 w-4" />,
-      component: <TeamFAConnection team={team} onUpdate={onUpdate} />
+      component: <TeamFAConnection team={team as any} onUpdate={onUpdate} />
     },
     {
       id: 'kit',

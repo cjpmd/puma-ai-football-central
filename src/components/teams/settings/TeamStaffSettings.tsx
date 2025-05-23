@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -84,8 +83,17 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
           phone: record.phone || '',
           role: record.role as TeamStaff['role'],
           user_id: record.user_id || undefined,
-          coachingBadges: Array.isArray(record.coaching_badges) ? record.coaching_badges : [],
-          certificates: Array.isArray(record.certificates) ? record.certificates : [],
+          coachingBadges: Array.isArray(record.coaching_badges) 
+            ? (record.coaching_badges as any[]).map(badge => String(badge))
+            : [],
+          certificates: Array.isArray(record.certificates) 
+            ? (record.certificates as any[]).map(cert => ({
+                name: String(cert.name || ''),
+                issuedBy: String(cert.issuedBy || ''),
+                dateIssued: String(cert.dateIssued || ''),
+                expiryDate: cert.expiryDate ? String(cert.expiryDate) : undefined
+              }))
+            : [],
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }));

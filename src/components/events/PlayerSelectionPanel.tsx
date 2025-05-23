@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -32,6 +31,7 @@ type PositionPlayerMap = Record<string, string>;
 interface PlayerPosition {
   playerId: string;
   positionId: string;
+  [key: string]: any; // Add index signature for Json compatibility
 }
 
 interface TeamSelection {
@@ -223,14 +223,18 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       if (checkError) throw checkError;
 
+      // Convert to Json-compatible format
+      const playerPositionsJson = playerPositionsArray as any;
+      const substitutesJson = substitutes as any;
+
       if (existingData?.id) {
         const { error } = await supabase
           .from('event_selections')
           .update({
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: playerPositionsArray,
-            substitutes: substitutes,
+            player_positions: playerPositionsJson,
+            substitutes: substitutesJson,
             performance_category_id: performanceCategoryId,
             updated_at: new Date().toISOString()
           })
@@ -247,8 +251,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             period_number: periodNumber,
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: playerPositionsArray,
-            substitutes: substitutes,
+            player_positions: playerPositionsJson,
+            substitutes: substitutesJson,
             performance_category_id: performanceCategoryId,
             duration_minutes: 45,
           });
