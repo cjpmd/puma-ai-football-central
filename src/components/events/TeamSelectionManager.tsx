@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -397,15 +398,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 <div className="space-y-2">
                   <Label htmlFor="performanceCategory">Performance Category</Label>
                   <Select 
-                    value={currentSelection.performanceCategoryId || ''}
+                    value={currentSelection.performanceCategoryId || 'none'}
                     onValueChange={(value) => updateTeamSelection(currentTeam, currentPeriod, { 
-                      performanceCategoryId: value || null 
+                      performanceCategoryId: value === 'none' ? null : value
                     })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="none">No category</SelectItem>
                       {performanceCategories.map(category => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}

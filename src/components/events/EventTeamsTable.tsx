@@ -1,11 +1,9 @@
-
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { TeamSelectionManager } from './TeamSelectionManager';
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
+import { TeamSelectionManager } from './TeamSelectionManager';
 
 interface EventTeamsTableProps {
   eventId: string;
@@ -18,119 +16,83 @@ interface Team {
   name: string;
 }
 
-export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
-  eventId,
+export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({ 
+  eventId, 
   primaryTeamId,
   gameFormat
 }) => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
-  const [selectedTeamId, setSelectedTeamId] = useState('');
-  const { toast } = useToast();
+  const [activeTeam, setActiveTeam] = useState<string>(primaryTeamId);
+  const { teams: userTeams } = useAuth();
 
   useEffect(() => {
     loadEventTeams();
-  }, [eventId]);
+  }, [eventId, primaryTeamId]);
 
   const loadEventTeams = async () => {
     try {
-      // First get the teams from the event_teams table
-      const { data: eventTeams, error: eventTeamsError } = await supabase
+      // First check if there are multiple teams in the event_teams table
+      const { data: eventTeamsData, error: eventTeamsError } = await supabase
         .from('event_teams')
         .select('team_id')
         .eq('event_id', eventId);
 
       if (eventTeamsError) throw eventTeamsError;
-
-      // If no event teams are stored yet, use the primary team
-      if (!eventTeams || eventTeams.length === 0) {
-        const { data: teamData, error: teamError } = await supabase
-          .from('teams')
-          .select('id, name')
-          .eq('id', primaryTeamId)
-          .single();
-          
-        if (teamError) throw teamError;
+      
+      // If there are teams in event_teams, use those
+      if (eventTeamsData && eventTeamsData.length > 0) {
+        const teamIds = eventTeamsData.map(et => et.team_id);
         
-        setTeams([teamData]);
+        // Filter user teams to only include teams in the event
+        const eventTeams = userTeams.filter(team => teamIds.includes(team.id));
+        setTeams(eventTeams.map(team => ({ id: team.id, name: team.name })));
       } else {
-        // Get all teams info
-        const teamIds = eventTeams.map(team => team.team_id);
-        const { data: teamsData, error: teamsError } = await supabase
-          .from('teams')
-          .select('id, name')
-          .in('id', teamIds);
-          
-        if (teamsError) throw teamsError;
-        
-        setTeams(teamsData || []);
+        // Otherwise, just use the primary team
+        const primaryTeam = userTeams.find(t => t.id === primaryTeamId);
+        if (primaryTeam) {
+          setTeams([{ id: primaryTeam.id, name: primaryTeam.name }]);
+        }
       }
       
       setLoading(false);
     } catch (error) {
       console.error('Error loading event teams:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load event teams',
-        variant: 'destructive',
-      });
       setLoading(false);
     }
-  };
-
-  const openTeamSelection = (teamId: string) => {
-    setSelectedTeamId(teamId);
-    setIsTeamSelectionOpen(true);
   };
 
   if (loading) {
     return <div className="text-center py-4">Loading teams...</div>;
   }
 
+  if (teams.length === 0) {
+    return <div className="text-center py-4">No teams found for this event.</div>;
+  }
+
   return (
-    <div className="space-y-4">
-      {!isTeamSelectionOpen ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Teams</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {teams.length === 0 ? (
-                <p>No teams have been added to this event.</p>
-              ) : (
-                teams.map(team => (
-                  <div key={team.id} className="flex items-center justify-between p-3 bg-background border rounded-md">
-                    <div className="flex items-center space-x-2">
-                      <Badge variant="outline">{team.id === primaryTeamId ? 'Primary' : 'Secondary'}</Badge>
-                      <span>{team.name}</span>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => openTeamSelection(team.id)}
-                    >
-                      Manage Team Selection
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          <Button variant="outline" onClick={() => setIsTeamSelectionOpen(false)}>
-            &larr; Back to Teams
-          </Button>
-          <TeamSelectionManager 
-            eventId={eventId} 
-            teamId={selectedTeamId} 
-            gameFormat={gameFormat} 
-          />
-        </div>
-      )}
-    </div>
+    <Card>
+      <CardContent className="p-6">
+        <Tabs value={activeTeam} onValueChange={setActiveTeam}>
+          <TabsList className="mb-6">
+            {teams.map(team => (
+              <TabsTrigger key={team.id} value={team.id}>
+                {team.name}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {teams.map(team => (
+            <TabsContent key={team.id} value={team.id}>
+              <TeamSelectionManager 
+                eventId={eventId}
+                teamId={team.id}
+                gameFormat={gameFormat}
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 };

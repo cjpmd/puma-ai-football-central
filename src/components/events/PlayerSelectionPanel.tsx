@@ -1,21 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { FormationSelector } from './FormationSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
-import { Plus, Users } from 'lucide-react';
-import { FormationSelector } from './FormationSelector';
-import { Position, GameFormat } from '@/types';
-
-interface Player {
-  id: string;
-  name: string;
-  squadNumber: number;
-  availability: string;
-}
+import { GameFormat } from '@/types';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
@@ -24,9 +15,24 @@ interface PlayerSelectionPanelProps {
   periodNumber: number;
 }
 
-interface PositionAssignment {
-  position: Position;
-  playerId: string | null;
+interface Player {
+  id: string;
+  name: string;
+  squadNumber: number;
+  position?: string;
+}
+
+interface PlayerPosition {
+  playerId: string;
+  positionId: string;
+}
+
+interface TeamSelection {
+  id?: string;
+  captainId: string | null;
+  formationId: string;
+  playerPositions: PlayerPosition[];
+  substitutes: string[];
 }
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
@@ -35,60 +41,46 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   gameFormat,
   periodNumber
 }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [positions, setPositions] = useState<PositionAssignment[]>([]);
-  const [substitutes, setSubstitutes] = useState<string[]>([]);
-  const [captainId, setCaptainId] = useState<string>('');
-  const [selectedFormation, setSelectedFormation] = useState<string>('');
-  const { toast } = useToast();
-
-  // Cast gameFormat to GameFormat type for utility functions
+  // Cast gameFormat to the correct type for the utility functions
   const gameFormatTyped = gameFormat as GameFormat;
-  const formations = getFormationsByFormat(gameFormatTyped);
+  
+  const [loading, setLoading] = useState(true);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selectedFormation, setSelectedFormation] = useState('');
+  const [positions, setPositions] = useState<string[]>([]);
+  const [playerPositions, setPlayerPositions] = useState<{[position: string]: string}>({});
+  const [substitutes, setSubstitutes] = useState<string[]>([]);
+  const [captainId, setCaptainId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadPlayers();
-    // Set default formation if available
-    if (formations.length > 0 && !selectedFormation) {
-      setSelectedFormation(formations[0].id);
-    }
-  }, [teamId, gameFormat]);
+    loadTeamSelection();
+  }, [eventId, teamId, periodNumber]);
 
   useEffect(() => {
-    // Update positions when formation changes
     if (selectedFormation) {
       const formationPositions = getPositionsForFormation(selectedFormation, gameFormatTyped);
-      const newPositions: PositionAssignment[] = formationPositions.map(position => {
-        // Try to keep existing player assignments when switching formations
-        const existingAssignment = positions.find(p => p.position === position);
-        return {
-          position,
-          playerId: existingAssignment?.playerId || null
-        };
-      });
-      setPositions(newPositions);
+      setPositions(formationPositions);
     }
-  }, [selectedFormation, gameFormat]);
+  }, [selectedFormation, gameFormatTyped]);
 
   const loadPlayers = async () => {
     try {
       const { data, error } = await supabase
         .from('players')
-        .select('id, name, squad_number, availability')
+        .select('id, name, squad_number')
         .eq('team_id', teamId)
         .eq('status', 'active')
         .order('squad_number');
 
       if (error) throw error;
 
-      const transformedPlayers: Player[] = (data || []).map(player => ({
-        id: player.id,
-        name: player.name,
-        squadNumber: player.squad_number,
-        availability: player.availability
-      }));
-
-      setPlayers(transformedPlayers);
+      setPlayers(data?.map(p => ({
+        id: p.id,
+        name: p.name,
+        squadNumber: p.squad_number
+      })) || []);
     } catch (error) {
       console.error('Error loading players:', error);
       toast({
@@ -99,117 +91,176 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
-  const getAvailabilityColor = (availability: string) => {
-    switch (availability.toLowerCase()) {
-      case 'green':
-        return 'bg-green-500';
-      case 'amber':
-        return 'bg-amber-500';
-      case 'red':
-        return 'bg-red-500';
-      default:
-        return 'bg-gray-500';
+  const loadTeamSelection = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_selections')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('team_id', teamId)
+        .eq('team_number', 1)
+        .eq('period_number', periodNumber)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+        throw error;
+      }
+
+      if (data) {
+        // Set formation
+        setSelectedFormation(data.formation || '');
+        setCaptainId(data.captain_id);
+        
+        // Parse player positions and substitutes
+        let positions: {[position: string]: string} = {};
+        let subs: string[] = [];
+        
+        if (data.player_positions) {
+          const parsedPositions = typeof data.player_positions === 'string' 
+            ? JSON.parse(data.player_positions) 
+            : data.player_positions;
+            
+          parsedPositions.forEach((pp: {playerId: string, positionId: string}) => {
+            positions[pp.positionId] = pp.playerId;
+          });
+        }
+        
+        if (data.substitutes) {
+          subs = typeof data.substitutes === 'string'
+            ? JSON.parse(data.substitutes)
+            : data.substitutes;
+        }
+        
+        setPlayerPositions(positions);
+        setSubstitutes(subs);
+      } else {
+        // Initialize with default values
+        const formations = getFormationsByFormat(gameFormatTyped);
+        setSelectedFormation(formations.length > 0 ? formations[0].id : '');
+      }
+    } catch (error) {
+      console.error('Error loading team selection:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load team selection',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getSelectedPlayerIds = () => {
-    return [
-      ...positions.map(p => p.playerId).filter(Boolean),
-      ...substitutes
-    ] as string[];
+  const handleFormationChange = (formationId: string) => {
+    setSelectedFormation(formationId);
+    // When formation changes, keep player assignments for positions that still exist
+    const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
+    
+    const updatedPlayerPositions: {[position: string]: string} = {};
+    Object.keys(playerPositions).forEach(pos => {
+      if (newPositions.includes(pos)) {
+        updatedPlayerPositions[pos] = playerPositions[pos];
+      }
+    });
+    
+    setPlayerPositions(updatedPlayerPositions);
   };
 
-  const isPlayerSelected = (playerId: string) => {
-    return getSelectedPlayerIds().includes(playerId);
+  const handlePlayerChange = (position: string, playerId: string) => {
+    setPlayerPositions(prev => ({
+      ...prev,
+      [position]: playerId
+    }));
   };
 
-  const handlePositionChange = (position: Position, playerId: string | null) => {
-    setPositions(prev => 
-      prev.map(p => 
-        p.position === position 
-          ? { ...p, playerId } 
-          : p
-      )
-    );
+  const handleCaptainChange = (captainId: string) => {
+    setCaptainId(captainId === 'none' ? null : captainId);
   };
 
   const handleAddSubstitute = (playerId: string) => {
-    if (!substitutes.includes(playerId)) {
-      setSubstitutes(prev => [...prev, playerId]);
+    if (playerId && playerId !== 'none' && !substitutes.includes(playerId)) {
+      setSubstitutes([...substitutes, playerId]);
     }
   };
 
   const handleRemoveSubstitute = (playerId: string) => {
-    setSubstitutes(prev => prev.filter(id => id !== playerId));
+    setSubstitutes(substitutes.filter(id => id !== playerId));
+  };
+
+  const isPlayerAssigned = (playerId: string) => {
+    return Object.values(playerPositions).includes(playerId) || substitutes.includes(playerId);
+  };
+
+  if (loading) {
+    return <div>Loading player selection...</div>;
+  }
+
+  // Get available players for selection (not assigned to other positions)
+  const getAvailablePlayersForPosition = (currentPosition: string) => {
+    return players.filter(player => 
+      // Include if either:
+      // 1. Player is not assigned to any position
+      // 2. Player is assigned to this position
+      // 3. We want to allow players to be selected for multiple positions
+      !isPlayerAssigned(player.id) || playerPositions[currentPosition] === player.id
+    );
   };
 
   const getPlayerName = (playerId: string) => {
     const player = players.find(p => p.id === playerId);
-    return player ? `${player.name} (#${player.squadNumber})` : '';
+    return player ? `${player.squadNumber}. ${player.name}` : '';
   };
 
   return (
-    <div className="space-y-6">
-      {/* Formation Selection with Mini Pitches */}
+    <div className="space-y-4">
+      {/* Formation Selector */}
+      <FormationSelector 
+        gameFormat={gameFormatTyped}
+        selectedFormation={selectedFormation}
+        onFormationChange={handleFormationChange}
+      />
+      
+      {/* Captain Selection */}
+      <div className="space-y-2">
+        <Label htmlFor="captainSelection">Captain</Label>
+        <Select value={captainId || 'none'} onValueChange={handleCaptainChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select captain" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">No captain selected</SelectItem>
+            {players.map(player => (
+              <SelectItem key={player.id} value={player.id}>
+                {player.squadNumber}. {player.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      
+      {/* Player Position Selection */}
       <Card>
-        <CardHeader>
-          <CardTitle>Formation & Captain</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FormationSelector
-            gameFormat={gameFormatTyped}
-            selectedFormation={selectedFormation}
-            onFormationChange={setSelectedFormation}
-          />
-          
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Captain</label>
-            <Select value={captainId} onValueChange={setCaptainId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select captain" />
-              </SelectTrigger>
-              <SelectContent>
-                {players.map(player => (
-                  <SelectItem key={player.id} value={player.id}>
-                    {player.name} (#{player.squadNumber})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Starting Positions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Starting Positions ({selectedFormation || 'No formation selected'})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {positions.map((positionAssignment, index) => (
-              <div key={`${positionAssignment.position}-${index}`} className="space-y-2">
-                <label className="text-sm font-medium">{positionAssignment.position}</label>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {positions.map((position) => (
+              <div key={position} className="space-y-2">
+                <Label htmlFor={`position-${position}`}>{position}</Label>
                 <Select 
-                  value={positionAssignment.playerId || ''} 
-                  onValueChange={(value) => handlePositionChange(positionAssignment.position, value || null)}
+                  value={playerPositions[position] || 'none'} 
+                  onValueChange={(value) => handlePlayerChange(position, value === 'none' ? '' : value)}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select player" />
+                  <SelectTrigger id={`position-${position}`}>
+                    <SelectValue placeholder={`Select player for ${position}`} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No player</SelectItem>
+                    <SelectItem value="none">No player selected</SelectItem>
                     {players.map(player => (
                       <SelectItem 
                         key={player.id} 
                         value={player.id}
-                        className={isPlayerSelected(player.id) && positionAssignment.playerId !== player.id ? 'opacity-50' : ''}
+                        className={isPlayerAssigned(player.id) && playerPositions[position] !== player.id ? 
+                          "text-gray-400" : ""}
                       >
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${getAvailabilityColor(player.availability)}`} />
-                          {player.name} (#{player.squadNumber})
-                          {captainId === player.id && <Badge variant="secondary">C</Badge>}
-                        </div>
+                        {player.squadNumber}. {player.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -219,81 +270,51 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           </div>
         </CardContent>
       </Card>
-
-      {/* Substitutes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Substitutes</span>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {substitutes.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">No substitutes selected</p>
-          ) : (
-            <div className="space-y-2">
-              {substitutes.map(playerId => (
-                <div key={playerId} className="flex items-center justify-between p-2 bg-muted rounded">
-                  <span>{getPlayerName(playerId)}</span>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => handleRemoveSubstitute(playerId)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
+      
+      {/* Substitutes Selection */}
+      <div className="space-y-2">
+        <Label>Substitutes</Label>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {substitutes.map(subId => (
+            <div key={subId} className="bg-gray-100 px-3 py-1 rounded-full flex items-center">
+              <span>{getPlayerName(subId)}</span>
+              <button 
+                className="ml-2 text-red-500 hover:text-red-700"
+                onClick={() => handleRemoveSubstitute(subId)}
+              >
+                ×
+              </button>
             </div>
-          )}
-          
-          <div className="mt-4">
-            <label className="text-sm font-medium">Add Substitute</label>
-            <Select onValueChange={handleAddSubstitute}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select player for substitutes" />
-              </SelectTrigger>
-              <SelectContent>
-                {players
-                  .filter(player => !getSelectedPlayerIds().includes(player.id))
-                  .map(player => (
-                    <SelectItem key={player.id} value={player.id}>
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${getAvailabilityColor(player.availability)}`} />
-                        {player.name} (#{player.squadNumber})
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Formation View */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Formation View</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-green-100 aspect-[3/2] rounded-lg p-4 text-center relative border-2 border-green-300">
-            <p className="text-muted-foreground">Formation: {selectedFormation || 'None selected'}</p>
-            <p className="text-sm mt-2">Players assigned: {positions.filter(p => p.playerId).length}/{positions.length}</p>
-            
-            {/* Simple position representation */}
-            <div className="absolute inset-4 grid grid-cols-3 gap-2">
-              {positions.slice(0, Math.min(6, positions.length)).map((position, index) => (
-                <div key={`${position.position}-${index}`} className="bg-white rounded p-2 text-xs text-center">
-                  <div className="font-medium">{position.position}</div>
-                  <div className="text-gray-600">
-                    {position.playerId ? getPlayerName(position.playerId) : 'Empty'}
-                  </div>
-                </div>
+          ))}
+        </div>
+        
+        <Select 
+          value="none" 
+          onValueChange={(value) => {
+            if (value !== 'none') {
+              handleAddSubstitute(value);
+            }
+          }}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Add substitute" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Select player</SelectItem>
+            {players
+              .filter(player => !substitutes.includes(player.id))
+              .map(player => (
+                <SelectItem 
+                  key={player.id} 
+                  value={player.id}
+                  className={isPlayerAssigned(player.id) ? "text-gray-400" : ""}
+                >
+                  {player.squadNumber}. {player.name}
+                </SelectItem>
               ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </SelectContent>
+        </Select>
+      </div>
     </div>
   );
 };
