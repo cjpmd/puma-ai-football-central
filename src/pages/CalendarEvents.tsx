@@ -47,15 +47,17 @@ const CalendarEvents = () => {
 
     try {
       setLoading(true);
-      const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      
+      // Load events for the entire year to show proper dots on calendar
+      const startOfYear = new Date(currentMonth.getFullYear(), 0, 1);
+      const endOfYear = new Date(currentMonth.getFullYear(), 11, 31);
 
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('team_id', selectedTeam)
-        .gte('date', startOfMonth.toISOString().split('T')[0])
-        .lte('date', endOfMonth.toISOString().split('T')[0])
+        .gte('date', startOfYear.toISOString().split('T')[0])
+        .lte('date', endOfYear.toISOString().split('T')[0])
         .order('date')
         .order('start_time');
 
@@ -291,14 +293,22 @@ const CalendarEvents = () => {
   };
 
   const getCurrentMonthEvents = () => {
-    return events.sort((a, b) => {
-      if (a.date === b.date) {
-        const timeA = a.startTime || '00:00';
-        const timeB = b.startTime || '00:00';
-        return timeA.localeCompare(timeB);
-      }
-      return a.date.localeCompare(b.date);
-    });
+    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+    
+    return events
+      .filter(event => {
+        const eventDate = new Date(event.date);
+        return eventDate >= startOfMonth && eventDate <= endOfMonth;
+      })
+      .sort((a, b) => {
+        if (a.date === b.date) {
+          const timeA = a.startTime || '00:00';
+          const timeB = b.startTime || '00:00';
+          return timeA.localeCompare(timeB);
+        }
+        return a.date.localeCompare(b.date);
+      });
   };
 
   return (
@@ -573,6 +583,15 @@ const CalendarEvents = () => {
                           month={currentMonth}
                           onMonthChange={setCurrentMonth}
                           className="rounded-md border"
+                          modifiers={{
+                            hasEvents: (date) => getEventsForDate(date).length > 0
+                          }}
+                          modifiersStyles={{
+                            hasEvents: { 
+                              backgroundColor: '#dbeafe',
+                              borderRadius: '6px'
+                            }
+                          }}
                           components={{
                             Day: ({ date, ...props }) => {
                               const dayEvents = getEventsForDate(date);
@@ -580,18 +599,20 @@ const CalendarEvents = () => {
                               const hasTraining = dayEvents.some(e => e.type === 'training');
                               
                               return (
-                                <div className="relative">
-                                  <button {...props}>
+                                <div className="relative w-full h-full">
+                                  <button {...props} className="w-full h-full">
                                     {date.getDate()}
                                   </button>
-                                  <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1">
-                                    {hasFixtures && (
-                                      <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                                    )}
-                                    {hasTraining && (
-                                      <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                    )}
-                                  </div>
+                                  {dayEvents.length > 0 && (
+                                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1">
+                                      {hasFixtures && (
+                                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                                      )}
+                                      {hasTraining && (
+                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             }
@@ -714,11 +735,13 @@ const CalendarEvents = () => {
               <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
             </DialogHeader>
             {selectedEvent && (
-              <TeamSelectionManager
-                eventId={selectedEvent.id}
-                teamId={selectedEvent.teamId}
-                gameFormat={selectedEvent.gameFormat}
-              />
+              <ScrollArea className="h-[80vh]">
+                <TeamSelectionManager
+                  eventId={selectedEvent.id}
+                  teamId={selectedEvent.teamId}
+                  gameFormat={selectedEvent.gameFormat}
+                />
+              </ScrollArea>
             )}
           </DialogContent>
         </Dialog>
