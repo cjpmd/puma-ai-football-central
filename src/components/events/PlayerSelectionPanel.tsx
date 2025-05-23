@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -26,7 +27,6 @@ interface Player {
   position?: string;
 }
 
-// Simple type definitions to avoid recursive issues
 type PositionPlayerMap = Record<string, string>;
 
 interface PlayerPosition {
@@ -51,7 +51,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   performanceCategoryId,
   onSave
 }) => {
-  // Cast gameFormat to the correct type for the utility functions
   const gameFormatTyped = gameFormat as GameFormat;
   
   const [loading, setLoading] = useState(true);
@@ -113,16 +112,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .eq('period_number', periodNumber)
         .single();
 
-      if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+      if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
       if (data) {
-        // Set formation
         setSelectedFormation(data.formation || '');
         setCaptainId(data.captain_id);
         
-        // Parse player positions and substitutes with explicit typing
         const positions: PositionPlayerMap = {};
         const subs: string[] = [];
         
@@ -153,7 +150,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setPlayerPositions(positions);
         setSubstitutes(subs);
       } else {
-        // Initialize with default values
         const formations = getFormationsByFormat(gameFormatTyped);
         setSelectedFormation(formations.length > 0 ? formations[0].id : '');
       }
@@ -171,7 +167,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   const handleFormationChange = (formationId: string) => {
     setSelectedFormation(formationId);
-    // When formation changes, keep player assignments for positions that still exist
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
     const newPositionStrings = newPositions.map(pos => String(pos));
     
@@ -210,15 +205,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     try {
       setSaving(true);
       
-      // Convert playerPositions object to array of PlayerPosition objects
       const playerPositionsArray: PlayerPosition[] = Object.entries(playerPositions).map(
         ([positionId, playerId]) => ({
           positionId,
           playerId: playerId || ''
         })
-      ).filter(pp => pp.playerId); // Remove empty player IDs
+      ).filter(pp => pp.playerId);
 
-      // Check if team selection already exists
       const { data: existingData, error: checkError } = await supabase
         .from('event_selections')
         .select('id')
@@ -231,14 +224,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       if (checkError) throw checkError;
 
       if (existingData?.id) {
-        // Update existing selection - convert arrays to Json for database
         const { error } = await supabase
           .from('event_selections')
           .update({
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: JSON.stringify(playerPositionsArray),
-            substitutes: JSON.stringify(substitutes),
+            player_positions: playerPositionsArray,
+            substitutes: substitutes,
             performance_category_id: performanceCategoryId,
             updated_at: new Date().toISOString()
           })
@@ -246,7 +238,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
         if (error) throw error;
       } else {
-        // Create new selection - convert arrays to Json for database
         const { error } = await supabase
           .from('event_selections')
           .insert({
@@ -256,10 +247,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             period_number: periodNumber,
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: JSON.stringify(playerPositionsArray),
-            substitutes: JSON.stringify(substitutes),
+            player_positions: playerPositionsArray,
+            substitutes: substitutes,
             performance_category_id: performanceCategoryId,
-            duration_minutes: 45, // Default value
+            duration_minutes: 45,
           });
 
         if (error) throw error;
@@ -285,38 +276,23 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
-  // Check if a player is assigned across all teams in this event, not just current team
-  const isPlayerAssigned = (playerId: string) => {
-    return Object.values(playerPositions).includes(playerId) || substitutes.includes(playerId);
+  const getPlayerName = (playerId: string) => {
+    const player = players.find(p => p.id === playerId);
+    return player ? `${player.squadNumber}. ${player.name}` : '';
   };
 
   if (loading) {
     return <div>Loading player selection...</div>;
   }
 
-  // Get available players for selection (players can be selected for multiple teams)
-  const getAvailablePlayersForPosition = (currentPosition: string) => {
-    return players.filter(player => 
-      // Include all players - they can be selected for multiple teams in the same event
-      true
-    );
-  };
-
-  const getPlayerName = (playerId: string) => {
-    const player = players.find(p => p.id === playerId);
-    return player ? `${player.squadNumber}. ${player.name}` : '';
-  };
-
   return (
     <div className="space-y-4">
-      {/* Formation Selector */}
       <FormationSelector 
         gameFormat={gameFormatTyped}
         selectedFormation={selectedFormation}
         onFormationChange={handleFormationChange}
       />
       
-      {/* Captain Selection */}
       <div className="space-y-2">
         <Label htmlFor="captainSelection">Captain</Label>
         <Select value={captainId || 'none'} onValueChange={handleCaptainChange}>
@@ -334,7 +310,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         </Select>
       </div>
       
-      {/* Player Position Selection */}
       <Card>
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -350,7 +325,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No player selected</SelectItem>
-                    {getAvailablePlayersForPosition(position).map(player => (
+                    {players.map(player => (
                       <SelectItem 
                         key={player.id} 
                         value={player.id}
@@ -366,7 +341,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         </CardContent>
       </Card>
       
-      {/* Substitutes Selection */}
       <div className="space-y-2">
         <Label>Substitutes</Label>
         <div className="flex flex-wrap gap-2 mb-4">

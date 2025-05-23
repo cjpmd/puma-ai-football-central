@@ -141,7 +141,7 @@ const TeamManagement = () => {
 
   const getClubName = (clubId?: string) => {
     if (!clubId) return 'Independent';
-    const club = clubs.find(club => club.id === clubId);
+    const club = clubs?.find(club => club.id === clubId);
     return club?.name || 'Independent';
   };
 

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +21,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   team,
   onUpdate
 }) => {
-  const [staff, setStaff] = useState<TeamStaff[]>(team.staff || []);
+  const [staff, setStaff] = useState<TeamStaff[]>([]);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
   const [newStaff, setNewStaff] = useState({
@@ -32,7 +33,6 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   const { toast } = useToast();
   const { user } = useAuth();
 
-  // Load staff from database on initial render
   useEffect(() => {
     loadStaffFromDatabase();
   }, [team.id]);
@@ -77,7 +77,6 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       if (error) throw error;
 
       if (data) {
-        // Transform database records to TeamStaff objects
         const staffMembers: TeamStaff[] = data.map(record => ({
           id: record.id,
           name: record.name,
@@ -85,8 +84,8 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
           phone: record.phone || '',
           role: record.role as TeamStaff['role'],
           user_id: record.user_id || undefined,
-          coachingBadges: Array.isArray(record.coaching_badges) ? record.coaching_badges as string[] : [],
-          certificates: Array.isArray(record.certificates) ? record.certificates as TeamStaff['certificates'] : [],
+          coachingBadges: Array.isArray(record.coaching_badges) ? record.coaching_badges : [],
+          certificates: Array.isArray(record.certificates) ? record.certificates : [],
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }));
@@ -111,7 +110,6 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         ...newStaff,
         coachingBadges: [],
         certificates: [],
-        // Set user_id if adding the current user as staff
         user_id: newStaff.email === user?.email ? user?.id : undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -120,7 +118,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       const success = await saveStaffToDatabase(staffMember);
       
       if (success) {
-        await loadStaffFromDatabase(); // Reload from DB to get the correct ID
+        await loadStaffFromDatabase();
         
         setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
         setIsAddingStaff(false);
@@ -144,7 +142,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       const success = await saveStaffToDatabase(updatedStaffMember);
       
       if (success) {
-        await loadStaffFromDatabase(); // Reload from DB to get the updated data
+        await loadStaffFromDatabase();
         
         setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
         setEditingStaff(null);
@@ -168,7 +166,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       
       if (error) throw error;
       
-      await loadStaffFromDatabase(); // Reload from DB
+      await loadStaffFromDatabase();
       
       toast({
         title: 'Success',
