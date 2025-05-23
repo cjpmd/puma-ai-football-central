@@ -18,8 +18,8 @@ interface EquipmentItem {
   description?: string;
   quantity: number;
   condition: 'excellent' | 'good' | 'fair' | 'poor';
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 interface TeamEquipmentSettingsProps {
@@ -47,21 +47,21 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('team_equipment')
+        .from('team_equipment' as any)
         .select('*')
         .eq('team_id', team.id)
         .order('name');
 
       if (error) throw error;
 
-      const equipmentData: EquipmentItem[] = (data || []).map(item => ({
+      const equipmentData: EquipmentItem[] = (data || []).map((item: any) => ({
         id: item.id,
         name: item.name,
         description: item.description || '',
         quantity: item.quantity,
         condition: item.condition as EquipmentItem['condition'],
-        createdAt: item.created_at,
-        updatedAt: item.updated_at
+        created_at: item.created_at,
+        updated_at: item.updated_at
       }));
 
       setEquipment(equipmentData);
@@ -79,7 +79,7 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
     try {
       if (editingItem) {
         const { error } = await supabase
-          .from('team_equipment')
+          .from('team_equipment' as any)
           .update({
             name: formData.name,
             description: formData.description,
@@ -92,7 +92,7 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
         toast.success('Equipment updated successfully');
       } else {
         const { error } = await supabase
-          .from('team_equipment')
+          .from('team_equipment' as any)
           .insert({
             team_id: team.id,
             name: formData.name,
@@ -131,7 +131,7 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
 
     try {
       const { error } = await supabase
-        .from('team_equipment')
+        .from('team_equipment' as any)
         .delete()
         .eq('id', id);
 

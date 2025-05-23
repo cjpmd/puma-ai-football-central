@@ -851,6 +851,72 @@ export type Database = {
           },
         ]
       }
+      team_equipment: {
+        Row: {
+          condition: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          quantity: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          quantity?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          quantity?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      team_privacy_settings: {
+        Row: {
+          created_at: string
+          id: string
+          show_player_stats_to_parents: boolean
+          show_player_stats_to_players: boolean
+          show_scores_to_parents: boolean
+          show_scores_to_players: boolean
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          show_player_stats_to_parents?: boolean
+          show_player_stats_to_players?: boolean
+          show_scores_to_parents?: boolean
+          show_scores_to_players?: boolean
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          show_player_stats_to_parents?: boolean
+          show_player_stats_to_players?: boolean
+          show_scores_to_parents?: boolean
+          show_scores_to_players?: boolean
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_staff: {
         Row: {
           certificates: Json | null

@@ -37,7 +37,7 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
   const loadPrivacySettings = async () => {
     try {
       const { data, error } = await supabase
-        .from('team_privacy_settings')
+        .from('team_privacy_settings' as any)
         .select('*')
         .eq('team_id', team.id)
         .single();
@@ -63,7 +63,7 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
       setLoading(true);
 
       const { error } = await supabase
-        .from('team_privacy_settings')
+        .from('team_privacy_settings' as any)
         .upsert({
           team_id: team.id,
           show_scores_to_parents: settings.showScoresToParents,
