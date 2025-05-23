@@ -46,6 +46,23 @@ interface TeamSelectionData {
   substitutes: string[];
 }
 
+// Interface for the DB response from event_selections table
+interface EventSelectionRow {
+  id: string;
+  event_id: string;
+  team_id: string;
+  team_number?: number;
+  period_number: number;
+  captain_id: string | null;
+  performance_category_id: string | null;
+  formation: string | null;
+  duration_minutes: number;
+  player_positions: any;
+  substitutes: any;
+  created_at: string;
+  updated_at: string;
+}
+
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   eventId,
   teamId,
@@ -131,7 +148,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const teamSelectionData: { [teamNumber: string]: TeamSelectionData } = {};
         const periodCounts: { [teamNumber: string]: number } = {};
         
-        data.forEach(selection => {
+        // Cast data to the correct type
+        const selections = data as EventSelectionRow[];
+        
+        selections.forEach(selection => {
           const teamNumber = `team-${selection.team_number || 1}`;
           const periodNumber = selection.period_number;
           
@@ -145,16 +165,23 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           let substitutes: string[] = [];
           
           try {
-            if (selection.player_positions && typeof selection.player_positions === 'object') {
-              playerPositions = Array.isArray(selection.player_positions) 
-                ? selection.player_positions as PlayerPosition[]
-                : [];
+            // Parse player positions safely
+            if (selection.player_positions) {
+              // Handle different ways the data might be stored
+              if (typeof selection.player_positions === 'string') {
+                playerPositions = JSON.parse(selection.player_positions);
+              } else if (Array.isArray(selection.player_positions)) {
+                playerPositions = selection.player_positions as unknown as PlayerPosition[];
+              }
             }
             
-            if (selection.substitutes && typeof selection.substitutes === 'object') {
-              substitutes = Array.isArray(selection.substitutes) 
-                ? selection.substitutes as string[]
-                : [];
+            // Parse substitutes safely
+            if (selection.substitutes) {
+              if (typeof selection.substitutes === 'string') {
+                substitutes = JSON.parse(selection.substitutes);
+              } else if (Array.isArray(selection.substitutes)) {
+                substitutes = selection.substitutes as unknown as string[];
+              }
             }
           } catch (e) {
             console.error('Error parsing JSON data:', e);
@@ -285,8 +312,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               performance_category_id: selection.performanceCategoryId,
               formation: selection.formationId,
               duration_minutes: selection.durationMinutes,
-              player_positions: selection.playerPositions,
-              substitutes: selection.substitutes,
+              player_positions: selection.playerPositions as any,
+              substitutes: selection.substitutes as any,
               updated_at: new Date().toISOString()
             })
             .eq('id', selection.id);
@@ -305,8 +332,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               performance_category_id: selection.performanceCategoryId,
               formation: selection.formationId,
               duration_minutes: selection.durationMinutes,
-              player_positions: selection.playerPositions,
-              substitutes: selection.substitutes
+              player_positions: selection.playerPositions as any,
+              substitutes: selection.substitutes as any
             });
             
           if (error) throw error;
