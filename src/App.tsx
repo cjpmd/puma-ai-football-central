@@ -11,6 +11,9 @@ import Dashboard from "./pages/Dashboard";
 import TeamManagement from "./pages/TeamManagement";
 import ClubManagement from "./pages/ClubManagement";
 import StaffManagement from "./pages/StaffManagement";
+import PlayerManagement from "./pages/PlayerManagement";
+import CalendarEvents from "./pages/CalendarEvents";
+import SubscriptionManagement from "./pages/SubscriptionManagement";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -32,6 +35,9 @@ const App = () => (
             <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
             <Route path="/clubs" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
             <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+            <Route path="/players" element={<ProtectedRoute><PlayerManagement /></ProtectedRoute>} />
+            <Route path="/calendar" element={<ProtectedRoute><CalendarEvents /></ProtectedRoute>} />
+            <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionManagement /></ProtectedRoute>} />
             
             {/* Legacy routes that redirect to dashboard */}
             <Route path="/dashboard/squad" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
