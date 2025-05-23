@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -191,16 +192,21 @@ const TeamManagement = () => {
     if (!clubId) return 'Independent';
     
     // Try from auth context clubs first
-    let club = clubs?.find(club => club.id === clubId);
-    
-    // If not found, try from all clubs
-    if (!club) {
-      club = allClubs.find(club => club.id === clubId);
+    const authClub = clubs?.find(club => club.id === clubId);
+    if (authClub) {
+      console.log('Found club name from auth context:', authClub.name, 'for clubId:', clubId);
+      return authClub.name;
     }
     
-    const clubName = club ? club.name : 'Independent';
-    console.log('Found club name:', clubName, 'for clubId:', clubId);
-    return clubName;
+    // If not found, try from all clubs
+    const allClub = allClubs.find(club => club.id === clubId);
+    if (allClub) {
+      console.log('Found club name from all clubs:', allClub.name, 'for clubId:', clubId);
+      return allClub.name;
+    }
+    
+    console.log('No club found for clubId:', clubId, 'returning Independent');
+    return 'Independent';
   };
 
   console.log('TeamManagement render - teams:', teams, 'clubs:', clubs, 'allClubs:', allClubs);
