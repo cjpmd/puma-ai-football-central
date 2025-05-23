@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,65 +10,195 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { EventForm } from '@/components/events/EventForm';
 import { Event } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const CalendarEvents = () => {
   const { teams } = useAuth();
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const { toast } = useToast();
 
-  // Mock events data - in real app this would come from database
-  const mockEvents: Event[] = [
-    {
-      id: "1",
-      type: "training",
-      teamId: teams[0]?.id || '',
-      title: "Weekly Training Session",
-      date: "2024-01-15",
-      meetingTime: "09:00",
-      startTime: "09:30",
-      endTime: "11:00",
-      location: "Training Ground A",
-      gameFormat: "7-a-side",
-      teams: [teams[0]?.id || ''],
-      periods: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: "2",
-      type: "fixture",
-      teamId: teams[0]?.id || '',
-      title: "vs Arsenal FC",
-      date: "2024-01-20",
-      meetingTime: "13:00",
-      startTime: "14:00",
-      endTime: "15:30",
-      location: "Home Stadium",
-      gameFormat: "7-a-side",
-      opponent: "Arsenal FC",
-      isHome: true,
-      teams: [teams[0]?.id || ''],
-      periods: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+  useEffect(() => {
+    if (teams.length > 0) {
+      loadEvents();
     }
-  ];
+  }, [teams]);
+
+  const loadEvents = async () => {
+    setLoading(true);
+    try {
+      console.log('Loading events for teams:', teams.map(t => t.id));
+      
+      const teamIds = teams.map(t => t.id);
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .in('team_id', teamIds)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('Error loading events:', error);
+        throw error;
+      }
+
+      console.log('Loaded events:', data);
+
+      // Transform database fields to match interface
+      const transformedEvents: Event[] = (data || []).map(event => ({
+        id: event.id,
+        type: event.event_type as any,
+        teamId: event.team_id,
+        title: event.title,
+        date: event.date,
+        meetingTime: event.meeting_time || '09:00',
+        startTime: event.start_time || '10:00',
+        endTime: event.end_time || '11:30',
+        location: event.location || '',
+        gameFormat: event.game_format as any || '7-a-side',
+        opponent: event.opponent,
+        isHome: event.is_home,
+        teams: [event.team_id],
+        periods: [],
+        createdAt: event.created_at,
+        updatedAt: event.updated_at
+      }));
+
+      setEvents(transformedEvents);
+    } catch (error: any) {
+      console.error('Error in loadEvents:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load events',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCreateEvent = async (eventData: Partial<Event>) => {
     try {
-      // In real app, this would create event in database
       console.log('Creating event:', eventData);
+
+      const { data, error } = await supabase
+        .from('events')
+        .insert({
+          event_type: eventData.type,
+          team_id: eventData.teamId,
+          title: eventData.title,
+          date: eventData.date,
+          meeting_time: eventData.meetingTime,
+          start_time: eventData.startTime,
+          end_time: eventData.endTime,
+          location: eventData.location,
+          game_format: eventData.gameFormat,
+          opponent: eventData.opponent,
+          is_home: eventData.isHome
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating event:', error);
+        throw error;
+      }
+
+      console.log('Event created successfully:', data);
+      
       setIsEventDialogOpen(false);
+      await loadEvents();
+      
       toast({
         title: 'Event Created',
         description: `${eventData.title} has been successfully created.`,
       });
     } catch (error: any) {
+      console.error('Error in handleCreateEvent:', error);
       toast({
         title: 'Error',
         description: 'Failed to create event',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditEvent = async (eventData: Partial<Event>) => {
+    if (!selectedEvent) return;
+
+    try {
+      console.log('Updating event:', eventData);
+
+      const { error } = await supabase
+        .from('events')
+        .update({
+          event_type: eventData.type,
+          title: eventData.title,
+          date: eventData.date,
+          meeting_time: eventData.meetingTime,
+          start_time: eventData.startTime,
+          end_time: eventData.endTime,
+          location: eventData.location,
+          game_format: eventData.gameFormat,
+          opponent: eventData.opponent,
+          is_home: eventData.isHome,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedEvent.id);
+
+      if (error) {
+        console.error('Error updating event:', error);
+        throw error;
+      }
+
+      console.log('Event updated successfully');
+      
+      setIsEventDialogOpen(false);
+      setSelectedEvent(null);
+      await loadEvents();
+      
+      toast({
+        title: 'Event Updated',
+        description: `${eventData.title} has been successfully updated.`,
+      });
+    } catch (error: any) {
+      console.error('Error in handleEditEvent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update event',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      console.log('Deleting event:', eventId);
+
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) {
+        console.error('Error deleting event:', error);
+        throw error;
+      }
+
+      console.log('Event deleted successfully');
+      await loadEvents();
+      
+      toast({
+        title: 'Event Deleted',
+        description: 'Event has been successfully deleted.',
+      });
+    } catch (error: any) {
+      console.error('Error in handleDeleteEvent:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete event',
         variant: 'destructive',
       });
     }
@@ -103,6 +233,24 @@ const CalendarEvents = () => {
     });
   };
 
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Calendar & Events</h1>
+              <p className="text-muted-foreground">
+                Manage team events, fixtures, and training sessions
+              </p>
+            </div>
+          </div>
+          <div className="text-center py-8">Loading events...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -129,16 +277,21 @@ const CalendarEvents = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>Create New Event</DialogTitle>
+                  <DialogTitle>
+                    {selectedEvent ? 'Edit Event' : 'Create New Event'}
+                  </DialogTitle>
                   <DialogDescription>
-                    Create a new training session, fixture, or other team event.
+                    {selectedEvent ? 'Update the event details below.' : 'Create a new training session, fixture, or other team event.'}
                   </DialogDescription>
                 </DialogHeader>
                 <EventForm 
                   event={selectedEvent} 
                   teamId={selectedTeamId}
-                  onSubmit={handleCreateEvent} 
-                  onCancel={() => setIsEventDialogOpen(false)}
+                  onSubmit={selectedEvent ? handleEditEvent : handleCreateEvent} 
+                  onCancel={() => {
+                    setIsEventDialogOpen(false);
+                    setSelectedEvent(null);
+                  }}
                 />
               </DialogContent>
             </Dialog>
@@ -159,74 +312,106 @@ const CalendarEvents = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {teams.map((team) => (
-              <div key={team.id} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">{team.name} Events</h2>
-                  <Badge variant="outline">{team.gameFormat}</Badge>
-                </div>
-                
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {mockEvents
-                    .filter(event => event.teamId === team.id)
-                    .map((event) => (
-                    <Card key={event.id} className="relative">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{event.title}</CardTitle>
-                          <Badge className={`text-white ${getEventTypeColor(event.type)}`}>
-                            {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
-                          </Badge>
-                        </div>
-                        <CardDescription>
-                          {formatDate(event.date)}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              {formatTime(event.startTime)} - {formatTime(event.endTime)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{event.location}</span>
-                          </div>
-                          {event.opponent && (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Users className="h-4 w-4 text-muted-foreground" />
-                              <span>vs {event.opponent}</span>
-                              <Badge variant={event.isHome ? 'default' : 'secondary'} className="ml-auto">
-                                {event.isHome ? 'Home' : 'Away'}
+            {teams.map((team) => {
+              const teamEvents = events.filter(event => event.teamId === team.id);
+              
+              return (
+                <div key={team.id} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">{team.name} Events</h2>
+                    <Badge variant="outline">{team.gameFormat}</Badge>
+                  </div>
+                  
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {teamEvents.map((event) => (
+                      <Card key={event.id} className="relative group">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">{event.title}</CardTitle>
+                            <div className="flex gap-1">
+                              <Badge className={`text-white ${getEventTypeColor(event.type)}`}>
+                                {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
                               </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
+                                onClick={() => {
+                                  setSelectedEvent(event);
+                                  setSelectedTeamId(event.teamId);
+                                  setIsEventDialogOpen(true);
+                                }}
+                              >
+                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                onClick={() => {
+                                  if (confirm('Are you sure you want to delete this event?')) {
+                                    handleDeleteEvent(event.id);
+                                  }
+                                }}
+                              >
+                                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                              </Button>
                             </div>
-                          )}
-                          <div className="flex items-center gap-2 text-sm">
-                            <span className="text-muted-foreground">Format:</span>
-                            <span className="font-medium">{event.gameFormat}</span>
                           </div>
-                        </div>
+                          <CardDescription>
+                            {formatDate(event.date)}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span>
+                                {formatTime(event.startTime)} - {formatTime(event.endTime)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <MapPin className="h-4 w-4 text-muted-foreground" />
+                              <span>{event.location}</span>
+                            </div>
+                            {event.opponent && (
+                              <div className="flex items-center gap-2 text-sm">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span>vs {event.opponent}</span>
+                                <Badge variant={event.isHome ? 'default' : 'secondary'} className="ml-auto">
+                                  {event.isHome ? 'Home' : 'Away'}
+                                </Badge>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-muted-foreground">Format:</span>
+                              <span className="font-medium">{event.gameFormat}</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                    
+                    {/* Add Event Card */}
+                    <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedEvent(null);
+                            setSelectedTeamId(team.id);
+                            setIsEventDialogOpen(true);
+                          }}>
+                      <CardContent className="py-8 flex flex-col items-center justify-center text-center">
+                        <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Create Event</p>
                       </CardContent>
                     </Card>
-                  ))}
-                  
-                  {/* Add Event Card */}
-                  <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setSelectedEvent(null);
-                          setSelectedTeamId(team.id);
-                          setIsEventDialogOpen(true);
-                        }}>
-                    <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                      <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm font-medium">Create Event</p>
-                    </CardContent>
-                  </Card>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

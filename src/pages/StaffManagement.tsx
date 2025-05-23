@@ -63,87 +63,93 @@ const StaffManagement = () => {
 
   const fetchTeamStaff = async (teamId: string) => {
     try {
-      // First get the user IDs with their roles
+      console.log('Fetching team staff for team:', teamId);
+      
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
-        .select('user_id, role')
+        .select(`
+          user_id,
+          role,
+          profiles!inner (
+            id,
+            name,
+            email
+          )
+        `)
         .eq('team_id', teamId);
 
-      if (userTeamsError) throw userTeamsError;
+      if (userTeamsError) {
+        console.error('Error fetching user teams:', userTeamsError);
+        throw userTeamsError;
+      }
+      
+      console.log('User teams data:', userTeamsData);
       
       if (!userTeamsData || userTeamsData.length === 0) {
         setTeamStaff([]);
         return;
       }
       
-      // Get the profile data for each user
-      const userIds = userTeamsData.map(ut => ut.user_id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .in('id', userIds);
-        
-      if (profilesError) throw profilesError;
-      
-      // Join the data to create staff members
-      const staffMembers: StaffMember[] = userTeamsData.map(teamUser => {
-        const userProfile = profilesData?.find(p => p.id === teamUser.user_id);
-        return {
-          id: teamUser.user_id,
-          name: userProfile?.name || 'Unknown',
-          email: userProfile?.email || 'No email',
-          role: teamUser.role as UserRole
-        };
-      });
+      const staffMembers: StaffMember[] = userTeamsData.map(teamUser => ({
+        id: teamUser.user_id,
+        name: teamUser.profiles?.name || 'Unknown',
+        email: teamUser.profiles?.email || 'No email',
+        role: teamUser.role as UserRole
+      }));
       
       setTeamStaff(staffMembers);
     } catch (error: any) {
+      console.error('Error in fetchTeamStaff:', error);
       toast.error('Failed to fetch team staff', {
         description: error.message
       });
+      setTeamStaff([]);
     }
   };
 
   const fetchClubStaff = async (clubId: string) => {
     try {
-      // First get the user IDs with their roles
+      console.log('Fetching club staff for club:', clubId);
+      
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
-        .select('user_id, role')
+        .select(`
+          user_id,
+          role,
+          profiles!inner (
+            id,
+            name,
+            email
+          )
+        `)
         .eq('club_id', clubId);
 
-      if (userClubsError) throw userClubsError;
+      if (userClubsError) {
+        console.error('Error fetching user clubs:', userClubsError);
+        throw userClubsError;
+      }
+      
+      console.log('User clubs data:', userClubsData);
       
       if (!userClubsData || userClubsData.length === 0) {
         setClubStaff([]);
         return;
       }
       
-      // Get the profile data for each user
-      const userIds = userClubsData.map(uc => uc.user_id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .in('id', userIds);
-        
-      if (profilesError) throw profilesError;
-      
-      // Join the data to create staff members
-      const staffMembers: StaffMember[] = userClubsData.map(clubUser => {
-        const userProfile = profilesData?.find(p => p.id === clubUser.user_id);
-        return {
-          id: clubUser.user_id,
-          name: userProfile?.name || 'Unknown',
-          email: userProfile?.email || 'No email',
-          role: clubUser.role as UserRole
-        };
-      });
+      const staffMembers: StaffMember[] = userClubsData.map(clubUser => ({
+        id: clubUser.user_id,
+        name: clubUser.profiles?.name || 'Unknown',
+        email: clubUser.profiles?.email || 'No email',
+        role: clubUser.role as UserRole
+      }));
       
       setClubStaff(staffMembers);
     } catch (error: any) {
+      console.error('Error in fetchClubStaff:', error);
       toast.error('Failed to fetch club staff', {
         description: error.message
       });
+      setClubStaff([]);
     }
   };
 
@@ -154,6 +160,8 @@ const StaffManagement = () => {
     }
 
     try {
+      console.log('Adding team staff:', formData);
+      
       // First, try to find the user by email
       const { data: userData, error: userError } = await supabase
         .from('profiles')
@@ -162,11 +170,14 @@ const StaffManagement = () => {
         .single();
 
       if (userError) {
+        console.error('User lookup error:', userError);
         toast.error('User not found', {
           description: 'This email address is not registered in the system.'
         });
         return;
       }
+
+      console.log('Found user:', userData);
 
       // Then add the user to the team
       const { error: addError } = await supabase
@@ -178,6 +189,7 @@ const StaffManagement = () => {
         });
 
       if (addError) {
+        console.error('Add staff error:', addError);
         if (addError.code === '23505') { // Unique violation
           toast.error('This user already has this role on the team');
         } else {
@@ -190,6 +202,7 @@ const StaffManagement = () => {
         setFormData({ email: '', role: '' as UserRole });
       }
     } catch (error: any) {
+      console.error('Error in handleAddTeamStaff:', error);
       toast.error('Failed to add staff member', {
         description: error.message
       });
@@ -203,6 +216,8 @@ const StaffManagement = () => {
     }
 
     try {
+      console.log('Adding club staff:', formData);
+      
       // First, try to find the user by email
       const { data: userData, error: userError } = await supabase
         .from('profiles')
@@ -211,11 +226,14 @@ const StaffManagement = () => {
         .single();
 
       if (userError) {
+        console.error('User lookup error:', userError);
         toast.error('User not found', {
           description: 'This email address is not registered in the system.'
         });
         return;
       }
+
+      console.log('Found user:', userData);
 
       // Then add the user to the club
       const { error: addError } = await supabase
@@ -227,6 +245,7 @@ const StaffManagement = () => {
         });
 
       if (addError) {
+        console.error('Add staff error:', addError);
         if (addError.code === '23505') { // Unique violation
           toast.error('This user already has this role in the club');
         } else {
@@ -239,6 +258,7 @@ const StaffManagement = () => {
         setFormData({ email: '', role: '' as UserRole });
       }
     } catch (error: any) {
+      console.error('Error in handleAddClubStaff:', error);
       toast.error('Failed to add staff member', {
         description: error.message
       });
@@ -247,6 +267,8 @@ const StaffManagement = () => {
 
   const handleRemoveTeamStaff = async (userId: string, role: UserRole) => {
     try {
+      console.log('Removing team staff:', { userId, role, selectedTeam });
+      
       const { error } = await supabase
         .from('user_teams')
         .delete()
@@ -254,11 +276,15 @@ const StaffManagement = () => {
         .eq('team_id', selectedTeam)
         .eq('role', role);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Remove staff error:', error);
+        throw error;
+      }
 
       toast.success('Staff member removed successfully');
       fetchTeamStaff(selectedTeam);
     } catch (error: any) {
+      console.error('Error in handleRemoveTeamStaff:', error);
       toast.error('Failed to remove staff member', {
         description: error.message
       });
@@ -267,6 +293,8 @@ const StaffManagement = () => {
 
   const handleRemoveClubStaff = async (userId: string, role: UserRole) => {
     try {
+      console.log('Removing club staff:', { userId, role, selectedClub });
+      
       const { error } = await supabase
         .from('user_clubs')
         .delete()
@@ -274,11 +302,15 @@ const StaffManagement = () => {
         .eq('club_id', selectedClub)
         .eq('role', role);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Remove staff error:', error);
+        throw error;
+      }
 
       toast.success('Staff member removed successfully');
       fetchClubStaff(selectedClub);
     } catch (error: any) {
+      console.error('Error in handleRemoveClubStaff:', error);
       toast.error('Failed to remove staff member', {
         description: error.message
       });
