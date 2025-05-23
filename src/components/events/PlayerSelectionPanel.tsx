@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -48,8 +47,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedFormation, setSelectedFormation] = useState('');
-  const [positions, setPositions] = useState<string[]>([]);
-  const [playerPositions, setPlayerPositions] = useState<{[position: string]: string}>({});
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [playerPositions, setPlayerPositions] = useState<Record<string, string>>({});
   const [substitutes, setSubstitutes] = useState<string[]>([]);
   const [captainId, setCaptainId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -113,7 +112,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setCaptainId(data.captain_id);
         
         // Parse player positions and substitutes
-        let positions: {[position: string]: string} = {};
+        let positions: Record<string, string> = {};
         let subs: string[] = [];
         
         if (data.player_positions) {
@@ -156,7 +155,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     // When formation changes, keep player assignments for positions that still exist
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
     
-    const updatedPlayerPositions: {[position: string]: string} = {};
+    const updatedPlayerPositions: Record<string, string> = {};
     Object.keys(playerPositions).forEach(pos => {
       if (newPositions.includes(pos as Position)) {
         updatedPlayerPositions[pos] = playerPositions[pos];
