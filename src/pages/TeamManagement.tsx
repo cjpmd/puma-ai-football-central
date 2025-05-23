@@ -8,18 +8,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { TeamForm } from '@/components/teams/TeamForm';
 import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
 import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
-import { Team } from '@/types';
+import { Team, Club } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
-interface Club {
-  id: string;
-  name: string;
-}
-
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
-  const [allClubs, setAllClubs] = useState<Club[]>([]);
+  const [allClubs, setAllClubs] = useState<Partial<Club>[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
