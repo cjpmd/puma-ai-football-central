@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TeamForm } from '@/components/teams/TeamForm';
+import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
 import { Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,6 +16,7 @@ const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const { toast } = useToast();
 
   const handleCreateTeam = async (teamData: Partial<Team>) => {
@@ -119,6 +121,11 @@ const TeamManagement = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const openTeamSettingsModal = (team: Team) => {
+    setSelectedTeam(team);
+    setIsSettingsModalOpen(true);
   };
 
   const openEditTeamDialog = (team: Team) => {
@@ -231,7 +238,7 @@ const TeamManagement = () => {
                     <UserPlus className="mr-2 h-4 w-4" />
                     Staff
                   </Button>
-                  <Button size="sm" onClick={() => openEditTeamDialog(team)}>
+                  <Button size="sm" onClick={() => openTeamSettingsModal(team)}>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </Button>
@@ -241,6 +248,15 @@ const TeamManagement = () => {
           </div>
         )}
       </div>
+
+      {selectedTeam && (
+        <TeamSettingsModal 
+          team={selectedTeam}
+          isOpen={isSettingsModalOpen}
+          onClose={() => setIsSettingsModalOpen(false)}
+          onUpdate={handleUpdateTeam}
+        />
+      )}
     </DashboardLayout>
   );
 };
