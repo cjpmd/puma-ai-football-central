@@ -56,11 +56,14 @@ export const EventForm: React.FC<EventFormProps> = ({
     trainingNotes: event?.trainingNotes || '',
     coachNotes: event?.coachNotes || '',
     staffNotes: event?.staffNotes || '',
-    performanceCategoryId: event?.performanceCategoryId || ''
+    performanceCategoryId: event?.performanceCategoryId || '',
+    kitSelection: event?.kitSelection || 'home' // Use event's kitSelection if available, otherwise default to 'home'
   });
 
   const [selectedFacility, setSelectedFacility] = useState<string>(event?.facilityId || "none");
-  const [selectedKit, setSelectedKit] = useState<string>(event?.kitSelection || "home");
+  
+  // No need for a separate state variable for kit selection since it's now part of formData
+  // const [selectedKit, setSelectedKit] = useState<string>(event?.kitSelection || "home");
 
   useEffect(() => {
     loadClubFacilities();
@@ -119,7 +122,7 @@ export const EventForm: React.FC<EventFormProps> = ({
     const enhancedData = {
       ...formData,
       facilityId: selectedFacility !== "none" ? selectedFacility : null,
-      kitSelection: selectedKit,
+      // No need to add kitSelection separately as it's already in formData
     };
 
     onSubmit(enhancedData);
@@ -128,6 +131,20 @@ export const EventForm: React.FC<EventFormProps> = ({
   const isMatchType = formData.type === 'fixture' || formData.type === 'friendly' || formData.type === 'tournament' || formData.type === 'festival';
   const hasOpponent = formData.type === 'fixture' || formData.type === 'friendly';
   const currentTeam = teams.find(t => t.id === teamId);
+
+  function handleChange(field: keyof Partial<Event>, value: any) {
+    setFormData({
+      ...formData,
+      [field]: value
+    });
+  }
+
+  function handleTeamsChange(teams: string[]) {
+    setFormData({
+      ...formData,
+      teams: teams
+    });
+  }
 
   return (
     <div className="max-h-[70vh] overflow-y-auto">
@@ -337,8 +354,8 @@ export const EventForm: React.FC<EventFormProps> = ({
                   <div className="space-y-2">
                     <Label htmlFor="kit">Select Kit</Label>
                     <Select 
-                      value={selectedKit}
-                      onValueChange={setSelectedKit}
+                      value={formData.kitSelection}
+                      onValueChange={(value) => handleChange('kitSelection', value)}
                     >
                       <SelectTrigger id="kit">
                         <SelectValue placeholder="Select kit" />

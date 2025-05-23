@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -228,7 +227,7 @@ export type Event = {
   teams: string[]; // Team IDs
   periods: Period[];
   facilityId?: string;
-  performanceCategoryId?: string; // Added this property
+  performanceCategoryId?: string;
   scores?: {
     home: number;
     away: number;
@@ -237,6 +236,7 @@ export type Event = {
   coachNotes?: string;
   staffNotes?: string;
   trainingNotes?: string;
+  kitSelection?: string; // Added this property to fix the type error
   createdAt: string;
   updatedAt: string;
 };
