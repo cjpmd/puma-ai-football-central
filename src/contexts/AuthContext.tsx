@@ -1,21 +1,8 @@
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Team, Club } from '@/types';
+import { Team, Club, Profile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-
-interface Profile {
-  id: string;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  roles: string[];
-  fa_id: string | null;
-  coaching_badges: any[];
-  created_at: string;
-  updated_at: string;
-}
 
 interface AuthContextType {
   user: any;
@@ -103,7 +90,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw profileError;
       }
 
-      setProfile(profileData);
+      // Transform the data to match our Profile type
+      const transformedProfile: Profile = {
+        id: profileData.id,
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        roles: profileData.roles || [],
+        fa_id: profileData.fa_id,
+        coaching_badges: Array.isArray(profileData.coaching_badges) 
+          ? profileData.coaching_badges 
+          : [],
+        created_at: profileData.created_at,
+        updated_at: profileData.updated_at,
+      };
+
+      setProfile(transformedProfile);
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
       toast({
@@ -261,7 +263,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setClubs([]);
       setProfile(null);
     }
-    return { error };
+    if (error) {
+      throw error;
+    }
   };
 
   const login = async () => {
