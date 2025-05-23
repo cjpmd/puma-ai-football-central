@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { TeamForm } from '@/components/teams/TeamForm';
 import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
+import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
 import { Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ const TeamManagement = () => {
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const { toast } = useToast();
 
   const handleCreateTeam = async (teamData: Partial<Team>) => {
@@ -128,6 +129,11 @@ const TeamManagement = () => {
     setIsSettingsModalOpen(true);
   };
 
+  const openStaffModal = (team: Team) => {
+    setSelectedTeam(team);
+    setIsStaffModalOpen(true);
+  };
+
   const openEditTeamDialog = (team: Team) => {
     setSelectedTeam(team);
     setIsTeamDialogOpen(true);
@@ -234,7 +240,7 @@ const TeamManagement = () => {
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm">
+                  <Button variant="outline" size="sm" onClick={() => openStaffModal(team)}>
                     <UserPlus className="mr-2 h-4 w-4" />
                     Staff
                   </Button>
@@ -249,13 +255,22 @@ const TeamManagement = () => {
         )}
       </div>
 
+      {/* Modals */}
       {selectedTeam && (
-        <TeamSettingsModal 
-          team={selectedTeam}
-          isOpen={isSettingsModalOpen}
-          onClose={() => setIsSettingsModalOpen(false)}
-          onUpdate={handleUpdateTeam}
-        />
+        <>
+          <TeamSettingsModal 
+            team={selectedTeam}
+            isOpen={isSettingsModalOpen}
+            onClose={() => setIsSettingsModalOpen(false)}
+            onUpdate={handleUpdateTeam}
+          />
+          <TeamStaffModal
+            team={selectedTeam}
+            isOpen={isStaffModalOpen}
+            onClose={() => setIsStaffModalOpen(false)}
+            onUpdate={handleUpdateTeam}
+          />
+        </>
       )}
     </DashboardLayout>
   );

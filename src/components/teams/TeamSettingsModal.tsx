@@ -69,16 +69,16 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Team Settings - {team.name}</DialogTitle>
           <DialogDescription>
             Configure your team settings, subscriptions, and integrations.
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-6 flex-shrink-0">
             {settingsTabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
                 {tab.icon}
@@ -87,17 +87,17 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
             ))}
           </TabsList>
           
-          <div className="mt-4 h-full overflow-y-auto">
+          <div className="flex-1 overflow-hidden mt-4">
             {settingsTabs.map((tab) => (
-              <TabsContent key={tab.id} value={tab.id} className="mt-0 h-full">
-                <Card className="h-full border-0 shadow-none">
-                  <CardHeader>
+              <TabsContent key={tab.id} value={tab.id} className="h-full overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col">
+                <Card className="flex-1 border-0 shadow-none">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle className="flex items-center gap-2">
                       {tab.icon}
                       {tab.label}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="flex-1 space-y-4 pb-6">
                     {tab.component}
                   </CardContent>
                 </Card>
@@ -106,7 +106,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
           </div>
         </Tabs>
         
-        <div className="flex justify-end gap-2 pt-4 border-t">
+        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

@@ -6,7 +6,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Team, GameFormat } from '@/types/team';
+import { useAuth } from '@/contexts/AuthContext';
 import { Plus, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface TeamBasicSettingsProps {
   team: Team;
@@ -17,6 +19,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   team,
   onUpdate
 }) => {
+  const { clubs } = useAuth();
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: team.name,
     ageGroup: team.ageGroup,
@@ -24,6 +28,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     seasonEnd: team.seasonEnd,
     gameFormat: team.gameFormat,
     performanceCategories: [...team.performanceCategories],
+    clubId: team.clubId || '',
     clubReferenceNumber: team.clubReferenceNumber || ''
   });
   
@@ -47,7 +52,17 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleSave = () => {
-    onUpdate(formData);
+    // Convert empty string to undefined for clubId
+    const updateData = {
+      ...formData,
+      clubId: formData.clubId === '' ? undefined : formData.clubId
+    };
+    
+    onUpdate(updateData);
+    toast({
+      title: 'Settings Updated',
+      description: 'Team basic settings have been saved successfully.',
+    });
   };
 
   return (
@@ -114,6 +129,26 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             <SelectItem value="7-a-side">7-a-side</SelectItem>
             <SelectItem value="9-a-side">9-a-side</SelectItem>
             <SelectItem value="11-a-side">11-a-side</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="club">Club Association</Label>
+        <Select 
+          value={formData.clubId}
+          onValueChange={(value) => handleInputChange('clubId', value === 'independent' ? '' : value)}
+        >
+          <SelectTrigger id="club">
+            <SelectValue placeholder="Select a club (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="independent">Independent (No Club)</SelectItem>
+            {clubs.map((club) => (
+              <SelectItem key={club.id} value={club.id}>
+                {club.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
