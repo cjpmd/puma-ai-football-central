@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { User as AppUser, Team, Club, UserRole, SubscriptionType, GameFormat } from '@/types';
+import { Json } from '@/integrations/supabase/types';
 
 type AuthContextType = {
   session: Session | null;
@@ -139,28 +140,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Map the data to our Team type with proper type conversions
-      const formattedTeams: Team[] = teamsData.map(team => ({
-        id: team.id,
-        name: team.name,
-        ageGroup: team.age_group,
-        seasonStart: team.season_start,
-        seasonEnd: team.season_end,
-        clubId: team.club_id,
-        // Cast subscription type to ensure type safety
-        subscriptionType: team.subscription_type as SubscriptionType,
-        // Cast game_format string to the GameFormat type
-        gameFormat: team.game_format as GameFormat,
-        // Ensure kitIcons matches the expected structure
-        kitIcons: {
-          home: team.kit_icons?.home || '',
-          away: team.kit_icons?.away || '',
-          training: team.kit_icons?.training || '',
-          goalkeeper: team.kit_icons?.goalkeeper || '',
-        },
-        performanceCategories: team.performance_categories || [],
-        createdAt: team.created_at,
-        updatedAt: team.updated_at
-      }));
+      const formattedTeams: Team[] = teamsData.map(team => {
+        // Safely handle kitIcons by checking if it's an object and has the right properties
+        const kitIconsData = team.kit_icons as Record<string, string> | null;
+        const kitIcons = {
+          home: kitIconsData?.home || '',
+          away: kitIconsData?.away || '',
+          training: kitIconsData?.training || '',
+          goalkeeper: kitIconsData?.goalkeeper || '',
+        };
+
+        return {
+          id: team.id,
+          name: team.name,
+          ageGroup: team.age_group,
+          seasonStart: team.season_start,
+          seasonEnd: team.season_end,
+          clubId: team.club_id,
+          // Cast subscription type to ensure type safety
+          subscriptionType: team.subscription_type as SubscriptionType,
+          // Cast game_format string to the GameFormat type
+          gameFormat: team.game_format as GameFormat,
+          // Use the properly formatted kitIcons
+          kitIcons,
+          performanceCategories: team.performance_categories || [],
+          createdAt: team.created_at,
+          updatedAt: team.updated_at
+        };
+      });
 
       setTeams(formattedTeams);
     } catch (error) {
