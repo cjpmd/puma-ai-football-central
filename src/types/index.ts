@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -282,4 +281,16 @@ export type ClubEvent = {
   playerOfMatchId?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+export type Profile = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  roles: string[];
+  fa_id: string | null;
+  coaching_badges: any[];
+  created_at: string;
+  updated_at: string;
 };
