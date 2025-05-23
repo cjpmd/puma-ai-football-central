@@ -439,18 +439,4 @@ export const EventForm: React.FC<EventFormProps> = ({
       </form>
     </div>
   );
-
-  function handleChange(field: keyof Partial<Event>, value: any) {
-    setFormData({
-      ...formData,
-      [field]: value
-    });
-  }
-
-  function handleTeamsChange(teams: string[]) {
-    setFormData({
-      ...formData,
-      teams: teams
-    });
-  }
 };
