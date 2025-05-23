@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -48,7 +47,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     location: event?.location || '',
     gameFormat: event?.gameFormat || '7-a-side' as GameFormat,
     opponent: event?.opponent || '',
-    isHome: event?.isHome || true,
+    isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
     trainingNotes: event?.trainingNotes || ''
   });
@@ -129,9 +128,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       teams: numberOfTeams > 1 ? Array(numberOfTeams).fill(teamId) : [teamId],
       meetingTime: primaryTimeSlot.meetingTime,
       startTime: primaryTimeSlot.startTime,
-      endTime: primaryTimeSlot.endTime,
-      // Store team time slots in a custom field for multi-team events
-      teamTimeSlots: numberOfTeams > 1 ? teamTimeSlots : undefined
+      endTime: primaryTimeSlot.endTime
     };
 
     onSubmit(eventData);
