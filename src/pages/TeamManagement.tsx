@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -13,13 +12,42 @@ import { Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+interface Club {
+  id: string;
+  name: string;
+}
+
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
+  const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadAllClubs();
+  }, []);
+
+  const loadAllClubs = async () => {
+    try {
+      console.log('Loading all clubs...');
+      const { data, error } = await supabase
+        .from('clubs')
+        .select('id, name');
+
+      if (error) {
+        console.error('Error loading clubs:', error);
+        return;
+      }
+
+      console.log('Loaded all clubs:', data);
+      setAllClubs(data || []);
+    } catch (error) {
+      console.error('Error in loadAllClubs:', error);
+    }
+  };
 
   const handleCreateTeam = async (teamData: Partial<Team>) => {
     try {
@@ -158,15 +186,23 @@ const TeamManagement = () => {
   };
 
   const getClubName = (clubId?: string) => {
-    console.log('Getting club name for clubId:', clubId, 'Available clubs:', clubs);
-    if (!clubId || !clubs || clubs.length === 0) return 'Independent';
-    const club = clubs.find(club => club.id === clubId);
+    console.log('Getting club name for clubId:', clubId, 'Available clubs:', clubs, 'All clubs:', allClubs);
+    if (!clubId) return 'Independent';
+    
+    // Try from auth context clubs first
+    let club = clubs?.find(club => club.id === clubId);
+    
+    // If not found, try from all clubs
+    if (!club) {
+      club = allClubs.find(club => club.id === clubId);
+    }
+    
     const clubName = club ? club.name : 'Independent';
-    console.log('Found club name:', clubName);
+    console.log('Found club name:', clubName, 'for clubId:', clubId);
     return clubName;
   };
 
-  console.log('TeamManagement render - teams:', teams, 'clubs:', clubs);
+  console.log('TeamManagement render - teams:', teams, 'clubs:', clubs, 'allClubs:', allClubs);
 
   return (
     <DashboardLayout>

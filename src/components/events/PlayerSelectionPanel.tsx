@@ -25,7 +25,8 @@ interface Player {
   name: string;
   squadNumber: number;
   position?: string;
-  isSelected?: boolean;
+  isSelectedInOtherTeam?: boolean;
+  selectedTeamNumber?: number;
 }
 
 type PositionPlayerMap = Record<string, string>;
@@ -83,7 +84,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       console.log('Loaded players:', data);
 
-      // Check which players are already selected in other team selections for this event
+      // Check which players are selected in other teams for this event/period
       const { data: existingSelections, error: selectionsError } = await supabase
         .from('event_selections')
         .select('player_positions, substitutes, team_number')
@@ -94,36 +95,34 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         console.error('Error loading existing selections:', selectionsError);
       }
 
-      const playersInOtherTeams = new Set<string>();
+      const playerTeamMap = new Map<string, number>();
       
       if (existingSelections) {
         existingSelections.forEach(selection => {
-          if (selection.team_number !== teamNumber) {
-            // Parse player positions
-            if (selection.player_positions) {
-              const positions = Array.isArray(selection.player_positions) 
-                ? selection.player_positions 
-                : JSON.parse(String(selection.player_positions || '[]'));
-              
-              positions.forEach((pos: any) => {
-                if (pos && pos.playerId) {
-                  playersInOtherTeams.add(pos.playerId);
-                }
-              });
-            }
+          // Parse player positions
+          if (selection.player_positions) {
+            const positions = Array.isArray(selection.player_positions) 
+              ? selection.player_positions 
+              : JSON.parse(String(selection.player_positions || '[]'));
             
-            // Parse substitutes
-            if (selection.substitutes) {
-              const subs = Array.isArray(selection.substitutes)
-                ? selection.substitutes
-                : JSON.parse(String(selection.substitutes || '[]'));
-              
-              subs.forEach((sub: any) => {
-                if (typeof sub === 'string') {
-                  playersInOtherTeams.add(sub);
-                }
-              });
-            }
+            positions.forEach((pos: any) => {
+              if (pos && pos.playerId) {
+                playerTeamMap.set(pos.playerId, selection.team_number);
+              }
+            });
+          }
+          
+          // Parse substitutes
+          if (selection.substitutes) {
+            const subs = Array.isArray(selection.substitutes)
+              ? selection.substitutes
+              : JSON.parse(String(selection.substitutes || '[]'));
+            
+            subs.forEach((sub: any) => {
+              if (typeof sub === 'string') {
+                playerTeamMap.set(sub, selection.team_number);
+              }
+            });
           }
         });
       }
@@ -132,7 +131,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         id: p.id,
         name: p.name,
         squadNumber: p.squad_number,
-        isSelected: playersInOtherTeams.has(p.id)
+        isSelectedInOtherTeam: playerTeamMap.has(p.id) && playerTeamMap.get(p.id) !== teamNumber,
+        selectedTeamNumber: playerTeamMap.get(p.id)
       })) || [];
 
       console.log('Players with availability:', playersWithAvailability);
@@ -262,7 +262,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       console.log('Saving team selection...');
       setSaving(true);
       
-      // Convert to simple JSON-compatible arrays
       const playerPositionsArray = Object.entries(playerPositions)
         .filter(([, playerId]) => playerId)
         .map(([positionId, playerId]) => ({
@@ -279,23 +278,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         captain: captainId
       });
 
-      // Delete existing selection first to avoid constraint issues
-      const { error: deleteError } = await supabase
-        .from('event_selections')
-        .delete()
-        .eq('event_id', eventId)
-        .eq('team_id', teamId)
-        .eq('team_number', teamNumber)
-        .eq('period_number', periodNumber);
-
-      if (deleteError) {
-        console.error('Error deleting existing selection:', deleteError);
-      }
-
-      // Insert new selection
+      // Use upsert to handle both insert and update cases
       const { error } = await supabase
         .from('event_selections')
-        .insert({
+        .upsert({
           event_id: eventId,
           team_id: teamId,
           team_number: teamNumber,
@@ -306,6 +292,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           substitutes: substitutesArray,
           performance_category_id: performanceCategoryId,
           duration_minutes: 45,
+        }, {
+          onConflict: 'event_id,team_id,team_number,period_number'
         });
 
       if (error) {
@@ -343,8 +331,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     return player ? `${player.squadNumber}. ${player.name}` : '';
   };
 
-  const getAvailablePlayers = () => {
-    return players.filter(player => !player.isSelected);
+  const getPlayerDisplayName = (player: Player) => {
+    let displayName = `${player.squadNumber}. ${player.name}`;
+    if (player.isSelectedInOtherTeam) {
+      displayName += ` (Selected in Team ${player.selectedTeamNumber})`;
+    }
+    return displayName;
   };
 
   if (loading) {
@@ -376,8 +368,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             <SelectItem value="none">No captain selected</SelectItem>
             {players.map(player => (
               <SelectItem key={player.id} value={player.id}>
-                {player.squadNumber}. {player.name}
-                {player.isSelected && ' (Selected in other team)'}
+                {getPlayerDisplayName(player)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -403,10 +394,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                       <SelectItem 
                         key={player.id} 
                         value={player.id}
-                        disabled={player.isSelected && playerPositions[position] !== player.id}
                       >
-                        {player.squadNumber}. {player.name}
-                        {player.isSelected && playerPositions[position] !== player.id && ' (Selected in other team)'}
+                        <span className={player.isSelectedInOtherTeam ? 'text-orange-600' : ''}>
+                          {getPlayerDisplayName(player)}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -452,10 +443,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 <SelectItem 
                   key={player.id} 
                   value={player.id}
-                  disabled={player.isSelected}
                 >
-                  {player.squadNumber}. {player.name}
-                  {player.isSelected && ' (Selected in other team)'}
+                  <span className={player.isSelectedInOtherTeam ? 'text-orange-600' : ''}>
+                    {getPlayerDisplayName(player)}
+                  </span>
                 </SelectItem>
               ))}
           </SelectContent>

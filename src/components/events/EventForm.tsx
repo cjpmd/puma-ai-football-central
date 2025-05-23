@@ -10,6 +10,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TeamSelector } from './TeamSelector';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Users, UserCheck } from 'lucide-react';
 
 interface EventFormProps {
   event: Event | null;
@@ -30,6 +32,20 @@ interface PerformanceCategory {
   description?: string;
 }
 
+interface Player {
+  id: string;
+  name: string;
+  squad_number: number;
+  availability: string;
+}
+
+interface Staff {
+  id: string;
+  name: string;
+  role: string;
+  email: string;
+}
+
 export const EventForm: React.FC<EventFormProps> = ({
   event,
   onSubmit,
@@ -40,6 +56,8 @@ export const EventForm: React.FC<EventFormProps> = ({
   const [activeTab, setActiveTab] = useState('details');
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [formData, setFormData] = useState<Partial<Event>>({
     type: event?.type || 'training',
     teamId: teamId,
@@ -65,6 +83,7 @@ export const EventForm: React.FC<EventFormProps> = ({
   useEffect(() => {
     loadClubFacilities();
     loadPerformanceCategories();
+    loadPlayersAndStaff();
   }, [teamId]);
 
   const loadClubFacilities = async () => {
@@ -111,6 +130,38 @@ export const EventForm: React.FC<EventFormProps> = ({
     }
   };
 
+  const loadPlayersAndStaff = async () => {
+    try {
+      // Load players
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('id, name, squad_number, availability')
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+        .order('squad_number');
+
+      if (playersError) {
+        console.error('Error loading players:', playersError);
+      } else {
+        setPlayers(playersData || []);
+      }
+
+      // Load staff
+      const { data: staffData, error: staffError } = await supabase
+        .from('team_staff')
+        .select('id, name, role, email')
+        .eq('team_id', teamId);
+
+      if (staffError) {
+        console.error('Error loading staff:', staffError);
+      } else {
+        setStaff(staffData || []);
+      }
+    } catch (error) {
+      console.error('Error in loadPlayersAndStaff:', error);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -140,13 +191,32 @@ export const EventForm: React.FC<EventFormProps> = ({
     });
   };
 
+  const getAvailabilityColor = (availability: string) => {
+    switch (availability) {
+      case 'green': return 'bg-green-500';
+      case 'amber': return 'bg-yellow-500';
+      case 'red': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getAvailabilityLabel = (availability: string) => {
+    switch (availability) {
+      case 'green': return 'Available';
+      case 'amber': return 'Maybe';
+      case 'red': return 'Unavailable';
+      default: return 'Unknown';
+    }
+  };
+
   return (
     <div className="max-h-[70vh] overflow-y-auto">
       <form onSubmit={handleSubmit} className="space-y-4 py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-4">
+          <TabsList className="grid grid-cols-4 mb-4">
             <TabsTrigger value="details">Event Details</TabsTrigger>
             <TabsTrigger value="kit">Kit & Teams</TabsTrigger>
+            <TabsTrigger value="availability">Availability</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
           </TabsList>
           
@@ -382,6 +452,95 @@ export const EventForm: React.FC<EventFormProps> = ({
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="availability" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Players Availability */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="h-5 w-5" />
+                    Players Availability
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {players.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">
+                        No players found for this team.
+                      </p>
+                    ) : (
+                      players.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">
+                              {player.squad_number}. {player.name}
+                            </span>
+                          </div>
+                          <Badge className={`text-white ${getAvailabilityColor(player.availability)}`}>
+                            {getAvailabilityLabel(player.availability)}
+                          </Badge>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Staff Availability */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5" />
+                    Staff Availability
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {staff.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">
+                        No staff members found for this team.
+                      </p>
+                    ) : (
+                      staff.map((member) => (
+                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <span className="font-medium">{member.name}</span>
+                              <p className="text-sm text-muted-foreground capitalize">
+                                {member.role.replace('_', ' ')}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge className="bg-green-500 text-white">
+                            Available
+                          </Badge>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h4 className="font-medium mb-2">Availability Legend</h4>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-green-500"></div>
+                  <span className="text-sm">Available</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-yellow-500"></div>
+                  <span className="text-sm">Maybe</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded bg-red-500"></div>
+                  <span className="text-sm">Unavailable</span>
+                </div>
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="notes" className="space-y-4">
