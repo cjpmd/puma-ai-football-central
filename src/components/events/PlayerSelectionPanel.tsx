@@ -11,6 +11,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Position, Formation, Player } from '@/types';
 import { FormationSelector } from './FormationSelector';
 import { getPositionsForFormation } from '@/utils/formationUtils';
+import { AlertTriangle } from 'lucide-react';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
@@ -18,6 +19,7 @@ interface PlayerSelectionPanelProps {
   gameFormat: string;
   periodNumber: number;
   teamNumber: number;
+  totalTeams?: number;
 }
 
 interface PerformanceCategory {
@@ -26,15 +28,23 @@ interface PerformanceCategory {
   description: string | null;
 }
 
+interface PlayerConflict {
+  playerId: string;
+  conflictTeamNumber: number;
+  conflictPeriodNumber: number;
+}
+
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventId,
   teamId,
   gameFormat,
   periodNumber,
-  teamNumber
+  teamNumber,
+  totalTeams = 1
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
+  const [playerConflicts, setPlayerConflicts] = useState<PlayerConflict[]>([]);
   const [selection, setSelection] = useState({
     formation: '3-2-1' as Formation,
     captainId: '',
@@ -51,6 +61,60 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     loadPlayersAndSelection();
     loadPerformanceCategories();
   }, [eventId, teamId, periodNumber, teamNumber]);
+
+  useEffect(() => {
+    if (totalTeams > 1) {
+      loadPlayerConflicts();
+    }
+  }, [eventId, teamId, periodNumber, teamNumber, totalTeams, selection.playerPositions, selection.substitutes]);
+
+  const loadPlayerConflicts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_selections')
+        .select('player_positions, substitutes, team_number, period_number')
+        .eq('event_id', eventId)
+        .eq('team_id', teamId)
+        .neq('team_number', teamNumber);
+
+      if (error) throw error;
+
+      const conflicts: PlayerConflict[] = [];
+      
+      (data || []).forEach(otherSelection => {
+        // Check player positions
+        if (Array.isArray(otherSelection.player_positions)) {
+          otherSelection.player_positions.forEach((pp: any) => {
+            const playerId = pp.playerId || pp.player_id;
+            if (playerId) {
+              conflicts.push({
+                playerId,
+                conflictTeamNumber: otherSelection.team_number,
+                conflictPeriodNumber: otherSelection.period_number
+              });
+            }
+          });
+        }
+        
+        // Check substitutes
+        if (Array.isArray(otherSelection.substitutes)) {
+          otherSelection.substitutes.forEach((subId: string) => {
+            if (subId) {
+              conflicts.push({
+                playerId: subId,
+                conflictTeamNumber: otherSelection.team_number,
+                conflictPeriodNumber: otherSelection.period_number
+              });
+            }
+          });
+        }
+      });
+
+      setPlayerConflicts(conflicts);
+    } catch (error) {
+      console.error('Error loading player conflicts:', error);
+    }
+  };
 
   const loadPerformanceCategories = async () => {
     try {
@@ -118,7 +182,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       
       setPlayers(transformedPlayers);
 
-      // Load existing selection with proper WHERE clause including team_number
+      // Load existing selection
       const { data: selectionData, error: selectionError } = await supabase
         .from('event_selections')
         .select('*')
@@ -149,6 +213,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           duration: selectionData.duration_minutes || 90,
           performanceCategoryId: selectionData.performance_category_id || ''
         });
+      } else {
+        // Check if this is not the first period and try to duplicate from previous period
+        if (periodNumber > 1) {
+          await loadPreviousPeriodSelection();
+        }
       }
     } catch (error: any) {
       console.error('PlayerSelectionPanel: Error in loadPlayersAndSelection:', error);
@@ -159,6 +228,39 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPreviousPeriodSelection = async () => {
+    try {
+      const { data: previousSelection, error } = await supabase
+        .from('event_selections')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('team_id', teamId)
+        .eq('period_number', periodNumber - 1)
+        .eq('team_number', teamNumber)
+        .maybeSingle();
+
+      if (error || !previousSelection) return;
+
+      setSelection({
+        formation: previousSelection.formation as Formation,
+        captainId: previousSelection.captain_id || '',
+        playerPositions: Array.isArray(previousSelection.player_positions) ? 
+          (previousSelection.player_positions as any[]).map(pp => ({
+            playerId: pp.playerId || pp.player_id,
+            position: pp.position
+          })) : [],
+        substitutes: Array.isArray(previousSelection.substitutes) ? 
+          (previousSelection.substitutes as any[]).filter(sub => typeof sub === 'string') : [],
+        duration: previousSelection.duration_minutes || 90,
+        performanceCategoryId: previousSelection.performance_category_id || ''
+      });
+
+      console.log('Duplicated selection from previous period');
+    } catch (error) {
+      console.error('Error loading previous period selection:', error);
     }
   };
 
@@ -187,7 +289,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       console.log('PlayerSelectionPanel: Upserting data:', selectionData);
 
-      // Use the correct unique constraint fields for upsert (now includes team_number)
       const { error } = await supabase
         .from('event_selections')
         .upsert(selectionData, {
@@ -220,13 +321,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     console.log('PlayerSelectionPanel: Changing player position:', playerId, position);
     
     if (position === 'none') {
-      // Remove the player from positions
       setSelection(prev => ({
         ...prev,
         playerPositions: prev.playerPositions.filter(pp => pp.playerId !== playerId)
       }));
     } else {
-      // Add or update the player position
       setSelection(prev => ({
         ...prev,
         playerPositions: [
@@ -245,6 +344,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         ? prev.substitutes.filter(id => id !== playerId)
         : [...prev.substitutes, playerId]
     }));
+  };
+
+  const getPlayerConflict = (playerId: string): PlayerConflict | undefined => {
+    return playerConflicts.find(conflict => conflict.playerId === playerId);
   };
 
   // Get available positions for the current formation
@@ -283,51 +386,55 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               onFormationChange={(formation) => setSelection(prev => ({ 
                 ...prev, 
                 formation: formation as Formation,
-                // Clear player positions when formation changes
                 playerPositions: []
               }))}
             />
           </div>
 
-          {/* Performance Category */}
-          {performanceCategories.length > 0 && (
-            <div className="space-y-2">
-              <Label>Performance Category</Label>
-              <Select
-                value={selection.performanceCategoryId || 'none'}
-                onValueChange={(value) => setSelection(prev => ({ 
-                  ...prev, 
-                  performanceCategoryId: value === 'none' ? '' : value 
-                }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select performance category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No Category</SelectItem>
-                  {performanceCategories.map((category) => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          {/* Team-level settings (only show for period 1) */}
+          {periodNumber === 1 && (
+            <>
+              {/* Performance Category */}
+              {performanceCategories.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Performance Category</Label>
+                  <Select
+                    value={selection.performanceCategoryId || 'none'}
+                    onValueChange={(value) => setSelection(prev => ({ 
+                      ...prev, 
+                      performanceCategoryId: value === 'none' ? '' : value 
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select performance category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {performanceCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
-          {/* Duration */}
-          <div className="space-y-2">
-            <Label htmlFor="duration">Period Duration (minutes)</Label>
-            <Input
-              id="duration"
-              type="number"
-              value={selection.duration}
-              onChange={(e) => setSelection(prev => ({ ...prev, duration: parseInt(e.target.value) || 90 }))}
-              className="w-32"
-              min="1"
-              max="120"
-            />
-          </div>
+              {/* Duration */}
+              <div className="space-y-2">
+                <Label htmlFor="duration">Period Duration (minutes)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={selection.duration}
+                  onChange={(e) => setSelection(prev => ({ ...prev, duration: parseInt(e.target.value) || 90 }))}
+                  className="w-32"
+                  min="1"
+                  max="120"
+                />
+              </div>
+            </>
+          )}
 
           {/* Captain Selection */}
           <div className="space-y-2">
@@ -363,6 +470,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               {availablePositions.map((position, index) => {
                 const assignedPlayer = selection.playerPositions.find(pp => pp.position === position);
                 const player = assignedPlayer ? players.find(p => p.id === assignedPlayer.playerId) : null;
+                const conflict = player ? getPlayerConflict(player.id) : undefined;
                 
                 return (
                   <div key={`${position}-${index}`} className="flex items-center gap-4 p-3 border rounded">
@@ -371,13 +479,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                       value={assignedPlayer?.playerId || 'none'}
                       onValueChange={(playerId) => {
                         if (playerId === 'none') {
-                          // Remove assignment
                           setSelection(prev => ({
                             ...prev,
                             playerPositions: prev.playerPositions.filter(pp => pp.position !== position)
                           }));
                         } else {
-                          // Assign player to this position
                           setSelection(prev => ({
                             ...prev,
                             playerPositions: [
@@ -395,7 +501,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                         <SelectItem value="none">No Player</SelectItem>
                         {players
                           .filter(p => {
-                            // Show unassigned players or the currently assigned player
                             const isAssigned = selection.playerPositions.some(pp => pp.playerId === p.id && pp.position !== position);
                             return !isAssigned || p.id === assignedPlayer?.playerId;
                           })
@@ -407,9 +512,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                       </SelectContent>
                     </Select>
                     {player && (
-                      <Badge variant="outline" className="text-xs">
-                        #{player.squadNumber}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          #{player.squadNumber}
+                        </Badge>
+                        {conflict && (
+                          <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                            <AlertTriangle className="h-3 w-3" />
+                            Team {conflict.conflictTeamNumber}
+                          </Badge>
+                        )}
+                      </div>
                     )}
                   </div>
                 );
@@ -425,6 +538,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 .filter(player => !selection.playerPositions.some(pp => pp.playerId === player.id))
                 .map((player) => {
                   const isSubstitute = selection.substitutes.includes(player.id);
+                  const conflict = getPlayerConflict(player.id);
                   
                   return (
                     <div key={player.id} className="flex items-center gap-4 p-3 border rounded">
@@ -432,6 +546,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                         <div className="font-medium">{player.name}</div>
                         <div className="text-sm text-muted-foreground">#{player.squadNumber}</div>
                       </div>
+                      
+                      {conflict && (
+                        <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3" />
+                          Team {conflict.conflictTeamNumber}
+                        </Badge>
+                      )}
                       
                       <Button
                         variant={isSubstitute ? "default" : "outline"}

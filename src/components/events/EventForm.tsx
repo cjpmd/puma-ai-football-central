@@ -1,23 +1,30 @@
-import { useState, useEffect } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Event, EventType, GameFormat } from '@/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { TeamSelector } from './TeamSelector';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Users, UserCheck } from 'lucide-react';
+import { Event, GameFormat } from '@/types';
+import { Plus, X } from 'lucide-react';
 
 interface EventFormProps {
-  event: Event | null;
-  onSubmit: (data: Partial<Event>) => void;
-  onCancel: () => void;
+  event?: Event | null;
   teamId: string;
+  onSubmit: (eventData: Partial<Event>) => void;
+  onCancel: () => void;
+}
+
+interface TeamTimeSlot {
+  teamNumber: number;
+  meetingTime: string;
+  startTime: string;
+  endTime: string;
 }
 
 interface Facility {
@@ -26,570 +33,358 @@ interface Facility {
   description?: string;
 }
 
-interface PerformanceCategory {
-  id: string;
-  name: string;
-  description?: string;
-}
-
-interface Player {
-  id: string;
-  name: string;
-  squad_number: number;
-  availability: string;
-}
-
-interface Staff {
-  id: string;
-  name: string;
-  role: string;
-  email: string;
-}
-
-export const EventForm: React.FC<EventFormProps> = ({
-  event,
-  onSubmit,
-  onCancel,
-  teamId
-}) => {
+export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, onCancel }) => {
   const { teams } = useAuth();
-  const [activeTab, setActiveTab] = useState('details');
   const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [staff, setStaff] = useState<Staff[]>([]);
-  const [formData, setFormData] = useState<Partial<Event>>({
-    type: event?.type || 'training',
-    teamId: teamId,
+  const [numberOfTeams, setNumberOfTeams] = useState(1);
+  const [teamTimeSlots, setTeamTimeSlots] = useState<TeamTimeSlot[]>([
+    { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
+  ]);
+  
+  const [formData, setFormData] = useState({
+    type: event?.type || 'training' as const,
     title: event?.title || '',
     date: event?.date || new Date().toISOString().split('T')[0],
-    meetingTime: event?.meetingTime || '09:00',
-    startTime: event?.startTime || '10:00',
-    endTime: event?.endTime || '11:30',
     location: event?.location || '',
-    gameFormat: event?.gameFormat || '7-a-side',
+    gameFormat: event?.gameFormat || '7-a-side' as GameFormat,
     opponent: event?.opponent || '',
     isHome: event?.isHome || true,
-    teams: event?.teams || [teamId],
-    trainingNotes: event?.trainingNotes || '',
-    coachNotes: event?.coachNotes || '',
-    staffNotes: event?.staffNotes || '',
-    performanceCategoryId: event?.performanceCategoryId || '',
-    kitSelection: event?.kitSelection || 'home'
+    facilityId: event?.facilityId || '',
+    trainingNotes: event?.trainingNotes || ''
   });
 
-  const [selectedFacility, setSelectedFacility] = useState<string>(event?.facilityId || "none");
-
   useEffect(() => {
-    loadClubFacilities();
-    loadPerformanceCategories();
-    loadPlayersAndStaff();
-  }, [teamId]);
+    loadFacilities();
+    if (event) {
+      // For existing events, initialize with existing time slots or default
+      setNumberOfTeams(event.teams?.length || 1);
+      const initialSlots = event.teams?.map((_, index) => ({
+        teamNumber: index + 1,
+        meetingTime: event.meetingTime || '09:00',
+        startTime: event.startTime || '10:00',
+        endTime: event.endTime || '11:30'
+      })) || [{ teamNumber: 1, meetingTime: event.meetingTime || '09:00', startTime: event.startTime || '10:00', endTime: event.endTime || '11:30' }];
+      setTeamTimeSlots(initialSlots);
+    }
+  }, [event]);
 
-  const loadClubFacilities = async () => {
+  const loadFacilities = async () => {
     try {
       const team = teams.find(t => t.id === teamId);
       if (!team?.clubId) return;
 
       const { data, error } = await supabase
         .from('facilities')
-        .select('id, name, description')
-        .eq('club_id', team.clubId);
+        .select('*')
+        .eq('club_id', team.clubId)
+        .order('name');
 
-      if (error) {
-        console.error('Error loading facilities:', error);
-        return;
-      }
-
+      if (error) throw error;
       setFacilities(data || []);
     } catch (error) {
-      console.error('Error in loadClubFacilities:', error);
+      console.error('Error loading facilities:', error);
     }
   };
 
-  const loadPerformanceCategories = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('performance_categories')
-        .select('id, name, description')
-        .eq('team_id', teamId);
-
-      if (error) {
-        console.error('Error loading performance categories:', error);
-        return;
+  const handleNumberOfTeamsChange = (newNumber: number) => {
+    setNumberOfTeams(newNumber);
+    
+    // Adjust team time slots
+    const newSlots: TeamTimeSlot[] = [];
+    for (let i = 1; i <= newNumber; i++) {
+      const existingSlot = teamTimeSlots.find(slot => slot.teamNumber === i);
+      if (existingSlot) {
+        newSlots.push(existingSlot);
+      } else {
+        // Create new slot based on the last slot or default
+        const lastSlot = teamTimeSlots[teamTimeSlots.length - 1] || teamTimeSlots[0];
+        newSlots.push({
+          teamNumber: i,
+          meetingTime: lastSlot?.meetingTime || '09:00',
+          startTime: lastSlot?.startTime || '10:00',
+          endTime: lastSlot?.endTime || '11:30'
+        });
       }
-
-      setPerformanceCategories(data || []);
-      
-      if (data && data.length > 0 && !formData.performanceCategoryId) {
-        const defaultCategory = data.find(cat => cat.name === 'Default') || data[0];
-        handleChange('performanceCategoryId', defaultCategory.id);
-      }
-    } catch (error) {
-      console.error('Error in loadPerformanceCategories:', error);
     }
+    setTeamTimeSlots(newSlots);
   };
 
-  const loadPlayersAndStaff = async () => {
-    try {
-      // Load players
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('id, name, squad_number, availability')
-        .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('squad_number');
-
-      if (playersError) {
-        console.error('Error loading players:', playersError);
-      } else {
-        setPlayers(playersData || []);
-      }
-
-      // Load staff
-      const { data: staffData, error: staffError } = await supabase
-        .from('team_staff')
-        .select('id, name, role, email')
-        .eq('team_id', teamId);
-
-      if (staffError) {
-        console.error('Error loading staff:', staffError);
-      } else {
-        setStaff(staffData || []);
-      }
-    } catch (error) {
-      console.error('Error in loadPlayersAndStaff:', error);
-    }
+  const updateTeamTimeSlot = (teamNumber: number, field: keyof Omit<TeamTimeSlot, 'teamNumber'>, value: string) => {
+    setTeamTimeSlots(prev => prev.map(slot => 
+      slot.teamNumber === teamNumber 
+        ? { ...slot, [field]: value }
+        : slot
+    ));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const enhancedData = {
+    // For single team events, use the primary time slot
+    const primaryTimeSlot = teamTimeSlots[0];
+    
+    const eventData: Partial<Event> = {
       ...formData,
-      facilityId: selectedFacility !== "none" ? selectedFacility : null,
+      teamId,
+      teams: numberOfTeams > 1 ? Array(numberOfTeams).fill(teamId) : [teamId],
+      meetingTime: primaryTimeSlot.meetingTime,
+      startTime: primaryTimeSlot.startTime,
+      endTime: primaryTimeSlot.endTime,
+      // Store team time slots in a custom field for multi-team events
+      teamTimeSlots: numberOfTeams > 1 ? teamTimeSlots : undefined
     };
 
-    onSubmit(enhancedData);
+    onSubmit(eventData);
   };
 
-  const isMatchType = formData.type === 'fixture' || formData.type === 'friendly' || formData.type === 'tournament' || formData.type === 'festival';
-  const hasOpponent = formData.type === 'fixture' || formData.type === 'friendly';
-  const currentTeam = teams.find(t => t.id === teamId);
-
-  const handleChange = (field: keyof Partial<Event>, value: any) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    });
-  };
-
-  const handleTeamsChange = (teams: string[]) => {
-    setFormData({
-      ...formData,
-      teams: teams
-    });
-  };
-
-  const getAvailabilityColor = (availability: string) => {
-    switch (availability) {
-      case 'green': return 'bg-green-500';
-      case 'amber': return 'bg-yellow-500';
-      case 'red': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getAvailabilityLabel = (availability: string) => {
-    switch (availability) {
-      case 'green': return 'Available';
-      case 'amber': return 'Maybe';
-      case 'red': return 'Unavailable';
-      default: return 'Unknown';
-    }
-  };
+  const gameFormats: GameFormat[] = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
+  const eventTypes = ['training', 'fixture', 'friendly', 'tournament', 'festival', 'social'];
 
   return (
-    <div className="max-h-[70vh] overflow-y-auto">
-      <form onSubmit={handleSubmit} className="space-y-4 py-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid grid-cols-4 mb-4">
-            <TabsTrigger value="details">Event Details</TabsTrigger>
-            <TabsTrigger value="kit">Kit & Teams</TabsTrigger>
-            <TabsTrigger value="availability">Availability</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="details" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="type">Event Type</Label>
-              <Select 
-                value={formData.type}
-                onValueChange={(value) => handleChange('type', value as EventType)}
-                required
-              >
-                <SelectTrigger id="type">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fixture">Fixture</SelectItem>
-                  <SelectItem value="friendly">Friendly</SelectItem>
-                  <SelectItem value="tournament">Tournament</SelectItem>
-                  <SelectItem value="festival">Festival</SelectItem>
-                  <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="social">Social Event</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="title">Event Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => handleChange('title', e.target.value)}
-                placeholder="e.g. Training Session or vs Arsenal FC"
-                required
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => handleChange('date', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="meetingTime">Meeting Time</Label>
-                <Input
-                  id="meetingTime"
-                  type="time"
-                  value={formData.meetingTime}
-                  onChange={(e) => handleChange('meetingTime', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="startTime">Start Time</Label>
-                <Input
-                  id="startTime"
-                  type="time"
-                  value={formData.startTime}
-                  onChange={(e) => handleChange('startTime', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="endTime">End Time</Label>
-                <Input
-                  id="endTime"
-                  type="time"
-                  value={formData.endTime}
-                  onChange={(e) => handleChange('endTime', e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="gameFormat">Game Format</Label>
-                <Select 
-                  value={formData.gameFormat}
-                  onValueChange={(value) => handleChange('gameFormat', value as GameFormat)}
-                  required
-                >
-                  <SelectTrigger id="gameFormat">
-                    <SelectValue placeholder="Select game format" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="3-a-side">3-a-side</SelectItem>
-                    <SelectItem value="4-a-side">4-a-side</SelectItem>
-                    <SelectItem value="5-a-side">5-a-side</SelectItem>
-                    <SelectItem value="7-a-side">7-a-side</SelectItem>
-                    <SelectItem value="9-a-side">9-a-side</SelectItem>
-                    <SelectItem value="11-a-side">11-a-side</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  value={formData.location}
-                  onChange={(e) => handleChange('location', e.target.value)}
-                  placeholder="e.g. Training Ground or Stadium Name"
-                  required
-                />
-              </div>
-              
-              {facilities.length > 0 && (
-                <div className="space-y-2">
-                  <Label htmlFor="facility">Club Facility (Optional)</Label>
-                  <Select 
-                    value={selectedFacility}
-                    onValueChange={setSelectedFacility}
-                  >
-                    <SelectTrigger id="facility">
-                      <SelectValue placeholder="Select a facility" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No facility</SelectItem>
-                      {facilities.map((facility) => (
-                        <SelectItem key={facility.id} value={facility.id}>
-                          {facility.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-            </div>
-
-            {performanceCategories.length > 0 && (
-              <div className="space-y-2">
-                <Label htmlFor="performanceCategory">Performance Category</Label>
-                <Select 
-                  value={formData.performanceCategoryId || ""}
-                  onValueChange={(value) => handleChange('performanceCategoryId', value)}
-                >
-                  <SelectTrigger id="performanceCategory">
-                    <SelectValue placeholder="Select performance category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {performanceCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
-            {hasOpponent && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="opponent">Opponent</Label>
-                  <Input
-                    id="opponent"
-                    value={formData.opponent}
-                    onChange={(e) => handleChange('opponent', e.target.value)}
-                    placeholder="e.g. Arsenal FC"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="venue">Venue</Label>
-                  <Select 
-                    value={formData.isHome ? 'home' : 'away'}
-                    onValueChange={(value) => handleChange('isHome', value === 'home')}
-                    required
-                  >
-                    <SelectTrigger id="venue">
-                      <SelectValue placeholder="Select venue" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="home">Home</SelectItem>
-                      <SelectItem value="away">Away</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="kit" className="space-y-4">
-            {/* Kit Selection - Only show for match types */}
-            {isMatchType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Kit Selection</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <Label htmlFor="kit">Select Kit</Label>
-                    <Select 
-                      value={formData.kitSelection}
-                      onValueChange={(value) => handleChange('kitSelection', value)}
-                    >
-                      <SelectTrigger id="kit">
-                        <SelectValue placeholder="Select kit" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="home">Home Kit</SelectItem>
-                        <SelectItem value="away">Away Kit</SelectItem>
-                        <SelectItem value="training">Training Kit</SelectItem>
-                        <SelectItem value="goalkeeper">Goalkeeper Kit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Team Selection - Show for match types */}
-            {isMatchType && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Team Selection</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <TeamSelector
-                    selectedTeams={formData.teams || [teamId]}
-                    onTeamsChange={handleTeamsChange}
-                    primaryTeamId={teamId}
-                    maxTeams={formData.type === 'tournament' || formData.type === 'festival' ? 4 : 2}
-                  />
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          <TabsContent value="availability" className="space-y-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Players Availability */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Players Availability
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {players.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">
-                        No players found for this team.
-                      </p>
-                    ) : (
-                      players.map((player) => (
-                        <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <span className="font-medium">
-                              {player.squad_number}. {player.name}
-                            </span>
-                          </div>
-                          <Badge className={`text-white ${getAvailabilityColor(player.availability)}`}>
-                            {getAvailabilityLabel(player.availability)}
-                          </Badge>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Staff Availability */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <UserCheck className="h-5 w-5" />
-                    Staff Availability
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {staff.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-4">
-                        No staff members found for this team.
-                      </p>
-                    ) : (
-                      staff.map((member) => (
-                        <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <span className="font-medium">{member.name}</span>
-                              <p className="text-sm text-muted-foreground capitalize">
-                                {member.role.replace('_', ' ')}
-                              </p>
-                            </div>
-                          </div>
-                          <Badge className="bg-green-500 text-white">
-                            Available
-                          </Badge>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="mt-4 p-4 bg-muted rounded-lg">
-              <h4 className="font-medium mb-2">Availability Legend</h4>
-              <div className="flex flex-wrap gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-green-500"></div>
-                  <span className="text-sm">Available</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-yellow-500"></div>
-                  <span className="text-sm">Maybe</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-red-500"></div>
-                  <span className="text-sm">Unavailable</span>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="notes" className="space-y-4">
-            {formData.type === 'training' && (
-              <div className="space-y-2">
-                <Label htmlFor="trainingNotes">Training Notes</Label>
-                <Textarea
-                  id="trainingNotes"
-                  value={formData.trainingNotes || ''}
-                  onChange={(e) => handleChange('trainingNotes', e.target.value)}
-                  placeholder="Add training session details, drills, squad information..."
-                  rows={4}
-                />
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="coachNotes">Coach Notes (Visible to coaches only)</Label>
-              <Textarea
-                id="coachNotes"
-                value={formData.coachNotes || ''}
-                onChange={(e) => handleChange('coachNotes', e.target.value)}
-                placeholder="Add notes for coaches only..."
-                rows={4}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="staffNotes">Staff Notes (Visible to staff only)</Label>
-              <Textarea
-                id="staffNotes"
-                value={formData.staffNotes || ''}
-                onChange={(e) => handleChange('staffNotes', e.target.value)}
-                placeholder="Add notes for staff only..."
-                rows={4}
-              />
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <div className="flex justify-end space-x-2 pt-4 border-t mt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" className="bg-puma-blue-500 hover:bg-puma-blue-600">
-            {event ? 'Update Event' : 'Create Event'}
-          </Button>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Basic Event Information */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="type">Event Type</Label>
+          <Select
+            value={formData.type}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as any }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {eventTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </form>
-    </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="title">Event Title</Label>
+          <Input
+            id="title"
+            value={formData.title}
+            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date">Date</Label>
+          <Input
+            id="date"
+            type="date"
+            value={formData.date}
+            onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="gameFormat">Game Format</Label>
+          <Select
+            value={formData.gameFormat}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {gameFormats.map((format) => (
+                <SelectItem key={format} value={format}>
+                  {format}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Number of Teams for fixtures, friendlies, tournaments, and festivals */}
+      {(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Number of Teams</Label>
+            <Select
+              value={numberOfTeams.toString()}
+              onValueChange={(value) => handleNumberOfTeamsChange(parseInt(value))}
+            >
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[1, 2, 3, 4].map((num) => (
+                  <SelectItem key={num} value={num.toString()}>
+                    {num} {num === 1 ? 'Team' : 'Teams'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Team Time Slots */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Team Schedules</Label>
+            {teamTimeSlots.map((slot) => (
+              <Card key={slot.teamNumber}>
+                <CardHeader>
+                  <CardTitle className="text-base">Team {slot.teamNumber}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label>Meeting Time</Label>
+                      <Input
+                        type="time"
+                        value={slot.meetingTime}
+                        onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'meetingTime', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Start Time</Label>
+                      <Input
+                        type="time"
+                        value={slot.startTime}
+                        onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'startTime', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>End Time</Label>
+                      <Input
+                        type="time"
+                        value={slot.endTime}
+                        onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'endTime', e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Single team time slots for other event types */}
+      {!(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="meetingTime">Meeting Time</Label>
+            <Input
+              id="meetingTime"
+              type="time"
+              value={teamTimeSlots[0]?.meetingTime || '09:00'}
+              onChange={(e) => updateTeamTimeSlot(1, 'meetingTime', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="startTime">Start Time</Label>
+            <Input
+              id="startTime"
+              type="time"
+              value={teamTimeSlots[0]?.startTime || '10:00'}
+              onChange={(e) => updateTeamTimeSlot(1, 'startTime', e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="endTime">End Time</Label>
+            <Input
+              id="endTime"
+              type="time"
+              value={teamTimeSlots[0]?.endTime || '11:30'}
+              onChange={(e) => updateTeamTimeSlot(1, 'endTime', e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Location and Facility */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="location">Location</Label>
+          <Input
+            id="location"
+            value={formData.location}
+            onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+            required
+          />
+        </div>
+
+        {facilities.length > 0 && (
+          <div className="space-y-2">
+            <Label htmlFor="facility">Facility</Label>
+            <Select
+              value={formData.facilityId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select facility" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No facility</SelectItem>
+                {facilities.map((facility) => (
+                  <SelectItem key={facility.id} value={facility.id}>
+                    {facility.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+
+      {/* Opponent for fixtures and friendlies */}
+      {(formData.type === 'fixture' || formData.type === 'friendly') && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="opponent">Opponent</Label>
+            <Input
+              id="opponent"
+              value={formData.opponent}
+              onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
+              placeholder="Enter opponent name"
+            />
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="isHome"
+              checked={formData.isHome}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+            />
+            <Label htmlFor="isHome">Home game</Label>
+          </div>
+        </div>
+      )}
+
+      {/* Training Notes */}
+      {formData.type === 'training' && (
+        <div className="space-y-2">
+          <Label htmlFor="trainingNotes">Training Notes</Label>
+          <Textarea
+            id="trainingNotes"
+            value={formData.trainingNotes}
+            onChange={(e) => setFormData(prev => ({ ...prev, trainingNotes: e.target.value }))}
+            placeholder="Add notes about this training session..."
+            rows={3}
+          />
+        </div>
+      )}
+
+      {/* Form Actions */}
+      <div className="flex gap-2 pt-4">
+        <Button type="submit" className="flex-1">
+          {event ? 'Update Event' : 'Create Event'}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </form>
   );
 };
