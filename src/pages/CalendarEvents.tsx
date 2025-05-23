@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ import { TeamSelectionManager } from '@/components/events/TeamSelectionManager';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Event, GameFormat } from '@/types';
-import { Plus, Calendar as CalendarIcon, List, Clock, MapPin, Users, ChevronLeft, ChevronRight, Trophy, Target } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, List, Clock, MapPin, Users, ChevronLeft, ChevronRight, Trophy, Target, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const CalendarEvents = () => {
@@ -111,10 +110,43 @@ const CalendarEvents = () => {
           opponent: eventData.opponent,
           is_home: eventData.isHome,
           facility_id: eventData.facilityId,
-          training_notes: eventData.trainingNotes
+          training_notes: eventData.trainingNotes,
+          scores: eventData.scores,
+          player_of_match_id: eventData.playerOfTheMatchId
         });
 
       if (error) throw error;
+
+      // If multiple teams, create event_teams entries
+      if (eventData.teams && eventData.teams.length > 1) {
+        const eventTeamsData = eventData.teams.map((teamId, index) => ({
+          event_id: undefined, // Will be filled by the response
+          team_id: teamId,
+          team_number: index + 1
+        }));
+
+        // We need the event ID, so let's get it from the inserted event
+        const { data: insertedEvent } = await supabase
+          .from('events')
+          .select('id')
+          .eq('team_id', selectedTeam)
+          .eq('title', eventData.title)
+          .eq('date', eventData.date)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (insertedEvent) {
+          const eventTeamsWithId = eventTeamsData.map(et => ({
+            ...et,
+            event_id: insertedEvent.id
+          }));
+
+          await supabase
+            .from('event_teams')
+            .insert(eventTeamsWithId);
+        }
+      }
 
       toast.success('Event created successfully');
       setIsEventFormOpen(false);
@@ -143,11 +175,33 @@ const CalendarEvents = () => {
           opponent: eventData.opponent,
           is_home: eventData.isHome,
           facility_id: eventData.facilityId,
-          training_notes: eventData.trainingNotes
+          training_notes: eventData.trainingNotes,
+          scores: eventData.scores,
+          player_of_match_id: eventData.playerOfTheMatchId
         })
         .eq('id', editingEvent.id);
 
       if (error) throw error;
+
+      // Update event_teams if multiple teams
+      if (eventData.teams && eventData.teams.length > 1) {
+        // Delete existing event_teams
+        await supabase
+          .from('event_teams')
+          .delete()
+          .eq('event_id', editingEvent.id);
+
+        // Insert new event_teams
+        const eventTeamsData = eventData.teams.map((teamId, index) => ({
+          event_id: editingEvent.id,
+          team_id: teamId,
+          team_number: index + 1
+        }));
+
+        await supabase
+          .from('event_teams')
+          .insert(eventTeamsData);
+      }
 
       toast.success('Event updated successfully');
       setIsEventFormOpen(false);
@@ -156,6 +210,36 @@ const CalendarEvents = () => {
     } catch (error: any) {
       console.error('Error updating event:', error);
       toast.error('Failed to update event');
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      // Delete related event_teams first
+      await supabase
+        .from('event_teams')
+        .delete()
+        .eq('event_id', eventId);
+
+      // Delete event_selections
+      await supabase
+        .from('event_selections')
+        .delete()
+        .eq('event_id', eventId);
+
+      // Delete the event
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      toast.success('Event deleted successfully');
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
     }
   };
 
@@ -391,6 +475,14 @@ const CalendarEvents = () => {
                                             >
                                               <Users className="h-4 w-4" />
                                             </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => handleDeleteEvent(event.id)}
+                                              className="text-red-600 hover:text-red-700"
+                                            >
+                                              <Trash2 className="h-4 w-4" />
+                                            </Button>
                                           </div>
                                         </div>
                                       </div>
@@ -583,6 +675,14 @@ const CalendarEvents = () => {
                                             }}
                                           >
                                             <Users className="h-4 w-4" />
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleDeleteEvent(event.id)}
+                                            className="text-red-600 hover:text-red-700"
+                                          >
+                                            <Trash2 className="h-4 w-4" />
                                           </Button>
                                         </div>
                                       </div>

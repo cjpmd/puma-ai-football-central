@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,9 +33,15 @@ interface Facility {
   description?: string;
 }
 
+interface Player {
+  id: string;
+  name: string;
+}
+
 export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, onCancel }) => {
   const { teams } = useAuth();
   const [facilities, setFacilities] = useState<Facility[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [numberOfTeams, setNumberOfTeams] = useState(1);
   const [teamTimeSlots, setTeamTimeSlots] = useState<TeamTimeSlot[]>([
     { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
@@ -51,13 +56,16 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     opponent: event?.opponent || '',
     isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
-    trainingNotes: event?.trainingNotes || ''
+    trainingNotes: event?.trainingNotes || '',
+    homeScore: event?.scores?.home || 0,
+    awayScore: event?.scores?.away || 0,
+    playerOfTheMatchId: event?.playerOfTheMatchId || ''
   });
 
   useEffect(() => {
     loadFacilities();
+    loadPlayers();
     if (event) {
-      // For existing events, initialize with existing time slots or default
       setNumberOfTeams(event.teams?.length || 1);
       const initialSlots = event.teams?.map((_, index) => ({
         teamNumber: index + 1,
@@ -84,6 +92,22 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       setFacilities(data || []);
     } catch (error) {
       console.error('Error loading facilities:', error);
+    }
+  };
+
+  const loadPlayers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, name')
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      setPlayers(data || []);
+    } catch (error) {
+      console.error('Error loading players:', error);
     }
   };
 
@@ -121,7 +145,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // For single team events, use the primary time slot
     const primaryTimeSlot = teamTimeSlots[0];
     
     const eventData: Partial<Event> = {
@@ -130,7 +153,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       teams: numberOfTeams > 1 ? Array(numberOfTeams).fill(teamId) : [teamId],
       meetingTime: primaryTimeSlot.meetingTime,
       startTime: primaryTimeSlot.startTime,
-      endTime: primaryTimeSlot.endTime
+      endTime: primaryTimeSlot.endTime,
+      scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
+        ? { home: formData.homeScore, away: formData.awayScore }
+        : undefined,
+      playerOfTheMatchId: formData.playerOfTheMatchId || undefined
     };
 
     onSubmit(eventData);
@@ -359,6 +386,63 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               />
               <Label htmlFor="isHome">Home game</Label>
             </div>
+
+            {/* Scores Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Match Result</CardTitle>
+                <CardDescription>Enter the final score if the match has been played</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="homeScore">
+                      {formData.isHome ? 'Our Score' : 'Opponent Score'}
+                    </Label>
+                    <Input
+                      id="homeScore"
+                      type="number"
+                      min="0"
+                      value={formData.homeScore}
+                      onChange={(e) => setFormData(prev => ({ ...prev, homeScore: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="awayScore">
+                      {formData.isHome ? 'Opponent Score' : 'Our Score'}
+                    </Label>
+                    <Input
+                      id="awayScore"
+                      type="number"
+                      min="0"
+                      value={formData.awayScore}
+                      onChange={(e) => setFormData(prev => ({ ...prev, awayScore: parseInt(e.target.value) || 0 }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Player of the Match */}
+                <div className="space-y-2">
+                  <Label htmlFor="playerOfTheMatch">Player of the Match</Label>
+                  <Select
+                    value={formData.playerOfTheMatchId}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, playerOfTheMatchId: value === 'none' ? '' : value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select player of the match" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No player selected</SelectItem>
+                      {players.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          {player.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
