@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
-import { Plus, Edit, Trash2, Users, Mail, Phone } from 'lucide-react';
+import { Plus, Trash2, Users, Mail, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -37,21 +37,34 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && team?.id) {
+      console.log('StaffManagementModal: Loading staff for team:', team.id);
       loadStaff();
     }
-  }, [isOpen, team.id]);
+  }, [isOpen, team?.id]);
 
   const loadStaff = async () => {
+    if (!team?.id) {
+      console.error('StaffManagementModal: No team ID provided');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
+      console.log('StaffManagementModal: Fetching staff for team:', team.id);
       
       const { data, error } = await supabase
         .from('team_staff')
         .select('*')
         .eq('team_id', team.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('StaffManagementModal: Database error:', error);
+        throw error;
+      }
+
+      console.log('StaffManagementModal: Loaded staff data:', data);
 
       if (data) {
         const staffMembers: TeamStaff[] = data.map(record => ({
@@ -61,19 +74,19 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           phone: record.phone || '',
           role: record.role as TeamStaff['role'],
           user_id: record.user_id || undefined,
-          coachingBadges: [],
-          certificates: [],
+          coachingBadges: Array.isArray(record.coaching_badges) ? record.coaching_badges : [],
+          certificates: Array.isArray(record.certificates) ? record.certificates : [],
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }));
         
         setStaff(staffMembers);
       }
-    } catch (error) {
-      console.error('Error loading staff:', error);
+    } catch (error: any) {
+      console.error('StaffManagementModal: Error loading staff:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load team staff',
+        description: error.message || 'Failed to load team staff',
         variant: 'destructive',
       });
     } finally {
@@ -82,7 +95,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   };
 
   const handleAddStaff = async () => {
-    if (!newStaff.name || !newStaff.email) {
+    if (!newStaff.name.trim() || !newStaff.email.trim()) {
       toast({
         title: 'Error',
         description: 'Name and email are required',
@@ -91,18 +104,36 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       return;
     }
 
+    if (!team?.id) {
+      toast({
+        title: 'Error',
+        description: 'No team selected',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
-      const { error } = await supabase
+      console.log('StaffManagementModal: Adding staff member:', newStaff);
+
+      const { data, error } = await supabase
         .from('team_staff')
         .insert({
           team_id: team.id,
-          name: newStaff.name,
-          email: newStaff.email,
-          phone: newStaff.phone || null,
+          name: newStaff.name.trim(),
+          email: newStaff.email.trim(),
+          phone: newStaff.phone.trim() || null,
           role: newStaff.role,
-        });
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('StaffManagementModal: Insert error:', error);
+        throw error;
+      }
+
+      console.log('StaffManagementModal: Staff member added:', data);
 
       await loadStaff();
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
@@ -113,10 +144,10 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         description: `${newStaff.name} has been added to ${team.name}`,
       });
     } catch (error: any) {
-      console.error('Error adding staff:', error);
+      console.error('StaffManagementModal: Error adding staff:', error);
       toast({
         title: 'Error',
-        description: 'Failed to add staff member',
+        description: error.message || 'Failed to add staff member',
         variant: 'destructive',
       });
     }
@@ -124,12 +155,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
   const handleRemoveStaff = async (staffId: string) => {
     try {
+      console.log('StaffManagementModal: Removing staff member:', staffId);
+
       const { error } = await supabase
         .from('team_staff')
         .delete()
         .eq('id', staffId);
       
-      if (error) throw error;
+      if (error) {
+        console.error('StaffManagementModal: Delete error:', error);
+        throw error;
+      }
       
       await loadStaff();
       
@@ -137,11 +173,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         title: 'Success',
         description: 'Staff member removed successfully',
       });
-    } catch (error) {
-      console.error('Error removing staff:', error);
+    } catch (error: any) {
+      console.error('StaffManagementModal: Error removing staff:', error);
       toast({
         title: 'Error',
-        description: 'Failed to remove staff member',
+        description: error.message || 'Failed to remove staff member',
         variant: 'destructive',
       });
     }
@@ -161,6 +197,10 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     return role.replace('_', ' ').split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
+  }
+
+  if (!team) {
+    return null;
   }
 
   return (
