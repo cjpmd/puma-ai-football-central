@@ -70,46 +70,46 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
+      <DialogContent className="sm:max-w-[900px] h-[90vh] max-h-[800px] flex flex-col">
+        <DialogHeader className="flex-shrink-0 pb-4">
           <DialogTitle>Team Settings - {team.name}</DialogTitle>
           <DialogDescription>
             Configure your team settings, subscriptions, and integrations.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-            <TabsList className="grid w-full grid-cols-6 flex-shrink-0">
-              {settingsTabs.map((tab) => (
-                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
-                  {tab.icon}
-                  <span className="hidden sm:inline">{tab.label}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            
-            <div className="flex-1 mt-4 min-h-0 overflow-hidden">
-              {settingsTabs.map((tab) => (
-                <TabsContent key={tab.id} value={tab.id} className="h-full data-[state=active]:flex data-[state=active]:flex-col">
-                  <ScrollArea className="flex-1 h-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-6 flex-shrink-0 mb-4">
+            {settingsTabs.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
+                {tab.icon}
+                <span className="hidden sm:inline">{tab.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
+          <div className="flex-1 overflow-hidden">
+            {settingsTabs.map((tab) => (
+              <TabsContent key={tab.id} value={tab.id} className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="space-y-6 pb-6">
                     <Card className="border-0 shadow-none">
-                      <CardHeader>
+                      <CardHeader className="px-0">
                         <CardTitle className="flex items-center gap-2">
                           {tab.icon}
                           {tab.label}
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="space-y-4 pb-6">
+                      <CardContent className="px-0">
                         {tab.component}
                       </CardContent>
                     </Card>
-                  </ScrollArea>
-                </TabsContent>
-              ))}
-            </div>
-          </Tabs>
-        </div>
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+            ))}
+          </div>
+        </Tabs>
         
         <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
