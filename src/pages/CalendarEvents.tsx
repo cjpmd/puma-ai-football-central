@@ -23,7 +23,7 @@ const CalendarEvents = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [activeView, setActiveView] = useState<'list' | 'calendar'>('list'); // Default to list view
+  const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -215,71 +215,6 @@ const CalendarEvents = () => {
       }
       return a.date.localeCompare(b.date);
     });
-  };
-
-  const handleCreateEvent = async (eventData: Partial<Event>) => {
-    try {
-      const { error } = await supabase
-        .from('events')
-        .insert({
-          team_id: selectedTeam,
-          event_type: eventData.type,
-          title: eventData.title,
-          date: eventData.date,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          meeting_time: eventData.meetingTime,
-          location: eventData.location,
-          game_format: eventData.gameFormat,
-          opponent: eventData.opponent,
-          is_home: eventData.isHome,
-          facility_id: eventData.facilityId,
-          training_notes: eventData.trainingNotes
-        });
-
-      if (error) throw error;
-
-      toast.success('Event created successfully');
-      setIsEventFormOpen(false);
-      loadEvents();
-    } catch (error: any) {
-      console.error('Error creating event:', error);
-      toast.error('Failed to create event');
-    }
-  };
-
-  const handleEditEvent = async (eventData: Partial<Event>) => {
-    if (!editingEvent) return;
-
-    try {
-      const { error } = await supabase
-        .from('events')
-        .update({
-          event_type: eventData.type,
-          title: eventData.title,
-          date: eventData.date,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          meeting_time: eventData.meetingTime,
-          location: eventData.location,
-          game_format: eventData.gameFormat,
-          opponent: eventData.opponent,
-          is_home: eventData.isHome,
-          facility_id: eventData.facilityId,
-          training_notes: eventData.trainingNotes
-        })
-        .eq('id', editingEvent.id);
-
-      if (error) throw error;
-
-      toast.success('Event updated successfully');
-      setIsEventFormOpen(false);
-      setEditingEvent(null);
-      loadEvents();
-    } catch (error: any) {
-      console.error('Error updating event:', error);
-      toast.error('Failed to update event');
-    }
   };
 
   return (

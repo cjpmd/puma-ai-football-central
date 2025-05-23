@@ -40,16 +40,16 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
         .from('team_privacy_settings' as any)
         .select('*')
         .eq('team_id', team.id)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
 
       if (data) {
         setSettings({
-          showScoresToParents: data.show_scores_to_parents ?? true,
-          showScoresToPlayers: data.show_scores_to_players ?? true,
-          showPlayerStatsToParents: data.show_player_stats_to_parents ?? true,
-          showPlayerStatsToPlayers: data.show_player_stats_to_players ?? true
+          showScoresToParents: (data as any).show_scores_to_parents ?? true,
+          showScoresToPlayers: (data as any).show_scores_to_players ?? true,
+          showPlayerStatsToParents: (data as any).show_player_stats_to_parents ?? true,
+          showPlayerStatsToPlayers: (data as any).show_player_stats_to_players ?? true
         });
       }
     } catch (error: any) {
