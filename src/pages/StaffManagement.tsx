@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -69,7 +68,7 @@ const StaffManagement = () => {
         .select(`
           user_id,
           role,
-          profiles:user_id (
+          profiles!inner(
             name,
             email
           )
@@ -102,7 +101,7 @@ const StaffManagement = () => {
         .select(`
           user_id,
           role,
-          profiles:user_id (
+          profiles!inner(
             name,
             email
           )

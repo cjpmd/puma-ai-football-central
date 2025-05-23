@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { User as AppUser, Team, Club } from '@/types';
+import { User as AppUser, Team, Club, UserRole, SubscriptionType } from '@/types';
 
 type AuthContextType = {
   session: Session | null;
@@ -98,7 +98,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.email,
           name: data.name,
           phone: data.phone,
-          roles: data.roles,
+          // Cast the roles to ensure type safety
+          roles: data.roles as UserRole[],
         };
         setProfile(userProfile);
       }
@@ -137,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Map the data to our Team type
+      // Map the data to our Team type with proper type conversions
       const formattedTeams: Team[] = teamsData.map(team => ({
         id: team.id,
         name: team.name,
@@ -145,7 +146,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         seasonStart: team.season_start,
         seasonEnd: team.season_end,
         clubId: team.club_id,
-        subscriptionType: team.subscription_type,
+        // Cast subscription type to ensure type safety
+        subscriptionType: team.subscription_type as SubscriptionType,
         gameFormat: team.game_format,
         kitIcons: team.kit_icons,
         performanceCategories: team.performance_categories,
@@ -189,13 +191,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Map the data to our Club type
+      // Map the data to our Club type with proper type conversions
       const formattedClubs: Club[] = clubsData.map(club => ({
         id: club.id,
         name: club.name,
         referenceNumber: club.reference_number || '',
         teams: [], // We'll need a separate query to get this
-        subscriptionType: club.subscription_type,
+        // Cast subscription type to ensure type safety
+        subscriptionType: club.subscription_type as SubscriptionType,
         createdAt: club.created_at,
         updatedAt: club.updated_at
       }));
