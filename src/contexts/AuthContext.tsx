@@ -32,40 +32,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   useEffect(() => {
-    const loadSession = async () => {
-      setIsLoading(true);
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+    let mounted = true;
 
-        if (session) {
+    const loadSession = async () => {
+      try {
+        console.log('Loading session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          throw error;
+        }
+
+        if (!mounted) return;
+
+        if (session?.user) {
+          console.log('Session found, loading user data...');
           setUser(session.user);
           setSession(session);
-          await fetchProfile(session.user.id);
-          await fetchTeams(session.user.id);
-          await fetchClubs(session.user.id);
+          
+          // Load user data in parallel
+          await Promise.all([
+            fetchProfile(session.user.id),
+            fetchTeams(session.user.id),
+            fetchClubs(session.user.id)
+          ]);
+        } else {
+          console.log('No session found');
         }
       } catch (error: any) {
         console.error('Error loading session:', error);
-        toast({
-          title: 'Session load failed',
-          description: error.message,
-          variant: 'destructive',
-        });
+        if (mounted) {
+          toast({
+            title: 'Session load failed',
+            description: error.message,
+            variant: 'destructive',
+          });
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          console.log('Setting loading to false');
+          setIsLoading(false);
+        }
       }
     };
 
     loadSession();
 
     // Set up listener for supabase auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state changed:', event, session?.user?.id);
+      
       if (session?.user) {
         setUser(session.user);
         setSession(session);
-        await fetchProfile(session.user.id);
-        await fetchTeams(session.user.id);
-        await fetchClubs(session.user.id);
+        
+        try {
+          await Promise.all([
+            fetchProfile(session.user.id),
+            fetchTeams(session.user.id),
+            fetchClubs(session.user.id)
+          ]);
+        } catch (error) {
+          console.error('Error loading user data after auth change:', error);
+        }
       } else {
         setUser(null);
         setSession(null);
@@ -73,13 +103,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setClubs([]);
         setProfile(null);
       }
+      
+      if (mounted) {
+        setIsLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [toast]);
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -106,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       setProfile(transformedProfile);
+      console.log('Profile loaded successfully');
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
       toast({
@@ -118,6 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchTeams = async (userId: string) => {
     try {
+      console.log('Fetching teams for user:', userId);
       const { data: teamsData, error: teamsError } = await supabase
         .from('user_teams')
         .select('team_id')
@@ -125,6 +165,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (teamsError) {
         throw teamsError;
+      }
+
+      if (!teamsData || teamsData.length === 0) {
+        console.log('No teams found for user');
+        setTeams([]);
+        return;
       }
 
       // Fetch full team details for each team_id
@@ -165,6 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Filter out any null results (failed fetches)
       const validTeams = teamDetails.filter(team => team !== null);
       setTeams(validTeams as Team[]);
+      console.log('Teams loaded successfully:', validTeams.length);
 
     } catch (error: any) {
       console.error('Error fetching teams:', error.message);
@@ -179,6 +226,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchClubs = async (userId: string) => {
     try {
+      console.log('Fetching clubs for user:', userId);
       const { data: clubsData, error: clubsError } = await supabase
         .from('user_clubs')
         .select('club_id')
@@ -186,6 +234,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (clubsError) {
         throw clubsError;
+      }
+
+      if (!clubsData || clubsData.length === 0) {
+        console.log('No clubs found for user');
+        setClubs([]);
+        return;
       }
 
       // Fetch full club details for each club_id
@@ -221,6 +275,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Filter out any null results (failed fetches)
       const validClubs = clubDetails.filter(club => club !== null);
       setClubs(validClubs as Club[]);
+      console.log('Clubs loaded successfully:', validClubs.length);
 
     } catch (error: any) {
       console.error('Error fetching clubs:', error.message);
