@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Event, GameFormat } from '@/types';
@@ -138,250 +140,252 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const eventTypes = ['training', 'fixture', 'friendly', 'tournament', 'festival', 'social'];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Event Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="type">Event Type</Label>
-          <Select
-            value={formData.type}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as any }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {eventTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type.charAt(0).toUpperCase() + type.slice(1)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="title">Event Title</Label>
-          <Input
-            id="title"
-            value={formData.title}
-            onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-            required
-          />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="date">Date</Label>
-          <Input
-            id="date"
-            type="date"
-            value={formData.date}
-            onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="gameFormat">Game Format</Label>
-          <Select
-            value={formData.gameFormat}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {gameFormats.map((format) => (
-                <SelectItem key={format} value={format}>
-                  {format}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Number of Teams for fixtures, friendlies, tournaments, and festivals */}
-      {(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
-        <div className="space-y-4">
+    <ScrollArea className="max-h-[80vh] pr-4">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Event Information */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Number of Teams</Label>
+            <Label htmlFor="type">Event Type</Label>
             <Select
-              value={numberOfTeams.toString()}
-              onValueChange={(value) => handleNumberOfTeamsChange(parseInt(value))}
+              value={formData.type}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as any }))}
             >
-              <SelectTrigger className="w-32">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[1, 2, 3, 4].map((num) => (
-                  <SelectItem key={num} value={num.toString()}>
-                    {num} {num === 1 ? 'Team' : 'Teams'}
+                {eventTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type.charAt(0).toUpperCase() + type.slice(1)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Team Time Slots */}
-          <div className="space-y-4">
-            <Label className="text-lg font-semibold">Team Schedules</Label>
-            {teamTimeSlots.map((slot) => (
-              <Card key={slot.teamNumber}>
-                <CardHeader>
-                  <CardTitle className="text-base">Team {slot.teamNumber}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="space-y-2">
-                      <Label>Meeting Time</Label>
-                      <Input
-                        type="time"
-                        value={slot.meetingTime}
-                        onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'meetingTime', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Start Time</Label>
-                      <Input
-                        type="time"
-                        value={slot.startTime}
-                        onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'startTime', e.target.value)}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>End Time</Label>
-                      <Input
-                        type="time"
-                        value={slot.endTime}
-                        onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'endTime', e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Single team time slots for other event types */}
-      {!(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
-        <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="meetingTime">Meeting Time</Label>
+            <Label htmlFor="title">Event Title</Label>
             <Input
-              id="meetingTime"
-              type="time"
-              value={teamTimeSlots[0]?.meetingTime || '09:00'}
-              onChange={(e) => updateTeamTimeSlot(1, 'meetingTime', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="startTime">Start Time</Label>
-            <Input
-              id="startTime"
-              type="time"
-              value={teamTimeSlots[0]?.startTime || '10:00'}
-              onChange={(e) => updateTeamTimeSlot(1, 'startTime', e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="endTime">End Time</Label>
-            <Input
-              id="endTime"
-              type="time"
-              value={teamTimeSlots[0]?.endTime || '11:30'}
-              onChange={(e) => updateTeamTimeSlot(1, 'endTime', e.target.value)}
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              required
             />
           </div>
         </div>
-      )}
 
-      {/* Location and Facility */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
-          <Input
-            id="location"
-            value={formData.location}
-            onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-            required
-          />
-        </div>
-
-        {facilities.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="facility">Facility</Label>
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="gameFormat">Game Format</Label>
             <Select
-              value={formData.facilityId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value === 'none' ? '' : value }))}
+              value={formData.gameFormat}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }))}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select facility" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No facility</SelectItem>
-                {facilities.map((facility) => (
-                  <SelectItem key={facility.id} value={facility.id}>
-                    {facility.name}
+                {gameFormats.map((format) => (
+                  <SelectItem key={format} value={format}>
+                    {format}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Number of Teams for fixtures, friendlies, tournaments, and festivals */}
+        {(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Number of Teams</Label>
+              <Select
+                value={numberOfTeams.toString()}
+                onValueChange={(value) => handleNumberOfTeamsChange(parseInt(value))}
+              >
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4].map((num) => (
+                    <SelectItem key={num} value={num.toString()}>
+                      {num} {num === 1 ? 'Team' : 'Teams'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Team Time Slots */}
+            <div className="space-y-4">
+              <Label className="text-lg font-semibold">Team Schedules</Label>
+              {teamTimeSlots.map((slot) => (
+                <Card key={slot.teamNumber}>
+                  <CardHeader>
+                    <CardTitle className="text-base">Team {slot.teamNumber}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="space-y-2">
+                        <Label>Meeting Time</Label>
+                        <Input
+                          type="time"
+                          value={slot.meetingTime}
+                          onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'meetingTime', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Start Time</Label>
+                        <Input
+                          type="time"
+                          value={slot.startTime}
+                          onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'startTime', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>End Time</Label>
+                        <Input
+                          type="time"
+                          value={slot.endTime}
+                          onChange={(e) => updateTeamTimeSlot(slot.teamNumber, 'endTime', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
         )}
-      </div>
 
-      {/* Opponent for fixtures and friendlies */}
-      {(formData.type === 'fixture' || formData.type === 'friendly') && (
-        <div className="space-y-4">
+        {/* Single team time slots for other event types */}
+        {!(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
+          <div className="grid grid-cols-3 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="meetingTime">Meeting Time</Label>
+              <Input
+                id="meetingTime"
+                type="time"
+                value={teamTimeSlots[0]?.meetingTime || '09:00'}
+                onChange={(e) => updateTeamTimeSlot(1, 'meetingTime', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start Time</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={teamTimeSlots[0]?.startTime || '10:00'}
+                onChange={(e) => updateTeamTimeSlot(1, 'startTime', e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={teamTimeSlots[0]?.endTime || '11:30'}
+                onChange={(e) => updateTeamTimeSlot(1, 'endTime', e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Location and Facility */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="opponent">Opponent</Label>
+            <Label htmlFor="location">Location</Label>
             <Input
-              id="opponent"
-              value={formData.opponent}
-              onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
-              placeholder="Enter opponent name"
+              id="location"
+              value={formData.location}
+              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              required
             />
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isHome"
-              checked={formData.isHome}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
-            />
-            <Label htmlFor="isHome">Home game</Label>
+          {facilities.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="facility">Facility</Label>
+              <Select
+                value={formData.facilityId}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value === 'none' ? '' : value }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select facility" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No facility</SelectItem>
+                  {facilities.map((facility) => (
+                    <SelectItem key={facility.id} value={facility.id}>
+                      {facility.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
+
+        {/* Opponent for fixtures and friendlies */}
+        {(formData.type === 'fixture' || formData.type === 'friendly') && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="opponent">Opponent</Label>
+              <Input
+                id="opponent"
+                value={formData.opponent}
+                onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
+                placeholder="Enter opponent name"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="isHome"
+                checked={formData.isHome}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+              />
+              <Label htmlFor="isHome">Home game</Label>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Training Notes */}
-      {formData.type === 'training' && (
-        <div className="space-y-2">
-          <Label htmlFor="trainingNotes">Training Notes</Label>
-          <Textarea
-            id="trainingNotes"
-            value={formData.trainingNotes}
-            onChange={(e) => setFormData(prev => ({ ...prev, trainingNotes: e.target.value }))}
-            placeholder="Add notes about this training session..."
-            rows={3}
-          />
-        </div>
-      )}
+        {/* Training Notes */}
+        {formData.type === 'training' && (
+          <div className="space-y-2">
+            <Label htmlFor="trainingNotes">Training Notes</Label>
+            <Textarea
+              id="trainingNotes"
+              value={formData.trainingNotes}
+              onChange={(e) => setFormData(prev => ({ ...prev, trainingNotes: e.target.value }))}
+              placeholder="Add notes about this training session..."
+              rows={3}
+            />
+          </div>
+        )}
 
-      {/* Form Actions */}
-      <div className="flex gap-2 pt-4">
-        <Button type="submit" className="flex-1">
-          {event ? 'Update Event' : 'Create Event'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </form>
+        {/* Form Actions */}
+        <div className="flex gap-2 pt-4">
+          <Button type="submit" className="flex-1">
+            {event ? 'Update Event' : 'Create Event'}
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </ScrollArea>
   );
 };
