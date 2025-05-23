@@ -14,6 +14,8 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { ClubStaffManagement } from '@/components/clubs/ClubStaffManagement';
+import { ClubTeamsOverview } from '@/components/clubs/ClubTeamsOverview';
 
 interface StaffMember {
   id: string;
@@ -30,6 +32,7 @@ const StaffManagement = () => {
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
   const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'teams' | 'clubs'>('teams');
+  const [clubView, setClubView] = useState<'overview' | 'staff'>('overview');
   const [teamStaff, setTeamStaff] = useState<StaffMember[]>([]);
   const [clubStaff, setClubStaff] = useState<StaffMember[]>([]);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -602,101 +605,35 @@ const StaffManagement = () => {
                   )}
 
                   {selectedClub && (
-                    <Button
-                      onClick={() => {
-                        setFormData({ name: '', email: '', phone: '', role: '' });
-                        setIsAddStaffDialogOpen(true);
-                      }}
-                      className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Add Staff Member
-                    </Button>
+                    <div className="flex gap-2">
+                      <Tabs value={clubView} onValueChange={(v) => setClubView(v as 'overview' | 'staff')}>
+                        <TabsList>
+                          <TabsTrigger value="overview">Overview</TabsTrigger>
+                          <TabsTrigger value="staff">Staff Management</TabsTrigger>
+                        </TabsList>
+                      </Tabs>
+                    </div>
                   )}
                 </div>
 
                 {selectedClub ? (
-                  clubStaff.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {clubStaff.map((staff) => (
-                        <Card key={staff.id} className="hover:shadow-md transition-shadow">
-                          <CardContent className="p-4">
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <Avatar>
-                                  <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
-                                    {staff.name.substring(0, 2).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <h4 className="font-semibold">{staff.name}</h4>
-                                  <Badge className={`text-white ${getRoleColor(staff.role)} text-xs`}>
-                                    {formatRoleName(staff.role)}
-                                  </Badge>
-                                </div>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => openEditDialog(staff)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    if (confirm(`Are you sure you want to remove ${staff.name}?`)) {
-                                      handleRemoveClubStaff(staff.id, staff.role as UserRole);
-                                    }
-                                  }}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="space-y-2 text-sm text-muted-foreground">
-                              <div className="flex items-center gap-2">
-                                <Mail className="h-3 w-3" />
-                                <span className="truncate">{staff.email}</span>
-                              </div>
-                              {staff.phone && (
-                                <div className="flex items-center gap-2">
-                                  <Phone className="h-3 w-3" />
-                                  <span>{staff.phone}</span>
-                                </div>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  ) : (
-                    <Card>
-                      <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                        <div className="rounded-full bg-muted p-3 mb-4">
-                          <UserPlus className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <h3 className="font-semibold text-lg mb-1">No Staff Members Yet</h3>
-                        <p className="text-muted-foreground mb-4 max-w-md">
-                          This club doesn't have any staff members yet. Add staff members to help manage the club.
-                        </p>
-                        <Button
-                          onClick={() => setIsAddStaffDialogOpen(true)}
-                          className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                        >
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Add Staff Member
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  )
+                  <div className="space-y-6">
+                    {clubView === 'overview' ? (
+                      <ClubTeamsOverview
+                        clubId={selectedClub}
+                        clubName={getClubName(selectedClub)}
+                      />
+                    ) : (
+                      <ClubStaffManagement
+                        clubId={selectedClub}
+                        clubName={getClubName(selectedClub)}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <Card>
                     <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                      <p className="text-muted-foreground">Please select a club to manage its staff</p>
+                      <p className="text-muted-foreground">Please select a club to view its details</p>
                     </CardContent>
                   </Card>
                 )}

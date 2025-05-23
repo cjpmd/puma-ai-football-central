@@ -50,6 +50,42 @@ export type Database = {
           },
         ]
       }
+      club_teams: {
+        Row: {
+          club_id: string
+          created_at: string | null
+          id: string
+          team_id: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string | null
+          id?: string
+          team_id: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string | null
+          id?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_teams_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clubs: {
         Row: {
           created_at: string | null
@@ -79,6 +115,91 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      coaching_badges: {
+        Row: {
+          badge_level: string | null
+          badge_name: string
+          certificate_number: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          issued_date: string | null
+          issuing_authority: string | null
+          staff_id: string
+        }
+        Insert: {
+          badge_level?: string | null
+          badge_name: string
+          certificate_number?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issued_date?: string | null
+          issuing_authority?: string | null
+          staff_id: string
+        }
+        Update: {
+          badge_level?: string | null
+          badge_name?: string
+          certificate_number?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          issued_date?: string | null
+          issuing_authority?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_badges_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coaching_courses: {
+        Row: {
+          certificate_number: string | null
+          completion_date: string | null
+          course_name: string
+          course_type: string | null
+          created_at: string | null
+          id: string
+          issuing_authority: string | null
+          staff_id: string
+        }
+        Insert: {
+          certificate_number?: string | null
+          completion_date?: string | null
+          course_name: string
+          course_type?: string | null
+          created_at?: string | null
+          id?: string
+          issuing_authority?: string | null
+          staff_id: string
+        }
+        Update: {
+          certificate_number?: string | null
+          completion_date?: string | null
+          course_name?: string
+          course_type?: string | null
+          created_at?: string | null
+          id?: string
+          issuing_authority?: string | null
+          staff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_courses_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_attendees: {
         Row: {
@@ -926,6 +1047,9 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          pvg_checked: boolean | null
+          pvg_checked_at: string | null
+          pvg_checked_by: string | null
           role: string
           team_id: string
           updated_at: string | null
@@ -939,6 +1063,9 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          pvg_checked?: boolean | null
+          pvg_checked_at?: string | null
+          pvg_checked_by?: string | null
           role: string
           team_id: string
           updated_at?: string | null
@@ -952,6 +1079,9 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          pvg_checked?: boolean | null
+          pvg_checked_at?: string | null
+          pvg_checked_by?: string | null
           role?: string
           team_id?: string
           updated_at?: string | null
