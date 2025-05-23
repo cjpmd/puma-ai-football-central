@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,6 +85,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
     "STL": { x: 35, y: 15 },
     "STR": { x: 65, y: 15 },
     "DM": { x: 50, y: 65 },
+    "none": { x: 0, y: 0 }, // Placeholder coordinates for "none" position
   };
 
   const handleFormationChange = (value: string) => {
@@ -300,7 +300,7 @@ export function PitchView({ gameFormat, availablePlayers }: PitchViewProps) {
                           }`}
                           onClick={() => handleAddSubstitute(player.id)}
                         >
-                          <AvatarFallback className="bg-puma-blue-100 text-puma-blue-600 font-bold">
+                          <AvatarFallback className="bg-puma-blue-100 text-puma-blue-600 text-xs font-bold">
                             {player.number}
                           </AvatarFallback>
                         </Avatar>
