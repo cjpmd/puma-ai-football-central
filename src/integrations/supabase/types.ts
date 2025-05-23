@@ -9,12 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      club_officials: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          club_id: string
+          created_at: string
+          id: string
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          club_id: string
+          created_at?: string
+          id?: string
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          club_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_officials_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clubs: {
         Row: {
           created_at: string | null
           id: string
           name: string
           reference_number: string | null
+          serial_number: string | null
           subscription_type: string | null
           updated_at: string | null
         }
@@ -23,6 +65,7 @@ export type Database = {
           id?: string
           name: string
           reference_number?: string | null
+          serial_number?: string | null
           subscription_type?: string | null
           updated_at?: string | null
         }
@@ -31,10 +74,166 @@ export type Database = {
           id?: string
           name?: string
           reference_number?: string | null
+          serial_number?: string | null
           subscription_type?: string | null
           updated_at?: string | null
         }
         Relationships: []
+      }
+      events: {
+        Row: {
+          created_at: string
+          date: string
+          end_time: string | null
+          event_type: string
+          id: string
+          location: string | null
+          opponent: string | null
+          player_of_match_id: string | null
+          start_time: string | null
+          team_id: string
+          title: string
+          total_minutes: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          end_time?: string | null
+          event_type: string
+          id?: string
+          location?: string | null
+          opponent?: string | null
+          player_of_match_id?: string | null
+          start_time?: string | null
+          team_id: string
+          title: string
+          total_minutes?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          end_time?: string | null
+          event_type?: string
+          id?: string
+          location?: string | null
+          opponent?: string | null
+          player_of_match_id?: string | null
+          start_time?: string | null
+          team_id?: string
+          title?: string
+          total_minutes?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_player_of_match_id_fkey"
+            columns: ["player_of_match_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facilities: {
+        Row: {
+          bookable_units: string
+          club_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bookable_units?: string
+          club_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bookable_units?: string
+          club_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilities_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facility_availability: {
+        Row: {
+          booked_by_team_id: string | null
+          created_at: string
+          date: string
+          end_time: string
+          event_type: string | null
+          facility_id: string
+          id: string
+          is_available: boolean
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          booked_by_team_id?: string | null
+          created_at?: string
+          date: string
+          end_time: string
+          event_type?: string | null
+          facility_id: string
+          id?: string
+          is_available?: boolean
+          start_time: string
+          updated_at?: string
+        }
+        Update: {
+          booked_by_team_id?: string | null
+          created_at?: string
+          date?: string
+          end_time?: string
+          event_type?: string | null
+          facility_id?: string
+          id?: string
+          is_available?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facility_availability_booked_by_team_id_fkey"
+            columns: ["booked_by_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facility_availability_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       players: {
         Row: {
@@ -103,8 +302,10 @@ export type Database = {
       }
       profiles: {
         Row: {
+          coaching_badges: Json | null
           created_at: string | null
           email: string | null
+          fa_id: string | null
           id: string
           name: string | null
           phone: string | null
@@ -112,8 +313,10 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          coaching_badges?: Json | null
           created_at?: string | null
           email?: string | null
+          fa_id?: string | null
           id: string
           name?: string | null
           phone?: string | null
@@ -121,8 +324,10 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          coaching_badges?: Json | null
           created_at?: string | null
           email?: string | null
+          fa_id?: string | null
           id?: string
           name?: string | null
           phone?: string | null
@@ -130,6 +335,100 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      staff_certifications: {
+        Row: {
+          awarded_by: string | null
+          awarded_date: string
+          certification_name: string
+          certification_type: string
+          club_id: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          awarded_by?: string | null
+          awarded_date: string
+          certification_name: string
+          certification_type: string
+          club_id: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          awarded_by?: string | null
+          awarded_date?: string
+          certification_name?: string
+          certification_type?: string
+          club_id?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_certifications_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_subscriptions: {
+        Row: {
+          billing_period: string | null
+          created_at: string
+          end_date: string | null
+          id: string
+          start_date: string
+          status: string
+          subscription_type: string
+          team_id: string
+          updated_at: string
+          value_per_period: number | null
+        }
+        Insert: {
+          billing_period?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          start_date: string
+          status?: string
+          subscription_type: string
+          team_id: string
+          updated_at?: string
+          value_per_period?: number | null
+        }
+        Update: {
+          billing_period?: string | null
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          start_date?: string
+          status?: string
+          subscription_type?: string
+          team_id?: string
+          updated_at?: string
+          value_per_period?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_subscriptions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teams: {
         Row: {
@@ -139,6 +438,9 @@ export type Database = {
           game_format: string
           id: string
           kit_icons: Json | null
+          manager_email: string | null
+          manager_name: string | null
+          manager_phone: string | null
           name: string
           performance_categories: string[] | null
           season_end: string
@@ -153,6 +455,9 @@ export type Database = {
           game_format: string
           id?: string
           kit_icons?: Json | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
           name: string
           performance_categories?: string[] | null
           season_end: string
@@ -167,6 +472,9 @@ export type Database = {
           game_format?: string
           id?: string
           kit_icons?: Json | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_phone?: string | null
           name?: string
           performance_categories?: string[] | null
           season_end?: string
@@ -259,25 +567,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      get_current_user_id: {
+      generate_club_serial: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      user_belongs_to_team: {
-        Args: { team_id: string }
-        Returns: boolean
-      }
-      user_can_manage_team: {
-        Args: { team_id: string }
-        Returns: boolean
-      }
-      user_has_club_role: {
-        Args: { club_id: string; role: string }
-        Returns: boolean
-      }
-      user_has_team_role: {
-        Args: { team_id: string; role: string }
-        Returns: boolean
+      get_current_user_id: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       user_is_global_admin: {
         Args: Record<PropertyKey, never>

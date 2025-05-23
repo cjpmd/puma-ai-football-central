@@ -217,7 +217,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Get the actual club data
+      // Get the actual club data including serial numbers
       const clubIds = userClubData.map(uc => uc.club_id);
       const { data: clubsData, error: clubsError } = await supabase
         .from('clubs')
@@ -234,6 +234,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: club.id,
         name: club.name,
         referenceNumber: club.reference_number || '',
+        serialNumber: club.serial_number || undefined,
         teams: [],
         subscriptionType: club.subscription_type as SubscriptionType,
         createdAt: club.created_at,

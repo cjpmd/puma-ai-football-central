@@ -4,22 +4,26 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { Building, PlusCircle, Settings, UserPlus } from 'lucide-react';
+import { Building, PlusCircle, Settings, UserPlus, Eye, MapPin, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ClubForm } from '@/components/clubs/ClubForm';
+import { ClubDetailsModal } from '@/components/clubs/ClubDetailsModal';
 import { Club } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
 
 const ClubManagement = () => {
   const { clubs, refreshUserData } = useAuth();
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [detailsClub, setDetailsClub] = useState<Club | null>(null);
   const { toast } = useToast();
 
   const handleCreateClub = async (clubData: Partial<Club>) => {
     try {
-      // Insert club into the database
+      // Insert club into the database - serial number will be auto-generated
       const { data: clubResult, error: clubError } = await supabase
         .from('clubs')
         .insert([
@@ -36,7 +40,7 @@ const ClubManagement = () => {
         throw clubError;
       }
 
-      // Add the current user as club admin
+      // Add the current user as club admin via user_clubs table
       const { error: userClubError } = await supabase
         .from('user_clubs')
         .insert([
@@ -54,8 +58,8 @@ const ClubManagement = () => {
       await refreshUserData();
       setIsClubDialogOpen(false);
       toast({
-        title: 'Club Created',
-        description: `${clubData.name} has been successfully created.`,
+        title: 'Club Created Successfully',
+        description: `${clubData.name} has been created with a unique serial number and you've been assigned as admin.`,
       });
     } catch (error: any) {
       toast({
@@ -104,6 +108,11 @@ const ClubManagement = () => {
     setIsClubDialogOpen(true);
   };
 
+  const openDetailsModal = (club: Club) => {
+    setDetailsClub(club);
+    setIsDetailsModalOpen(true);
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -111,7 +120,7 @@ const ClubManagement = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Club Management</h1>
             <p className="text-muted-foreground">
-              Manage your clubs and their settings
+              Comprehensive management of clubs, teams, officials, and facilities
             </p>
           </div>
           <Dialog open={isClubDialogOpen} onOpenChange={setIsClubDialogOpen}>
@@ -132,7 +141,7 @@ const ClubManagement = () => {
                 <DialogDescription>
                   {selectedClub 
                     ? 'Update your club details and settings.' 
-                    : 'Add a new club to your account.'}
+                    : 'Add a new club with automatic serial number generation.'}
                 </DialogDescription>
               </DialogHeader>
               <ClubForm 
@@ -152,7 +161,8 @@ const ClubManagement = () => {
               </div>
               <h3 className="font-semibold text-lg mb-1">No Clubs Yet</h3>
               <p className="text-muted-foreground mb-4 max-w-md">
-                You haven't created any clubs yet. Start by creating your first club to manage teams, staff, and more.
+                You haven't created any clubs yet. Start by creating your first club to manage teams, 
+                officials, facilities, and more with automatic serial number generation.
               </p>
               <Button 
                 onClick={() => setIsClubDialogOpen(true)}
@@ -166,37 +176,64 @@ const ClubManagement = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {clubs.map((club) => (
-              <Card key={club.id}>
+              <Card key={club.id} className="hover:shadow-lg transition-shadow">
                 <CardHeader>
-                  <CardTitle>{club.name}</CardTitle>
-                  {club.referenceNumber && (
-                    <CardDescription>
-                      Ref: {club.referenceNumber}
-                    </CardDescription>
-                  )}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <CardTitle className="flex items-center gap-2">
+                        {club.name}
+                        {club.serialNumber && (
+                          <Badge variant="secondary" className="text-xs">
+                            #{club.serialNumber}
+                          </Badge>
+                        )}
+                      </CardTitle>
+                      {club.referenceNumber && (
+                        <CardDescription>
+                          Ref: {club.referenceNumber}
+                        </CardDescription>
+                      )}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Subscription:</span>
-                      <span className="font-medium capitalize">
+                      <Badge variant="outline" className="capitalize">
                         {club.subscriptionType}
-                      </span>
+                      </Badge>
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Teams:</span>
-                      <span className="font-medium">
+                      <span className="font-medium flex items-center gap-1">
+                        <Users className="h-3 w-3" />
                         {club.teams?.length || 0}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Serial Number:</span>
+                      <span className="font-mono text-xs">
+                        {club.serialNumber || 'Auto-generated'}
                       </span>
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm">
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Staff
+                <CardFooter className="flex justify-between gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => openDetailsModal(club)}
+                    className="flex-1"
+                  >
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Details
                   </Button>
-                  <Button size="sm" onClick={() => openEditClubDialog(club)}>
+                  <Button 
+                    size="sm" 
+                    onClick={() => openEditClubDialog(club)}
+                    className="flex-1"
+                  >
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </Button>
@@ -205,6 +242,13 @@ const ClubManagement = () => {
             ))}
           </div>
         )}
+
+        {/* Club Details Modal */}
+        <ClubDetailsModal 
+          club={detailsClub}
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+        />
       </div>
     </DashboardLayout>
   );

@@ -58,6 +58,9 @@ export const ClubForm: React.FC<ClubFormProps> = ({
             onChange={(e) => handleChange('referenceNumber', e.target.value)}
             placeholder="e.g. FA-12345"
           />
+          <p className="text-xs text-muted-foreground">
+            Note: A unique serial number will be automatically generated for this club
+          </p>
         </div>
 
         <div className="space-y-2">
