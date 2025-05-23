@@ -264,7 +264,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 <SelectValue placeholder="Select captain" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No Captain</SelectItem>
+                <SelectItem value="none">No Captain</SelectItem>
                 {players.map((player) => (
                   <SelectItem key={player.id} value={player.id}>
                     {player.name} (#{player.squadNumber})
@@ -290,14 +290,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                     </div>
                     
                     <Select
-                      value={playerPosition?.position || ''}
+                      value={playerPosition?.position || "none"}
                       onValueChange={(position) => handlePlayerPositionChange(player.id, position as Position)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue placeholder="Position" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No Position</SelectItem>
+                        <SelectItem value="none">No Position</SelectItem>
                         <SelectItem value="GK">GK</SelectItem>
                         <SelectItem value="DC">DC</SelectItem>
                         <SelectItem value="DL">DL</SelectItem>
