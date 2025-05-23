@@ -13,7 +13,7 @@ export type UserRole =
 
 export type SubscriptionType = "free" | "analytics_plus";
 export type PlayerSubscriptionType = "full_squad" | "training";
-export type SubscriptionStatus = "active" | "inactive" | "pending";
+export type SubscriptionStatus = "active" | "inactive" | "pending" | "paused";
 
 export type User = {
   id: string;

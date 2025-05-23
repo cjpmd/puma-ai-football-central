@@ -4,9 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Team, PlayerSubscriptionType, SubscriptionStatus } from '@/types/team';
+import { Team, PlayerSubscriptionType, SubscriptionStatus } from '@/types';
 import { Calendar, Users, PoundSterling, TrendingUp, Pause, Play, X } from 'lucide-react';
 
 interface TeamSubscriptionSettingsProps {
@@ -52,9 +51,10 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
 
   const getStatusColor = (status: SubscriptionStatus) => {
     switch (status) {
-      case 'active': return 'bg-green-500';
-      case 'paused': return 'bg-yellow-500';
-      case 'inactive': return 'bg-red-500';
+      case "active": return 'bg-green-500';
+      case "paused": return 'bg-yellow-500';
+      case "inactive": return 'bg-red-500';
+      case "pending": return 'bg-blue-500';
       default: return 'bg-gray-500';
     }
   };
