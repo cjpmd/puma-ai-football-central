@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,19 @@ const TeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [clubNames, setClubNames] = useState<Record<string, string>>({});
   const { toast } = useToast();
+
+  // Load club names when clubs change
+  useEffect(() => {
+    if (clubs && clubs.length > 0) {
+      const clubMap = clubs.reduce((acc, club) => {
+        acc[club.id] = club.name;
+        return acc;
+      }, {} as Record<string, string>);
+      setClubNames(clubMap);
+    }
+  }, [clubs]);
 
   const handleCreateTeam = async (teamData: Partial<Team>) => {
     try {
@@ -141,8 +154,7 @@ const TeamManagement = () => {
 
   const getClubName = (clubId?: string) => {
     if (!clubId) return 'Independent';
-    const club = clubs?.find(club => club.id === clubId);
-    return club?.name || 'Independent';
+    return clubNames[clubId] || 'Independent';
   };
 
   return (

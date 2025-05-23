@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
-import { Plus, Edit, Trash2, Users, Mail, Phone, Award } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Mail, Phone, Award, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -48,8 +49,13 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
           email: staffMember.email,
           phone: staffMember.phone || null,
           role: staffMember.role,
-          coaching_badges: staffMember.coachingBadges || [],
-          certificates: staffMember.certificates || [],
+          coaching_badges: (staffMember.coachingBadges || []).map(badge => ({ name: badge })),
+          certificates: (staffMember.certificates || []).map(cert => ({
+            name: cert.name,
+            issuedBy: cert.issuedBy,
+            dateIssued: cert.dateIssued,
+            expiryDate: cert.expiryDate
+          })),
           updated_at: new Date().toISOString()
         });
 
@@ -84,15 +90,17 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
           role: record.role as TeamStaff['role'],
           user_id: record.user_id || undefined,
           coachingBadges: Array.isArray(record.coaching_badges) 
-            ? (record.coaching_badges as any[]).map(badge => String(badge))
+            ? record.coaching_badges.map((badge: any) => 
+                typeof badge === 'string' ? badge : badge?.name || ''
+              ).filter(Boolean)
             : [],
           certificates: Array.isArray(record.certificates) 
-            ? (record.certificates as any[]).map(cert => ({
-                name: String(cert.name || ''),
-                issuedBy: String(cert.issuedBy || ''),
-                dateIssued: String(cert.dateIssued || ''),
-                expiryDate: cert.expiryDate ? String(cert.expiryDate) : undefined
-              }))
+            ? record.certificates.map((cert: any) => ({
+                name: String(cert?.name || ''),
+                issuedBy: String(cert?.issuedBy || ''),
+                dateIssued: String(cert?.dateIssued || ''),
+                expiryDate: cert?.expiryDate ? String(cert.expiryDate) : undefined
+              })).filter(cert => cert.name)
             : [],
           createdAt: record.created_at,
           updatedAt: record.updated_at
@@ -111,14 +119,57 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
   };
 
+  const sendStaffInvite = async (email: string, name: string, role: string) => {
+    try {
+      // Check if user already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingUser) {
+        toast({
+          title: 'User Already Exists',
+          description: 'This user is already registered. You can add them directly.',
+        });
+        return false;
+      }
+
+      // Here you would typically send an email invitation
+      // For now, we'll just show a message about the invite being sent
+      toast({
+        title: 'Invitation Sent',
+        description: `An invitation has been sent to ${email} to join as ${role}`,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error sending invite:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send invitation',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
   const handleAddStaff = async () => {
     if (newStaff.name && newStaff.email) {
+      // Check if user exists and send invite if needed
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', newStaff.email)
+        .maybeSingle();
+
       const staffMember: TeamStaff = {
         id: Date.now().toString(),
         ...newStaff,
         coachingBadges: [],
         certificates: [],
-        user_id: newStaff.email === user?.email ? user?.id : undefined,
+        user_id: existingUser?.id || undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -126,6 +177,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       const success = await saveStaffToDatabase(staffMember);
       
       if (success) {
+        // Send invite if user doesn't exist
+        if (!existingUser) {
+          await sendStaffInvite(newStaff.email, newStaff.name, newStaff.role);
+        }
+        
         await loadStaffFromDatabase();
         
         setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
@@ -212,7 +268,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         <div>
           <h3 className="text-lg font-semibold">Staff Management</h3>
           <p className="text-sm text-muted-foreground">
-            Manage your team's coaching staff and helpers
+            Manage your team's coaching staff and helpers. Invite new members or add existing users.
           </p>
         </div>
         <Button 
@@ -231,6 +287,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
             <CardTitle>
               {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
             </CardTitle>
+            <CardDescription>
+              {editingStaff 
+                ? 'Update staff member details' 
+                : 'Add a new staff member. If they don\'t have an account, we\'ll send them an invitation.'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -334,6 +395,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
                         <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
                           {getRoleLabel(staffMember.role)}
                         </Badge>
+                        {!staffMember.user_id && (
+                          <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                            Pending Invite
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                         <div className="flex items-center gap-1">

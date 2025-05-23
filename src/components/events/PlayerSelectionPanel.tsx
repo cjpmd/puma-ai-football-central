@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -27,20 +28,6 @@ interface Player {
 }
 
 type PositionPlayerMap = Record<string, string>;
-
-interface PlayerPosition {
-  playerId: string;
-  positionId: string;
-  [key: string]: any; // Add index signature for Json compatibility
-}
-
-interface TeamSelection {
-  id?: string;
-  captainId: string | null;
-  formationId: string;
-  playerPositions: PlayerPosition[];
-  substitutes: string[];
-}
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventId,
@@ -205,60 +192,42 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     try {
       setSaving(true);
       
-      const playerPositionsArray: PlayerPosition[] = Object.entries(playerPositions).map(
-        ([positionId, playerId]) => ({
+      // Convert to simple JSON-compatible arrays
+      const playerPositionsArray = Object.entries(playerPositions)
+        .filter(([, playerId]) => playerId)
+        .map(([positionId, playerId]) => ({
           positionId,
-          playerId: playerId || ''
-        })
-      ).filter(pp => pp.playerId);
+          playerId
+        }));
 
-      const { data: existingData, error: checkError } = await supabase
+      const substitutesArray = substitutes.filter(Boolean);
+
+      // Delete existing selection first to avoid constraint issues
+      await supabase
         .from('event_selections')
-        .select('id')
+        .delete()
         .eq('event_id', eventId)
         .eq('team_id', teamId)
         .eq('team_number', teamNumber)
-        .eq('period_number', periodNumber)
-        .maybeSingle();
+        .eq('period_number', periodNumber);
 
-      if (checkError) throw checkError;
+      // Insert new selection
+      const { error } = await supabase
+        .from('event_selections')
+        .insert({
+          event_id: eventId,
+          team_id: teamId,
+          team_number: teamNumber,
+          period_number: periodNumber,
+          captain_id: captainId,
+          formation: selectedFormation,
+          player_positions: playerPositionsArray,
+          substitutes: substitutesArray,
+          performance_category_id: performanceCategoryId,
+          duration_minutes: 45,
+        });
 
-      // Convert to Json-compatible format
-      const playerPositionsJson = playerPositionsArray as any;
-      const substitutesJson = substitutes as any;
-
-      if (existingData?.id) {
-        const { error } = await supabase
-          .from('event_selections')
-          .update({
-            captain_id: captainId,
-            formation: selectedFormation,
-            player_positions: playerPositionsJson,
-            substitutes: substitutesJson,
-            performance_category_id: performanceCategoryId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('event_selections')
-          .insert({
-            event_id: eventId,
-            team_id: teamId,
-            team_number: teamNumber,
-            period_number: periodNumber,
-            captain_id: captainId,
-            formation: selectedFormation,
-            player_positions: playerPositionsJson,
-            substitutes: substitutesJson,
-            performance_category_id: performanceCategoryId,
-            duration_minutes: 45,
-          });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       toast({
         title: 'Success',
