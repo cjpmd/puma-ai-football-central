@@ -29,6 +29,16 @@ export type TeamStaff = {
 
 export type FAProvider = 'comet' | 'matchday' | 'fulltime' | 'playmetrix' | 'custom';
 
+// Define performance category type
+export type PerformanceCategory = {
+  id: string;
+  name: string;
+  description?: string;
+  teamId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 // Type to match the imported Team type from '@/types'
 export interface Team {
   id: string;

@@ -34,7 +34,7 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
 
   useEffect(() => {
     loadAvailableTeams();
-  }, [primaryTeamId]);
+  }, [selectedTeams, primaryTeamId]);
 
   const loadAvailableTeams = async () => {
     try {
@@ -43,25 +43,12 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
       if (!primaryTeam) return;
 
       // Load teams with the same game format that aren't already selected
-      const { data, error } = await supabase
-        .from('teams')
-        .select('id, name, age_group, game_format')
-        .eq('game_format', primaryTeam.gameFormat)
-        .not('id', 'in', `(${selectedTeams.join(',')})`);
-
-      if (error) {
-        console.error('Error loading teams:', error);
-        return;
-      }
-
-      const transformedTeams: Team[] = (data || []).map(team => ({
-        id: team.id,
-        name: team.name,
-        ageGroup: team.age_group,
-        gameFormat: team.game_format
-      }));
-
-      setAvailableTeams(transformedTeams);
+      const filteredTeams = userTeams.filter(team => 
+        team.gameFormat === primaryTeam.gameFormat && 
+        !selectedTeams.includes(team.id)
+      );
+      
+      setAvailableTeams(filteredTeams);
     } catch (error) {
       console.error('Error in loadAvailableTeams:', error);
     }
@@ -71,20 +58,17 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
     if (selectedTeamId && !selectedTeams.includes(selectedTeamId) && selectedTeams.length < maxTeams) {
       onTeamsChange([...selectedTeams, selectedTeamId]);
       setSelectedTeamId('');
-      loadAvailableTeams();
     }
   };
 
   const handleRemoveTeam = (teamId: string) => {
     if (teamId !== primaryTeamId) { // Don't allow removing the primary team
       onTeamsChange(selectedTeams.filter(id => id !== teamId));
-      loadAvailableTeams();
     }
   };
 
   const getTeamName = (teamId: string) => {
-    const team = userTeams.find(t => t.id === teamId) || 
-                 availableTeams.find(t => t.id === teamId);
+    const team = userTeams.find(t => t.id === teamId);
     return team?.name || 'Unknown Team';
   };
 

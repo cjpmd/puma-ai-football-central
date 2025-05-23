@@ -198,6 +198,7 @@ export type Database = {
           id: string
           kit_selection: Json | null
           performance_category: string | null
+          performance_category_id: string | null
           period_number: number
           player_positions: Json
           staff_selection: Json | null
@@ -214,6 +215,7 @@ export type Database = {
           id?: string
           kit_selection?: Json | null
           performance_category?: string | null
+          performance_category_id?: string | null
           period_number?: number
           player_positions?: Json
           staff_selection?: Json | null
@@ -230,6 +232,7 @@ export type Database = {
           id?: string
           kit_selection?: Json | null
           performance_category?: string | null
+          performance_category_id?: string | null
           period_number?: number
           player_positions?: Json
           staff_selection?: Json | null
@@ -253,10 +256,52 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "event_selections_performance_category_id_fkey"
+            columns: ["performance_category_id"]
+            isOneToOne: false
+            referencedRelation: "performance_categories"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "event_selections_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_teams: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          team_id: string
+          team_number: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          team_id: string
+          team_number?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          team_id?: string
+          team_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_teams_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -504,6 +549,33 @@ export type Database = {
           },
         ]
       }
+      performance_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       player_attribute_history: {
         Row: {
           attribute_group: string
@@ -623,6 +695,7 @@ export type Database = {
           name: string
           objectives: Json | null
           parent_id: string | null
+          performance_category_id: string | null
           squad_number: number
           status: string | null
           subscription_status: string | null
@@ -644,6 +717,7 @@ export type Database = {
           name: string
           objectives?: Json | null
           parent_id?: string | null
+          performance_category_id?: string | null
           squad_number: number
           status?: string | null
           subscription_status?: string | null
@@ -665,6 +739,7 @@ export type Database = {
           name?: string
           objectives?: Json | null
           parent_id?: string | null
+          performance_category_id?: string | null
           squad_number?: number
           status?: string | null
           subscription_status?: string | null
@@ -674,6 +749,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "players_performance_category_id_fkey"
+            columns: ["performance_category_id"]
+            isOneToOne: false
+            referencedRelation: "performance_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "players_team_id_fkey"
             columns: ["team_id"]
