@@ -12,9 +12,15 @@ import { Team, Club } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+// Type for the minimal club data we fetch
+type ClubData = {
+  id: string;
+  name: string;
+};
+
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
-  const [allClubs, setAllClubs] = useState<Partial<Club>[]>([]);
+  const [allClubs, setAllClubs] = useState<ClubData[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
