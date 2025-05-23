@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -45,6 +44,12 @@ export type Team = {
   managerName?: string;
   managerEmail?: string;
   managerPhone?: string;
+  privacySettings?: {
+    showScoresToParents: boolean;
+    showScoresToPlayers: boolean;
+    showPlayerStatsToParents: boolean;
+    showPlayerStatsToPlayers: boolean;
+  };
   createdAt: string;
   updatedAt: string;
 };
@@ -239,6 +244,17 @@ export type Event = {
   staffNotes?: string;
   trainingNotes?: string;
   kitSelection?: string; // Added this property to fix the type error
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type EquipmentItem = {
+  id: string;
+  teamId: string;
+  name: string;
+  description?: string;
+  quantity: number;
+  condition: 'excellent' | 'good' | 'fair' | 'poor';
   createdAt: string;
   updatedAt: string;
 };

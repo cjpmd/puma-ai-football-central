@@ -9,12 +9,12 @@ import { Team } from '@/types';
 import { TeamBasicSettings } from './settings/TeamBasicSettings';
 import { TeamSubscriptionSettings } from './settings/TeamSubscriptionSettings';
 import { TeamAttributeSettings } from './settings/TeamAttributeSettings';
-import { TeamStaffSettings } from './settings/TeamStaffSettings';
 import { TeamFAConnection } from './settings/TeamFAConnection';
 import { TeamKitSettings } from './settings/TeamKitSettings';
 import { TeamPerformanceSettings } from './settings/TeamPerformanceSettings';
-import { UserManagement } from '../admin/UserManagement';
-import { Settings, Users, Trophy, Star, Wifi, Shirt, Target, UserCog } from 'lucide-react';
+import { TeamEquipmentSettings } from './settings/TeamEquipmentSettings';
+import { TeamPrivacySettings } from './settings/TeamPrivacySettings';
+import { Settings, Trophy, Star, Wifi, Shirt, Target, Package, Shield } from 'lucide-react';
 
 interface TeamSettingsModalProps {
   team: Team;
@@ -57,12 +57,6 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       component: <TeamAttributeSettings team={team as any} onUpdate={onUpdate} />
     },
     {
-      id: 'staff',
-      label: 'Staff Management',
-      icon: <Users className="h-4 w-4" />,
-      component: <TeamStaffSettings team={team as any} onUpdate={onUpdate} />
-    },
-    {
       id: 'fa-connection',
       label: 'FA Connection',
       icon: <Wifi className="h-4 w-4" />,
@@ -75,10 +69,16 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       component: <TeamKitSettings team={team} onUpdate={onUpdate} />
     },
     {
-      id: 'users',
-      label: 'User Management',
-      icon: <UserCog className="h-4 w-4" />,
-      component: <UserManagement />
+      id: 'equipment',
+      label: 'Equipment',
+      icon: <Package className="h-4 w-4" />,
+      component: <TeamEquipmentSettings team={team} onUpdate={onUpdate} />
+    },
+    {
+      id: 'privacy',
+      label: 'Privacy Settings',
+      icon: <Shield className="h-4 w-4" />,
+      component: <TeamPrivacySettings team={team} onUpdate={onUpdate} />
     }
   ];
 
