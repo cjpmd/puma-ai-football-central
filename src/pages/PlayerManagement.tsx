@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { PlayerForm } from '@/components/players/PlayerForm';
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { playersService } from '@/services/playersService';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const PlayerManagement = () => {
   const { teams } = useAuth();
@@ -17,51 +19,79 @@ const PlayerManagement = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  // Mock players data - in real app this would come from database
-  const mockPlayers: Player[] = [
-    {
-      id: "1",
-      name: "Jack Smith",
-      type: "outfield",
-      squadNumber: 7,
-      availability: "green",
-      subscriptionStatus: "active",
-      subscriptionType: "full_squad",
-      dateOfBirth: "2010-03-15",
-      teamId: teams[0]?.id || '',
-      attributes: [],
-      objectives: [],
-      comments: [],
-      matchStats: {
-        totalGames: 15,
-        captainGames: 3,
-        playerOfTheMatchCount: 2,
-        totalMinutes: 1200,
-        minutesByPosition: {} as any,
-        recentGames: []
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-  ];
+  // Fetch players for all teams
+  const { data: playersByTeam = {}, isLoading } = useQuery({
+    queryKey: ['players', teams.map(t => t.id)],
+    queryFn: async () => {
+      const result: Record<string, Player[]> = {};
+      for (const team of teams) {
+        try {
+          result[team.id] = await playersService.getPlayersByTeamId(team.id);
+        } catch (error) {
+          console.error(`Error fetching players for team ${team.id}:`, error);
+          result[team.id] = [];
+        }
+      }
+      return result;
+    },
+    enabled: teams.length > 0,
+  });
 
-  const handleCreatePlayer = async (playerData: Partial<Player>) => {
-    try {
-      // In real app, this would create player in database
-      console.log('Creating player:', playerData);
+  // Mutation for creating players
+  const createPlayerMutation = useMutation({
+    mutationFn: playersService.createPlayer,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['players'] });
       setIsPlayerDialogOpen(false);
       toast({
         title: 'Player Added',
-        description: `${playerData.name} has been successfully added to the squad.`,
+        description: 'Player has been successfully added to the squad.',
       });
-    } catch (error: any) {
+    },
+    onError: (error: any) => {
       toast({
         title: 'Error',
-        description: 'Failed to add player',
+        description: error.message || 'Failed to add player',
         variant: 'destructive',
       });
+    },
+  });
+
+  // Mutation for updating players
+  const updatePlayerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Player> }) => 
+      playersService.updatePlayer(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      setIsPlayerDialogOpen(false);
+      toast({
+        title: 'Player Updated',
+        description: 'Player has been successfully updated.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update player',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const handleCreatePlayer = async (playerData: Partial<Player>) => {
+    if (selectedPlayer) {
+      updatePlayerMutation.mutate({ id: selectedPlayer.id, data: playerData });
+    } else {
+      createPlayerMutation.mutate(playerData);
     }
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    setSelectedPlayer(player);
+    setSelectedTeamId(player.teamId);
+    setIsPlayerDialogOpen(true);
   };
 
   const getAvailabilityColor = (availability: string) => {
@@ -81,6 +111,24 @@ const PlayerManagement = () => {
       default: return 'Unknown';
     }
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight">Player Management</h1>
+              <p className="text-muted-foreground">
+                Manage your squad and player information
+              </p>
+            </div>
+          </div>
+          <div className="text-center py-8">Loading players...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -108,16 +156,21 @@ const PlayerManagement = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>Add New Player</DialogTitle>
+                  <DialogTitle>
+                    {selectedPlayer ? 'Edit Player' : 'Add New Player'}
+                  </DialogTitle>
                   <DialogDescription>
-                    Add a new player to your squad.
+                    {selectedPlayer ? 'Update player information.' : 'Add a new player to your squad.'}
                   </DialogDescription>
                 </DialogHeader>
                 <PlayerForm 
                   player={selectedPlayer} 
                   teamId={selectedTeamId}
                   onSubmit={handleCreatePlayer} 
-                  onCancel={() => setIsPlayerDialogOpen(false)}
+                  onCancel={() => {
+                    setIsPlayerDialogOpen(false);
+                    setSelectedPlayer(null);
+                  }}
                 />
               </DialogContent>
             </Dialog>
@@ -138,80 +191,82 @@ const PlayerManagement = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {teams.map((team) => (
-              <div key={team.id} className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">{team.name}</h2>
-                  <Badge variant="outline">{team.gameFormat}</Badge>
-                </div>
-                
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {mockPlayers
-                    .filter(player => player.teamId === team.id)
-                    .map((player) => (
-                    <Card key={player.id} className="relative">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{player.name}</CardTitle>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${getAvailabilityColor(player.availability)}`} />
-                            <span className="text-2xl font-bold">#{player.squadNumber}</span>
-                          </div>
-                        </div>
-                        <CardDescription>
-                          {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Status:</span>
-                            <Badge variant={player.availability === 'green' ? 'default' : 'secondary'}>
-                              {getAvailabilityText(player.availability)}
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Subscription:</span>
-                            <span className="font-medium capitalize">
-                              {player.subscriptionType?.replace('_', ' ')}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-muted-foreground">Games:</span>
-                            <span className="font-medium">
-                              {player.matchStats.totalGames}
-                            </span>
-                          </div>
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-between">
-                        <Button variant="outline" size="sm">
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Parent
-                        </Button>
-                        <Button size="sm">
-                          <Settings className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
+            {teams.map((team) => {
+              const teamPlayers = playersByTeam[team.id] || [];
+              
+              return (
+                <div key={team.id} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold">{team.name}</h2>
+                    <Badge variant="outline">{team.gameFormat}</Badge>
+                  </div>
                   
-                  {/* Add Player Card */}
-                  <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setSelectedPlayer(null);
-                          setSelectedTeamId(team.id);
-                          setIsPlayerDialogOpen(true);
-                        }}>
-                    <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                      <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-sm font-medium">Add Player</p>
-                    </CardContent>
-                  </Card>
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {teamPlayers.map((player) => (
+                      <Card key={player.id} className="relative">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-lg">{player.name}</CardTitle>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full ${getAvailabilityColor(player.availability)}`} />
+                              <span className="text-2xl font-bold">#{player.squadNumber}</span>
+                            </div>
+                          </div>
+                          <CardDescription>
+                            {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Status:</span>
+                              <Badge variant={player.availability === 'green' ? 'default' : 'secondary'}>
+                                {getAvailabilityText(player.availability)}
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Subscription:</span>
+                              <span className="font-medium capitalize">
+                                {player.subscriptionType?.replace('_', ' ')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-muted-foreground">Games:</span>
+                              <span className="font-medium">
+                                {player.matchStats.totalGames}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="flex justify-between">
+                          <Button variant="outline" size="sm">
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Parent
+                          </Button>
+                          <Button size="sm" onClick={() => handleEditPlayer(player)}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Edit
+                          </Button>
+                        </CardFooter>
+                      </Card>
+                    ))}
+                    
+                    {/* Add Player Card */}
+                    <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setSelectedPlayer(null);
+                            setSelectedTeamId(team.id);
+                            setIsPlayerDialogOpen(true);
+                          }}>
+                      <CardContent className="py-8 flex flex-col items-center justify-center text-center">
+                        <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Add Player</p>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

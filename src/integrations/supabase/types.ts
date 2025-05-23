@@ -36,6 +36,71 @@ export type Database = {
         }
         Relationships: []
       }
+      players: {
+        Row: {
+          attributes: Json | null
+          availability: string
+          comments: Json | null
+          created_at: string
+          date_of_birth: string
+          id: string
+          match_stats: Json | null
+          name: string
+          objectives: Json | null
+          parent_id: string | null
+          squad_number: number
+          subscription_status: string | null
+          subscription_type: string | null
+          team_id: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          attributes?: Json | null
+          availability?: string
+          comments?: Json | null
+          created_at?: string
+          date_of_birth: string
+          id?: string
+          match_stats?: Json | null
+          name: string
+          objectives?: Json | null
+          parent_id?: string | null
+          squad_number: number
+          subscription_status?: string | null
+          subscription_type?: string | null
+          team_id: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          attributes?: Json | null
+          availability?: string
+          comments?: Json | null
+          created_at?: string
+          date_of_birth?: string
+          id?: string
+          match_stats?: Json | null
+          name?: string
+          objectives?: Json | null
+          parent_id?: string | null
+          squad_number?: number
+          subscription_status?: string | null
+          subscription_type?: string | null
+          team_id?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
