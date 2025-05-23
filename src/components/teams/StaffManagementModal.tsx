@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -74,8 +73,27 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           phone: record.phone || '',
           role: record.role as TeamStaff['role'],
           user_id: record.user_id || undefined,
-          coachingBadges: Array.isArray(record.coaching_badges) ? record.coaching_badges : [],
-          certificates: Array.isArray(record.certificates) ? record.certificates : [],
+          coachingBadges: Array.isArray(record.coaching_badges) 
+            ? record.coaching_badges.filter(badge => typeof badge === 'string') as string[]
+            : [],
+          certificates: Array.isArray(record.certificates) 
+            ? record.certificates.map(cert => {
+                if (typeof cert === 'object' && cert !== null) {
+                  return {
+                    name: String(cert.name || ''),
+                    issuedBy: String(cert.issuedBy || ''),
+                    dateIssued: String(cert.dateIssued || ''),
+                    expiryDate: cert.expiryDate ? String(cert.expiryDate) : undefined
+                  };
+                }
+                return {
+                  name: '',
+                  issuedBy: '',
+                  dateIssued: '',
+                  expiryDate: undefined
+                };
+              })
+            : [],
           createdAt: record.created_at,
           updatedAt: record.updated_at
         }));
