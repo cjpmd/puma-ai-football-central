@@ -16,6 +16,10 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
   onClose,
   onUpdate
 }) => {
+  if (!team) {
+    return null;
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
