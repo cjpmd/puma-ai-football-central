@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -78,12 +79,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
             : [],
           certificates: Array.isArray(record.certificates) 
             ? record.certificates.map(cert => {
-                if (typeof cert === 'object' && cert !== null) {
+                if (typeof cert === 'object' && cert !== null && !Array.isArray(cert)) {
+                  const certObj = cert as { [key: string]: any };
                   return {
-                    name: String(cert.name || ''),
-                    issuedBy: String(cert.issuedBy || ''),
-                    dateIssued: String(cert.dateIssued || ''),
-                    expiryDate: cert.expiryDate ? String(cert.expiryDate) : undefined
+                    name: String(certObj.name || ''),
+                    issuedBy: String(certObj.issuedBy || ''),
+                    dateIssued: String(certObj.dateIssued || ''),
+                    expiryDate: certObj.expiryDate ? String(certObj.expiryDate) : undefined
                   };
                 }
                 return {
