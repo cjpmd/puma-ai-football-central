@@ -22,12 +22,19 @@ const CalendarEvents = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [activeView, setActiveView] = useState<'calendar' | 'list'>('calendar');
+  const [activeView, setActiveView] = useState<'calendar' | 'list'>('list'); // Default to list view
   const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Auto-select single team
+  useEffect(() => {
+    if (teams.length === 1 && !selectedTeam) {
+      setSelectedTeam(teams[0].id);
+    }
+  }, [teams, selectedTeam]);
 
   useEffect(() => {
     if (selectedTeam) {
@@ -70,9 +77,9 @@ const CalendarEvents = () => {
         facilityId: event.facility_id || '',
         trainingNotes: event.training_notes || '',
         teams: [event.team_id],
-        periods: [], // Add required periods property
-        createdAt: event.created_at || new Date().toISOString(), // Add required createdAt
-        updatedAt: event.updated_at || new Date().toISOString() // Add required updatedAt
+        periods: [],
+        createdAt: event.created_at || new Date().toISOString(),
+        updatedAt: event.updated_at || new Date().toISOString()
       }));
 
       setEvents(eventsData);
@@ -228,20 +235,22 @@ const CalendarEvents = () => {
           <>
             <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                <div className="space-y-2">
-                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                    <SelectTrigger className="w-64">
-                      <SelectValue placeholder="Select a team" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teams.map((team) => (
-                        <SelectItem key={team.id} value={team.id}>
-                          {team.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {teams.length > 1 && (
+                  <div className="space-y-2">
+                    <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                      <SelectTrigger className="w-64">
+                        <SelectValue placeholder="Select a team" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {teams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {selectedTeam && (
                   <div className="flex items-center gap-2">
@@ -297,15 +306,116 @@ const CalendarEvents = () => {
             {selectedTeam ? (
               <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'calendar' | 'list')}>
                 <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="calendar" className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    Calendar View
-                  </TabsTrigger>
                   <TabsTrigger value="list" className="flex items-center gap-2">
                     <List className="h-4 w-4" />
                     List View
                   </TabsTrigger>
+                  <TabsTrigger value="calendar" className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4" />
+                    Calendar View
+                  </TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="list">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        Events for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </CardTitle>
+                      <CardDescription>
+                        All events for the selected month
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-[600px]">
+                        {loading ? (
+                          <div className="text-center py-8">Loading events...</div>
+                        ) : getCurrentMonthEvents().length === 0 ? (
+                          <div className="text-center py-8">
+                            <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="font-semibold mb-2">No Events This Month</h3>
+                            <p className="text-muted-foreground mb-4">
+                              No events scheduled for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                            {getCurrentMonthEvents().map((event) => (
+                              <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow">
+                                <CardContent className="p-4">
+                                  <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <Badge className={`text-white ${getEventTypeColor(event.type)}`}>
+                                        {event.type}
+                                      </Badge>
+                                      <div className="flex gap-1">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setEditingEvent(event);
+                                            setIsEventFormOpen(true);
+                                          }}
+                                        >
+                                          Edit
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => {
+                                            setSelectedEvent(event);
+                                            setIsTeamSelectionOpen(true);
+                                          }}
+                                        >
+                                          <Users className="h-4 w-4" />
+                                        </Button>
+                                      </div>
+                                    </div>
+                                    
+                                    <div>
+                                      <h4 className="font-semibold text-lg mb-2">{event.title}</h4>
+                                      <div className="space-y-2 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-2">
+                                          <CalendarIcon className="h-3 w-3" />
+                                          <span>{new Date(event.date).toLocaleDateString('en-US', { 
+                                            weekday: 'long', 
+                                            month: 'short', 
+                                            day: 'numeric' 
+                                          })}</span>
+                                        </div>
+                                        {event.startTime && (
+                                          <div className="flex items-center gap-2">
+                                            <Clock className="h-3 w-3" />
+                                            <span>
+                                              {formatTime(event.startTime)}
+                                              {event.endTime && ` - ${formatTime(event.endTime)}`}
+                                            </span>
+                                          </div>
+                                        )}
+                                        <div className="flex items-center gap-2">
+                                          <MapPin className="h-3 w-3" />
+                                          <span className="truncate">{event.location}</span>
+                                        </div>
+                                        {event.opponent && (
+                                          <div className="text-sm">
+                                            <span className="font-medium">vs {event.opponent}</span>
+                                            <span className="ml-2 text-xs">
+                                              ({event.isHome ? 'Home' : 'Away'})
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
                 <TabsContent value="calendar">
                   <Card>
@@ -424,89 +534,6 @@ const CalendarEvents = () => {
                       </CardContent>
                     </Card>
                   )}
-                </TabsContent>
-
-                <TabsContent value="list">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>
-                        Events for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </CardTitle>
-                      <CardDescription>
-                        All events for the selected month
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[600px]">
-                        {loading ? (
-                          <div className="text-center py-8">Loading events...</div>
-                        ) : getCurrentMonthEvents().length === 0 ? (
-                          <div className="text-center py-8">
-                            <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                            <h3 className="font-semibold mb-2">No Events This Month</h3>
-                            <p className="text-muted-foreground mb-4">
-                              No events scheduled for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {getCurrentMonthEvents().map((event) => (
-                              <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                                <CardContent className="p-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                      <Badge className={`text-white ${getEventTypeColor(event.type)}`}>
-                                        {event.type}
-                                      </Badge>
-                                      <div>
-                                        <h4 className="font-semibold">{event.title}</h4>
-                                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                          <span>{new Date(event.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
-                                          {event.startTime && (
-                                            <div className="flex items-center gap-1">
-                                              <Clock className="h-3 w-3" />
-                                              {formatTime(event.startTime)}
-                                              {event.endTime && ` - ${formatTime(event.endTime)}`}
-                                            </div>
-                                          )}
-                                          <div className="flex items-center gap-1">
-                                            <MapPin className="h-3 w-3" />
-                                            {event.location}
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setEditingEvent(event);
-                                          setIsEventFormOpen(true);
-                                        }}
-                                      >
-                                        Edit
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => {
-                                          setSelectedEvent(event);
-                                          setIsTeamSelectionOpen(true);
-                                        }}
-                                      >
-                                        <Users className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
                 </TabsContent>
               </Tabs>
             ) : (

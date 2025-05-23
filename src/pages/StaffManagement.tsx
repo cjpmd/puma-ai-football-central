@@ -3,7 +3,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, User, UserPlus, X } from 'lucide-react';
+import { PlusCircle, User, UserPlus, X, Edit, Phone, Mail } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Team, Club, UserRole } from '@/types';
@@ -13,12 +13,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
 
 interface StaffMember {
   id: string;
   name: string;
   email: string;
-  role: UserRole;
+  phone?: string;
+  role: UserRole | string;
 }
 
 const StaffManagement = () => {
@@ -26,20 +28,24 @@ const StaffManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedClub, setSelectedClub] = useState<string>('');
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
+  const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'teams' | 'clubs'>('teams');
   const [teamStaff, setTeamStaff] = useState<StaffMember[]>([]);
   const [clubStaff, setClubStaff] = useState<StaffMember[]>([]);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
-    role: '' as UserRole
+    phone: '',
+    role: '' as UserRole | string
   });
 
   // Team roles that can be assigned
-  const teamRoles: UserRole[] = [
-    'team_manager', 
-    'team_assistant_manager', 
-    'team_coach', 
-    'team_helper'
+  const teamRoles: { value: string; label: string }[] = [
+    { value: 'manager', label: 'Manager' },
+    { value: 'assistant_manager', label: 'Assistant Manager' },
+    { value: 'coach', label: 'Coach' },
+    { value: 'helper', label: 'Helper' }
   ];
 
   // Club roles that can be assigned
@@ -48,6 +54,16 @@ const StaffManagement = () => {
     'club_chair', 
     'club_secretary'
   ];
+
+  // Auto-select single team/club
+  useEffect(() => {
+    if (teams.length === 1 && !selectedTeam) {
+      setSelectedTeam(teams[0].id);
+    }
+    if (clubs.length === 1 && !selectedClub) {
+      setSelectedClub(clubs[0].id);
+    }
+  }, [teams, clubs, selectedTeam, selectedClub]);
 
   useEffect(() => {
     if (selectedTeam) {
@@ -65,55 +81,31 @@ const StaffManagement = () => {
     try {
       console.log('Fetching team staff for team:', teamId);
       
-      // First get user_teams data
-      const { data: userTeamsData, error: userTeamsError } = await supabase
-        .from('user_teams')
-        .select('user_id, role')
+      const { data: teamStaffData, error: teamStaffError } = await supabase
+        .from('team_staff')
+        .select('*')
         .eq('team_id', teamId);
 
-      if (userTeamsError) {
-        console.error('Error fetching user teams:', userTeamsError);
-        throw userTeamsError;
+      if (teamStaffError) {
+        console.error('Error fetching team staff:', teamStaffError);
+        throw teamStaffError;
       }
       
-      console.log('User teams data:', userTeamsData);
+      console.log('Team staff data:', teamStaffData);
       
-      if (!userTeamsData || userTeamsData.length === 0) {
+      if (teamStaffData && teamStaffData.length > 0) {
+        const staffMembers: StaffMember[] = teamStaffData.map(staff => ({
+          id: staff.id,
+          name: staff.name || 'Unknown',
+          email: staff.email || 'No email',
+          phone: staff.phone || '',
+          role: staff.role
+        }));
+        
+        setTeamStaff(staffMembers);
+      } else {
         setTeamStaff([]);
-        return;
       }
-      
-      // Get user profiles for these user IDs
-      const userIds = userTeamsData.map(ut => ut.user_id);
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .in('id', userIds);
-
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        throw profilesError;
-      }
-
-      console.log('Profiles data:', profilesData);
-      
-      // Combine the data
-      const staffMembers: StaffMember[] = userTeamsData
-        .map(teamUser => {
-          const profile = profilesData?.find(p => p.id === teamUser.user_id);
-          if (profile) {
-            return {
-              id: teamUser.user_id,
-              name: profile.name || 'Unknown',
-              email: profile.email || 'No email',
-              role: teamUser.role as UserRole
-            };
-          }
-          return null;
-        })
-        .filter(member => member !== null) as StaffMember[];
-      
-      setTeamStaff(staffMembers);
     } catch (error: any) {
       console.error('Error in fetchTeamStaff:', error);
       toast.error('Failed to fetch team staff', {
@@ -127,7 +119,6 @@ const StaffManagement = () => {
     try {
       console.log('Fetching club staff for club:', clubId);
       
-      // First get user_clubs data
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
         .select('user_id, role')
@@ -145,11 +136,10 @@ const StaffManagement = () => {
         return;
       }
       
-      // Get user profiles for these user IDs
       const userIds = userClubsData.map(uc => uc.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, name, email')
+        .select('id, name, email, phone')
         .in('id', userIds);
 
       if (profilesError) {
@@ -159,7 +149,6 @@ const StaffManagement = () => {
 
       console.log('Profiles data:', profilesData);
       
-      // Combine the data
       const staffMembers: StaffMember[] = userClubsData
         .map(clubUser => {
           const profile = profilesData?.find(p => p.id === clubUser.user_id);
@@ -168,6 +157,7 @@ const StaffManagement = () => {
               id: clubUser.user_id,
               name: profile.name || 'Unknown',
               email: profile.email || 'No email',
+              phone: profile.phone || '',
               role: clubUser.role as UserRole
             };
           }
@@ -186,56 +176,74 @@ const StaffManagement = () => {
   };
 
   const handleAddTeamStaff = async () => {
-    if (!formData.email || !formData.role || !selectedTeam) {
-      toast.error('Please fill in all fields');
+    if (!formData.name || !formData.email || !formData.role || !selectedTeam) {
+      toast.error('Please fill in all required fields');
       return;
     }
 
     try {
       console.log('Adding team staff:', formData);
       
-      // First, try to find the user by email
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', formData.email)
-        .single();
-
-      if (userError) {
-        console.error('User lookup error:', userError);
-        toast.error('User not found', {
-          description: 'This email address is not registered in the system.'
-        });
-        return;
-      }
-
-      console.log('Found user:', userData);
-
-      // Then add the user to the team
       const { error: addError } = await supabase
-        .from('user_teams')
+        .from('team_staff')
         .insert({
-          user_id: userData.id,
           team_id: selectedTeam,
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
           role: formData.role
         });
 
       if (addError) {
         console.error('Add staff error:', addError);
-        if (addError.code === '23505') { // Unique violation
-          toast.error('This user already has this role on the team');
-        } else {
-          throw addError;
-        }
-      } else {
-        toast.success('Staff member added successfully');
-        fetchTeamStaff(selectedTeam);
-        setIsAddStaffDialogOpen(false);
-        setFormData({ email: '', role: '' as UserRole });
+        throw addError;
       }
+
+      toast.success('Staff member added successfully');
+      fetchTeamStaff(selectedTeam);
+      setIsAddStaffDialogOpen(false);
+      setFormData({ name: '', email: '', phone: '', role: '' });
     } catch (error: any) {
       console.error('Error in handleAddTeamStaff:', error);
       toast.error('Failed to add staff member', {
+        description: error.message
+      });
+    }
+  };
+
+  const handleEditTeamStaff = async () => {
+    if (!editingStaff || !formData.name || !formData.email || !formData.role || !selectedTeam) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      console.log('Updating team staff:', editingStaff.id, formData);
+      
+      const { error: updateError } = await supabase
+        .from('team_staff')
+        .update({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          role: formData.role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingStaff.id);
+
+      if (updateError) {
+        console.error('Update staff error:', updateError);
+        throw updateError;
+      }
+
+      toast.success('Staff member updated successfully');
+      fetchTeamStaff(selectedTeam);
+      setIsEditStaffDialogOpen(false);
+      setEditingStaff(null);
+      setFormData({ name: '', email: '', phone: '', role: '' });
+    } catch (error: any) {
+      console.error('Error in handleEditTeamStaff:', error);
+      toast.error('Failed to update staff member', {
         description: error.message
       });
     }
@@ -250,7 +258,6 @@ const StaffManagement = () => {
     try {
       console.log('Adding club staff:', formData);
       
-      // First, try to find the user by email
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('id')
@@ -267,7 +274,6 @@ const StaffManagement = () => {
 
       console.log('Found user:', userData);
 
-      // Then add the user to the club
       const { error: addError } = await supabase
         .from('user_clubs')
         .insert({
@@ -278,7 +284,7 @@ const StaffManagement = () => {
 
       if (addError) {
         console.error('Add staff error:', addError);
-        if (addError.code === '23505') { // Unique violation
+        if (addError.code === '23505') {
           toast.error('This user already has this role in the club');
         } else {
           throw addError;
@@ -287,7 +293,7 @@ const StaffManagement = () => {
         toast.success('Staff member added successfully');
         fetchClubStaff(selectedClub);
         setIsAddStaffDialogOpen(false);
-        setFormData({ email: '', role: '' as UserRole });
+        setFormData({ name: '', email: '', phone: '', role: '' });
       }
     } catch (error: any) {
       console.error('Error in handleAddClubStaff:', error);
@@ -297,16 +303,14 @@ const StaffManagement = () => {
     }
   };
 
-  const handleRemoveTeamStaff = async (userId: string, role: UserRole) => {
+  const handleRemoveTeamStaff = async (staffId: string) => {
     try {
-      console.log('Removing team staff:', { userId, role, selectedTeam });
+      console.log('Removing team staff:', staffId);
       
       const { error } = await supabase
-        .from('user_teams')
+        .from('team_staff')
         .delete()
-        .eq('user_id', userId)
-        .eq('team_id', selectedTeam)
-        .eq('role', role);
+        .eq('id', staffId);
 
       if (error) {
         console.error('Remove staff error:', error);
@@ -349,6 +353,17 @@ const StaffManagement = () => {
     }
   };
 
+  const openEditDialog = (staff: StaffMember) => {
+    setEditingStaff(staff);
+    setFormData({
+      name: staff.name,
+      email: staff.email,
+      phone: staff.phone || '',
+      role: staff.role
+    });
+    setIsEditStaffDialogOpen(true);
+  };
+
   const getTeamName = (teamId: string): string => {
     const team = teams.find(t => t.id === teamId);
     return team ? team.name : 'Unknown Team';
@@ -364,6 +379,19 @@ const StaffManagement = () => {
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case 'manager': return 'bg-blue-500';
+      case 'assistant_manager': return 'bg-purple-500';
+      case 'coach': return 'bg-green-500';
+      case 'helper': return 'bg-orange-500';
+      case 'club_admin': return 'bg-red-500';
+      case 'club_chair': return 'bg-indigo-500';
+      case 'club_secretary': return 'bg-yellow-500';
+      default: return 'bg-gray-500';
+    }
   };
 
   return (
@@ -406,128 +434,99 @@ const StaffManagement = () => {
             ) : (
               <>
                 <div className="flex justify-between items-end">
-                  <div className="space-y-2 w-64">
-                    <Label htmlFor="team-select">Select Team</Label>
-                    <Select
-                      value={selectedTeam}
-                      onValueChange={setSelectedTeam}
-                    >
-                      <SelectTrigger id="team-select">
-                        <SelectValue placeholder="Select a team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {teams.length > 1 && (
+                    <div className="space-y-2 w-64">
+                      <Label htmlFor="team-select">Select Team</Label>
+                      <Select
+                        value={selectedTeam}
+                        onValueChange={setSelectedTeam}
+                      >
+                        <SelectTrigger id="team-select">
+                          <SelectValue placeholder="Select a team" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teams.map((team) => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {selectedTeam && (
-                    <Dialog open={isAddStaffDialogOpen && activeTab === 'teams'} onOpenChange={(open) => setIsAddStaffDialogOpen(open)}>
-                      <DialogTrigger asChild>
-                        <Button
-                          className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Add Staff Member
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add Staff to {getTeamName(selectedTeam)}</DialogTitle>
-                          <DialogDescription>
-                            Add a new staff member to the team. They must already have an account.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="user@example.com"
-                              value={formData.email}
-                              onChange={(e) => setFormData({...formData, email: e.target.value})}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Select
-                              value={formData.role}
-                              onValueChange={(value) => setFormData({...formData, role: value as UserRole})}
-                            >
-                              <SelectTrigger id="role">
-                                <SelectValue placeholder="Select a role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {teamRoles.map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {formatRoleName(role)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="flex justify-end pt-4">
-                            <Button
-                              onClick={handleAddTeamStaff}
-                              className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                            >
-                              Add Staff Member
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      onClick={() => {
+                        setFormData({ name: '', email: '', phone: '', role: '' });
+                        setIsAddStaffDialogOpen(true);
+                      }}
+                      className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Add Staff Member
+                    </Button>
                   )}
                 </div>
 
                 {selectedTeam ? (
                   teamStaff.length > 0 ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Staff for {getTeamName(selectedTeam)}</CardTitle>
-                        <CardDescription>
-                          Manage staff members and their roles
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {teamStaff.map((staff) => (
-                            <div key={`${staff.id}-${staff.role}`} className="flex items-center justify-between bg-muted/50 p-3 rounded-md">
-                              <div className="flex items-center space-x-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {teamStaff.map((staff) => (
+                        <Card key={staff.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
                                 <Avatar>
                                   <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
                                     {staff.name.substring(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <div className="font-medium">{staff.name}</div>
-                                  <div className="text-sm text-muted-foreground">{staff.email}</div>
+                                  <h4 className="font-semibold">{staff.name}</h4>
+                                  <Badge className={`text-white ${getRoleColor(staff.role)} text-xs`}>
+                                    {formatRoleName(staff.role)}
+                                  </Badge>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-3">
-                                <div className="text-sm font-medium">{formatRoleName(staff.role)}</div>
+                              <div className="flex gap-1">
                                 <Button
                                   variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
-                                  onClick={() => handleRemoveTeamStaff(staff.id, staff.role)}
+                                  size="sm"
+                                  onClick={() => openEditDialog(staff)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to remove ${staff.name}?`)) {
+                                      handleRemoveTeamStaff(staff.id);
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3 w-3" />
+                                <span className="truncate">{staff.email}</span>
+                              </div>
+                              {staff.phone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{staff.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   ) : (
                     <Card>
                       <CardContent className="py-8 flex flex-col items-center justify-center text-center">
@@ -581,128 +580,99 @@ const StaffManagement = () => {
             ) : (
               <>
                 <div className="flex justify-between items-end">
-                  <div className="space-y-2 w-64">
-                    <Label htmlFor="club-select">Select Club</Label>
-                    <Select
-                      value={selectedClub}
-                      onValueChange={setSelectedClub}
-                    >
-                      <SelectTrigger id="club-select">
-                        <SelectValue placeholder="Select a club" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clubs.map((club) => (
-                          <SelectItem key={club.id} value={club.id}>
-                            {club.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {clubs.length > 1 && (
+                    <div className="space-y-2 w-64">
+                      <Label htmlFor="club-select">Select Club</Label>
+                      <Select
+                        value={selectedClub}
+                        onValueChange={setSelectedClub}
+                      >
+                        <SelectTrigger id="club-select">
+                          <SelectValue placeholder="Select a club" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {clubs.map((club) => (
+                            <SelectItem key={club.id} value={club.id}>
+                              {club.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {selectedClub && (
-                    <Dialog open={isAddStaffDialogOpen && activeTab === 'clubs'} onOpenChange={(open) => setIsAddStaffDialogOpen(open)}>
-                      <DialogTrigger asChild>
-                        <Button
-                          className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                        >
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          Add Staff Member
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Add Staff to {getClubName(selectedClub)}</DialogTitle>
-                          <DialogDescription>
-                            Add a new staff member to the club. They must already have an account.
-                          </DialogDescription>
-                        </DialogHeader>
-
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="email">Email Address</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              placeholder="user@example.com"
-                              value={formData.email}
-                              onChange={(e) => setFormData({...formData, email: e.target.value})}
-                            />
-                          </div>
-
-                          <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
-                            <Select
-                              value={formData.role}
-                              onValueChange={(value) => setFormData({...formData, role: value as UserRole})}
-                            >
-                              <SelectTrigger id="role">
-                                <SelectValue placeholder="Select a role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {clubRoles.map((role) => (
-                                  <SelectItem key={role} value={role}>
-                                    {formatRoleName(role)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div className="flex justify-end pt-4">
-                            <Button
-                              onClick={handleAddClubStaff}
-                              className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                            >
-                              Add Staff Member
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      onClick={() => {
+                        setFormData({ name: '', email: '', phone: '', role: '' });
+                        setIsAddStaffDialogOpen(true);
+                      }}
+                      className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                    >
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Add Staff Member
+                    </Button>
                   )}
                 </div>
 
                 {selectedClub ? (
                   clubStaff.length > 0 ? (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Staff for {getClubName(selectedClub)}</CardTitle>
-                        <CardDescription>
-                          Manage staff members and their roles
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {clubStaff.map((staff) => (
-                            <div key={`${staff.id}-${staff.role}`} className="flex items-center justify-between bg-muted/50 p-3 rounded-md">
-                              <div className="flex items-center space-x-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {clubStaff.map((staff) => (
+                        <Card key={staff.id} className="hover:shadow-md transition-shadow">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
                                 <Avatar>
                                   <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
                                     {staff.name.substring(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                  <div className="font-medium">{staff.name}</div>
-                                  <div className="text-sm text-muted-foreground">{staff.email}</div>
+                                  <h4 className="font-semibold">{staff.name}</h4>
+                                  <Badge className={`text-white ${getRoleColor(staff.role)} text-xs`}>
+                                    {formatRoleName(staff.role)}
+                                  </Badge>
                                 </div>
                               </div>
-                              <div className="flex items-center space-x-3">
-                                <div className="text-sm font-medium">{formatRoleName(staff.role)}</div>
+                              <div className="flex gap-1">
                                 <Button
                                   variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
-                                  onClick={() => handleRemoveClubStaff(staff.id, staff.role)}
+                                  size="sm"
+                                  onClick={() => openEditDialog(staff)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm(`Are you sure you want to remove ${staff.name}?`)) {
+                                      handleRemoveClubStaff(staff.id);
+                                    }
+                                  }}
+                                  className="text-red-600 hover:text-red-700"
                                 >
                                   <X className="h-4 w-4" />
                                 </Button>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <Mail className="h-3 w-3" />
+                                <span className="truncate">{staff.email}</span>
+                              </div>
+                              {staff.phone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{staff.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   ) : (
                     <Card>
                       <CardContent className="py-8 flex flex-col items-center justify-center text-center">
@@ -734,6 +704,166 @@ const StaffManagement = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Add Staff Dialog */}
+        <Dialog open={isAddStaffDialogOpen} onOpenChange={setIsAddStaffDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                Add Staff to {activeTab === 'teams' ? getTeamName(selectedTeam) : getClubName(selectedClub)}
+              </DialogTitle>
+              <DialogDescription>
+                Add a new staff member to the {activeTab === 'teams' ? 'team' : 'club'}.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {activeTab === 'teams' && (
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="Full name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                />
+              </div>
+
+              {activeTab === 'teams' && (
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone (Optional)</Label>
+                  <Input
+                    id="phone"
+                    placeholder="Phone number"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="role">Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({...formData, role: value})}
+                >
+                  <SelectTrigger id="role">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeTab === 'teams' ? (
+                      teamRoles.map((role) => (
+                        <SelectItem key={role.value} value={role.value}>
+                          {role.label}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      clubRoles.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {formatRoleName(role)}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={activeTab === 'teams' ? handleAddTeamStaff : handleAddClubStaff}
+                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                >
+                  Add Staff Member
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Staff Dialog */}
+        <Dialog open={isEditStaffDialogOpen} onOpenChange={setIsEditStaffDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Staff Member</DialogTitle>
+              <DialogDescription>
+                Update staff member information.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Name</Label>
+                <Input
+                  id="edit-name"
+                  placeholder="Full name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email Address</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone (Optional)</Label>
+                <Input
+                  id="edit-phone"
+                  placeholder="Phone number"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select
+                  value={formData.role}
+                  onValueChange={(value) => setFormData({...formData, role: value})}
+                >
+                  <SelectTrigger id="edit-role">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teamRoles.map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        {role.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button
+                  onClick={handleEditTeamStaff}
+                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                >
+                  Update Staff Member
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
