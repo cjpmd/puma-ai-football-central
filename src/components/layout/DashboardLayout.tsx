@@ -2,7 +2,7 @@
 import { Header } from "./Header";
 import { ReactNode } from "react";
 import { NavLink } from "react-router-dom";
-import { Building, CalendarDays, Home, PieChart, Settings, Users, UsersRound } from "lucide-react";
+import { Building, CalendarDays, Home, PieChart, Settings, Users, UsersRound, UserRound } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -28,6 +28,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       href: "/teams",
       icon: <UsersRound className="w-5 h-5" />,
       showAlways: true
+    },
+    {
+      title: "Players",
+      href: "/players",
+      icon: <UserRound className="w-5 h-5" />,
+      show: hasTeams
     },
     {
       title: "Clubs",
@@ -96,7 +102,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </ul>
           </nav>
         </aside>
-        <main className="flex-1 p-6 md:p-8">
+        <main className="flex-1 p-6 md:p-8 overflow-auto">
           {children}
         </main>
       </div>

@@ -3,57 +3,14 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
 import { PlayerList } from "@/components/dashboard/PlayerList";
-import { Player } from "@/types";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Dashboard = () => {
-  // Mock data for players
-  const mockPlayers: Partial<Player>[] = [
-    {
-      id: "1",
-      name: "Jack Smith",
-      type: "outfield",
-      squadNumber: 7,
-      availability: "green",
-      subscriptionStatus: "active",
-      subscriptionType: "full_squad",
-    },
-    {
-      id: "2",
-      name: "Tom Williams",
-      type: "outfield",
-      squadNumber: 11,
-      availability: "amber",
-      subscriptionStatus: "active",
-      subscriptionType: "full_squad",
-    },
-    {
-      id: "3",
-      name: "Lucas Davis",
-      type: "outfield",
-      squadNumber: 8,
-      availability: "green",
-      subscriptionStatus: "active",
-      subscriptionType: "full_squad",
-    },
-    {
-      id: "4",
-      name: "Ryan Johnson",
-      type: "goalkeeper",
-      squadNumber: 1,
-      availability: "green",
-      subscriptionStatus: "active",
-      subscriptionType: "full_squad",
-    },
-    {
-      id: "5",
-      name: "Max Cooper",
-      type: "outfield",
-      squadNumber: 10,
-      availability: "red",
-      subscriptionStatus: "inactive",
-      subscriptionType: "training",
-    },
-  ];
+  const navigate = useNavigate();
+  const { teams } = useAuth();
+  
+  const hasTeams = teams.length > 0;
 
   return (
     <DashboardLayout>
@@ -72,16 +29,33 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <TeamOverview />
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <UpcomingEvents />
+        {hasTeams ? (
+          <>
+            <TeamOverview />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-2">
+                <UpcomingEvents />
+              </div>
+              <div className="md:col-span-1">
+                <PlayerList />
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <h2 className="text-2xl font-bold mb-4">Welcome to Team Manager!</h2>
+            <p className="text-muted-foreground mb-6">
+              To get started, create your first team by clicking the button below.
+            </p>
+            <button 
+              onClick={() => navigate("/teams")}
+              className="bg-puma-blue-500 hover:bg-puma-blue-600 text-white px-6 py-3 rounded-md font-medium"
+            >
+              Create Your First Team
+            </button>
           </div>
-          <div className="md:col-span-1">
-            <PlayerList players={mockPlayers} />
-          </div>
-        </div>
+        )}
       </div>
     </DashboardLayout>
   );

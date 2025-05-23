@@ -7,6 +7,7 @@ import { Player } from "@/types";
 import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 interface PlayerListProps {
   players?: Partial<Player>[];
@@ -14,6 +15,7 @@ interface PlayerListProps {
 
 export function PlayerList({ players: propPlayers }: PlayerListProps) {
   const { teams } = useAuth();
+  const navigate = useNavigate();
   
   // If players are passed as props, use them; otherwise fetch from database
   const { data: fetchedPlayers = [], isLoading } = useQuery({
@@ -24,7 +26,7 @@ export function PlayerList({ players: propPlayers }: PlayerListProps) {
       const allPlayers: Player[] = [];
       for (const team of teams) {
         try {
-          const teamPlayers = await playersService.getPlayersByTeamId(team.id);
+          const teamPlayers = await playersService.getActivePlayersByTeamId(team.id);
           allPlayers.push(...teamPlayers);
         } catch (error) {
           console.error(`Error fetching players for team ${team.id}:`, error);
@@ -36,13 +38,21 @@ export function PlayerList({ players: propPlayers }: PlayerListProps) {
   });
 
   const players = propPlayers || fetchedPlayers;
+  
+  const handleAddPlayer = () => {
+    navigate('/players');
+  };
+  
+  const handleViewPlayer = (playerId: string) => {
+    navigate('/players');
+  };
 
   if (isLoading && !propPlayers) {
     return (
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Squad Players</CardTitle>
-          <Button size="sm">Add Player</Button>
+          <Button size="sm" onClick={handleAddPlayer}>Add Player</Button>
         </CardHeader>
         <CardContent>
           <div className="text-center py-4">Loading players...</div>
@@ -55,7 +65,7 @@ export function PlayerList({ players: propPlayers }: PlayerListProps) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Squad Players</CardTitle>
-        <Button size="sm">Add Player</Button>
+        <Button size="sm" onClick={handleAddPlayer}>Add Player</Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -111,7 +121,13 @@ export function PlayerList({ players: propPlayers }: PlayerListProps) {
                       {player.subscriptionStatus.charAt(0).toUpperCase() + player.subscriptionStatus.slice(1)}
                     </Badge>
                   )}
-                  <Button variant="ghost" size="sm">View</Button>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => handleViewPlayer(player.id)}
+                  >
+                    View
+                  </Button>
                 </div>
               </div>
             ))

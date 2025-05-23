@@ -78,7 +78,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             <TabsList className="grid w-full grid-cols-6 flex-shrink-0">
               {settingsTabs.map((tab) => (
@@ -89,10 +89,10 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
               ))}
             </TabsList>
             
-            <div className="flex-1 mt-4 min-h-0">
+            <div className="flex-1 mt-4 min-h-0 overflow-hidden">
               {settingsTabs.map((tab) => (
                 <TabsContent key={tab.id} value={tab.id} className="h-full data-[state=active]:flex data-[state=active]:flex-col">
-                  <ScrollArea className="flex-1">
+                  <ScrollArea className="flex-1 h-full">
                     <Card className="border-0 shadow-none">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">

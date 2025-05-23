@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Player, PlayerAttribute } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { DEFAULT_PLAYER_ATTRIBUTES } from '@/types/team';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface PlayerAttributesModalProps {
   player: Player;
@@ -134,14 +135,14 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>
             Player Attributes - {player.name}
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="technical" disabled={player.type === 'goalkeeper' && getAttributesByGroup('technical').every(a => !a.enabled)}>
               Technical
@@ -161,56 +162,60 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
             </TabsTrigger>
           </TabsList>
 
-          {['technical', 'physical', 'mental', 'goalkeeping'].map(group => (
-            <TabsContent key={group} value={group} className="space-y-4 py-4">
-              <Card>
-                <CardContent className="pt-6">
-                  {getAttributesByGroup(group).length === 0 ? (
-                    <div className="text-center py-4 text-muted-foreground">
-                      No {group} attributes defined.
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {getAttributesByGroup(group).map(attribute => (
-                        <div key={attribute.id} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <Label 
-                              htmlFor={attribute.id} 
-                              className={`font-medium ${attribute.enabled ? '' : 'text-muted-foreground'}`}
-                            >
-                              {attribute.name}
-                            </Label>
-                            <div className="flex items-center gap-2">
-                              <span className={`font-bold ${getAttributeColor(attribute.value)}`}>
-                                {attribute.value}
-                              </span>
-                              <Switch
-                                checked={attribute.enabled}
-                                onCheckedChange={(checked) => handleAttributeEnabledToggle(attribute.id, checked)}
+          <div className="flex-1 min-h-0 mt-4">
+            {['technical', 'physical', 'mental', 'goalkeeping'].map(group => (
+              <TabsContent key={group} value={group} className="h-full data-[state=active]:flex data-[state=active]:flex-col">
+                <ScrollArea className="flex-1">
+                  <Card>
+                    <CardContent className="pt-6">
+                      {getAttributesByGroup(group).length === 0 ? (
+                        <div className="text-center py-4 text-muted-foreground">
+                          No {group} attributes defined.
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {getAttributesByGroup(group).map(attribute => (
+                            <div key={attribute.id} className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <Label 
+                                  htmlFor={attribute.id} 
+                                  className={`font-medium ${attribute.enabled ? '' : 'text-muted-foreground'}`}
+                                >
+                                  {attribute.name}
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                  <span className={`font-bold ${getAttributeColor(attribute.value)}`}>
+                                    {attribute.value}
+                                  </span>
+                                  <Switch
+                                    checked={attribute.enabled}
+                                    onCheckedChange={(checked) => handleAttributeEnabledToggle(attribute.id, checked)}
+                                  />
+                                </div>
+                              </div>
+                              <Slider
+                                id={attribute.id}
+                                min={1}
+                                max={10}
+                                step={1}
+                                value={[attribute.value]}
+                                onValueChange={([value]) => handleAttributeValueChange(attribute.id, value)}
+                                disabled={!attribute.enabled}
+                                className={attribute.enabled ? '' : 'opacity-50'}
                               />
                             </div>
-                          </div>
-                          <Slider
-                            id={attribute.id}
-                            min={1}
-                            max={10}
-                            step={1}
-                            value={[attribute.value]}
-                            onValueChange={([value]) => handleAttributeValueChange(attribute.id, value)}
-                            disabled={!attribute.enabled}
-                            className={attribute.enabled ? '' : 'opacity-50'}
-                          />
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
+                      )}
+                    </CardContent>
+                  </Card>
+                </ScrollArea>
+              </TabsContent>
+            ))}
+          </div>
         </Tabs>
 
-        <DialogFooter>
+        <DialogFooter className="mt-4 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
