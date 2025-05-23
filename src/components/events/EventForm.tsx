@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +44,8 @@ export const EventForm: React.FC<EventFormProps> = ({
     teams: event?.teams || [teamId]
   });
 
-  const [selectedFacility, setSelectedFacility] = useState<string>('');
+  // Initialize with a non-empty value, use "none" instead of empty string
+  const [selectedFacility, setSelectedFacility] = useState<string>(event?.facilityId || "none");
   const [numberOfTeams, setNumberOfTeams] = useState<number>(1);
 
   useEffect(() => {
@@ -87,7 +87,8 @@ export const EventForm: React.FC<EventFormProps> = ({
     // Include additional data for enhanced events
     const enhancedData = {
       ...formData,
-      facilityId: selectedFacility || null,
+      // Only include facilityId if it's not "none"
+      facilityId: selectedFacility !== "none" ? selectedFacility : null,
       numberOfTeams: isMatchType ? numberOfTeams : 1,
     };
 
@@ -221,7 +222,8 @@ export const EventForm: React.FC<EventFormProps> = ({
                   <SelectValue placeholder="Select a facility" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No facility</SelectItem>
+                  {/* Fixed: Changed empty string to "none" with a proper value */}
+                  <SelectItem value="none">No facility</SelectItem>
                   {facilities.map((facility) => (
                     <SelectItem key={facility.id} value={facility.id}>
                       {facility.name}
@@ -290,6 +292,8 @@ export const EventForm: React.FC<EventFormProps> = ({
             <Label htmlFor="trainingNotes">Training Notes</Label>
             <Textarea
               id="trainingNotes"
+              value={formData.trainingNotes || ''}
+              onChange={(e) => handleChange('trainingNotes', e.target.value)}
               placeholder="Add training session details, drills, squad information..."
               rows={4}
             />
