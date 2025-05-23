@@ -1,134 +1,23 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, Users, Settings, UserPlus } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { PlayerForm } from '@/components/players/PlayerForm';
-import { Player } from '@/types';
-import { useToast } from '@/hooks/use-toast';
-import { playersService } from '@/services/playersService';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Users } from 'lucide-react';
+import { PlayerManagement } from '@/components/players/PlayerManagement';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Team } from '@/types';
 
-const PlayerManagement = () => {
+const PlayerManagementPage = () => {
   const { teams } = useAuth();
-  const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
 
-  // Fetch players for all teams
-  const { data: playersByTeam = {}, isLoading } = useQuery({
-    queryKey: ['players', teams.map(t => t.id)],
-    queryFn: async () => {
-      const result: Record<string, Player[]> = {};
-      for (const team of teams) {
-        try {
-          result[team.id] = await playersService.getPlayersByTeamId(team.id);
-        } catch (error) {
-          console.error(`Error fetching players for team ${team.id}:`, error);
-          result[team.id] = [];
-        }
-      }
-      return result;
-    },
-    enabled: teams.length > 0,
-  });
-
-  // Mutation for creating players
-  const createPlayerMutation = useMutation({
-    mutationFn: playersService.createPlayer,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['players'] });
-      setIsPlayerDialogOpen(false);
-      toast({
-        title: 'Player Added',
-        description: 'Player has been successfully added to the squad.',
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to add player',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  // Mutation for updating players
-  const updatePlayerMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Player> }) => 
-      playersService.updatePlayer(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['players'] });
-      setIsPlayerDialogOpen(false);
-      toast({
-        title: 'Player Updated',
-        description: 'Player has been successfully updated.',
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update player',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const handleCreatePlayer = async (playerData: Partial<Player>) => {
-    if (selectedPlayer) {
-      updatePlayerMutation.mutate({ id: selectedPlayer.id, data: playerData });
-    } else {
-      createPlayerMutation.mutate(playerData);
-    }
+  const handleTeamChange = (teamId: string) => {
+    setSelectedTeamId(teamId);
   };
 
-  const handleEditPlayer = (player: Player) => {
-    setSelectedPlayer(player);
-    setSelectedTeamId(player.teamId);
-    setIsPlayerDialogOpen(true);
-  };
-
-  const getAvailabilityColor = (availability: string) => {
-    switch (availability) {
-      case 'green': return 'bg-green-500';
-      case 'amber': return 'bg-yellow-500';
-      case 'red': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const getAvailabilityText = (availability: string) => {
-    switch (availability) {
-      case 'green': return 'Available';
-      case 'amber': return 'Uncertain';
-      case 'red': return 'Unavailable';
-      default: return 'Unknown';
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <DashboardLayout>
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold tracking-tight">Player Management</h1>
-              <p className="text-muted-foreground">
-                Manage your squad and player information
-              </p>
-            </div>
-          </div>
-          <div className="text-center py-8">Loading players...</div>
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const selectedTeam = teams.find(team => team.id === selectedTeamId);
 
   return (
     <DashboardLayout>
@@ -140,40 +29,22 @@ const PlayerManagement = () => {
               Manage your squad and player information
             </p>
           </div>
-          {teams.length > 0 && (
-            <Dialog open={isPlayerDialogOpen} onOpenChange={setIsPlayerDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={() => {
-                    setSelectedPlayer(null);
-                    setSelectedTeamId(teams[0]?.id || '');
-                  }} 
-                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Player
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {selectedPlayer ? 'Edit Player' : 'Add New Player'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {selectedPlayer ? 'Update player information.' : 'Add a new player to your squad.'}
-                  </DialogDescription>
-                </DialogHeader>
-                <PlayerForm 
-                  player={selectedPlayer} 
-                  teamId={selectedTeamId}
-                  onSubmit={handleCreatePlayer} 
-                  onCancel={() => {
-                    setIsPlayerDialogOpen(false);
-                    setSelectedPlayer(null);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
+
+          {teams.length > 1 && (
+            <div className="min-w-[250px]">
+              <Select value={selectedTeamId} onValueChange={handleTeamChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           )}
         </div>
 
@@ -187,86 +58,19 @@ const PlayerManagement = () => {
               <p className="text-muted-foreground mb-4 max-w-md">
                 You need to create a team first before you can manage players.
               </p>
+              <Button
+                onClick={() => window.location.href = '/teams'}
+                className="bg-puma-blue-500 hover:bg-puma-blue-600"
+              >
+                Create Team
+              </Button>
             </CardContent>
           </Card>
+        ) : selectedTeam ? (
+          <PlayerManagement team={selectedTeam} />
         ) : (
-          <div className="space-y-6">
-            {teams.map((team) => {
-              const teamPlayers = playersByTeam[team.id] || [];
-              
-              return (
-                <div key={team.id} className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">{team.name}</h2>
-                    <Badge variant="outline">{team.gameFormat}</Badge>
-                  </div>
-                  
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {teamPlayers.map((player) => (
-                      <Card key={player.id} className="relative">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-lg">{player.name}</CardTitle>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${getAvailabilityColor(player.availability)}`} />
-                              <span className="text-2xl font-bold">#{player.squadNumber}</span>
-                            </div>
-                          </div>
-                          <CardDescription>
-                            {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-2">
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Status:</span>
-                              <Badge variant={player.availability === 'green' ? 'default' : 'secondary'}>
-                                {getAvailabilityText(player.availability)}
-                              </Badge>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Subscription:</span>
-                              <span className="font-medium capitalize">
-                                {player.subscriptionType?.replace('_', ' ')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Games:</span>
-                              <span className="font-medium">
-                                {player.matchStats.totalGames}
-                              </span>
-                            </div>
-                          </div>
-                        </CardContent>
-                        <CardFooter className="flex justify-between">
-                          <Button variant="outline" size="sm">
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Parent
-                          </Button>
-                          <Button size="sm" onClick={() => handleEditPlayer(player)}>
-                            <Settings className="mr-2 h-4 w-4" />
-                            Edit
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    ))}
-                    
-                    {/* Add Player Card */}
-                    <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer"
-                          onClick={() => {
-                            setSelectedPlayer(null);
-                            setSelectedTeamId(team.id);
-                            setIsPlayerDialogOpen(true);
-                          }}>
-                      <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                        <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm font-medium">Add Player</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="text-center py-8">
+            Please select a team to manage players.
           </div>
         )}
       </div>
@@ -274,4 +78,4 @@ const PlayerManagement = () => {
   );
 };
 
-export default PlayerManagement;
+export default PlayerManagementPage;

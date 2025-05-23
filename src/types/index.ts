@@ -66,7 +66,7 @@ export type PlayerAttribute = {
   name: string;
   group: "goalkeeping" | "mental" | "physical" | "technical";
   value: number; // 1-10
-  enabled: boolean;
+  enabled: boolean; // Added enabled flag for attributes
 };
 
 export type PlayerObjective = {
@@ -137,6 +137,9 @@ export type Player = {
   parentId?: string;
   subscriptionType?: PlayerSubscriptionType;
   subscriptionStatus?: SubscriptionStatus;
+  status?: "active" | "inactive"; // Player status (active or left the team)
+  leaveDate?: string; // Date when player left the team
+  leaveComments?: string; // Comments about player leaving
   createdAt: string;
   updatedAt: string;
 };
@@ -148,8 +151,41 @@ export type Parent = {
   phone?: string;
   playerId: string;
   linkCode: string;
+  subscriptionType?: PlayerSubscriptionType;
+  subscriptionStatus?: SubscriptionStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type PlayerTransfer = {
+  id: string;
+  playerId: string;
+  fromTeamId?: string;
+  toTeamId?: string;
+  transferDate: string;
+  status: "pending" | "accepted" | "rejected";
+  dataTransferOptions: {
+    full: boolean;
+    attributes: boolean;
+    comments: boolean;
+    objectives: boolean;
+    events: boolean;
+  };
+  requestedBy: string;
+  acceptedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AttributeHistory = {
+  id: string;
+  playerId: string;
+  attributeName: string;
+  attributeGroup: string;
+  value: number;
+  recordedDate: string;
+  recordedBy: string;
+  createdAt: string;
 };
 
 export type EventType = 

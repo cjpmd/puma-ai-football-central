@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Player, PlayerSubscriptionType, SubscriptionStatus } from '@/types';
+import { format } from 'date-fns';
+import { calculateAge } from '@/lib/utils';
 
 interface PlayerFormProps {
   player: Player | null;
@@ -19,15 +21,27 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   onCancel,
   teamId
 }) => {
+  // Format the date to YYYY-MM-DD for input if it exists
+  const formatDateForInput = (dateString?: string) => {
+    if (!dateString) return '';
+    try {
+      return format(new Date(dateString), 'yyyy-MM-dd');
+    } catch (e) {
+      console.error('Error formatting date:', e);
+      return '';
+    }
+  };
+
   const [formData, setFormData] = useState<Partial<Player>>({
     name: player?.name || '',
-    dateOfBirth: player?.dateOfBirth || '',
+    dateOfBirth: formatDateForInput(player?.dateOfBirth) || '',
     squadNumber: player?.squadNumber || 1,
     type: player?.type || 'outfield',
     teamId: teamId,
     subscriptionType: player?.subscriptionType || 'full_squad',
     subscriptionStatus: player?.subscriptionStatus || 'active',
-    availability: player?.availability || 'green'
+    availability: player?.availability || 'green',
+    status: player?.status || 'active'
   });
 
   const handleChange = (field: keyof Partial<Player>, value: any) => {
@@ -41,6 +55,8 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     e.preventDefault();
     onSubmit(formData);
   };
+
+  const playerAge = formData.dateOfBirth ? calculateAge(new Date(formData.dateOfBirth)) : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -58,7 +74,14 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Label htmlFor="dateOfBirth">
+              Date of Birth
+              {playerAge !== null && (
+                <span className="ml-2 text-sm text-muted-foreground">
+                  (Age: {playerAge})
+                </span>
+              )}
+            </Label>
             <Input
               id="dateOfBirth"
               type="date"
@@ -116,6 +139,25 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         </div>
 
         <div className="space-y-2">
+          <Label htmlFor="subscriptionStatus">Subscription Status</Label>
+          <Select 
+            value={formData.subscriptionStatus}
+            onValueChange={(value) => handleChange('subscriptionStatus', value as SubscriptionStatus)}
+            required
+          >
+            <SelectTrigger id="subscriptionStatus">
+              <SelectValue placeholder="Select subscription status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="paused">Paused</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="availability">Availability Status</Label>
           <Select 
             value={formData.availability}
@@ -132,6 +174,25 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
             </SelectContent>
           </Select>
         </div>
+
+        {player && (
+          <div className="space-y-2">
+            <Label htmlFor="status">Player Status</Label>
+            <Select 
+              value={formData.status}
+              onValueChange={(value) => handleChange('status', value)}
+              required
+            >
+              <SelectTrigger id="status">
+                <SelectValue placeholder="Select player status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end space-x-2 pt-4">

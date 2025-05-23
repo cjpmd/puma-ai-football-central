@@ -16,8 +16,9 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
   onClose,
   onUpdate
 }) => {
+  // Using onOpenChange to call onClose when the dialog is closed
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Staff Management - {team.name}</DialogTitle>

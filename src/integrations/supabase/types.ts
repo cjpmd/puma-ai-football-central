@@ -235,6 +235,158 @@ export type Database = {
           },
         ]
       }
+      parents: {
+        Row: {
+          created_at: string | null
+          email: string
+          id: string
+          link_code: string
+          name: string
+          phone: string | null
+          player_id: string | null
+          subscription_status: string | null
+          subscription_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          id?: string
+          link_code?: string
+          name: string
+          phone?: string | null
+          player_id?: string | null
+          subscription_status?: string | null
+          subscription_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          id?: string
+          link_code?: string
+          name?: string
+          phone?: string | null
+          player_id?: string | null
+          subscription_status?: string | null
+          subscription_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parents_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_attribute_history: {
+        Row: {
+          attribute_group: string
+          attribute_name: string
+          created_at: string | null
+          id: string
+          player_id: string | null
+          recorded_by: string
+          recorded_date: string
+          value: number
+        }
+        Insert: {
+          attribute_group: string
+          attribute_name: string
+          created_at?: string | null
+          id?: string
+          player_id?: string | null
+          recorded_by: string
+          recorded_date?: string
+          value: number
+        }
+        Update: {
+          attribute_group?: string
+          attribute_name?: string
+          created_at?: string | null
+          id?: string
+          player_id?: string | null
+          recorded_by?: string
+          recorded_date?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_attribute_history_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_transfers: {
+        Row: {
+          accepted_by: string | null
+          created_at: string | null
+          data_transfer_options: Json | null
+          from_team_id: string | null
+          id: string
+          player_id: string | null
+          requested_by: string
+          status: string | null
+          to_team_id: string | null
+          transfer_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_by?: string | null
+          created_at?: string | null
+          data_transfer_options?: Json | null
+          from_team_id?: string | null
+          id?: string
+          player_id?: string | null
+          requested_by: string
+          status?: string | null
+          to_team_id?: string | null
+          transfer_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_by?: string | null
+          created_at?: string | null
+          data_transfer_options?: Json | null
+          from_team_id?: string | null
+          id?: string
+          player_id?: string | null
+          requested_by?: string
+          status?: string | null
+          to_team_id?: string | null
+          transfer_date?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_transfers_from_team_id_fkey"
+            columns: ["from_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_transfers_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_transfers_to_team_id_fkey"
+            columns: ["to_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       players: {
         Row: {
           attributes: Json | null
@@ -243,11 +395,14 @@ export type Database = {
           created_at: string
           date_of_birth: string
           id: string
+          leave_comments: string | null
+          leave_date: string | null
           match_stats: Json | null
           name: string
           objectives: Json | null
           parent_id: string | null
           squad_number: number
+          status: string | null
           subscription_status: string | null
           subscription_type: string | null
           team_id: string
@@ -261,11 +416,14 @@ export type Database = {
           created_at?: string
           date_of_birth: string
           id?: string
+          leave_comments?: string | null
+          leave_date?: string | null
           match_stats?: Json | null
           name: string
           objectives?: Json | null
           parent_id?: string | null
           squad_number: number
+          status?: string | null
           subscription_status?: string | null
           subscription_type?: string | null
           team_id: string
@@ -279,11 +437,14 @@ export type Database = {
           created_at?: string
           date_of_birth?: string
           id?: string
+          leave_comments?: string | null
+          leave_date?: string | null
           match_stats?: Json | null
           name?: string
           objectives?: Json | null
           parent_id?: string | null
           squad_number?: number
+          status?: string | null
           subscription_status?: string | null
           subscription_type?: string | null
           team_id?: string
