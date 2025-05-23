@@ -1,14 +1,17 @@
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FormationSelector } from './FormationSelector';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
-import { GameFormat, Position } from '@/types';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Position, Formation, Player } from '@/types';
+import { FormationSelector } from './FormationSelector';
+import { PitchView } from '@/components/dashboard/PitchView';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
@@ -16,203 +19,82 @@ interface PlayerSelectionPanelProps {
   gameFormat: string;
   periodNumber: number;
   teamNumber: number;
-  performanceCategoryId: string | null;
-  onSave?: () => void;
 }
-
-interface Player {
-  id: string;
-  name: string;
-  squadNumber: number;
-  position?: string;
-  isSelectedInOtherTeam?: boolean;
-  selectedTeamNumber?: number;
-}
-
-type PositionPlayerMap = Record<string, string>;
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventId,
   teamId,
   gameFormat,
   periodNumber,
-  teamNumber = 1,
-  performanceCategoryId,
-  onSave
+  teamNumber
 }) => {
-  const gameFormatTyped = gameFormat as GameFormat;
-  
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [selection, setSelection] = useState({
+    formation: '3-2-1' as Formation,
+    captainId: '',
+    playerPositions: [] as { playerId: string; position: Position }[],
+    substitutes: [] as string[],
+    duration: 90
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedFormation, setSelectedFormation] = useState('');
-  const [positions, setPositions] = useState<Position[]>([]);
-  const [playerPositions, setPlayerPositions] = useState<PositionPlayerMap>({});
-  const [substitutes, setSubstitutes] = useState<string[]>([]);
-  const [captainId, setCaptainId] = useState<string | null>(null);
-  const [existingRecordId, setExistingRecordId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('PlayerSelectionPanel mounted with:', { eventId, teamId, periodNumber, teamNumber });
-    loadPlayers();
-    loadTeamSelection();
-  }, [eventId, teamId, periodNumber, teamNumber, performanceCategoryId]);
+    loadPlayersAndSelection();
+  }, [eventId, teamId, periodNumber, teamNumber]);
 
-  useEffect(() => {
-    if (selectedFormation) {
-      console.log('Formation changed to:', selectedFormation);
-      const formationPositions = getPositionsForFormation(selectedFormation, gameFormatTyped);
-      setPositions(formationPositions);
-    }
-  }, [selectedFormation, gameFormatTyped]);
-
-  const loadPlayers = async () => {
+  const loadPlayersAndSelection = async () => {
     try {
-      console.log('Loading players for team:', teamId);
+      console.log('PlayerSelectionPanel: Loading data for:', { eventId, teamId, periodNumber, teamNumber });
+      setLoading(true);
       
-      const { data, error } = await supabase
+      // Load team players
+      const { data: playersData, error: playersError } = await supabase
         .from('players')
-        .select('id, name, squad_number')
+        .select('*')
         .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('squad_number');
+        .eq('status', 'active');
 
-      if (error) {
-        console.error('Error loading players:', error);
-        throw error;
+      if (playersError) {
+        console.error('PlayerSelectionPanel: Error loading players:', playersError);
+        throw playersError;
       }
 
-      console.log('Loaded players:', data);
+      console.log('PlayerSelectionPanel: Loaded players:', playersData);
+      setPlayers(playersData || []);
 
-      // Check which players are selected in other teams for this event/period
-      const { data: existingSelections, error: selectionsError } = await supabase
-        .from('event_selections')
-        .select('player_positions, substitutes, team_number')
-        .eq('event_id', eventId)
-        .eq('period_number', periodNumber)
-        .neq('team_number', teamNumber); // Exclude current team number
-
-      if (selectionsError) {
-        console.error('Error loading existing selections:', selectionsError);
-      }
-
-      const playerTeamMap = new Map<string, number>();
-      
-      if (existingSelections) {
-        existingSelections.forEach(selection => {
-          // Parse player positions
-          if (selection.player_positions) {
-            const positions = Array.isArray(selection.player_positions) 
-              ? selection.player_positions 
-              : JSON.parse(String(selection.player_positions || '[]'));
-            
-            positions.forEach((pos: any) => {
-              if (pos && pos.playerId) {
-                playerTeamMap.set(pos.playerId, selection.team_number);
-              }
-            });
-          }
-          
-          // Parse substitutes
-          if (selection.substitutes) {
-            const subs = Array.isArray(selection.substitutes)
-              ? selection.substitutes
-              : JSON.parse(String(selection.substitutes || '[]'));
-            
-            subs.forEach((sub: any) => {
-              if (typeof sub === 'string') {
-                playerTeamMap.set(sub, selection.team_number);
-              }
-            });
-          }
-        });
-      }
-
-      const playersWithAvailability: Player[] = data?.map(p => ({
-        id: p.id,
-        name: p.name,
-        squadNumber: p.squad_number,
-        isSelectedInOtherTeam: playerTeamMap.has(p.id),
-        selectedTeamNumber: playerTeamMap.get(p.id)
-      })) || [];
-
-      console.log('Players with availability:', playersWithAvailability);
-      setPlayers(playersWithAvailability);
-    } catch (error) {
-      console.error('Error loading players:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load players',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const loadTeamSelection = async () => {
-    try {
-      console.log('Loading team selection for:', { eventId, teamId, teamNumber, periodNumber });
-      
-      const { data, error } = await supabase
+      // Load existing selection
+      const { data: selectionData, error: selectionError } = await supabase
         .from('event_selections')
         .select('*')
         .eq('event_id', eventId)
         .eq('team_id', teamId)
-        .eq('team_number', teamNumber)
         .eq('period_number', periodNumber)
+        .eq('team_number', teamNumber)
         .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
-        console.error('Error loading team selection:', error);
-        throw error;
+      if (selectionError && selectionError.code !== 'PGRST116') {
+        console.error('PlayerSelectionPanel: Error loading selection:', selectionError);
+        throw selectionError;
       }
 
-      console.log('Loaded team selection:', data);
+      console.log('PlayerSelectionPanel: Loaded selection:', selectionData);
 
-      if (data) {
-        setExistingRecordId(data.id);
-        setSelectedFormation(data.formation || '');
-        setCaptainId(data.captain_id);
-        
-        const positions: PositionPlayerMap = {};
-        const subs: string[] = [];
-        
-        if (data.player_positions) {
-          const parsedPositions = Array.isArray(data.player_positions) 
-            ? data.player_positions 
-            : JSON.parse(String(data.player_positions || '[]'));
-            
-          parsedPositions.forEach((pp: any) => {
-            if (pp && typeof pp === 'object' && pp.playerId && pp.positionId) {
-              positions[String(pp.positionId)] = String(pp.playerId);
-            }
-          });
-        }
-        
-        if (data.substitutes) {
-          const parsedSubs = Array.isArray(data.substitutes)
-            ? data.substitutes
-            : JSON.parse(String(data.substitutes || '[]'));
-          
-          parsedSubs.forEach((sub: any) => {
-            if (typeof sub === 'string') {
-              subs.push(sub);
-            }
-          });
-        }
-        
-        setPlayerPositions(positions);
-        setSubstitutes(subs);
-      } else {
-        setExistingRecordId(null);
-        const formations = getFormationsByFormat(gameFormatTyped);
-        setSelectedFormation(formations.length > 0 ? formations[0].id : '');
+      if (selectionData) {
+        setSelection({
+          formation: selectionData.formation as Formation,
+          captainId: selectionData.captain_id || '',
+          playerPositions: Array.isArray(selectionData.player_positions) ? selectionData.player_positions : [],
+          substitutes: Array.isArray(selectionData.substitutes) ? selectionData.substitutes : [],
+          duration: selectionData.duration_minutes || 90
+        });
       }
-    } catch (error) {
-      console.error('Error loading team selection:', error);
+    } catch (error: any) {
+      console.error('PlayerSelectionPanel: Error in loadPlayersAndSelection:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load team selection',
+        description: error.message || 'Failed to load data',
         variant: 'destructive',
       });
     } finally {
@@ -220,117 +102,47 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
-  const handleFormationChange = (formationId: string) => {
-    console.log('Changing formation to:', formationId);
-    setSelectedFormation(formationId);
-    const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
-    const newPositionStrings = newPositions.map(pos => String(pos));
-    
-    const updatedPlayerPositions: PositionPlayerMap = {};
-    Object.keys(playerPositions).forEach(pos => {
-      if (newPositionStrings.includes(pos)) {
-        updatedPlayerPositions[pos] = playerPositions[pos];
-      }
-    });
-    
-    setPlayerPositions(updatedPlayerPositions);
-  };
-
-  const handlePlayerChange = (position: string, playerId: string) => {
-    console.log('Assigning player', playerId, 'to position', position);
-    setPlayerPositions(prev => ({
-      ...prev,
-      [position]: playerId
-    }));
-  };
-
-  const handleCaptainChange = (captainId: string) => {
-    console.log('Setting captain to:', captainId);
-    setCaptainId(captainId === 'none' ? null : captainId);
-  };
-
-  const handleAddSubstitute = (playerId: string) => {
-    if (playerId && playerId !== 'none' && !substitutes.includes(playerId)) {
-      console.log('Adding substitute:', playerId);
-      setSubstitutes([...substitutes, playerId]);
-    }
-  };
-
-  const handleRemoveSubstitute = (playerId: string) => {
-    console.log('Removing substitute:', playerId);
-    setSubstitutes(substitutes.filter(id => id !== playerId));
-  };
-
-  const handleSaveTeamSelection = async () => {
+  const handleSave = async () => {
     try {
-      console.log('Saving team selection...');
+      console.log('PlayerSelectionPanel: Saving selection:', selection);
       setSaving(true);
-      
-      const playerPositionsArray = Object.entries(playerPositions)
-        .filter(([, playerId]) => playerId)
-        .map(([positionId, playerId]) => ({
-          positionId,
-          playerId
-        }));
 
-      const substitutesArray = substitutes.filter(Boolean);
-
-      console.log('Saving data:', {
-        playerPositionsArray,
-        substitutesArray,
-        formation: selectedFormation,
-        captain: captainId,
-        existingRecordId
-      });
-
-      // Create properly typed upsert data
-      const upsertData: any = {
+      const selectionData = {
         event_id: eventId,
         team_id: teamId,
-        team_number: teamNumber,
         period_number: periodNumber,
-        captain_id: captainId,
-        formation: selectedFormation,
-        player_positions: playerPositionsArray,
-        substitutes: substitutesArray,
-        performance_category_id: performanceCategoryId,
-        duration_minutes: 45,
+        team_number: teamNumber,
+        formation: selection.formation,
+        captain_id: selection.captainId || null,
+        player_positions: selection.playerPositions,
+        substitutes: selection.substitutes,
+        duration_minutes: selection.duration,
         updated_at: new Date().toISOString()
       };
 
-      // Add id if we have an existing record
-      if (existingRecordId) {
-        upsertData.id = existingRecordId;
-      }
+      console.log('PlayerSelectionPanel: Upserting data:', selectionData);
 
-      const { data: upsertResult, error } = await supabase
+      const { error } = await supabase
         .from('event_selections')
-        .upsert(upsertData);
+        .upsert(selectionData, {
+          onConflict: 'event_id,team_id,period_number,team_number'
+        });
 
       if (error) {
-        console.error('Error saving team selection:', error);
+        console.error('PlayerSelectionPanel: Error saving selection:', error);
         throw error;
       }
 
-      console.log('Team selection saved successfully');
-
+      console.log('PlayerSelectionPanel: Selection saved successfully');
       toast({
         title: 'Success',
-        description: 'Team selection saved successfully',
+        description: `Team ${teamNumber} selection saved successfully`,
       });
-      
-      // Reload players to update availability status
-      await loadPlayers();
-      await loadTeamSelection();
-      
-      if (onSave) {
-        onSave();
-      }
-    } catch (error) {
-      console.error('Error saving team selection:', error);
+    } catch (error: any) {
+      console.error('PlayerSelectionPanel: Error in handleSave:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save team selection',
+        description: error.message || 'Failed to save selection',
         variant: 'destructive',
       });
     } finally {
@@ -338,17 +150,25 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
-  const getPlayerName = (playerId: string) => {
-    const player = players.find(p => p.id === playerId);
-    return player ? `${player.squadNumber}. ${player.name}` : '';
+  const handlePlayerPositionChange = (playerId: string, position: Position) => {
+    console.log('PlayerSelectionPanel: Changing player position:', playerId, position);
+    setSelection(prev => ({
+      ...prev,
+      playerPositions: [
+        ...prev.playerPositions.filter(pp => pp.playerId !== playerId),
+        { playerId, position }
+      ]
+    }));
   };
 
-  const getPlayerDisplayName = (player: Player) => {
-    let displayName = `${player.squadNumber}. ${player.name}`;
-    if (player.isSelectedInOtherTeam) {
-      displayName += ` (Selected in Team ${player.selectedTeamNumber})`;
-    }
-    return displayName;
+  const handleSubstituteToggle = (playerId: string) => {
+    console.log('PlayerSelectionPanel: Toggling substitute:', playerId);
+    setSelection(prev => ({
+      ...prev,
+      substitutes: prev.substitutes.includes(playerId)
+        ? prev.substitutes.filter(id => id !== playerId)
+        : [...prev.substitutes, playerId]
+    }));
   };
 
   if (loading) {
@@ -356,126 +176,124 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       <div className="flex items-center justify-center p-8">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p>Loading player selection...</p>
+          <p>Loading team selection...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <FormationSelector 
-        gameFormat={gameFormatTyped}
-        selectedFormation={selectedFormation}
-        onFormationChange={handleFormationChange}
-      />
-      
-      <div className="space-y-2">
-        <Label htmlFor="captainSelection">Captain</Label>
-        <Select value={captainId || 'none'} onValueChange={handleCaptainChange}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select captain" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">No captain selected</SelectItem>
-            {players.map(player => (
-              <SelectItem key={player.id} value={player.id}>
-                {player.squadNumber}. {player.name}
-                {player.isSelectedInOtherTeam && ` (Selected in Team ${player.selectedTeamNumber})`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
+    <div className="space-y-6">
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {positions.map((position) => (
-              <div key={position} className="space-y-2">
-                <Label htmlFor={`position-${position}`}>{position}</Label>
-                <Select 
-                  value={playerPositions[position] || 'none'} 
-                  onValueChange={(value) => handlePlayerChange(position, value === 'none' ? '' : value)}
-                >
-                  <SelectTrigger id={`position-${position}`}>
-                    <SelectValue placeholder={`Select player for ${position}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No player selected</SelectItem>
-                    {players.map(player => (
-                      <SelectItem 
-                        key={player.id} 
-                        value={player.id}
-                      >
-                        <span className={player.isSelectedInOtherTeam ? 'text-orange-600' : ''}>
-                          {player.squadNumber}. {player.name}
-                          {player.isSelectedInOtherTeam && ` (Selected in Team ${player.selectedTeamNumber})`}
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ))}
+        <CardHeader>
+          <CardTitle>Team {teamNumber} Selection</CardTitle>
+          <CardDescription>
+            Select formation, players, and positions for Period {periodNumber}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Formation Selection */}
+          <div className="space-y-2">
+            <Label>Formation</Label>
+            <FormationSelector
+              gameFormat={gameFormat}
+              value={selection.formation}
+              onChange={(formation) => setSelection(prev => ({ ...prev, formation }))}
+            />
           </div>
+
+          {/* Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="duration">Duration (minutes)</Label>
+            <Input
+              id="duration"
+              type="number"
+              value={selection.duration}
+              onChange={(e) => setSelection(prev => ({ ...prev, duration: parseInt(e.target.value) || 90 }))}
+              className="w-32"
+            />
+          </div>
+
+          {/* Captain Selection */}
+          <div className="space-y-2">
+            <Label>Captain</Label>
+            <Select
+              value={selection.captainId}
+              onValueChange={(value) => setSelection(prev => ({ ...prev, captainId: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select captain" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No Captain</SelectItem>
+                {players.map((player) => (
+                  <SelectItem key={player.id} value={player.id}>
+                    {player.name} (#{player.squadNumber})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Player Positions */}
+          <div className="space-y-4">
+            <Label>Player Positions</Label>
+            <div className="grid gap-4">
+              {players.map((player) => {
+                const playerPosition = selection.playerPositions.find(pp => pp.playerId === player.id);
+                const isSubstitute = selection.substitutes.includes(player.id);
+                
+                return (
+                  <div key={player.id} className="flex items-center gap-4 p-3 border rounded">
+                    <div className="flex-1">
+                      <div className="font-medium">{player.name}</div>
+                      <div className="text-sm text-muted-foreground">#{player.squadNumber}</div>
+                    </div>
+                    
+                    <Select
+                      value={playerPosition?.position || ''}
+                      onValueChange={(position) => handlePlayerPositionChange(player.id, position as Position)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Position" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">No Position</SelectItem>
+                        <SelectItem value="GK">GK</SelectItem>
+                        <SelectItem value="DC">DC</SelectItem>
+                        <SelectItem value="DL">DL</SelectItem>
+                        <SelectItem value="DR">DR</SelectItem>
+                        <SelectItem value="MC">MC</SelectItem>
+                        <SelectItem value="ML">ML</SelectItem>
+                        <SelectItem value="MR">MR</SelectItem>
+                        <SelectItem value="AMC">AMC</SelectItem>
+                        <SelectItem value="STC">STC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Button
+                      variant={isSubstitute ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleSubstituteToggle(player.id)}
+                    >
+                      {isSubstitute ? "Sub" : "Add Sub"}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <Button 
+            onClick={handleSave} 
+            disabled={saving}
+            className="w-full"
+          >
+            {saving ? 'Saving...' : `Save Team ${teamNumber} Selection`}
+          </Button>
         </CardContent>
       </Card>
-      
-      <div className="space-y-2">
-        <Label>Substitutes</Label>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {substitutes.map(subId => {
-            const player = players.find(p => p.id === subId);
-            const playerName = player ? `${player.squadNumber}. ${player.name}` : '';
-            return (
-              <div key={subId} className="bg-gray-100 px-3 py-1 rounded-full flex items-center">
-                <span>{playerName}</span>
-                <button 
-                  className="ml-2 text-red-500 hover:text-red-700"
-                  onClick={() => handleRemoveSubstitute(subId)}
-                >
-                  ×
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        
-        <Select 
-          value="none" 
-          onValueChange={handleAddSubstitute}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Add substitute" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Select player</SelectItem>
-            {players
-              .filter(player => !substitutes.includes(player.id))
-              .map(player => (
-                <SelectItem 
-                  key={player.id} 
-                  value={player.id}
-                >
-                  <span className={player.isSelectedInOtherTeam ? 'text-orange-600' : ''}>
-                    {player.squadNumber}. {player.name}
-                    {player.isSelectedInOtherTeam && ` (Selected in Team ${player.selectedTeamNumber})`}
-                  </span>
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-      </div>
-      
-      <div className="flex justify-end mt-4">
-        <Button 
-          onClick={handleSaveTeamSelection} 
-          disabled={saving}
-        >
-          {saving ? 'Saving...' : 'Save Selection'}
-        </Button>
-      </div>
     </div>
   );
 };
