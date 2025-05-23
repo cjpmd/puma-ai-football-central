@@ -204,6 +204,7 @@ export type Database = {
           staff_selection: Json | null
           substitutes: Json
           team_id: string
+          team_number: number | null
           updated_at: string
         }
         Insert: {
@@ -221,6 +222,7 @@ export type Database = {
           staff_selection?: Json | null
           substitutes?: Json
           team_id: string
+          team_number?: number | null
           updated_at?: string
         }
         Update: {
@@ -238,6 +240,7 @@ export type Database = {
           staff_selection?: Json | null
           substitutes?: Json
           team_id?: string
+          team_number?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -844,6 +847,56 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_staff: {
+        Row: {
+          certificates: Json | null
+          coaching_badges: Json | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          role: string
+          team_id: string
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          certificates?: Json | null
+          coaching_badges?: Json | null
+          created_at?: string | null
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          role: string
+          team_id: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          certificates?: Json | null
+          coaching_badges?: Json | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          role?: string
+          team_id?: string
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_staff_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
             referencedColumns: ["id"]
           },
         ]

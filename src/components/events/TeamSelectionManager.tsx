@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { Plus } from 'lucide-react';
 import { GameFormat } from '@/types';
+import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 
 interface TeamSelectionManagerProps {
   eventId: string;
@@ -64,8 +64,6 @@ interface EventSelectionRow {
   updated_at: string;
 }
 
-import { PlayerSelectionPanel } from './PlayerSelectionPanel';
-
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   eventId,
   teamId,
@@ -76,8 +74,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [loading, setLoading] = useState(true);
   const [activeTeamTab, setActiveTeamTab] = useState('team-1');
   const [activePeriodTab, setActivePeriodTab] = useState('period-1');
-  const [teamSelections, setTeamSelections] = useState<{ [teamNumber: string]: TeamSelectionData }>({});
-  const [periods, setPeriods] = useState<{ [teamNumber: string]: number }>({ 'team-1': 1 });
+  const [teamSelections, setTeamSelections] = useState<{ [key: string]: TeamSelectionData }>({});
+  const [periods, setPeriods] = useState<{ [key: string]: number }>({ 'team-1': 1 });
   const { toast } = useToast();
 
   // Cast gameFormat to GameFormat type for utility functions
@@ -151,19 +149,20 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
       if (data && data.length > 0) {
         // Process existing team selections
-        const teamSelectionData: { [teamNumber: string]: TeamSelectionData } = {};
-        const periodCounts: { [teamNumber: string]: number } = {};
+        const teamSelectionData: { [key: string]: TeamSelectionData } = {};
+        const periodCounts: { [key: string]: number } = {};
         
         // Cast data to the correct type
         const selections = data as EventSelectionRow[];
         
         selections.forEach(selection => {
-          const teamNumber = `team-${selection.team_number || 1}`;
+          const teamNumber = selection.team_number || 1;
+          const teamKey = `team-${teamNumber}`;
           const periodNumber = selection.period_number;
           
           // Keep track of the highest period number for each team
-          if (!periodCounts[teamNumber] || periodNumber > periodCounts[teamNumber]) {
-            periodCounts[teamNumber] = periodNumber;
+          if (!periodCounts[teamKey] || periodNumber > periodCounts[teamKey]) {
+            periodCounts[teamKey] = periodNumber;
           }
           
           // Parse JSON data with proper type checking
@@ -193,7 +192,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             console.error('Error parsing JSON data:', e);
           }
           
-          teamSelectionData[`${teamNumber}-period-${periodNumber}`] = {
+          teamSelectionData[`${teamKey}-period-${periodNumber}`] = {
             id: selection.id,
             captainId: selection.captain_id,
             performanceCategoryId: selection.performance_category_id,
@@ -275,6 +274,43 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     setActivePeriodTab(`period-${newPeriodNumber}`);
   };
 
+  const addTeam = () => {
+    // Find the next available team number
+    const teamNumbers = Object.keys(periods)
+      .map(key => parseInt(key.replace('team-', '')))
+      .sort((a, b) => a - b);
+    
+    const nextTeamNumber = teamNumbers.length > 0 ? teamNumbers[teamNumbers.length - 1] + 1 : 1;
+    const newTeamKey = `team-${nextTeamNumber}`;
+    
+    // Initialize new team with one period
+    setPeriods({
+      ...periods,
+      [newTeamKey]: 1
+    });
+    
+    // Initialize team selection for the first period
+    const formations = getFormationsByFormat(gameFormatTyped);
+    const defaultFormation = formations.length > 0 ? formations[0].id : '';
+    
+    setTeamSelections({
+      ...teamSelections,
+      [`${newTeamKey}-period-1`]: {
+        captainId: null,
+        performanceCategoryId: performanceCategories.length > 0 ? performanceCategories[0].id : null,
+        formationId: defaultFormation,
+        periodNumber: 1,
+        durationMinutes: 45,
+        playerPositions: [],
+        substitutes: []
+      }
+    });
+    
+    // Set active tabs
+    setActiveTeamTab(newTeamKey);
+    setActivePeriodTab('period-1');
+  };
+
   const updateTeamSelection = (teamNumber: string, periodNumber: number, data: Partial<TeamSelectionData>) => {
     const key = `${teamNumber}-period-${periodNumber}`;
     
@@ -300,75 +336,21 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  const saveTeamSelection = async () => {
-    try {
-      // Loop through all team periods and save them
-      for (const key in teamSelections) {
-        const [, teamNumberStr, , periodNumberStr] = key.split('-');
-        const teamNumber = parseInt(teamNumberStr);
-        const periodNumber = parseInt(periodNumberStr);
-        const selection = teamSelections[key];
-        
-        if (selection.id) {
-          // Update existing team selection
-          const { error } = await supabase
-            .from('event_selections')
-            .update({
-              captain_id: selection.captainId,
-              performance_category_id: selection.performanceCategoryId,
-              formation: selection.formationId,
-              duration_minutes: selection.durationMinutes,
-              player_positions: selection.playerPositions as any,
-              substitutes: selection.substitutes as any,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', selection.id);
-            
-          if (error) throw error;
-        } else {
-          // Create new team selection
-          const { error } = await supabase
-            .from('event_selections')
-            .insert({
-              event_id: eventId,
-              team_id: teamId,
-              team_number: teamNumber,
-              period_number: periodNumber,
-              captain_id: selection.captainId,
-              performance_category_id: selection.performanceCategoryId,
-              formation: selection.formationId,
-              duration_minutes: selection.durationMinutes,
-              player_positions: selection.playerPositions as any,
-              substitutes: selection.substitutes as any
-            });
-            
-          if (error) throw error;
-        }
-      }
-      
-      toast({
-        title: 'Success',
-        description: 'Team selection saved successfully',
-      });
-      
-      // Reload team selections to get updated IDs
-      loadExistingTeamSelections();
-    } catch (error) {
-      console.error('Error saving team selection:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save team selection',
-        variant: 'destructive',
-      });
-    }
+  const getCurrentTeamNumber = () => {
+    return parseInt(activeTeamTab.replace('team-', ''));
+  };
+
+  const getCurrentPeriodNumber = () => {
+    return parseInt(activePeriodTab.replace('period-', ''));
   };
 
   if (loading) {
     return <div className="text-center py-8">Loading team selection...</div>;
   }
 
-  const currentPeriod = Number(activePeriodTab.split('-')[1]);
+  const currentPeriod = getCurrentPeriodNumber();
   const currentTeam = activeTeamTab;
+  const teamNumber = getCurrentTeamNumber();
   const currentSelection = teamSelections[`${currentTeam}-${activePeriodTab}`] || {
     captainId: null,
     performanceCategoryId: null,
@@ -388,86 +370,92 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           <CardTitle>Team Selection</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="flex justify-end mb-4">
+            <Button onClick={addTeam} variant="outline" size="sm">
+              <Plus className="h-4 w-4 mr-1" /> Add Team
+            </Button>
+          </div>
+          
           <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="team-1">Team 1</TabsTrigger>
+              {Object.keys(periods).sort().map((teamKey) => (
+                <TabsTrigger key={teamKey} value={teamKey}>Team {teamKey.replace('team-', '')}</TabsTrigger>
+              ))}
             </TabsList>
             
-            <TabsContent value="team-1" className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <Label htmlFor="performanceCategory">Performance Category</Label>
-                  <Select 
-                    value={currentSelection.performanceCategoryId || 'none'}
-                    onValueChange={(value) => updateTeamSelection(currentTeam, currentPeriod, { 
-                      performanceCategoryId: value === 'none' ? null : value
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No category</SelectItem>
-                      {performanceCategories.map(category => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Period Duration (minutes)</Label>
-                  <Input 
-                    id="duration" 
-                    type="number" 
-                    min="1"
-                    value={currentSelection.durationMinutes}
-                    onChange={(e) => updateTeamSelection(currentTeam, currentPeriod, {
-                      durationMinutes: parseInt(e.target.value) || 45
-                    })}
-                  />
-                </div>
-              </div>
-              
-              <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab}>
-                <div className="flex items-center space-x-2 mb-2">
-                  <TabsList>
-                    {Array.from({ length: periods[currentTeam] || 1 }, (_, i) => (
-                      <TabsTrigger key={i} value={`period-${i + 1}`}>
-                        Period {i + 1}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
+            {Object.keys(periods).sort().map((teamKey) => (
+              <TabsContent key={teamKey} value={teamKey} className="space-y-4">
+                <div className="grid md:grid-cols-2 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="performanceCategory">Performance Category</Label>
+                    <Select 
+                      value={currentSelection.performanceCategoryId || 'none'}
+                      onValueChange={(value) => updateTeamSelection(currentTeam, currentPeriod, { 
+                        performanceCategoryId: value === 'none' ? null : value
+                      })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No category</SelectItem>
+                        {performanceCategories.map(category => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => handleAddPeriod(currentTeam)}
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Add Period
-                  </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="duration">Period Duration (minutes)</Label>
+                    <Input 
+                      id="duration" 
+                      type="number" 
+                      min="1"
+                      value={currentSelection.durationMinutes}
+                      onChange={(e) => updateTeamSelection(currentTeam, currentPeriod, {
+                        durationMinutes: parseInt(e.target.value) || 45
+                      })}
+                    />
+                  </div>
                 </div>
                 
-                {Array.from({ length: periods[currentTeam] || 1 }, (_, i) => (
-                  <TabsContent key={i} value={`period-${i + 1}`} className="space-y-4">
-                    <PlayerSelectionPanel
-                      eventId={eventId}
-                      teamId={teamId}
-                      gameFormat={gameFormat}
-                      periodNumber={i + 1}
-                    />
-                  </TabsContent>
-                ))}
-              </Tabs>
-              
-              <div className="flex justify-end mt-4">
-                <Button onClick={saveTeamSelection}>
-                  Save Team Selection
-                </Button>
-              </div>
-            </TabsContent>
+                <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <TabsList>
+                      {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
+                        <TabsTrigger key={i} value={`period-${i + 1}`}>
+                          Period {i + 1}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleAddPeriod(teamKey)}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Period
+                    </Button>
+                  </div>
+                  
+                  {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
+                    <TabsContent key={i} value={`period-${i + 1}`} className="space-y-4">
+                      <PlayerSelectionPanel
+                        eventId={eventId}
+                        teamId={teamId}
+                        gameFormat={gameFormat}
+                        periodNumber={i + 1}
+                        teamNumber={parseInt(teamKey.replace('team-', ''))}
+                        performanceCategoryId={currentSelection.performanceCategoryId}
+                      />
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </TabsContent>
+            ))}
           </Tabs>
         </CardContent>
       </Card>

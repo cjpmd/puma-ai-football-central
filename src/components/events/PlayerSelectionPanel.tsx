@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -7,12 +8,16 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { GameFormat, Position } from '@/types';
+import { Button } from '@/components/ui/button';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
   teamId: string;
   gameFormat: string;
   periodNumber: number;
+  teamNumber: number;
+  performanceCategoryId: string | null;
+  onSave?: () => void;
 }
 
 interface Player {
@@ -42,12 +47,16 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventId,
   teamId,
   gameFormat,
-  periodNumber
+  periodNumber,
+  teamNumber = 1,
+  performanceCategoryId,
+  onSave
 }) => {
   // Cast gameFormat to the correct type for the utility functions
   const gameFormatTyped = gameFormat as GameFormat;
   
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedFormation, setSelectedFormation] = useState('');
   const [positions, setPositions] = useState<Position[]>([]);
@@ -59,7 +68,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   useEffect(() => {
     loadPlayers();
     loadTeamSelection();
-  }, [eventId, teamId, periodNumber]);
+  }, [eventId, teamId, periodNumber, teamNumber, performanceCategoryId]);
 
   useEffect(() => {
     if (selectedFormation) {
@@ -101,6 +110,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .select('*')
         .eq('event_id', eventId)
         .eq('team_id', teamId)
+        .eq('team_number', teamNumber)
         .eq('period_number', periodNumber)
         .single();
 
@@ -195,6 +205,84 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   const handleRemoveSubstitute = (playerId: string) => {
     setSubstitutes(substitutes.filter(id => id !== playerId));
+  };
+
+  const handleSaveTeamSelection = async () => {
+    try {
+      setSaving(true);
+      // Convert playerPositions object to array of PlayerPosition objects
+      const playerPositionsArray: PlayerPosition[] = Object.entries(playerPositions).map(
+        ([positionId, playerId]) => ({
+          positionId,
+          playerId: playerId || ''
+        })
+      ).filter(pp => pp.playerId); // Remove empty player IDs
+
+      // Check if team selection already exists
+      const { data: existingData, error: checkError } = await supabase
+        .from('event_selections')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('team_id', teamId)
+        .eq('team_number', teamNumber)
+        .eq('period_number', periodNumber)
+        .maybeSingle();
+
+      if (checkError) throw checkError;
+
+      if (existingData?.id) {
+        // Update existing selection
+        const { error } = await supabase
+          .from('event_selections')
+          .update({
+            captain_id: captainId,
+            formation: selectedFormation,
+            player_positions: playerPositionsArray,
+            substitutes: substitutes,
+            performance_category_id: performanceCategoryId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData.id);
+
+        if (error) throw error;
+      } else {
+        // Create new selection
+        const { error } = await supabase
+          .from('event_selections')
+          .insert({
+            event_id: eventId,
+            team_id: teamId,
+            team_number: teamNumber,
+            period_number: periodNumber,
+            captain_id: captainId,
+            formation: selectedFormation,
+            player_positions: playerPositionsArray,
+            substitutes: substitutes,
+            performance_category_id: performanceCategoryId,
+            duration_minutes: 45, // Default value
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Team selection saved successfully',
+      });
+      
+      if (onSave) {
+        onSave();
+      }
+    } catch (error) {
+      console.error('Error saving team selection:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save team selection',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const isPlayerAssigned = (playerId: string) => {
@@ -325,6 +413,15 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               ))}
           </SelectContent>
         </Select>
+      </div>
+      
+      <div className="flex justify-end mt-4">
+        <Button 
+          onClick={handleSaveTeamSelection} 
+          disabled={saving}
+        >
+          {saving ? 'Saving...' : 'Save Selection'}
+        </Button>
       </div>
     </div>
   );

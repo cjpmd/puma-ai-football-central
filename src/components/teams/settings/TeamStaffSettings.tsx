@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
 import { Plus, Edit, Trash2, Users, Mail, Phone, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeamStaffSettingsProps {
   team: Team;
@@ -28,64 +30,159 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     role: 'coach' as TeamStaff['role']
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const handleAddStaff = () => {
+  const saveStaffToDatabase = async (staffMember: TeamStaff) => {
+    try {
+      const { error } = await supabase
+        .from('team_staff')
+        .upsert({
+          id: staffMember.id,
+          team_id: team.id,
+          user_id: staffMember.user_id || null,
+          name: staffMember.name,
+          email: staffMember.email,
+          phone: staffMember.phone || null,
+          role: staffMember.role,
+          coaching_badges: staffMember.coachingBadges || [],
+          certificates: staffMember.certificates || [],
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Error saving staff member:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save staff member',
+        variant: 'destructive',
+      });
+      return false;
+    }
+  };
+
+  const loadStaffFromDatabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('team_staff')
+        .select('*')
+        .eq('team_id', team.id);
+
+      if (error) throw error;
+
+      if (data) {
+        // Transform database records to TeamStaff objects
+        const staffMembers: TeamStaff[] = data.map(record => ({
+          id: record.id,
+          name: record.name,
+          email: record.email,
+          phone: record.phone || '',
+          role: record.role as TeamStaff['role'],
+          user_id: record.user_id || undefined,
+          coachingBadges: record.coaching_badges || [],
+          certificates: record.certificates || [],
+          createdAt: record.created_at,
+          updatedAt: record.updated_at
+        }));
+        
+        setStaff(staffMembers);
+        onUpdate({ staff: staffMembers });
+      }
+    } catch (error) {
+      console.error('Error loading staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load team staff',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleAddStaff = async () => {
     if (newStaff.name && newStaff.email) {
       const staffMember: TeamStaff = {
         id: Date.now().toString(),
         ...newStaff,
         coachingBadges: [],
         certificates: [],
+        // Set user_id if adding the current user as staff
+        user_id: newStaff.email === user?.email ? user?.id : undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
       
-      const updatedStaff = [...staff, staffMember];
-      setStaff(updatedStaff);
-      onUpdate({ staff: updatedStaff });
+      const success = await saveStaffToDatabase(staffMember);
       
-      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setIsAddingStaff(false);
-      
-      toast({
-        title: 'Success',
-        description: `${staffMember.name} has been added to ${team.name}`,
-      });
+      if (success) {
+        await loadStaffFromDatabase(); // Reload from DB to get the correct ID
+        
+        setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+        setIsAddingStaff(false);
+        
+        toast({
+          title: 'Success',
+          description: `${staffMember.name} has been added to ${team.name}`,
+        });
+      }
     }
   };
 
-  const handleUpdateStaff = () => {
+  const handleUpdateStaff = async () => {
     if (editingStaff && newStaff.name && newStaff.email) {
-      const updatedStaff = staff.map(s => 
-        s.id === editingStaff.id 
-          ? { ...s, ...newStaff, updatedAt: new Date().toISOString() }
-          : s
-      );
+      const updatedStaffMember = { 
+        ...editingStaff, 
+        ...newStaff, 
+        updatedAt: new Date().toISOString() 
+      };
       
-      setStaff(updatedStaff);
-      onUpdate({ staff: updatedStaff });
+      const success = await saveStaffToDatabase(updatedStaffMember);
       
-      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setEditingStaff(null);
+      if (success) {
+        await loadStaffFromDatabase(); // Reload from DB to get the updated data
+        
+        setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+        setEditingStaff(null);
+        
+        toast({
+          title: 'Success',
+          description: `${newStaff.name} has been updated in ${team.name}`,
+        });
+      }
+    }
+  };
+
+  const handleRemoveStaff = async (staffId: string) => {
+    try {
+      const staffMember = staff.find(s => s.id === staffId);
+      
+      const { error } = await supabase
+        .from('team_staff')
+        .delete()
+        .eq('id', staffId);
+      
+      if (error) throw error;
+      
+      await loadStaffFromDatabase(); // Reload from DB
       
       toast({
         title: 'Success',
-        description: `${newStaff.name} has been updated in ${team.name}`,
+        description: `${staffMember?.name} has been removed from ${team.name}`,
+      });
+    } catch (error) {
+      console.error('Error removing staff:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove staff member',
+        variant: 'destructive',
       });
     }
   };
 
-  const handleRemoveStaff = (staffId: string) => {
-    const staffMember = staff.find(s => s.id === staffId);
-    const updatedStaff = staff.filter(s => s.id !== staffId);
-    setStaff(updatedStaff);
-    onUpdate({ staff: updatedStaff });
-    
-    toast({
-      title: 'Success',
-      description: `${staffMember?.name} has been removed from ${team.name}`,
-    });
-  };
+  // Load staff from database on initial render
+  useState(() => {
+    loadStaffFromDatabase();
+  });
 
   function getRoleColor(role: TeamStaff['role']) {
     switch (role) {
