@@ -45,7 +45,20 @@ export const TeamBasicSettings = ({ team, onUpdate }: TeamBasicSettingsProps) =>
         .order('name');
 
       if (error) throw error;
-      setClubs(data || []);
+      
+      // Transform database fields to match interface
+      const transformedClubs: Club[] = (data || []).map(club => ({
+        id: club.id,
+        name: club.name,
+        referenceNumber: club.reference_number || '',
+        serialNumber: club.serial_number || '',
+        teams: [], // Will be populated when needed
+        subscriptionType: club.subscription_type as any || 'free',
+        createdAt: club.created_at,
+        updatedAt: club.updated_at
+      }));
+      
+      setClubs(transformedClubs);
     } catch (error) {
       console.error('Error loading clubs:', error);
       toast({
@@ -65,7 +78,20 @@ export const TeamBasicSettings = ({ team, onUpdate }: TeamBasicSettingsProps) =>
         .single();
 
       if (error) throw error;
-      setLinkedClub(data);
+      
+      // Transform database fields to match interface
+      const transformedClub: Club = {
+        id: data.id,
+        name: data.name,
+        referenceNumber: data.reference_number || '',
+        serialNumber: data.serial_number || '',
+        teams: [], // Will be populated when needed
+        subscriptionType: data.subscription_type as any || 'free',
+        createdAt: data.created_at,
+        updatedAt: data.updated_at
+      };
+      
+      setLinkedClub(transformedClub);
     } catch (error) {
       console.error('Error loading club details:', error);
       setLinkedClub(null);

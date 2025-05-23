@@ -41,7 +41,19 @@ export const FacilitiesManagement = ({ clubId, onRefreshClub }: FacilitiesManage
         .order('name');
 
       if (error) throw error;
-      setFacilities(data || []);
+      
+      // Transform database fields to match interface
+      const transformedFacilities: Facility[] = (data || []).map(facility => ({
+        id: facility.id,
+        clubId: facility.club_id,
+        name: facility.name,
+        description: facility.description,
+        bookableUnits: facility.bookable_units,
+        createdAt: facility.created_at,
+        updatedAt: facility.updated_at
+      }));
+      
+      setFacilities(transformedFacilities);
     } catch (error) {
       console.error('Error loading facilities:', error);
       toast({
