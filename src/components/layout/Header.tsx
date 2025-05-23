@@ -10,11 +10,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserCircle, Settings, LogOut } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { UserLoginModal } from "../modals/UserLoginModal";
 import { UserSignupModal } from "../modals/UserSignupModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 export function Header() {
   const { user, profile, signOut } = useAuth();
@@ -25,16 +26,22 @@ export function Header() {
   const isLoggedIn = !!user;
 
   const handleLogout = async () => {
-    await signOut();
-    navigate('/');
+    try {
+      await signOut();
+      toast.success("Logged out successfully");
+      navigate('/');
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out. Please try again.");
+    }
   };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2">
-          <a 
-            href="/" 
+          <Link 
+            to="/" 
             className="flex items-center gap-2 font-bold text-xl text-puma-blue-500"
           >
             <svg
@@ -55,22 +62,22 @@ export function Header() {
               <path d="M2 12c0-1.688 1.5-3 3-3" />
             </svg>
             <span>Puma-AI</span>
-          </a>
+          </Link>
         </div>
         
         <nav className="hidden md:flex items-center gap-6">
-          <a href="/features" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
+          <Link to="/features" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
             Features
-          </a>
-          <a href="/pricing" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
+          </Link>
+          <Link to="/pricing" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
             Pricing
-          </a>
-          <a href="/about" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
+          </Link>
+          <Link to="/about" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
             About
-          </a>
-          <a href="/contact" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
+          </Link>
+          <Link to="/contact" className="text-sm font-medium hover:text-puma-blue-500 transition-colors">
             Contact
-          </a>
+          </Link>
         </nav>
         
         <div className="flex items-center gap-2">

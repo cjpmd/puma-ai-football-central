@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,8 +37,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up the auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_, session) => {
-        console.log('Auth state changed:', session?.user?.id || 'no user');
+      (event, session) => {
+        console.log('Auth state changed:', session?.user?.id || 'no user', 'event:', event);
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -286,10 +287,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setTeams([]);
-    setClubs([]);
+    try {
+      // Clear local state before calling signOut to avoid timing issues
+      setProfile(null);
+      setTeams([]);
+      setClubs([]);
+      
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error);
+        throw error;
+      }
+      
+      // Force a refresh of the user's session state
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      if (!currentSession) {
+        console.log('Successfully signed out, session cleared');
+      }
+    } catch (error) {
+      console.error('Exception during sign out:', error);
+    }
   };
 
   const refreshUserData = async () => {
