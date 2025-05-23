@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,9 +50,7 @@ export function UpcomingEvents() {
           game_format,
           opponent,
           is_home,
-          teams:team_id (
-            name
-          )
+          team_id
         `)
         .in('team_id', teamIds)
         .gte('date', today)
@@ -66,7 +63,7 @@ export function UpcomingEvents() {
         return;
       }
 
-      // Get attendee counts for each event
+      // Get attendee counts for each event and team names
       const eventsWithCounts = await Promise.all(
         (eventsData || []).map(async (event) => {
           // Get confirmed attendees count
@@ -80,12 +77,16 @@ export function UpcomingEvents() {
           const { count: totalPlayers } = await supabase
             .from('players')
             .select('*', { count: 'exact', head: true })
-            .eq('team_id', event.teams?.id)
+            .eq('team_id', event.team_id)
             .eq('status', 'active');
+
+          // Get team name
+          const team = teams.find(t => t.id === event.team_id);
+          const teamName = team?.name || 'Unknown Team';
 
           return {
             ...event,
-            team_name: event.teams?.name || 'Unknown Team',
+            team_name: teamName,
             attendee_count: attendeeCount || 0,
             total_players: totalPlayers || 0
           };

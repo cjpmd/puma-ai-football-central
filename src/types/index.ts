@@ -1,3 +1,4 @@
+
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -233,6 +234,8 @@ export type Event = {
   };
   playerOfTheMatchId?: string;
   coachNotes?: string;
+  staffNotes?: string;
+  trainingNotes?: string;
   createdAt: string;
   updatedAt: string;
 };
