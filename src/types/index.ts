@@ -228,6 +228,7 @@ export type Event = {
   teams: string[]; // Team IDs
   periods: Period[];
   facilityId?: string;
+  performanceCategoryId?: string; // Added this property
   scores?: {
     home: number;
     away: number;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,6 +30,11 @@ interface PerformanceCategory {
   name: string;
 }
 
+interface PlayerPosition {
+  playerId: string;
+  positionId: string;
+}
+
 interface TeamSelectionData {
   id?: string;
   captainId: string | null;
@@ -36,10 +42,7 @@ interface TeamSelectionData {
   performanceCategoryId: string | null;
   periodNumber: number;
   durationMinutes: number;
-  playerPositions: Array<{
-    playerId: string;
-    positionId: string;
-  }>;
+  playerPositions: PlayerPosition[];
   substitutes: string[];
 }
 
@@ -129,7 +132,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const periodCounts: { [teamNumber: string]: number } = {};
         
         data.forEach(selection => {
-          const teamNumber = `team-${selection.team_number}`;
+          const teamNumber = `team-${selection.team_number || 1}`;
           const periodNumber = selection.period_number;
           
           // Keep track of the highest period number for each team
@@ -137,15 +140,35 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             periodCounts[teamNumber] = periodNumber;
           }
           
+          // Parse JSON data with proper type checking
+          let playerPositions: PlayerPosition[] = [];
+          let substitutes: string[] = [];
+          
+          try {
+            if (selection.player_positions && typeof selection.player_positions === 'object') {
+              playerPositions = Array.isArray(selection.player_positions) 
+                ? selection.player_positions as PlayerPosition[]
+                : [];
+            }
+            
+            if (selection.substitutes && typeof selection.substitutes === 'object') {
+              substitutes = Array.isArray(selection.substitutes) 
+                ? selection.substitutes as string[]
+                : [];
+            }
+          } catch (e) {
+            console.error('Error parsing JSON data:', e);
+          }
+          
           teamSelectionData[`${teamNumber}-period-${periodNumber}`] = {
             id: selection.id,
             captainId: selection.captain_id,
             performanceCategoryId: selection.performance_category_id,
-            formationId: selection.formation,
+            formationId: selection.formation || '',
             periodNumber: selection.period_number,
             durationMinutes: selection.duration_minutes,
-            playerPositions: selection.player_positions,
-            substitutes: selection.substitutes
+            playerPositions,
+            substitutes
           };
         });
         
@@ -248,7 +271,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     try {
       // Loop through all team periods and save them
       for (const key in teamSelections) {
-        const [teamNumber, periodNumber] = key.split('-').slice(1, 3).map(Number);
+        const [, teamNumberStr, , periodNumberStr] = key.split('-');
+        const teamNumber = parseInt(teamNumberStr);
+        const periodNumber = parseInt(periodNumberStr);
         const selection = teamSelections[key];
         
         if (selection.id) {
