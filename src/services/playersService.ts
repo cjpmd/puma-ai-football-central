@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { Player } from '@/types';
+import { Player, PlayerAttribute, PlayerObjective, PlayerComment, MatchStats, Position } from '@/types';
 
 export const playersService = {
   async getPlayersByTeamId(teamId: string): Promise<Player[]> {
@@ -15,7 +15,31 @@ export const playersService = {
       throw error;
     }
 
-    return data || [];
+    // Transform database format to application format
+    return (data || []).map(player => ({
+      id: player.id,
+      name: player.name,
+      dateOfBirth: player.date_of_birth,
+      squadNumber: player.squad_number,
+      type: player.type as "outfield" | "goalkeeper",
+      teamId: player.team_id,
+      availability: player.availability as "amber" | "green" | "red",
+      subscriptionType: player.subscription_type as "full_squad" | "training",
+      subscriptionStatus: player.subscription_status as "active" | "inactive" | "pending",
+      attributes: (player.attributes as PlayerAttribute[]) || [],
+      objectives: (player.objectives as PlayerObjective[]) || [],
+      comments: (player.comments as PlayerComment[]) || [],
+      matchStats: (player.match_stats as MatchStats) || {
+        totalGames: 0,
+        captainGames: 0,
+        playerOfTheMatchCount: 0,
+        totalMinutes: 0,
+        minutesByPosition: {} as Record<Position, number>,
+        recentGames: []
+      },
+      createdAt: player.created_at,
+      updatedAt: player.updated_at
+    }));
   },
 
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
@@ -55,20 +79,20 @@ export const playersService = {
       name: data.name,
       dateOfBirth: data.date_of_birth,
       squadNumber: data.squad_number,
-      type: data.type,
+      type: data.type as "outfield" | "goalkeeper",
       teamId: data.team_id,
-      availability: data.availability,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
-      attributes: data.attributes || [],
-      objectives: data.objectives || [],
-      comments: data.comments || [],
-      matchStats: data.match_stats || {
+      availability: data.availability as "amber" | "green" | "red",
+      subscriptionType: data.subscription_type as "full_squad" | "training",
+      subscriptionStatus: data.subscription_status as "active" | "inactive" | "pending",
+      attributes: (data.attributes as PlayerAttribute[]) || [],
+      objectives: (data.objectives as PlayerObjective[]) || [],
+      comments: (data.comments as PlayerComment[]) || [],
+      matchStats: (data.match_stats as MatchStats) || {
         totalGames: 0,
         captainGames: 0,
         playerOfTheMatchCount: 0,
         totalMinutes: 0,
-        minutesByPosition: {},
+        minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
       createdAt: data.created_at,
@@ -103,20 +127,20 @@ export const playersService = {
       name: data.name,
       dateOfBirth: data.date_of_birth,
       squadNumber: data.squad_number,
-      type: data.type,
+      type: data.type as "outfield" | "goalkeeper",
       teamId: data.team_id,
-      availability: data.availability,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
-      attributes: data.attributes || [],
-      objectives: data.objectives || [],
-      comments: data.comments || [],
-      matchStats: data.match_stats || {
+      availability: data.availability as "amber" | "green" | "red",
+      subscriptionType: data.subscription_type as "full_squad" | "training",
+      subscriptionStatus: data.subscription_status as "active" | "inactive" | "pending",
+      attributes: (data.attributes as PlayerAttribute[]) || [],
+      objectives: (data.objectives as PlayerObjective[]) || [],
+      comments: (data.comments as PlayerComment[]) || [],
+      matchStats: (data.match_stats as MatchStats) || {
         totalGames: 0,
         captainGames: 0,
         playerOfTheMatchCount: 0,
         totalMinutes: 0,
-        minutesByPosition: {},
+        minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
       createdAt: data.created_at,
