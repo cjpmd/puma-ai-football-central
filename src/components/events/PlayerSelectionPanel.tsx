@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -48,6 +49,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedFormation, setSelectedFormation] = useState('');
   const [positions, setPositions] = useState<Position[]>([]);
+  // Fix: Use explicit Record type instead of indexed type to avoid recursive type issues
   const [playerPositions, setPlayerPositions] = useState<Record<string, string>>({});
   const [substitutes, setSubstitutes] = useState<string[]>([]);
   const [captainId, setCaptainId] = useState<string | null>(null);
@@ -112,6 +114,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setCaptainId(data.captain_id);
         
         // Parse player positions and substitutes
+        // Fix: Use explicit Record type instead of indexed type
         let positions: Record<string, string> = {};
         let subs: string[] = [];
         
@@ -155,6 +158,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     // When formation changes, keep player assignments for positions that still exist
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
     
+    // Fix: Use explicit Record type instead of indexed type
     const updatedPlayerPositions: Record<string, string> = {};
     Object.keys(playerPositions).forEach(pos => {
       if (newPositions.includes(pos as Position)) {
