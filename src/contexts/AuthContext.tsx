@@ -33,10 +33,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let mounted = true;
+    let initializationTimeout: NodeJS.Timeout;
 
-    const loadSession = async () => {
+    const initializeAuth = async () => {
       try {
-        console.log('Loading session...');
+        console.log('Starting auth initialization...');
+        
+        // Set up listener for supabase auth changes FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state changed:', event, session?.user?.id);
+          
+          if (!mounted) return;
+          
+          try {
+            if (session?.user) {
+              console.log('User session found, setting user data...');
+              setUser(session.user);
+              setSession(session);
+              
+              // Load user data without awaiting to prevent blocking
+              Promise.all([
+                fetchProfile(session.user.id),
+                fetchTeams(session.user.id),
+                fetchClubs(session.user.id)
+              ]).catch(error => {
+                console.error('Error loading user data after auth change:', error);
+              });
+            } else {
+              console.log('No user session, clearing data...');
+              setUser(null);
+              setSession(null);
+              setTeams([]);
+              setClubs([]);
+              setProfile(null);
+            }
+          } finally {
+            // Always set loading to false after processing auth state change
+            if (mounted) {
+              console.log('Auth state processed, setting loading to false');
+              setIsLoading(false);
+            }
+          }
+        });
+
+        // Then check for existing session
+        console.log('Checking for existing session...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -47,71 +88,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!mounted) return;
 
         if (session?.user) {
-          console.log('Session found, loading user data...');
+          console.log('Existing session found, loading user data...');
           setUser(session.user);
           setSession(session);
           
-          // Load user data in parallel
-          await Promise.all([
+          // Load user data in parallel without blocking
+          Promise.all([
             fetchProfile(session.user.id),
             fetchTeams(session.user.id),
             fetchClubs(session.user.id)
-          ]);
+          ]).catch(error => {
+            console.error('Error loading initial user data:', error);
+          }).finally(() => {
+            if (mounted) {
+              console.log('Initial data load complete, setting loading to false');
+              setIsLoading(false);
+            }
+          });
         } else {
-          console.log('No session found');
+          console.log('No existing session found');
+          if (mounted) {
+            setIsLoading(false);
+          }
         }
+
+        // Clean up timeout
+        if (initializationTimeout) {
+          clearTimeout(initializationTimeout);
+        }
+
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
       } catch (error: any) {
-        console.error('Error loading session:', error);
+        console.error('Error during auth initialization:', error);
         if (mounted) {
           toast({
-            title: 'Session load failed',
-            description: error.message,
+            title: 'Authentication Error',
+            description: 'Failed to initialize authentication. Please refresh the page.',
             variant: 'destructive',
           });
-        }
-      } finally {
-        if (mounted) {
-          console.log('Setting loading to false');
           setIsLoading(false);
         }
       }
     };
 
-    loadSession();
-
-    // Set up listener for supabase auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id);
-      
-      if (session?.user) {
-        setUser(session.user);
-        setSession(session);
-        
-        try {
-          await Promise.all([
-            fetchProfile(session.user.id),
-            fetchTeams(session.user.id),
-            fetchClubs(session.user.id)
-          ]);
-        } catch (error) {
-          console.error('Error loading user data after auth change:', error);
-        }
-      } else {
-        setUser(null);
-        setSession(null);
-        setTeams([]);
-        setClubs([]);
-        setProfile(null);
-      }
-      
-      if (mounted) {
+    // Set a fallback timeout to ensure loading never gets stuck
+    initializationTimeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        console.warn('Auth initialization timeout, forcing loading to false');
         setIsLoading(false);
       }
-    });
+    }, 10000); // 10 second timeout
 
+    const cleanup = initializeAuth();
+    
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      if (initializationTimeout) {
+        clearTimeout(initializationTimeout);
+      }
+      cleanup?.then(cleanupFn => cleanupFn?.());
     };
   }, [toast]);
 
@@ -310,16 +348,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (!error) {
+    console.log('Signing out user...');
+    setIsLoading(true);
+    
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        throw error;
+      }
+      
+      // Clear all state immediately
       setUser(null);
       setSession(null);
       setTeams([]);
       setClubs([]);
       setProfile(null);
-    }
-    if (error) {
-      throw error;
+      
+      console.log('Sign out successful');
+    } catch (error: any) {
+      console.error('Error during sign out:', error);
+      toast({
+        title: 'Sign out failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -342,6 +396,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    console.log('Logging out user...');
     try {
       setIsLoading(true);
       const { error } = await supabase.auth.signOut();
@@ -372,9 +427,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (user) {
       setIsLoading(true);
       try {
-        await fetchProfile(user.id);
-        await fetchTeams(user.id);
-        await fetchClubs(user.id);
+        await Promise.all([
+          fetchProfile(user.id),
+          fetchTeams(user.id),
+          fetchClubs(user.id)
+        ]);
       } catch (error: any) {
         console.error('Error refreshing user data:', error.message);
         toast({
