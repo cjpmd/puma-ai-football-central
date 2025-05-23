@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -19,7 +18,6 @@ const TeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
-  const [clubNames, setClubNames] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   // Load club names when clubs change
@@ -153,8 +151,9 @@ const TeamManagement = () => {
   };
 
   const getClubName = (clubId?: string) => {
-    if (!clubId) return 'Independent';
-    return clubNames[clubId] || 'Independent';
+    if (!clubId || !clubs) return 'Independent';
+    const club = clubs.find(club => club.id === clubId);
+    return club ? club.name : 'Independent';
   };
 
   return (
@@ -190,7 +189,7 @@ const TeamManagement = () => {
               </DialogHeader>
               <TeamForm 
                 team={selectedTeam} 
-                clubs={clubs}
+                clubs={clubs || []}
                 onSubmit={selectedTeam ? handleUpdateTeam : handleCreateTeam} 
                 onCancel={() => setIsTeamDialogOpen(false)}
               />
