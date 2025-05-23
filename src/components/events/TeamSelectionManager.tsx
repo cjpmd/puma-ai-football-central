@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { Plus } from 'lucide-react';
+import { GameFormat } from '@/types';
 
 interface TeamSelectionManagerProps {
   eventId: string;
@@ -77,6 +78,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [teamSelections, setTeamSelections] = useState<{ [teamNumber: string]: TeamSelectionData }>({});
   const [periods, setPeriods] = useState<{ [teamNumber: string]: number }>({ 'team-1': 1 });
   const { toast } = useToast();
+
+  // Cast gameFormat to GameFormat type for utility functions
+  const gameFormatTyped = gameFormat as GameFormat;
 
   useEffect(() => {
     loadPlayers();
@@ -221,7 +225,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const initializeDefaultSelections = () => {
     // Get the default formation for this game format
-    const formations = getFormationsByFormat(gameFormat);
+    const formations = getFormationsByFormat(gameFormatTyped);
     const defaultFormation = formations.length > 0 ? formations[0].id : '';
     
     // Initialize default team selection data
@@ -374,7 +378,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     substitutes: []
   };
   
-  const formations = getFormationsByFormat(gameFormat);
+  const formations = getFormationsByFormat(gameFormatTyped);
 
   return (
     <div className="space-y-4">

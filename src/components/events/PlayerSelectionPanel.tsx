@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { Plus, Users } from 'lucide-react';
 import { FormationSelector } from './FormationSelector';
-import { Position } from '@/types';
+import { Position, GameFormat } from '@/types';
 
 interface Player {
   id: string;
@@ -42,7 +42,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [selectedFormation, setSelectedFormation] = useState<string>('');
   const { toast } = useToast();
 
-  const formations = getFormationsByFormat(gameFormat);
+  // Cast gameFormat to GameFormat type for utility functions
+  const gameFormatTyped = gameFormat as GameFormat;
+  const formations = getFormationsByFormat(gameFormatTyped);
 
   useEffect(() => {
     loadPlayers();
@@ -55,7 +57,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   useEffect(() => {
     // Update positions when formation changes
     if (selectedFormation) {
-      const formationPositions = getPositionsForFormation(selectedFormation, gameFormat);
+      const formationPositions = getPositionsForFormation(selectedFormation, gameFormatTyped);
       const newPositions: PositionAssignment[] = formationPositions.map(position => {
         // Try to keep existing player assignments when switching formations
         const existingAssignment = positions.find(p => p.position === position);
@@ -155,7 +157,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         </CardHeader>
         <CardContent className="space-y-4">
           <FormationSelector
-            gameFormat={gameFormat}
+            gameFormat={gameFormatTyped}
             selectedFormation={selectedFormation}
             onFormationChange={setSelectedFormation}
           />
