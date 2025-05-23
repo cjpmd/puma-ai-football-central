@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -23,7 +22,7 @@ interface Player {
   position?: string;
 }
 
-// Define explicit types for player positions association
+// Simple type definitions to avoid recursive issues
 type PositionPlayerMap = Record<string, string>;
 
 interface PlayerPosition {
@@ -52,7 +51,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedFormation, setSelectedFormation] = useState('');
   const [positions, setPositions] = useState<Position[]>([]);
-  // Use the explicit type for playerPositions to prevent recursive type issues
   const [playerPositions, setPlayerPositions] = useState<PositionPlayerMap>({});
   const [substitutes, setSubstitutes] = useState<string[]>([]);
   const [captainId, setCaptainId] = useState<string | null>(null);
@@ -103,7 +101,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .select('*')
         .eq('event_id', eventId)
         .eq('team_id', teamId)
-        .eq('team_number', 1)
         .eq('period_number', periodNumber)
         .single();
 
@@ -116,25 +113,32 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setSelectedFormation(data.formation || '');
         setCaptainId(data.captain_id);
         
-        // Parse player positions and substitutes
-        // Use explicit PositionPlayerMap to avoid recursive type issues
-        let positions: PositionPlayerMap = {};
-        let subs: string[] = [];
+        // Parse player positions and substitutes with explicit typing
+        const positions: PositionPlayerMap = {};
+        const subs: string[] = [];
         
         if (data.player_positions) {
-          const parsedPositions = typeof data.player_positions === 'string' 
-            ? JSON.parse(data.player_positions) 
-            : data.player_positions;
+          const parsedPositions = Array.isArray(data.player_positions) 
+            ? data.player_positions 
+            : JSON.parse(String(data.player_positions || '[]'));
             
-          parsedPositions.forEach((pp: {playerId: string, positionId: string}) => {
-            positions[pp.positionId] = pp.playerId;
+          parsedPositions.forEach((pp: any) => {
+            if (pp && typeof pp === 'object' && pp.playerId && pp.positionId) {
+              positions[String(pp.positionId)] = String(pp.playerId);
+            }
           });
         }
         
         if (data.substitutes) {
-          subs = typeof data.substitutes === 'string'
-            ? JSON.parse(data.substitutes)
-            : data.substitutes;
+          const parsedSubs = Array.isArray(data.substitutes)
+            ? data.substitutes
+            : JSON.parse(String(data.substitutes || '[]'));
+          
+          parsedSubs.forEach((sub: any) => {
+            if (typeof sub === 'string') {
+              subs.push(sub);
+            }
+          });
         }
         
         setPlayerPositions(positions);
@@ -162,7 +166,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
     const newPositionStrings = newPositions.map(pos => String(pos));
     
-    // Use explicit PositionPlayerMap to avoid recursive type issues
     const updatedPlayerPositions: PositionPlayerMap = {};
     Object.keys(playerPositions).forEach(pos => {
       if (newPositionStrings.includes(pos)) {
