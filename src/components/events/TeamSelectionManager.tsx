@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -449,7 +450,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                         gameFormat={gameFormat}
                         periodNumber={i + 1}
                         teamNumber={parseInt(teamKey.replace('team-', ''))}
-                        performanceCategoryId={currentSelection.performanceCategoryId}
                       />
                     </TabsContent>
                   ))}

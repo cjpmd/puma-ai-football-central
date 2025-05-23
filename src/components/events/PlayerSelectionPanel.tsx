@@ -62,7 +62,38 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       }
 
       console.log('PlayerSelectionPanel: Loaded players:', playersData);
-      setPlayers(playersData || []);
+      
+      // Transform database player data to match Player type
+      const transformedPlayers: Player[] = (playersData || []).map(player => ({
+        id: player.id,
+        name: player.name,
+        dateOfBirth: player.date_of_birth,
+        squadNumber: player.squad_number,
+        type: player.type as "outfield" | "goalkeeper",
+        teamId: player.team_id,
+        attributes: Array.isArray(player.attributes) ? player.attributes as any[] : [],
+        objectives: Array.isArray(player.objectives) ? player.objectives as any[] : [],
+        comments: Array.isArray(player.comments) ? player.comments as any[] : [],
+        matchStats: typeof player.match_stats === 'object' && player.match_stats ? player.match_stats as any : {
+          totalGames: 0,
+          captainGames: 0,
+          playerOfTheMatchCount: 0,
+          totalMinutes: 0,
+          minutesByPosition: {},
+          recentGames: []
+        },
+        availability: player.availability as "amber" | "green" | "red",
+        parentId: player.parent_id,
+        subscriptionType: player.subscription_type as any,
+        subscriptionStatus: player.subscription_status as any,
+        status: player.status as "active" | "inactive",
+        leaveDate: player.leave_date,
+        leaveComments: player.leave_comments,
+        createdAt: player.created_at,
+        updatedAt: player.updated_at
+      }));
+      
+      setPlayers(transformedPlayers);
 
       // Load existing selection
       const { data: selectionData, error: selectionError } = await supabase
@@ -85,8 +116,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setSelection({
           formation: selectionData.formation as Formation,
           captainId: selectionData.captain_id || '',
-          playerPositions: Array.isArray(selectionData.player_positions) ? selectionData.player_positions : [],
-          substitutes: Array.isArray(selectionData.substitutes) ? selectionData.substitutes : [],
+          playerPositions: Array.isArray(selectionData.player_positions) ? 
+            (selectionData.player_positions as any[]).map(pp => ({
+              playerId: pp.playerId || pp.player_id,
+              position: pp.position
+            })) : [],
+          substitutes: Array.isArray(selectionData.substitutes) ? 
+            (selectionData.substitutes as any[]).filter(sub => typeof sub === 'string') : [],
           duration: selectionData.duration_minutes || 90
         });
       }
@@ -196,7 +232,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           <div className="space-y-2">
             <Label>Formation</Label>
             <FormationSelector
-              gameFormat={gameFormat}
+              gameFormat={gameFormat as any}
               value={selection.formation}
               onChange={(formation) => setSelection(prev => ({ ...prev, formation }))}
             />
