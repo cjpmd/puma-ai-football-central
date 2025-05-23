@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Event, EventType, GameFormat } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { TeamSelector } from './TeamSelector';
 
 interface EventFormProps {
   event: Event | null;
@@ -41,12 +43,12 @@ export const EventForm: React.FC<EventFormProps> = ({
     gameFormat: event?.gameFormat || '7-a-side',
     opponent: event?.opponent || '',
     isHome: event?.isHome || true,
-    teams: event?.teams || [teamId]
+    teams: event?.teams || [teamId],
+    trainingNotes: event?.trainingNotes || ''
   });
 
   // Initialize with a non-empty value, use "none" instead of empty string
   const [selectedFacility, setSelectedFacility] = useState<string>(event?.facilityId || "none");
-  const [numberOfTeams, setNumberOfTeams] = useState<number>(1);
 
   useEffect(() => {
     loadClubFacilities();
@@ -81,6 +83,13 @@ export const EventForm: React.FC<EventFormProps> = ({
     });
   };
 
+  const handleTeamsChange = (teams: string[]) => {
+    setFormData({
+      ...formData,
+      teams: teams
+    });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -89,7 +98,6 @@ export const EventForm: React.FC<EventFormProps> = ({
       ...formData,
       // Only include facilityId if it's not "none"
       facilityId: selectedFacility !== "none" ? selectedFacility : null,
-      numberOfTeams: isMatchType ? numberOfTeams : 1,
     };
 
     onSubmit(enhancedData);
@@ -235,6 +243,16 @@ export const EventForm: React.FC<EventFormProps> = ({
           )}
         </div>
 
+        {/* Team Selection for Match Types */}
+        {isMatchType && (
+          <TeamSelector
+            selectedTeams={formData.teams || [teamId]}
+            onTeamsChange={handleTeamsChange}
+            primaryTeamId={teamId}
+            maxTeams={formData.type === 'tournament' || formData.type === 'festival' ? 4 : 2}
+          />
+        )}
+
         {hasOpponent && (
           <>
             <div className="space-y-2">
@@ -264,27 +282,6 @@ export const EventForm: React.FC<EventFormProps> = ({
               </Select>
             </div>
           </>
-        )}
-
-        {isMatchType && (
-          <div className="space-y-2">
-            <Label htmlFor="numberOfTeams">Number of Teams</Label>
-            <Select 
-              value={numberOfTeams.toString()}
-              onValueChange={(value) => setNumberOfTeams(parseInt(value))}
-              required
-            >
-              <SelectTrigger id="numberOfTeams">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Team</SelectItem>
-                <SelectItem value="2">2 Teams</SelectItem>
-                <SelectItem value="3">3 Teams</SelectItem>
-                <SelectItem value="4">4 Teams</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         )}
 
         {formData.type === 'training' && (

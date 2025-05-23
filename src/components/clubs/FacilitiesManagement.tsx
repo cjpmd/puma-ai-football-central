@@ -7,6 +7,7 @@ import { Pencil, Plus, Trash2, Calendar } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { FacilityForm } from './FacilityForm';
+import { FacilityCalendar } from './FacilityCalendar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Facility } from '@/types';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -180,22 +181,10 @@ export const FacilitiesManagement = ({ clubId, onRefreshClub }: FacilitiesManage
         </TabsContent>
         
         <TabsContent value="calendar" className="mt-4">
-          <Card>
-            <CardContent className="py-6">
-              <div className="flex items-center justify-center h-[300px]">
-                <div className="flex flex-col items-center text-muted-foreground">
-                  <Calendar className="h-12 w-12 mb-2" />
-                  <h4 className="font-medium">Facility Availability Calendar</h4>
-                  <p className="text-sm text-center">
-                    The availability calendar for facility bookings will be implemented in an upcoming update.
-                  </p>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    Coming Soon
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <FacilityCalendar 
+            clubId={clubId} 
+            facilities={facilities.map(f => ({ id: f.id, name: f.name }))} 
+          />
         </TabsContent>
       </Tabs>
 
