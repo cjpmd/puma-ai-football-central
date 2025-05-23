@@ -1,339 +1,267 @@
-
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { User as AppUser, Team, Club, UserRole, SubscriptionType, GameFormat } from '@/types';
-import { Json } from '@/integrations/supabase/types';
+import { Profile, Team, Club } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
-type AuthContextType = {
-  session: Session | null;
-  user: User | null;
-  profile: AppUser | null;
+interface AuthContextType {
+  user: any;
+  profile: Profile | null;
   teams: Team[];
   clubs: Club[];
   isLoading: boolean;
-  signIn: (email: string, password: string) => Promise<{
-    error: Error | null;
-    data: Session | null;
-  }>;
-  signUp: (email: string, password: string, name: string) => Promise<{
-    error: Error | null;
-    data: { user: User | null; session: Session | null };
-  }>;
-  signOut: () => Promise<void>;
+  login: () => Promise<void>;
+  logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
-};
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [profile, setProfile] = useState<AppUser | null>(null);
+  const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Set up the auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', session?.user?.id || 'no user', 'event:', event);
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        // Only fetch user data if we have a valid session with a user
-        if (session?.user?.id) {
-          setTimeout(async () => {
-            await fetchUserData(session.user.id);
-          }, 0);
-        } else {
-          setProfile(null);
-          setTeams([]);
-          setClubs([]);
-          setIsLoading(false);
-        }
-      }
-    );
+    const loadSession = async () => {
+      setIsLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.id || 'no user');
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user?.id) {
-        fetchUserData(session.user.id);
-      } else {
+        if (session) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+          await fetchTeams(session.user.id);
+          await fetchClubs(session.user.id);
+        }
+      } catch (error: any) {
+        console.error('Error loading session:', error);
+        toast({
+          title: 'Session load failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
         setIsLoading(false);
       }
+    };
+
+    loadSession();
+
+    // Set up listener for supabase auth changes
+    supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        await fetchProfile(session.user.id);
+        await fetchTeams(session.user.id);
+        await fetchClubs(session.user.id);
+      } else {
+        setUser(null);
+        setTeams([]);
+        setClubs([]);
+        setProfile(null);
+      }
     });
+  }, [toast]);
 
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchUserData = async (userId: string) => {
-    if (!userId) {
-      console.error('No user ID provided to fetchUserData');
-      setIsLoading(false);
-      return;
-    }
-
+  const fetchProfile = async (userId: string) => {
     try {
-      console.log('Fetching user data for:', userId);
-      await Promise.all([
-        fetchProfile(userId),
-        fetchUserTeams(userId),
-        fetchUserClubs(userId)
-      ]);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        throw profileError;
+      }
+
+      setProfile(profileData);
+    } catch (error: any) {
+      console.error('Error fetching profile:', error.message);
+      toast({
+        title: 'Profile fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchTeams = async (userId: string) => {
+    try {
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('user_teams')
+        .select('team_id')
+        .eq('user_id', userId);
+
+      if (teamsError) {
+        throw teamsError;
+      }
+
+      // Fetch full team details for each team_id
+      const teamDetails = await Promise.all(
+        teamsData.map(async (userTeam) => {
+          const { data: teamData, error: teamError } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('id', userTeam.team_id)
+            .single();
+
+          if (teamError) {
+            console.error(`Error fetching team ${userTeam.team_id}:`, teamError);
+            return null;
+          }
+          return teamData;
+        })
+      );
+
+      // Filter out any null results (failed fetches)
+      const validTeams = teamDetails.filter(team => team !== null);
+      setTeams(validTeams as Team[]);
+
+    } catch (error: any) {
+      console.error('Error fetching teams:', error.message);
+      toast({
+        title: 'Teams fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setTeams([]);
+    }
+  };
+
+  const fetchClubs = async (userId: string) => {
+    try {
+      const { data: clubsData, error: clubsError } = await supabase
+        .from('user_clubs')
+        .select('club_id')
+        .eq('user_id', userId);
+
+      if (clubsError) {
+        throw clubsError;
+      }
+
+      // Fetch full club details for each club_id
+      const clubDetails = await Promise.all(
+        clubsData.map(async (userClub) => {
+          const { data: clubData, error: clubError } = await supabase
+            .from('clubs')
+            .select('*')
+            .eq('id', userClub.club_id)
+            .single();
+
+          if (clubError) {
+            console.error(`Error fetching club ${userClub.club_id}:`, clubError);
+            return null;
+          }
+          return clubData;
+        })
+      );
+
+      // Filter out any null results (failed fetches)
+      const validClubs = clubDetails.filter(club => team !== null);
+      setClubs(validClubs as Club[]);
+
+    } catch (error: any) {
+      console.error('Error fetching clubs:', error.message);
+      toast({
+        title: 'Clubs fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setClubs([]);
+    }
+  };
+
+  const login = async () => {
+    setIsLoading(true);
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+    } catch (error: any) {
+      console.error('Error during login:', error.message);
+      toast({
+        title: 'Login failed',
+        description: error.message,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchProfile = async (userId: string) => {
+  const logout = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (error) {
-        console.error('Error fetching profile:', error);
-        return;
-      }
-      
-      if (data) {
-        const userProfile: AppUser = {
-          id: data.id,
-          email: data.email,
-          name: data.name,
-          phone: data.phone,
-          roles: data.roles as UserRole[],
-        };
-        setProfile(userProfile);
-      }
-    } catch (error) {
-      console.error('Error in fetchProfile:', error);
-    }
-  };
-
-  const fetchUserTeams = async (userId: string) => {
-    if (!userId) {
-      console.error('No user ID for fetchUserTeams');
-      return;
-    }
-
-    try {
-      console.log('Fetching user teams for user:', userId);
-      // First get the team IDs the user is associated with
-      const { data: userTeamData, error: userTeamError } = await supabase
-        .from('user_teams')
-        .select('team_id, role')
-        .eq('user_id', userId);
-
-      if (userTeamError) {
-        console.error('Error fetching user teams:', userTeamError);
-        return;
-      }
-
-      if (!userTeamData || userTeamData.length === 0) {
-        console.log('No teams found for user');
-        setTeams([]);
-        return;
-      }
-
-      // Get the actual team data
-      const teamIds = userTeamData.map(ut => ut.team_id);
-      console.log('Found team IDs:', teamIds);
-      
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('*')
-        .in('id', teamIds);
-
-      if (teamsError) {
-        console.error('Error fetching teams:', teamsError);
-        return;
-      }
-
-      // Map the data to our Team type with proper type conversions
-      const formattedTeams: Team[] = teamsData.map(team => {
-        const kitIconsData = team.kit_icons as Record<string, string> | null;
-        const kitIcons = {
-          home: kitIconsData?.home || '',
-          away: kitIconsData?.away || '',
-          training: kitIconsData?.training || '',
-          goalkeeper: kitIconsData?.goalkeeper || '',
-        };
-
-        return {
-          id: team.id,
-          name: team.name,
-          ageGroup: team.age_group,
-          seasonStart: team.season_start,
-          seasonEnd: team.season_end,
-          clubId: team.club_id,
-          subscriptionType: team.subscription_type as SubscriptionType,
-          gameFormat: team.game_format as GameFormat,
-          kitIcons,
-          performanceCategories: team.performance_categories || [],
-          managerName: team.manager_name,
-          managerEmail: team.manager_email,
-          managerPhone: team.manager_phone,
-          createdAt: team.created_at,
-          updatedAt: team.updated_at
-        };
-      });
-
-      console.log('Formatted teams:', formattedTeams.length);
-      setTeams(formattedTeams);
-    } catch (error) {
-      console.error('Error in fetchUserTeams:', error);
-    }
-  };
-
-  const fetchUserClubs = async (userId: string) => {
-    if (!userId) {
-      console.error('No user ID for fetchUserClubs');
-      return;
-    }
-
-    try {
-      console.log('Fetching user clubs for user:', userId);
-      // First get the club IDs the user is associated with
-      const { data: userClubData, error: userClubError } = await supabase
-        .from('user_clubs')
-        .select('club_id, role')
-        .eq('user_id', userId);
-
-      if (userClubError) {
-        console.error('Error fetching user clubs:', userClubError);
-        return;
-      }
-
-      if (!userClubData || userClubData.length === 0) {
-        console.log('No clubs found for user');
-        setClubs([]);
-        return;
-      }
-
-      // Get the actual club data including serial numbers
-      const clubIds = userClubData.map(uc => uc.club_id);
-      const { data: clubsData, error: clubsError } = await supabase
-        .from('clubs')
-        .select('*')
-        .in('id', clubIds);
-
-      if (clubsError) {
-        console.error('Error fetching clubs:', clubsError);
-        return;
-      }
-
-      // Map the data to our Club type with proper type conversions
-      const formattedClubs: Club[] = clubsData.map(club => ({
-        id: club.id,
-        name: club.name,
-        referenceNumber: club.reference_number || '',
-        serialNumber: club.serial_number,
-        teams: [],
-        subscriptionType: club.subscription_type as SubscriptionType,
-        createdAt: club.created_at,
-        updatedAt: club.updated_at
-      }));
-
-      console.log('Formatted clubs:', formattedClubs.length);
-      setClubs(formattedClubs);
-    } catch (error) {
-      console.error('Error in fetchUserClubs:', error);
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { data: data.session, error };
-    } catch (error) {
-      console.error('Error signing in:', error);
-      return { data: null, error: error as Error };
-    }
-  };
-
-  const signUp = async (email: string, password: string, name: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-          },
-        },
-      });
-      return { data, error };
-    } catch (error) {
-      console.error('Error signing up:', error);
-      return { 
-        error: error as Error, 
-        data: { user: null, session: null } 
-      };
-    }
-  };
-
-  const signOut = async () => {
-    try {
-      // Clear local state before calling signOut to avoid timing issues
-      setProfile(null);
-      setTeams([]);
-      setClubs([]);
-      
+      setIsLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('Error signing out:', error);
         throw error;
       }
-      
-      // Force a refresh of the user's session state
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      if (!currentSession) {
-        console.log('Successfully signed out, session cleared');
-      }
-    } catch (error) {
-      console.error('Exception during sign out:', error);
+      // Reset the user state
+      setUser(null);
+      setTeams([]);
+      setClubs([]);
+      setProfile(null);
+      // Redirect to home page
+      navigate('/');
+    } catch (error: any) {
+      console.error('Error during logout:', error.message);
+      toast({
+        title: 'Logout failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const refreshUserData = async () => {
-    if (user?.id) {
-      await fetchUserData(user.id);
+    if (user) {
+      setIsLoading(true);
+      try {
+        await fetchProfile(user.id);
+        await fetchTeams(user.id);
+        await fetchClubs(user.id);
+      } catch (error: any) {
+        console.error('Error refreshing user data:', error.message);
+        toast({
+          title: 'Refresh failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const value = {
-    session,
+  const value: AuthContextType = {
     user,
     profile,
     teams,
     clubs,
     isLoading,
-    signIn,
-    signUp,
-    signOut,
-    refreshUserData
+    login,
+    logout,
+    refreshUserData,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

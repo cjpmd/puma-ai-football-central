@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -62,16 +63,36 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
 
       if (teamsError) throw teamsError;
 
-      // Fetch officials
+      // Fetch officials with related profiles
+      // We first fetch the officials
       const { data: officialsData, error: officialsError } = await supabase
         .from('club_officials')
-        .select(`
-          *,
-          profiles:user_id (name, email)
-        `)
+        .select('*')
         .eq('club_id', club.id);
 
       if (officialsError) throw officialsError;
+
+      // Then we fetch the profiles for the officials
+      const officialsWithProfiles = await Promise.all((officialsData || []).map(async (official) => {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', official.user_id)
+          .single();
+        
+        if (profileError) {
+          console.error('Error fetching profile for official:', profileError);
+          return {
+            ...official,
+            profile: undefined
+          };
+        }
+        
+        return {
+          ...official,
+          profile: profileData
+        };
+      }));
 
       // Fetch facilities
       const { data: facilitiesData, error: facilitiesError } = await supabase
@@ -110,7 +131,7 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
         };
       });
 
-      const formattedOfficials: ClubOfficial[] = (officialsData || []).map((official: any) => ({
+      const formattedOfficials: ClubOfficial[] = officialsWithProfiles.map((official: any) => ({
         id: official.id,
         clubId: official.club_id,
         userId: official.user_id,
@@ -119,9 +140,9 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
         assignedBy: official.assigned_by,
         createdAt: official.created_at,
         updatedAt: official.updated_at,
-        profile: official.profiles ? {
-          name: official.profiles.name,
-          email: official.profiles.email
+        profile: official.profile ? {
+          name: official.profile.name,
+          email: official.profile.email
         } : undefined
       }));
 
