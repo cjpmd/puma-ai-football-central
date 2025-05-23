@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { PlusCircle, Calendar, MapPin, Clock, Users, Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EventForm } from '@/components/events/EventForm';
+import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 import { Event } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +17,7 @@ const CalendarEvents = () => {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
+  const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const { toast } = useToast();
@@ -45,7 +47,6 @@ const CalendarEvents = () => {
 
       console.log('Loaded events:', data);
 
-      // Transform database fields to match interface
       const transformedEvents: Event[] = (data || []).map(event => ({
         id: event.id,
         type: event.event_type as any,
@@ -100,12 +101,10 @@ const CalendarEvents = () => {
         is_home: eventData.isHome
       };
 
-      // Add facility if selected
       if (eventData.facilityId) {
         insertData.facility_id = eventData.facilityId;
       }
 
-      // Add notes for training events
       if (eventData.type === 'training' && eventData.trainingNotes) {
         insertData.training_notes = eventData.trainingNotes;
       }
@@ -119,6 +118,24 @@ const CalendarEvents = () => {
       if (error) {
         console.error('Error creating event:', error);
         throw error;
+      }
+
+      // If multiple teams are selected, add them to event_teams table
+      if (eventData.teams && eventData.teams.length > 1) {
+        const eventTeams = eventData.teams.map((teamId, index) => ({
+          event_id: data.id,
+          team_id: teamId,
+          team_number: index + 1
+        }));
+
+        const { error: teamsError } = await supabase
+          .from('event_teams')
+          .insert(eventTeams);
+
+        if (teamsError) {
+          console.error('Error adding event teams:', teamsError);
+          // Don't throw here, just log the error
+        }
       }
 
       console.log('Event created successfully:', data);
@@ -229,6 +246,11 @@ const CalendarEvents = () => {
     }
   };
 
+  const handleOpenTeamSelection = (event: Event) => {
+    setSelectedEvent(event);
+    setIsTeamSelectionOpen(true);
+  };
+
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'fixture': return 'bg-red-500';
@@ -323,6 +345,25 @@ const CalendarEvents = () => {
           )}
         </div>
 
+        {/* Team Selection Dialog */}
+        <Dialog open={isTeamSelectionOpen} onOpenChange={setIsTeamSelectionOpen}>
+          <DialogContent className="sm:max-w-[90vw] max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
+              <DialogDescription>
+                Manage formations, players, and team selections for this event.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedEvent && (
+              <EventTeamsTable
+                eventId={selectedEvent.id}
+                primaryTeamId={selectedEvent.teamId}
+                gameFormat={selectedEvent.gameFormat || '7-a-side'}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
+
         {teams.length === 0 ? (
           <Card className="border-dashed border-2 border-muted">
             <CardContent className="py-8 flex flex-col items-center justify-center text-center">
@@ -377,6 +418,7 @@ const CalendarEvents = () => {
                                   size="sm"
                                   className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
                                   title="Team Selection"
+                                  onClick={() => handleOpenTeamSelection(event)}
                                 >
                                   <Settings className="h-3 w-3" />
                                 </Button>
@@ -437,7 +479,6 @@ const CalendarEvents = () => {
                       </Card>
                     ))}
                     
-                    {/* Add Event Card */}
                     <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer"
                           onClick={() => {
                             setSelectedEvent(null);

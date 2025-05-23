@@ -57,13 +57,10 @@ export const EventForm: React.FC<EventFormProps> = ({
     coachNotes: event?.coachNotes || '',
     staffNotes: event?.staffNotes || '',
     performanceCategoryId: event?.performanceCategoryId || '',
-    kitSelection: event?.kitSelection || 'home' // Use event's kitSelection if available, otherwise default to 'home'
+    kitSelection: event?.kitSelection || 'home'
   });
 
   const [selectedFacility, setSelectedFacility] = useState<string>(event?.facilityId || "none");
-  
-  // No need for a separate state variable for kit selection since it's now part of formData
-  // const [selectedKit, setSelectedKit] = useState<string>(event?.kitSelection || "home");
 
   useEffect(() => {
     loadClubFacilities();
@@ -72,7 +69,6 @@ export const EventForm: React.FC<EventFormProps> = ({
 
   const loadClubFacilities = async () => {
     try {
-      // Get the team's club
       const team = teams.find(t => t.id === teamId);
       if (!team?.clubId) return;
 
@@ -106,7 +102,6 @@ export const EventForm: React.FC<EventFormProps> = ({
 
       setPerformanceCategories(data || []);
       
-      // Set default performance category if one exists and none is already selected
       if (data && data.length > 0 && !formData.performanceCategoryId) {
         const defaultCategory = data.find(cat => cat.name === 'Default') || data[0];
         handleChange('performanceCategoryId', defaultCategory.id);
@@ -122,7 +117,6 @@ export const EventForm: React.FC<EventFormProps> = ({
     const enhancedData = {
       ...formData,
       facilityId: selectedFacility !== "none" ? selectedFacility : null,
-      // No need to add kitSelection separately as it's already in formData
     };
 
     onSubmit(enhancedData);
@@ -132,19 +126,19 @@ export const EventForm: React.FC<EventFormProps> = ({
   const hasOpponent = formData.type === 'fixture' || formData.type === 'friendly';
   const currentTeam = teams.find(t => t.id === teamId);
 
-  function handleChange(field: keyof Partial<Event>, value: any) {
+  const handleChange = (field: keyof Partial<Event>, value: any) => {
     setFormData({
       ...formData,
       [field]: value
     });
-  }
+  };
 
-  function handleTeamsChange(teams: string[]) {
+  const handleTeamsChange = (teams: string[]) => {
     setFormData({
       ...formData,
       teams: teams
     });
-  }
+  };
 
   return (
     <div className="max-h-[70vh] overflow-y-auto">
@@ -344,7 +338,7 @@ export const EventForm: React.FC<EventFormProps> = ({
           </TabsContent>
 
           <TabsContent value="kit" className="space-y-4">
-            {/* Kit Selection */}
+            {/* Kit Selection - Only show for match types */}
             {isMatchType && (
               <Card>
                 <CardHeader>
@@ -372,7 +366,7 @@ export const EventForm: React.FC<EventFormProps> = ({
               </Card>
             )}
 
-            {/* Team Selection for Match Types */}
+            {/* Team Selection - Show for match types */}
             {isMatchType && (
               <Card>
                 <CardHeader>
