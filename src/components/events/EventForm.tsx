@@ -317,13 +317,13 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             <Label htmlFor="facility">Facility</Label>
             <Select
               value={formData.facilityId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value }))}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select facility" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No facility</SelectItem>
+                <SelectItem value="none">No facility</SelectItem>
                 {facilities.map((facility) => (
                   <SelectItem key={facility.id} value={facility.id}>
                     {facility.name}
