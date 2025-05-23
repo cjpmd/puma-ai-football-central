@@ -1,3 +1,4 @@
+
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -94,7 +95,8 @@ export type Position =
   | "ML" | "MCL" | "MC" | "MCR" | "MR" 
   | "AML" | "AMCL" | "AMC" | "AMCR" | "AMR" 
   | "STCL" | "STC" | "STCR"
-  | "DM" | "STL" | "STR"; // Added these three positions
+  | "DM" | "STL" | "STR" 
+  | "none"; // Added "none" as a valid Position
 
 export type Formation = 
   | "1-1-3-1" | "2-3-1" | "3-2-1" 
