@@ -9,6 +9,7 @@ import { Club, Team, ClubOfficial, Facility } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Users, MapPin, Calendar, Trophy, Settings, UserPlus } from 'lucide-react';
+import { Json } from '@/integrations/supabase/types';
 
 interface ClubDetailsModalProps {
   club: Club | null;
@@ -65,9 +66,63 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
 
       if (facilitiesError) throw facilitiesError;
 
-      setTeams(teamsData || []);
-      setOfficials(officialsData || []);
-      setFacilities(facilitiesData || []);
+      // Map the data to our types
+      const formattedTeams: Team[] = (teamsData || []).map((team: any) => {
+        const kitIconsData = team.kit_icons as Record<string, string> | null;
+        const kitIcons = {
+          home: kitIconsData?.home || '',
+          away: kitIconsData?.away || '',
+          training: kitIconsData?.training || '',
+          goalkeeper: kitIconsData?.goalkeeper || '',
+        };
+
+        return {
+          id: team.id,
+          name: team.name,
+          ageGroup: team.age_group,
+          seasonStart: team.season_start,
+          seasonEnd: team.season_end,
+          clubId: team.club_id,
+          subscriptionType: team.subscription_type,
+          gameFormat: team.game_format,
+          kitIcons,
+          performanceCategories: team.performance_categories || [],
+          managerName: team.manager_name,
+          managerEmail: team.manager_email,
+          managerPhone: team.manager_phone,
+          createdAt: team.created_at,
+          updatedAt: team.updated_at
+        };
+      });
+
+      const formattedOfficials: ClubOfficial[] = (officialsData || []).map((official: any) => ({
+        id: official.id,
+        clubId: official.club_id,
+        userId: official.user_id,
+        role: official.role,
+        assignedAt: official.assigned_at,
+        assignedBy: official.assigned_by,
+        createdAt: official.created_at,
+        updatedAt: official.updated_at,
+        profile: official.profiles ? {
+          name: official.profiles.name,
+          email: official.profiles.email
+        } : undefined
+      }));
+
+      const formattedFacilities: Facility[] = (facilitiesData || []).map((facility: any) => ({
+        id: facility.id,
+        clubId: facility.club_id,
+        name: facility.name,
+        description: facility.description,
+        bookableUnits: facility.bookable_units,
+        createdAt: facility.created_at,
+        updatedAt: facility.updated_at
+      }));
+
+      setTeams(formattedTeams);
+      setOfficials(formattedOfficials);
+      setFacilities(formattedFacilities);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -240,8 +295,8 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
                   <CardContent className="py-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <div className="font-medium">{(official as any).profiles?.name || 'Unknown'}</div>
-                        <div className="text-sm text-muted-foreground">{(official as any).profiles?.email}</div>
+                        <div className="font-medium">{official.profile?.name || 'Unknown'}</div>
+                        <div className="text-sm text-muted-foreground">{official.profile?.email}</div>
                       </div>
                       <Badge variant="outline" className="capitalize">
                         {official.role}

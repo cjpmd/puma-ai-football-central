@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 
-const ClubManagement = () => {
+export const ClubManagement = () => {
   const { clubs, refreshUserData } = useAuth();
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);

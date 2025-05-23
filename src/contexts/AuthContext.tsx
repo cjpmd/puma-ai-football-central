@@ -180,6 +180,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           gameFormat: team.game_format as GameFormat,
           kitIcons,
           performanceCategories: team.performance_categories || [],
+          managerName: team.manager_name,
+          managerEmail: team.manager_email,
+          managerPhone: team.manager_phone,
           createdAt: team.created_at,
           updatedAt: team.updated_at
         };
@@ -234,7 +237,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: club.id,
         name: club.name,
         referenceNumber: club.reference_number || '',
-        serialNumber: club.serial_number || undefined,
+        serialNumber: club.serial_number,
         teams: [],
         subscriptionType: club.subscription_type as SubscriptionType,
         createdAt: club.created_at,

@@ -1,3 +1,4 @@
+
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -21,6 +22,8 @@ export type User = {
   name: string;
   phone?: string;
   roles: UserRole[];
+  faId?: string;
+  coachingBadges?: any[];
 };
 
 export type Team = {
@@ -39,6 +42,9 @@ export type Team = {
     goalkeeper: string;
   };
   performanceCategories: string[];
+  managerName?: string;
+  managerEmail?: string;
+  managerPhone?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -47,8 +53,11 @@ export type Club = {
   id: string;
   name: string;
   referenceNumber: string;
+  serialNumber?: string;
   teams: string[]; // Array of team IDs
   subscriptionType: SubscriptionType;
+  officials?: ClubOfficial[];
+  facilities?: Facility[];
   createdAt: string;
   updatedAt: string;
 };
@@ -195,67 +204,12 @@ export type Event = {
 
 export type Facility = {
   id: string;
-  name: string;
   clubId: string;
-  availability: {
-    id: string;
-    date: string;
-    startTime: string;
-    endTime: string;
-    isBooked: boolean;
-    eventId?: string;
-  }[];
+  name: string;
+  description?: string;
+  bookableUnits: string;
   createdAt: string;
   updatedAt: string;
-};
-
-// Enhanced Club type with new features
-export type Club = {
-  id: string;
-  name: string;
-  referenceNumber: string;
-  serialNumber?: string;
-  teams: string[]; // Array of team IDs
-  subscriptionType: SubscriptionType;
-  officials?: ClubOfficial[];
-  facilities?: Facility[];
-  createdAt: string;
-  updatedAt: string;
-};
-
-// Enhanced Team type with manager details
-export type Team = {
-  id: string;
-  name: string;
-  ageGroup: string;
-  seasonStart: string;
-  seasonEnd: string;
-  clubId?: string;
-  subscriptionType: SubscriptionType;
-  gameFormat: GameFormat;
-  kitIcons: {
-    home: string;
-    away: string;
-    training: string;
-    goalkeeper: string;
-  };
-  performanceCategories: string[];
-  managerName?: string;
-  managerEmail?: string;
-  managerPhone?: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
-// Enhanced User type with FA integration
-export type User = {
-  id: string;
-  email: string;
-  name: string;
-  phone?: string;
-  roles: UserRole[];
-  faId?: string;
-  coachingBadges?: any[];
 };
 
 export type ClubRole = 'admin' | 'chair' | 'secretary';
@@ -269,16 +223,10 @@ export type ClubOfficial = {
   assignedBy?: string;
   createdAt: string;
   updatedAt: string;
-};
-
-export type Facility = {
-  id: string;
-  clubId: string;
-  name: string;
-  description?: string;
-  bookableUnits: string;
-  createdAt: string;
-  updatedAt: string;
+  profile?: {
+    name: string;
+    email: string;
+  };
 };
 
 export type FacilityAvailability = {
