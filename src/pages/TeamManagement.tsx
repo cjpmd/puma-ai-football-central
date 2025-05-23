@@ -216,6 +216,14 @@ const TeamManagement = () => {
                         {team.subscriptionType}
                       </span>
                     </div>
+                    {team.performanceCategories && team.performanceCategories.length > 0 && (
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-muted-foreground">Categories:</span>
+                        <span className="font-medium">
+                          {team.performanceCategories.length}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
                 <CardFooter className="flex justify-between">
