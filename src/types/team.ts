@@ -1,13 +1,14 @@
 
 import { 
   SubscriptionType,
-  GameFormat, 
   PlayerAttribute,
   Position
 } from '@/types';
 
 // Define types used specifically in team settings
 export type PlayerAttributeGroup = 'goalkeeping' | 'mental' | 'physical' | 'technical';
+
+export type GameFormat = '3-a-side' | '4-a-side' | '5-a-side' | '7-a-side' | '9-a-side' | '11-a-side';
 
 export type TeamStaff = {
   id: string;
