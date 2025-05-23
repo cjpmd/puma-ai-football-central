@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,6 +61,8 @@ interface EventSelectionRow {
   created_at: string;
   updated_at: string;
 }
+
+import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   eventId,
@@ -361,7 +362,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     return <div className="text-center py-8">Loading team selection...</div>;
   }
 
-  // Create tabs for each team and period
   const currentPeriod = Number(activePeriodTab.split('-')[1]);
   const currentTeam = activeTeamTab;
   const currentSelection = teamSelections[`${currentTeam}-${activePeriodTab}`] || {
@@ -374,7 +374,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     substitutes: []
   };
   
-  // Get formations for this game format
   const formations = getFormationsByFormat(gameFormat);
 
   return (
@@ -387,7 +386,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="w-full">
             <TabsList className="mb-4">
               <TabsTrigger value="team-1">Team 1</TabsTrigger>
-              {/* Can add support for multiple teams later */}
             </TabsList>
             
             <TabsContent value="team-1" className="space-y-4">
@@ -407,50 +405,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       {performanceCategories.map(category => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="captain">Captain</Label>
-                  <Select 
-                    value={currentSelection.captainId || ''}
-                    onValueChange={(value) => updateTeamSelection(currentTeam, currentPeriod, {
-                      captainId: value || null
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select captain" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {players.map(player => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.name} (#{player.squadNumber})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid md:grid-cols-2 gap-4 mb-4">
-                <div className="space-y-2">
-                  <Label htmlFor="formation">Formation</Label>
-                  <Select 
-                    value={currentSelection.formationId}
-                    onValueChange={(value) => updateTeamSelection(currentTeam, currentPeriod, {
-                      formationId: value
-                    })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select formation" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {formations.map(formation => (
-                        <SelectItem key={formation.id} value={formation.id}>
-                          {formation.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -492,40 +446,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 
                 {Array.from({ length: periods[currentTeam] || 1 }, (_, i) => (
                   <TabsContent key={i} value={`period-${i + 1}`} className="space-y-4">
-                    <div className="bg-green-100 p-4 rounded-lg border border-green-200">
-                      <h3 className="font-semibold mb-2">Player Selection</h3>
-                      
-                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                        {players.map(player => (
-                          <div 
-                            key={player.id}
-                            className="flex flex-col items-center cursor-pointer hover:opacity-80"
-                            onClick={() => {
-                              // This will be expanded with drag-and-drop functionality
-                              console.log('Selected player:', player);
-                            }}
-                          >
-                            <div className={`relative w-12 h-12 rounded-full flex items-center justify-center ${getAvailabilityColor(player.availability)} text-white font-semibold`}>
-                              {player.squadNumber}
-                            </div>
-                            <span className="text-xs mt-1 text-center">{player.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Placeholder for pitch view with formation */}
-                    <div className="bg-emerald-800 aspect-[3/2] rounded-lg p-4 text-white text-center relative">
-                      <p>Formation view will be implemented here</p>
-                      <p>Current Formation: {
-                        formations.find(f => f.id === currentSelection.formationId)?.name || 'None selected'
-                      }</p>
-                      
-                      {/* This will be replaced with actual player positions */}
-                      <div className="absolute bottom-4 left-0 right-0">
-                        <p>Substitutes area</p>
-                      </div>
-                    </div>
+                    <PlayerSelectionPanel
+                      eventId={eventId}
+                      teamId={teamId}
+                      gameFormat={gameFormat}
+                      periodNumber={i + 1}
+                    />
                   </TabsContent>
                 ))}
               </Tabs>

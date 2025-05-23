@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
 import { Plus, Edit, Trash2, Users, Mail, Phone, Award } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface TeamStaffSettingsProps {
   team: Team;
@@ -27,6 +27,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     phone: '',
     role: 'coach' as TeamStaff['role']
   });
+  const { toast } = useToast();
 
   const handleAddStaff = () => {
     if (newStaff.name && newStaff.email) {
@@ -45,16 +46,48 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       setIsAddingStaff(false);
+      
+      toast({
+        title: 'Success',
+        description: `${staffMember.name} has been added to ${team.name}`,
+      });
+    }
+  };
+
+  const handleUpdateStaff = () => {
+    if (editingStaff && newStaff.name && newStaff.email) {
+      const updatedStaff = staff.map(s => 
+        s.id === editingStaff.id 
+          ? { ...s, ...newStaff, updatedAt: new Date().toISOString() }
+          : s
+      );
+      
+      setStaff(updatedStaff);
+      onUpdate({ staff: updatedStaff });
+      
+      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+      setEditingStaff(null);
+      
+      toast({
+        title: 'Success',
+        description: `${newStaff.name} has been updated in ${team.name}`,
+      });
     }
   };
 
   const handleRemoveStaff = (staffId: string) => {
+    const staffMember = staff.find(s => s.id === staffId);
     const updatedStaff = staff.filter(s => s.id !== staffId);
     setStaff(updatedStaff);
     onUpdate({ staff: updatedStaff });
+    
+    toast({
+      title: 'Success',
+      description: `${staffMember?.name} has been removed from ${team.name}`,
+    });
   };
 
-  const getRoleColor = (role: TeamStaff['role']) => {
+  function getRoleColor(role: TeamStaff['role']) {
     switch (role) {
       case 'manager': return 'bg-blue-500';
       case 'assistant_manager': return 'bg-purple-500';
@@ -62,13 +95,13 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       case 'helper': return 'bg-orange-500';
       default: return 'bg-gray-500';
     }
-  };
+  }
 
-  const getRoleLabel = (role: TeamStaff['role']) => {
+  function getRoleLabel(role: TeamStaff['role']) {
     return role.replace('_', ' ').split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -149,7 +182,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={handleAddStaff}>
+              <Button onClick={editingStaff ? handleUpdateStaff : handleAddStaff}>
                 {editingStaff ? 'Update' : 'Add'} Staff Member
               </Button>
               <Button 
@@ -240,7 +273,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleRemoveStaff(staffMember.id)}
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to remove ${staffMember.name}?`)) {
+                          handleRemoveStaff(staffMember.id);
+                        }
+                      }}
                       className="text-red-600 hover:text-red-700"
                     >
                       <Trash2 className="h-4 w-4" />
