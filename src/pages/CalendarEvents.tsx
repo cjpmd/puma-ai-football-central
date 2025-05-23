@@ -8,6 +8,7 @@ import { PlusCircle, Calendar, MapPin, Clock, Users, Settings } from 'lucide-rea
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EventForm } from '@/components/events/EventForm';
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
+import { SimpleStaffModal } from '@/components/teams/SimpleStaffModal';
 import { Event } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +19,9 @@ const CalendarEvents = () => {
   const [loading, setLoading] = useState(true);
   const [isEventDialogOpen, setIsEventDialogOpen] = useState(false);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const { toast } = useToast();
 
@@ -251,6 +254,11 @@ const CalendarEvents = () => {
     setIsTeamSelectionOpen(true);
   };
 
+  const handleOpenStaffModal = (team: any) => {
+    setSelectedTeam(team);
+    setIsStaffModalOpen(true);
+  };
+
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case 'fixture': return 'bg-red-500';
@@ -309,41 +317,60 @@ const CalendarEvents = () => {
             </p>
           </div>
           {teams.length > 0 && (
-            <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
-              <DialogTrigger asChild>
-                <Button 
-                  onClick={() => {
-                    setSelectedEvent(null);
-                    setSelectedTeamId(teams[0]?.id || '');
-                  }} 
-                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Create Event
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                  <DialogTitle>
-                    {selectedEvent ? 'Edit Event' : 'Create New Event'}
-                  </DialogTitle>
-                  <DialogDescription>
-                    {selectedEvent ? 'Update the event details below.' : 'Create a new training session, fixture, or other team event.'}
-                  </DialogDescription>
-                </DialogHeader>
-                <EventForm 
-                  event={selectedEvent} 
-                  teamId={selectedTeamId}
-                  onSubmit={selectedEvent ? handleEditEvent : handleCreateEvent} 
-                  onCancel={() => {
-                    setIsEventDialogOpen(false);
-                    setSelectedEvent(null);
-                  }}
-                />
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => handleOpenStaffModal(teams[0])}
+                variant="outline"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Staff
+              </Button>
+              <Dialog open={isEventDialogOpen} onOpenChange={setIsEventDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button 
+                    onClick={() => {
+                      setSelectedEvent(null);
+                      setSelectedTeamId(teams[0]?.id || '');
+                    }} 
+                    className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Create Event
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {selectedEvent ? 'Edit Event' : 'Create New Event'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {selectedEvent ? 'Update the event details below.' : 'Create a new training session, fixture, or other team event.'}
+                    </DialogDescription>
+                  </DialogHeader>
+                  <EventForm 
+                    event={selectedEvent} 
+                    teamId={selectedTeamId}
+                    onSubmit={selectedEvent ? handleEditEvent : handleCreateEvent} 
+                    onCancel={() => {
+                      setIsEventDialogOpen(false);
+                      setSelectedEvent(null);
+                    }}
+                  />
+                </DialogContent>
+              </Dialog>
+            </div>
           )}
         </div>
+
+        {/* Staff Modal */}
+        {selectedTeam && (
+          <SimpleStaffModal
+            team={selectedTeam}
+            isOpen={isStaffModalOpen}
+            onClose={() => setIsStaffModalOpen(false)}
+            onUpdate={() => {}}
+          />
+        )}
 
         {/* Team Selection Dialog */}
         <Dialog open={isTeamSelectionOpen} onOpenChange={setIsTeamSelectionOpen}>

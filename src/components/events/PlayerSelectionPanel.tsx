@@ -20,6 +20,12 @@ interface PlayerSelectionPanelProps {
   teamNumber: number;
 }
 
+interface PerformanceCategory {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventId,
   teamId,
@@ -28,12 +34,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   teamNumber
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
   const [selection, setSelection] = useState({
     formation: '3-2-1' as Formation,
     captainId: '',
     playerPositions: [] as { playerId: string; position: Position }[],
     substitutes: [] as string[],
-    duration: 90
+    duration: 90,
+    performanceCategoryId: ''
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -41,7 +49,23 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   useEffect(() => {
     loadPlayersAndSelection();
+    loadPerformanceCategories();
   }, [eventId, teamId, periodNumber, teamNumber]);
+
+  const loadPerformanceCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('name');
+
+      if (error) throw error;
+      setPerformanceCategories(data || []);
+    } catch (error) {
+      console.error('Error loading performance categories:', error);
+    }
+  };
 
   const loadPlayersAndSelection = async () => {
     try {
@@ -122,7 +146,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             })) : [],
           substitutes: Array.isArray(selectionData.substitutes) ? 
             (selectionData.substitutes as any[]).filter(sub => typeof sub === 'string') : [],
-          duration: selectionData.duration_minutes || 90
+          duration: selectionData.duration_minutes || 90,
+          performanceCategoryId: selectionData.performance_category_id || ''
         });
       }
     } catch (error: any) {
@@ -150,12 +175,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         event_id: eventId,
         team_id: teamId,
         period_number: periodNumber,
-        team_number: teamNumber, // This is crucial for the new unique constraint
+        team_number: teamNumber,
         formation: selection.formation,
         captain_id: selection.captainId === 'none' ? null : selection.captainId || null,
         player_positions: validPlayerPositions,
         substitutes: selection.substitutes,
         duration_minutes: selection.duration,
+        performance_category_id: selection.performanceCategoryId === 'none' ? null : selection.performanceCategoryId || null,
         updated_at: new Date().toISOString()
       };
 
@@ -263,15 +289,43 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             />
           </div>
 
+          {/* Performance Category */}
+          {performanceCategories.length > 0 && (
+            <div className="space-y-2">
+              <Label>Performance Category</Label>
+              <Select
+                value={selection.performanceCategoryId || 'none'}
+                onValueChange={(value) => setSelection(prev => ({ 
+                  ...prev, 
+                  performanceCategoryId: value === 'none' ? '' : value 
+                }))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select performance category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Category</SelectItem>
+                  {performanceCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Duration */}
           <div className="space-y-2">
-            <Label htmlFor="duration">Duration (minutes)</Label>
+            <Label htmlFor="duration">Period Duration (minutes)</Label>
             <Input
               id="duration"
               type="number"
               value={selection.duration}
               onChange={(e) => setSelection(prev => ({ ...prev, duration: parseInt(e.target.value) || 90 }))}
               className="w-32"
+              min="1"
+              max="120"
             />
           </div>
 
