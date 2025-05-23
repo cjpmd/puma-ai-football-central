@@ -64,42 +64,55 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         throw error;
       }
 
-      console.log('StaffManagementModal: Loaded staff data:', data);
+      console.log('StaffManagementModal: Raw staff data:', data);
 
       if (data) {
-        const staffMembers: TeamStaff[] = data.map(record => ({
-          id: record.id,
-          name: record.name,
-          email: record.email,
-          phone: record.phone || '',
-          role: record.role as TeamStaff['role'],
-          user_id: record.user_id || undefined,
-          coachingBadges: Array.isArray(record.coaching_badges) 
-            ? record.coaching_badges.filter(badge => typeof badge === 'string') as string[]
-            : [],
-          certificates: Array.isArray(record.certificates) 
-            ? record.certificates.map(cert => {
-                if (typeof cert === 'object' && cert !== null && !Array.isArray(cert)) {
-                  const certObj = cert as { [key: string]: any };
-                  return {
-                    name: String(certObj.name || ''),
-                    issuedBy: String(certObj.issuedBy || ''),
-                    dateIssued: String(certObj.dateIssued || ''),
-                    expiryDate: certObj.expiryDate ? String(certObj.expiryDate) : undefined
-                  };
-                }
+        const staffMembers: TeamStaff[] = data.map(record => {
+          // Safely handle coaching badges
+          let coachingBadges: string[] = [];
+          if (Array.isArray(record.coaching_badges)) {
+            coachingBadges = record.coaching_badges
+              .filter(badge => typeof badge === 'string')
+              .map(badge => String(badge));
+          }
+
+          // Safely handle certificates
+          let certificates: any[] = [];
+          if (Array.isArray(record.certificates)) {
+            certificates = record.certificates.map(cert => {
+              if (typeof cert === 'object' && cert !== null && !Array.isArray(cert)) {
+                const certObj = cert as Record<string, any>;
                 return {
-                  name: '',
-                  issuedBy: '',
-                  dateIssued: '',
-                  expiryDate: undefined
+                  name: String(certObj.name || ''),
+                  issuedBy: String(certObj.issuedBy || ''),
+                  dateIssued: String(certObj.dateIssued || ''),
+                  expiryDate: certObj.expiryDate ? String(certObj.expiryDate) : undefined
                 };
-              })
-            : [],
-          createdAt: record.created_at,
-          updatedAt: record.updated_at
-        }));
+              }
+              return {
+                name: '',
+                issuedBy: '',
+                dateIssued: '',
+                expiryDate: undefined
+              };
+            });
+          }
+
+          return {
+            id: record.id,
+            name: record.name,
+            email: record.email,
+            phone: record.phone || '',
+            role: record.role as TeamStaff['role'],
+            user_id: record.user_id || undefined,
+            coachingBadges,
+            certificates,
+            createdAt: record.created_at,
+            updatedAt: record.updated_at
+          };
+        });
         
+        console.log('StaffManagementModal: Processed staff:', staffMembers);
         setStaff(staffMembers);
       }
     } catch (error: any) {

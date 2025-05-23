@@ -94,7 +94,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       
       setPlayers(transformedPlayers);
 
-      // Load existing selection
+      // Load existing selection with proper WHERE clause including team_number
       const { data: selectionData, error: selectionError } = await supabase
         .from('event_selections')
         .select('*')
@@ -160,6 +160,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       console.log('PlayerSelectionPanel: Upserting data:', selectionData);
 
+      // Use the correct unique constraint fields for upsert
       const { error } = await supabase
         .from('event_selections')
         .upsert(selectionData, {
