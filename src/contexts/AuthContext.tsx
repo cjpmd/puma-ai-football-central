@@ -352,6 +352,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
+      // First check if we have a user to sign out
+      if (!user) {
+        console.log('No user found to sign out');
+        // Clear all state anyway
+        setUser(null);
+        setSession(null);
+        setTeams([]);
+        setClubs([]);
+        setProfile(null);
+        setIsLoading(false);
+        return;
+      }
+      
       const { error } = await supabase.auth.signOut();
       if (error) {
         throw error;
@@ -367,11 +380,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Sign out successful');
     } catch (error: any) {
       console.error('Error during sign out:', error);
+      
+      // Clear state anyway to ensure the UI updates properly
+      setUser(null);
+      setSession(null);
+      setTeams([]);
+      setClubs([]);
+      setProfile(null);
+      
       toast({
         title: 'Sign out failed',
         description: error.message,
         variant: 'destructive',
       });
+      
+      throw error; // Re-throw to allow component handling
     } finally {
       setIsLoading(false);
     }

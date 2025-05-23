@@ -27,12 +27,29 @@ export function Header() {
 
   const handleLogout = async () => {
     try {
+      // Check if there's a valid session before attempting to sign out
+      if (!user) {
+        console.log("No active session found, redirecting to home");
+        navigate('/');
+        return;
+      }
+      
       await signOut();
       toast.success("Logged out successfully");
       navigate('/');
     } catch (error) {
       console.error("Error logging out:", error);
-      toast.error("Failed to log out. Please try again.");
+      
+      // Handle the AuthSessionMissingError specifically
+      if (error && typeof error === 'object' && 'name' in error && 
+          error.name === 'AuthSessionMissingError') {
+        console.log("Session already expired, redirecting to home");
+        // Clear local user state anyway
+        toast.info("Your session has expired");
+        navigate('/');
+      } else {
+        toast.error("Failed to log out. Please try again.");
+      }
     }
   };
 
