@@ -23,6 +23,9 @@ interface Player {
   position?: string;
 }
 
+// Define explicit types for player positions association
+type PositionPlayerMap = Record<string, string>;
+
 interface PlayerPosition {
   playerId: string;
   positionId: string;
@@ -49,8 +52,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [players, setPlayers] = useState<Player[]>([]);
   const [selectedFormation, setSelectedFormation] = useState('');
   const [positions, setPositions] = useState<Position[]>([]);
-  // Fix: Use explicit Record type instead of indexed type to avoid recursive type issues
-  const [playerPositions, setPlayerPositions] = useState<Record<string, string>>({});
+  // Use the explicit type for playerPositions to prevent recursive type issues
+  const [playerPositions, setPlayerPositions] = useState<PositionPlayerMap>({});
   const [substitutes, setSubstitutes] = useState<string[]>([]);
   const [captainId, setCaptainId] = useState<string | null>(null);
   const { toast } = useToast();
@@ -114,8 +117,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         setCaptainId(data.captain_id);
         
         // Parse player positions and substitutes
-        // Fix: Use explicit Record type instead of indexed type
-        let positions: Record<string, string> = {};
+        // Use explicit PositionPlayerMap to avoid recursive type issues
+        let positions: PositionPlayerMap = {};
         let subs: string[] = [];
         
         if (data.player_positions) {
@@ -158,8 +161,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     // When formation changes, keep player assignments for positions that still exist
     const newPositions = getPositionsForFormation(formationId, gameFormatTyped);
     
-    // Fix: Use explicit Record type instead of indexed type
-    const updatedPlayerPositions: Record<string, string> = {};
+    // Use explicit PositionPlayerMap to avoid recursive type issues
+    const updatedPlayerPositions: PositionPlayerMap = {};
     Object.keys(playerPositions).forEach(pos => {
       if (newPositions.includes(pos as Position)) {
         updatedPlayerPositions[pos] = playerPositions[pos];
