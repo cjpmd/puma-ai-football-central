@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -38,11 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up the auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_, session) => {
+        console.log('Auth state changed:', session?.user?.id || 'no user');
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer Supabase calls with setTimeout to prevent deadlocks
-        if (session?.user) {
+        // Only fetch user data if we have a valid session with a user
+        if (session?.user?.id) {
           setTimeout(async () => {
             await fetchUserData(session.user.id);
           }, 0);
@@ -50,33 +50,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setProfile(null);
           setTeams([]);
           setClubs([]);
+          setIsLoading(false);
         }
       }
     );
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.id || 'no user');
       setSession(session);
       setUser(session?.user ?? null);
       
-      if (session?.user) {
+      if (session?.user?.id) {
         fetchUserData(session.user.id);
+      } else {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserData = async (userId: string) => {
+    if (!userId) {
+      console.error('No user ID provided to fetchUserData');
+      setIsLoading(false);
+      return;
+    }
+
     try {
+      console.log('Fetching user data for:', userId);
       await Promise.all([
         fetchProfile(userId),
-        fetchUserTeams(),
-        fetchUserClubs()
+        fetchUserTeams(userId),
+        fetchUserClubs(userId)
       ]);
     } catch (error) {
       console.error('Error fetching user data:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,7 +111,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: data.email,
           name: data.name,
           phone: data.phone,
-          // Cast the roles to ensure type safety
           roles: data.roles as UserRole[],
         };
         setProfile(userProfile);
@@ -109,13 +120,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const fetchUserTeams = async () => {
+  const fetchUserTeams = async (userId: string) => {
+    if (!userId) {
+      console.error('No user ID for fetchUserTeams');
+      return;
+    }
+
     try {
+      console.log('Fetching user teams for user:', userId);
       // First get the team IDs the user is associated with
       const { data: userTeamData, error: userTeamError } = await supabase
         .from('user_teams')
         .select('team_id, role')
-        .eq('user_id', user?.id);
+        .eq('user_id', userId);
 
       if (userTeamError) {
         console.error('Error fetching user teams:', userTeamError);
@@ -123,12 +140,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!userTeamData || userTeamData.length === 0) {
+        console.log('No teams found for user');
         setTeams([]);
         return;
       }
 
       // Get the actual team data
       const teamIds = userTeamData.map(ut => ut.team_id);
+      console.log('Found team IDs:', teamIds);
+      
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('*')
@@ -141,7 +161,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Map the data to our Team type with proper type conversions
       const formattedTeams: Team[] = teamsData.map(team => {
-        // Safely handle kitIcons by checking if it's an object and has the right properties
         const kitIconsData = team.kit_icons as Record<string, string> | null;
         const kitIcons = {
           home: kitIconsData?.home || '',
@@ -157,11 +176,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           seasonStart: team.season_start,
           seasonEnd: team.season_end,
           clubId: team.club_id,
-          // Cast subscription type to ensure type safety
           subscriptionType: team.subscription_type as SubscriptionType,
-          // Cast game_format string to the GameFormat type
           gameFormat: team.game_format as GameFormat,
-          // Use the properly formatted kitIcons
           kitIcons,
           performanceCategories: team.performance_categories || [],
           createdAt: team.created_at,
@@ -169,19 +185,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
       });
 
+      console.log('Formatted teams:', formattedTeams.length);
       setTeams(formattedTeams);
     } catch (error) {
       console.error('Error in fetchUserTeams:', error);
     }
   };
 
-  const fetchUserClubs = async () => {
+  const fetchUserClubs = async (userId: string) => {
+    if (!userId) {
+      console.error('No user ID for fetchUserClubs');
+      return;
+    }
+
     try {
+      console.log('Fetching user clubs for user:', userId);
       // First get the club IDs the user is associated with
       const { data: userClubData, error: userClubError } = await supabase
         .from('user_clubs')
         .select('club_id, role')
-        .eq('user_id', user?.id);
+        .eq('user_id', userId);
 
       if (userClubError) {
         console.error('Error fetching user clubs:', userClubError);
@@ -189,6 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!userClubData || userClubData.length === 0) {
+        console.log('No clubs found for user');
         setClubs([]);
         return;
       }
@@ -210,13 +234,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: club.id,
         name: club.name,
         referenceNumber: club.reference_number || '',
-        teams: [], // We'll need a separate query to get this
-        // Cast subscription type to ensure type safety
+        teams: [],
         subscriptionType: club.subscription_type as SubscriptionType,
         createdAt: club.created_at,
         updatedAt: club.updated_at
       }));
 
+      console.log('Formatted clubs:', formattedClubs.length);
       setClubs(formattedClubs);
     } catch (error) {
       console.error('Error in fetchUserClubs:', error);
@@ -265,7 +289,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const refreshUserData = async () => {
-    if (user) {
+    if (user?.id) {
       await fetchUserData(user.id);
     }
   };

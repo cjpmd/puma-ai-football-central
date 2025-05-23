@@ -263,6 +263,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      user_belongs_to_team: {
+        Args: { team_id: string }
+        Returns: boolean
+      }
+      user_can_manage_team: {
+        Args: { team_id: string }
+        Returns: boolean
+      }
       user_has_club_role: {
         Args: { club_id: string; role: string }
         Returns: boolean
