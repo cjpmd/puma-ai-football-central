@@ -70,7 +70,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] h-[90vh] max-h-[800px] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] h-[90vh] max-h-[800px] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0 pb-4">
           <DialogTitle>Team Settings - {team.name}</DialogTitle>
           <DialogDescription>
@@ -90,8 +90,12 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
           
           <div className="flex-1 overflow-hidden">
             {settingsTabs.map((tab) => (
-              <TabsContent key={tab.id} value={tab.id} className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
-                <ScrollArea className="flex-1 pr-4">
+              <TabsContent 
+                key={tab.id} 
+                value={tab.id} 
+                className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col overflow-hidden"
+              >
+                <ScrollArea className="flex-1 pr-4 overflow-auto">
                   <div className="space-y-6 pb-6">
                     <Card className="border-0 shadow-none">
                       <CardHeader className="px-0">
@@ -111,7 +115,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
           </div>
         </Tabs>
         
-        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
+        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0 mt-4">
           <Button variant="outline" onClick={onClose}>
             Close
           </Button>

@@ -1,26 +1,15 @@
 
-import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Club } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Club, Team, ClubOfficial, Facility } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import { Building, CalendarDays, Users, Box, UserRound } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Users, MapPin, Calendar, Trophy, Settings, UserPlus, Trash2, Pencil } from 'lucide-react';
-import { ClubOfficialForm } from './ClubOfficialForm';
-import { FacilityForm } from './FacilityForm';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { FacilitiesManagement } from './FacilitiesManagement';
 
 interface ClubDetailsModalProps {
   club: Club | null;
@@ -28,666 +17,317 @@ interface ClubDetailsModalProps {
   onClose: () => void;
 }
 
-export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
-  club,
-  isOpen,
-  onClose
-}) => {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [officials, setOfficials] = useState<ClubOfficial[]>([]);
-  const [facilities, setFacilities] = useState<Facility[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isAddingOfficial, setIsAddingOfficial] = useState(false);
-  const [isEditingOfficial, setIsEditingOfficial] = useState<ClubOfficial | null>(null);
-  const [isAddingFacility, setIsAddingFacility] = useState(false);
-  const [isEditingFacility, setIsEditingFacility] = useState<Facility | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ type: 'official' | 'facility', id: string, name: string } | null>(null);
+export const ClubDetailsModal = ({ club, isOpen, onClose }: ClubDetailsModalProps) => {
+  const [loading, setLoading] = useState(false);
+  const [linkedTeams, setLinkedTeams] = useState<any[]>([]);
+  const [clubStaff, setClubStaff] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('overview');
   const { toast } = useToast();
 
   useEffect(() => {
-    if (club && isOpen) {
-      fetchClubDetails();
+    if (club?.id && isOpen) {
+      loadLinkedTeams();
+      loadClubStaff();
     }
-  }, [club, isOpen]);
+  }, [club?.id, isOpen]);
 
-  const fetchClubDetails = async () => {
-    if (!club) return;
+  const loadLinkedTeams = async () => {
+    if (!club?.id) return;
     
-    setIsLoading(true);
+    setLoading(true);
     try {
-      // Fetch teams
-      const { data: teamsData, error: teamsError } = await supabase
+      const { data, error } = await supabase
         .from('teams')
-        .select('*')
-        .eq('club_id', club.id);
+        .select(`
+          id,
+          name,
+          age_group,
+          game_format,
+          subscription_type,
+          season_start,
+          season_end,
+          manager_name,
+          manager_email,
+          manager_phone
+        `)
+        .eq('club_id', club.id)
+        .order('name');
 
-      if (teamsError) throw teamsError;
-
-      // Fetch officials with related profiles
-      // We first fetch the officials
-      const { data: officialsData, error: officialsError } = await supabase
-        .from('club_officials')
-        .select('*')
-        .eq('club_id', club.id);
-
-      if (officialsError) throw officialsError;
-
-      // Then we fetch the profiles for the officials
-      const officialsWithProfiles = await Promise.all((officialsData || []).map(async (official) => {
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('name, email')
-          .eq('id', official.user_id)
-          .single();
-        
-        if (profileError) {
-          console.error('Error fetching profile for official:', profileError);
-          return {
-            ...official,
-            profile: undefined
-          };
-        }
-        
-        return {
-          ...official,
-          profile: profileData
-        };
-      }));
-
-      // Fetch facilities
-      const { data: facilitiesData, error: facilitiesError } = await supabase
-        .from('facilities')
-        .select('*')
-        .eq('club_id', club.id);
-
-      if (facilitiesError) throw facilitiesError;
-
-      // Map the data to our types
-      const formattedTeams: Team[] = (teamsData || []).map((team: any) => {
-        const kitIconsData = team.kit_icons as Record<string, string> | null;
-        const kitIcons = {
-          home: kitIconsData?.home || '',
-          away: kitIconsData?.away || '',
-          training: kitIconsData?.training || '',
-          goalkeeper: kitIconsData?.goalkeeper || '',
-        };
-
-        return {
-          id: team.id,
-          name: team.name,
-          ageGroup: team.age_group,
-          seasonStart: team.season_start,
-          seasonEnd: team.season_end,
-          clubId: team.club_id,
-          subscriptionType: team.subscription_type,
-          gameFormat: team.game_format,
-          kitIcons,
-          performanceCategories: team.performance_categories || [],
-          managerName: team.manager_name,
-          managerEmail: team.manager_email,
-          managerPhone: team.manager_phone,
-          createdAt: team.created_at,
-          updatedAt: team.updated_at
-        };
-      });
-
-      const formattedOfficials: ClubOfficial[] = officialsWithProfiles.map((official: any) => ({
-        id: official.id,
-        clubId: official.club_id,
-        userId: official.user_id,
-        role: official.role,
-        assignedAt: official.assigned_at,
-        assignedBy: official.assigned_by,
-        createdAt: official.created_at,
-        updatedAt: official.updated_at,
-        profile: official.profile ? {
-          name: official.profile.name,
-          email: official.profile.email
-        } : undefined
-      }));
-
-      const formattedFacilities: Facility[] = (facilitiesData || []).map((facility: any) => ({
-        id: facility.id,
-        clubId: facility.club_id,
-        name: facility.name,
-        description: facility.description,
-        bookableUnits: facility.bookable_units,
-        createdAt: facility.created_at,
-        updatedAt: facility.updated_at
-      }));
-
-      setTeams(formattedTeams);
-      setOfficials(formattedOfficials);
-      setFacilities(formattedFacilities);
-    } catch (error: any) {
+      if (error) throw error;
+      setLinkedTeams(data || []);
+    } catch (error) {
+      console.error('Error loading linked teams:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to fetch club details',
+        description: 'Failed to load linked teams',
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleDeleteOfficial = async () => {
-    if (!deleteTarget || deleteTarget.type !== 'official') return;
+  const loadClubStaff = async () => {
+    if (!club?.id) return;
     
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('club_officials')
-        .delete()
-        .eq('id', deleteTarget.id);
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Official Removed',
-        description: 'The official has been removed from this club',
-      });
-      
-      fetchClubDetails();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to remove official',
-        variant: 'destructive',
-      });
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
+        .select(`
+          id,
+          role,
+          assigned_at,
+          user_id,
+          profiles:user_id (name, email, phone, coaching_badges)
+        `)
+        .eq('club_id', club.id)
+        .order('role');
 
-  const handleDeleteFacility = async () => {
-    if (!deleteTarget || deleteTarget.type !== 'facility') return;
-    
-    try {
-      const { error } = await supabase
-        .from('facilities')
-        .delete()
-        .eq('id', deleteTarget.id);
-      
       if (error) throw error;
-      
-      toast({
-        title: 'Facility Removed',
-        description: 'The facility has been removed from this club',
-      });
-      
-      fetchClubDetails();
-    } catch (error: any) {
+      setClubStaff(data || []);
+    } catch (error) {
+      console.error('Error loading club staff:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to remove facility',
+        description: 'Failed to load club officials',
         variant: 'destructive',
       });
-    } finally {
-      setDeleteTarget(null);
     }
   };
 
   if (!club) return null;
 
   return (
-    <>
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[900px] h-[90vh] max-h-[800px] flex flex-col overflow-hidden">
+        <div className="flex justify-between items-start border-b pb-4">
+          <div>
+            <h2 className="text-2xl font-bold flex items-center">
+              <Building className="mr-2 h-5 w-5" />
               {club.name}
+            </h2>
+            <div className="flex items-center mt-1 space-x-2 text-sm text-muted-foreground">
               {club.serialNumber && (
-                <Badge variant="outline">#{club.serialNumber}</Badge>
+                <div className="flex items-center">
+                  <span className="font-mono">Serial #{club.serialNumber}</span>
+                </div>
               )}
-            </DialogTitle>
-            <DialogDescription>
-              Comprehensive club management and details
-            </DialogDescription>
-          </DialogHeader>
+              {club.referenceNumber && (
+                <div className="flex items-center">
+                  <span className="px-2 border-l">Ref: {club.referenceNumber}</span>
+                </div>
+              )}
+              <Badge variant="outline" className="capitalize ml-2">
+                {club.subscriptionType?.replace('_', ' ')}
+              </Badge>
+            </div>
+          </div>
+        </div>
 
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="teams">Teams</TabsTrigger>
-              <TabsTrigger value="officials">Officials</TabsTrigger>
-              <TabsTrigger value="facilities">Facilities</TabsTrigger>
-              <TabsTrigger value="staff">Staff</TabsTrigger>
-              <TabsTrigger value="reports">Reports</TabsTrigger>
-            </TabsList>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden mt-4">
+          <TabsList className="grid w-full grid-cols-4 mb-4">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <Building className="h-4 w-4" />
+              <span>Overview</span>
+            </TabsTrigger>
+            <TabsTrigger value="teams" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              <span>Teams</span>
+            </TabsTrigger>
+            <TabsTrigger value="facilities" className="flex items-center gap-2">
+              <Box className="h-4 w-4" />
+              <span>Facilities</span>
+            </TabsTrigger>
+            <TabsTrigger value="staff" className="flex items-center gap-2">
+              <UserRound className="h-4 w-4" />
+              <span>Staff</span>
+            </TabsTrigger>
+          </TabsList>
 
-            <TabsContent value="overview" className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Teams</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{teams.length}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Officials</CardTitle>
-                    <UserPlus className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{officials.length}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Facilities</CardTitle>
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{facilities.length}</div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Subscription</CardTitle>
-                    <Trophy className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold capitalize">{club.subscriptionType}</div>
-                  </CardContent>
-                </Card>
-              </div>
+          <div className="flex-1 overflow-hidden">
+            <TabsContent value="overview" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <ScrollArea className="flex-1">
+                <div className="space-y-6">
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Club Information</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-muted rounded-md p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Name</span>
+                        <span className="font-medium">{club.name}</span>
+                      </div>
+                      <div className="bg-muted rounded-md p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Serial Number</span>
+                        <span className="font-medium font-mono">{club.serialNumber || 'Not assigned'}</span>
+                      </div>
+                      <div className="bg-muted rounded-md p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Reference Number</span>
+                        <span className="font-medium">{club.referenceNumber || 'Not assigned'}</span>
+                      </div>
+                      <div className="bg-muted rounded-md p-3 flex flex-col">
+                        <span className="text-sm text-muted-foreground">Subscription Type</span>
+                        <span className="font-medium capitalize">{club.subscriptionType?.replace('_', ' ')}</span>
+                      </div>
+                    </div>
+                  </div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Club Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Serial Number:</span>
-                    <span>{club.serialNumber || 'Not assigned'}</span>
+                  <div>
+                    <h3 className="text-lg font-medium mb-2">Summary</h3>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-muted rounded-md p-3 flex items-center">
+                        <Users className="h-8 w-8 mr-3 text-primary" />
+                        <div>
+                          <span className="text-sm text-muted-foreground">Linked Teams</span>
+                          <p className="text-xl font-medium">{linkedTeams.length}</p>
+                        </div>
+                      </div>
+                      <div className="bg-muted rounded-md p-3 flex items-center">
+                        <Box className="h-8 w-8 mr-3 text-primary" />
+                        <div>
+                          <span className="text-sm text-muted-foreground">Facilities</span>
+                          <p className="text-xl font-medium">Coming soon</p>
+                        </div>
+                      </div>
+                      <div className="bg-muted rounded-md p-3 flex items-center">
+                        <CalendarDays className="h-8 w-8 mr-3 text-primary" />
+                        <div>
+                          <span className="text-sm text-muted-foreground">Upcoming Events</span>
+                          <p className="text-xl font-medium">Coming soon</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Reference Number:</span>
-                    <span>{club.referenceNumber || 'Not set'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">Subscription Type:</span>
-                    <Badge variant="outline" className="capitalize">{club.subscriptionType}</Badge>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="teams" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Teams ({teams.length})</h3>
-                <Button variant="outline" size="sm">
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Team
-                </Button>
-              </div>
-              
-              <div className="grid gap-4">
-                {teams.map((team) => (
-                  <Card key={team.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-base">{team.name}</CardTitle>
-                          <CardDescription>{team.ageGroup} • {team.gameFormat}</CardDescription>
+            <TabsContent value="teams" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <ScrollArea className="flex-1">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Linked Teams</h3>
+                  
+                  {loading ? (
+                    <div className="text-center py-4">Loading teams...</div>
+                  ) : linkedTeams.length === 0 ? (
+                    <div className="bg-muted rounded-md p-6 text-center">
+                      <h4 className="font-medium">No Teams Linked</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        This club doesn't have any linked teams yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {linkedTeams.map((team) => (
+                        <div key={team.id} className="bg-muted rounded-md p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{team.name}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {team.age_group} • {team.game_format}
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="capitalize">
+                              {team.subscription_type?.replace('_', ' ')}
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-x-6 gap-y-2 mt-3 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">Season:</span>{' '}
+                              <span>
+                                {new Date(team.season_start).toLocaleDateString()} - {new Date(team.season_end).toLocaleDateString()}
+                              </span>
+                            </div>
+                            {team.manager_name && (
+                              <div>
+                                <span className="text-muted-foreground">Manager:</span>{' '}
+                                <span>{team.manager_name}</span>
+                              </div>
+                            )}
+                            {team.manager_email && (
+                              <div>
+                                <span className="text-muted-foreground">Email:</span>{' '}
+                                <span>{team.manager_email}</span>
+                              </div>
+                            )}
+                            {team.manager_phone && (
+                              <div>
+                                <span className="text-muted-foreground">Phone:</span>{' '}
+                                <span>{team.manager_phone}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <Badge variant="outline" className="capitalize">
-                          {team.subscriptionType}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium">Manager:</span>
-                          <div>{team.managerName || 'Not assigned'}</div>
-                          {team.managerEmail && (
-                            <div className="text-muted-foreground">{team.managerEmail}</div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="facilities" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <ScrollArea className="flex-1">
+                <FacilitiesManagement clubId={club.id} />
+              </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="staff" className="h-full m-0 data-[state=active]:flex data-[state=active]:flex-col">
+              <ScrollArea className="flex-1">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Club Officials</h3>
+                  
+                  {clubStaff.length === 0 ? (
+                    <div className="bg-muted rounded-md p-6 text-center">
+                      <h4 className="font-medium">No Officials Added</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        This club doesn't have any officials assigned yet.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {clubStaff.map((staff) => (
+                        <div key={staff.id} className="bg-muted rounded-md p-4">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h4 className="font-medium">{staff.profiles?.name || 'Unknown'}</h4>
+                              <p className="text-sm text-muted-foreground">
+                                {staff.profiles?.email || 'No email'} • {staff.profiles?.phone || 'No phone'}
+                              </p>
+                            </div>
+                            <Badge className="capitalize">{staff.role.replace('_', ' ')}</Badge>
+                          </div>
+                          
+                          {staff.profiles?.coaching_badges && staff.profiles.coaching_badges.length > 0 && (
+                            <div className="mt-3">
+                              <p className="text-sm font-medium mb-1">Coaching Badges:</p>
+                              <div className="flex flex-wrap gap-2">
+                                {staff.profiles.coaching_badges.map((badge: any, idx: number) => (
+                                  <Badge key={idx} variant="outline">
+                                    {badge.name} ({badge.level})
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                          {team.managerPhone && (
-                            <div className="text-muted-foreground">{team.managerPhone}</div>
-                          )}
+                          
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Assigned on: {new Date(staff.assigned_at).toLocaleDateString()}
+                          </div>
                         </div>
-                        <div>
-                          <span className="font-medium">Season:</span>
-                          <div>{team.seasonStart} - {team.seasonEnd}</div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {teams.length === 0 && (
-                  <Card className="border-dashed">
-                    <CardContent className="py-8 text-center">
-                      <Users className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No teams linked to this club yet</p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </TabsContent>
+          </div>
+        </Tabs>
 
-            <TabsContent value="officials" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Club Officials ({officials.length})</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsAddingOfficial(true)}
-                >
-                  <UserPlus className="mr-2 h-4 w-4" />
-                  Add Official
-                </Button>
-              </div>
-              
-              {isAddingOfficial && club && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Add New Official</CardTitle>
-                    <CardDescription>Assign a user to an official role in this club</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ClubOfficialForm 
-                      clubId={club.id}
-                      onSuccess={() => {
-                        setIsAddingOfficial(false);
-                        fetchClubDetails();
-                      }}
-                      onCancel={() => setIsAddingOfficial(false)}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {isEditingOfficial && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Edit Official</CardTitle>
-                    <CardDescription>Update role for {isEditingOfficial.profile?.name || 'this official'}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ClubOfficialForm 
-                      clubId={club.id}
-                      official={isEditingOfficial}
-                      onSuccess={() => {
-                        setIsEditingOfficial(null);
-                        fetchClubDetails();
-                      }}
-                      onCancel={() => setIsEditingOfficial(null)}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              <div className="grid gap-4">
-                {officials.map((official) => (
-                  <Card key={official.id}>
-                    <CardContent className="py-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">{official.profile?.name || 'Unknown'}</div>
-                          <div className="text-sm text-muted-foreground">{official.profile?.email}</div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="capitalize">
-                            {official.role}
-                          </Badge>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => setIsEditingOfficial(official)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-100"
-                            onClick={() => setDeleteTarget({
-                              type: 'official',
-                              id: official.id,
-                              name: official.profile?.name || 'this official'
-                            })}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {officials.length === 0 && !isAddingOfficial && (
-                  <Card className="border-dashed">
-                    <CardContent className="py-8 text-center">
-                      <UserPlus className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No officials assigned to this club yet</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-4"
-                        onClick={() => setIsAddingOfficial(true)}
-                      >
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Add First Official
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="facilities" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Facilities ({facilities.length})</h3>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setIsAddingFacility(true)}
-                >
-                  <MapPin className="mr-2 h-4 w-4" />
-                  Add Facility
-                </Button>
-              </div>
-              
-              {isAddingFacility && club && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Add New Facility</CardTitle>
-                    <CardDescription>Create a facility for this club that can be booked for events</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FacilityForm 
-                      clubId={club.id}
-                      onSuccess={() => {
-                        setIsAddingFacility(false);
-                        fetchClubDetails();
-                      }}
-                      onCancel={() => setIsAddingFacility(false)}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              {isEditingFacility && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base">Edit Facility</CardTitle>
-                    <CardDescription>Update details for {isEditingFacility.name}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FacilityForm 
-                      clubId={club.id}
-                      facility={isEditingFacility}
-                      onSuccess={() => {
-                        setIsEditingFacility(null);
-                        fetchClubDetails();
-                      }}
-                      onCancel={() => setIsEditingFacility(null)}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-              
-              <div className="grid gap-4">
-                {facilities.map((facility) => (
-                  <Card key={facility.id}>
-                    <CardHeader>
-                      <CardTitle className="text-base">{facility.name}</CardTitle>
-                      <CardDescription>{facility.description}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm">Bookable Units: {facility.bookableUnits}</span>
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Calendar className="mr-2 h-4 w-4" />
-                            View Bookings
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => setIsEditingFacility(facility)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-100"
-                            onClick={() => setDeleteTarget({
-                              type: 'facility',
-                              id: facility.id,
-                              name: facility.name
-                            })}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-                
-                {facilities.length === 0 && !isAddingFacility && (
-                  <Card className="border-dashed">
-                    <CardContent className="py-8 text-center">
-                      <MapPin className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                      <p className="text-muted-foreground">No facilities added to this club yet</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-4"
-                        onClick={() => setIsAddingFacility(true)}
-                      >
-                        <MapPin className="mr-2 h-4 w-4" />
-                        Add First Facility
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="staff" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Staff Management</h3>
-                <Button variant="outline" size="sm">
-                  <Settings className="mr-2 h-4 w-4" />
-                  Manage Certifications
-                </Button>
-              </div>
-              
-              <Card className="border-dashed">
-                <CardContent className="py-8 text-center">
-                  <Settings className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">Staff management features coming soon</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This will include FA integration, coaching badges, and certifications
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="reports" className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Club Reports</h3>
-                <Button variant="outline" size="sm">
-                  <Trophy className="mr-2 h-4 w-4" />
-                  Generate Report
-                </Button>
-              </div>
-              
-              <Card className="border-dashed">
-                <CardContent className="py-8 text-center">
-                  <Trophy className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">Reporting features coming soon</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    This will include event summaries, player statistics, and financial reports
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
-
-      {/* Confirmation Dialog for Deleting Officials */}
-      <AlertDialog 
-        open={deleteTarget?.type === 'official'} 
-        onOpenChange={() => setDeleteTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Official</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove {deleteTarget?.name} from this club? 
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-red-500 hover:bg-red-600" 
-              onClick={handleDeleteOfficial}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirmation Dialog for Deleting Facilities */}
-      <AlertDialog 
-        open={deleteTarget?.type === 'facility'} 
-        onOpenChange={() => setDeleteTarget(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Facility</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete {deleteTarget?.name}? 
-              All bookings associated with this facility will also be removed.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              className="bg-red-500 hover:bg-red-600" 
-              onClick={handleDeleteFacility}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0 mt-auto">
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };
