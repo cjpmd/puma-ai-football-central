@@ -1,9 +1,9 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player, Team } from '@/types';
 import { PlayerForm } from './PlayerForm';
 import { PlayerCard } from './PlayerCard';
@@ -268,8 +268,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const isLoading = isActiveLoading || isInactiveLoading;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 h-full flex flex-col">
+      <div className="flex justify-between items-center flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold">{team.name} Squad</h2>
           <p className="text-muted-foreground">
@@ -288,124 +288,136 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
               <PlusCircle className="mr-2 h-4 w-4" />
               Add Player
             </Button>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {selectedPlayer ? 'Edit Player' : 'Add New Player'}
-                </DialogTitle>
-              </DialogHeader>
-              <PlayerForm 
-                player={selectedPlayer} 
-                teamId={team.id}
-                onSubmit={handleCreatePlayer} 
-                onCancel={() => {
-                  setIsPlayerDialogOpen(false);
-                  setSelectedPlayer(null);
-                }}
-              />
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
+              <ScrollArea className="max-h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {selectedPlayer ? 'Edit Player' : 'Add New Player'}
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="px-1">
+                  <PlayerForm 
+                    player={selectedPlayer} 
+                    teamId={team.id}
+                    onSubmit={handleCreatePlayer} 
+                    onCancel={() => {
+                      setIsPlayerDialogOpen(false);
+                      setSelectedPlayer(null);
+                    }}
+                  />
+                </div>
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="active" className="flex items-center gap-2">
-            Active Squad
-            {activePlayers.length > 0 && (
-              <Badge variant="secondary" className="ml-1">{activePlayers.length}</Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="inactive" className="flex items-center gap-2">
-            Previous Players
-            {inactivePlayers.length > 0 && (
-              <Badge variant="secondary" className="ml-1">{inactivePlayers.length}</Badge>
-            )}
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="active" className="mt-6">
-          {isLoading ? (
-            <div className="text-center py-8">Loading players...</div>
-          ) : activePlayers.length === 0 ? (
-            <Card className="border-dashed border-2 border-muted">
-              <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                <div className="rounded-full bg-muted p-3 mb-4">
-                  <Users className="h-6 w-6 text-muted-foreground" />
+      <div className="flex-1 min-h-0">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <TabsList className="flex-shrink-0">
+            <TabsTrigger value="active" className="flex items-center gap-2">
+              Active Squad
+              {activePlayers.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{activePlayers.length}</Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="inactive" className="flex items-center gap-2">
+              Previous Players
+              {inactivePlayers.length > 0 && (
+                <Badge variant="secondary" className="ml-1">{inactivePlayers.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          
+          <div className="flex-1 mt-6 min-h-0">
+            <TabsContent value="active" className="h-full">
+              {isLoading ? (
+                <div className="text-center py-8">Loading players...</div>
+              ) : activePlayers.length === 0 ? (
+                <Card className="border-dashed border-2 border-muted">
+                  <CardContent className="py-8 flex flex-col items-center justify-center text-center">
+                    <div className="rounded-full bg-muted p-3 mb-4">
+                      <Users className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-1">No Players Yet</h3>
+                    <p className="text-muted-foreground mb-4 max-w-md">
+                      You haven't added any players to this team yet.
+                    </p>
+                    <Button 
+                      onClick={() => {
+                        setSelectedPlayer(null);
+                        setIsPlayerDialogOpen(true);
+                      }}
+                      className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add Your First Player
+                    </Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <ScrollArea className="h-full">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-4">
+                    {activePlayers.map((player) => (
+                      <PlayerCard
+                        key={player.id}
+                        player={player}
+                        onEdit={() => handleEditPlayer(player)}
+                        onLeave={() => handleLeavePlayer(player)}
+                        onTransfer={() => handleTransferPlayer(player)}
+                        onManageParents={() => handleManageParents(player)}
+                        onManageAttributes={() => handleManageAttributes(player)}
+                        onManageObjectives={() => handleManageObjectives(player)}
+                        onManageComments={() => handleManageComments(player)}
+                        onViewStats={() => handleViewStats(player)}
+                        onViewHistory={() => handleViewHistory(player)}
+                      />
+                    ))}
+
+                    {/* Add Player Card */}
+                    <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer h-[440px] flex items-center justify-center"
+                          onClick={() => {
+                            setSelectedPlayer(null);
+                            setIsPlayerDialogOpen(true);
+                          }}>
+                      <CardContent className="py-8 flex flex-col items-center justify-center text-center">
+                        <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                        <p className="text-sm font-medium">Add Player</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </ScrollArea>
+              )}
+            </TabsContent>
+
+            <TabsContent value="inactive" className="h-full">
+              {isLoading ? (
+                <div className="text-center py-8">Loading previous players...</div>
+              ) : inactivePlayers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No previous players found.
                 </div>
-                <h3 className="font-semibold text-lg mb-1">No Players Yet</h3>
-                <p className="text-muted-foreground mb-4 max-w-md">
-                  You haven't added any players to this team yet.
-                </p>
-                <Button 
-                  onClick={() => {
-                    setSelectedPlayer(null);
-                    setIsPlayerDialogOpen(true);
-                  }}
-                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Your First Player
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {activePlayers.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  onEdit={() => handleEditPlayer(player)}
-                  onLeave={() => handleLeavePlayer(player)}
-                  onTransfer={() => handleTransferPlayer(player)}
-                  onManageParents={() => handleManageParents(player)}
-                  onManageAttributes={() => handleManageAttributes(player)}
-                  onManageObjectives={() => handleManageObjectives(player)}
-                  onManageComments={() => handleManageComments(player)}
-                  onViewStats={() => handleViewStats(player)}
-                  onViewHistory={() => handleViewHistory(player)}
-                />
-              ))}
-
-              {/* Add Player Card */}
-              <Card className="border-dashed border-2 border-muted hover:border-puma-blue-300 transition-colors cursor-pointer h-[440px] flex items-center justify-center"
-                    onClick={() => {
-                      setSelectedPlayer(null);
-                      setIsPlayerDialogOpen(true);
-                    }}>
-                <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                  <PlusCircle className="h-8 w-8 text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">Add Player</p>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="inactive" className="mt-6">
-          {isLoading ? (
-            <div className="text-center py-8">Loading previous players...</div>
-          ) : inactivePlayers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No previous players found.
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {inactivePlayers.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  inactive={true}
-                  onResurrect={() => handleResurrectPlayer(player)}
-                  onDelete={() => handleDeletePlayer(player)}
-                  onViewStats={() => handleViewStats(player)}
-                  onViewHistory={() => handleViewHistory(player)}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+              ) : (
+                <ScrollArea className="h-full">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 pb-4">
+                    {inactivePlayers.map((player) => (
+                      <PlayerCard
+                        key={player.id}
+                        player={player}
+                        inactive={true}
+                        onResurrect={() => handleResurrectPlayer(player)}
+                        onDelete={() => handleDeletePlayer(player)}
+                        onViewStats={() => handleViewStats(player)}
+                        onViewHistory={() => handleViewHistory(player)}
+                      />
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
 
       {/* Leave Team Dialog */}
       <Dialog open={isLeaveDialogOpen} onOpenChange={setIsLeaveDialogOpen}>

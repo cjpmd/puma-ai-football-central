@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Team } from '@/types/team';
 import { TeamBasicSettings } from './settings/TeamBasicSettings';
 import { TeamSubscriptionSettings } from './settings/TeamSubscriptionSettings';
@@ -69,7 +70,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Team Settings - {team.name}</DialogTitle>
           <DialogDescription>
@@ -77,34 +78,38 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-6 flex-shrink-0">
-            {settingsTabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
-                {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          
-          <div className="flex-1 overflow-hidden mt-4">
-            {settingsTabs.map((tab) => (
-              <TabsContent key={tab.id} value={tab.id} className="h-full overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col">
-                <Card className="flex-1 border-0 shadow-none">
-                  <CardHeader className="flex-shrink-0">
-                    <CardTitle className="flex items-center gap-2">
-                      {tab.icon}
-                      {tab.label}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex-1 space-y-4 pb-6">
-                    {tab.component}
-                  </CardContent>
-                </Card>
-              </TabsContent>
-            ))}
-          </div>
-        </Tabs>
+        <div className="flex-1 flex flex-col min-h-0">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+            <TabsList className="grid w-full grid-cols-6 flex-shrink-0">
+              {settingsTabs.map((tab) => (
+                <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
+                  {tab.icon}
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            
+            <div className="flex-1 mt-4 min-h-0">
+              {settingsTabs.map((tab) => (
+                <TabsContent key={tab.id} value={tab.id} className="h-full data-[state=active]:flex data-[state=active]:flex-col">
+                  <ScrollArea className="flex-1">
+                    <Card className="border-0 shadow-none">
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          {tab.icon}
+                          {tab.label}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 pb-6">
+                        {tab.component}
+                      </CardContent>
+                    </Card>
+                  </ScrollArea>
+                </TabsContent>
+              ))}
+            </div>
+          </Tabs>
+        </div>
         
         <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0">
           <Button variant="outline" onClick={onClose}>
