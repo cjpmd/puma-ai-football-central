@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -282,8 +283,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         existingRecordId
       });
 
-      // Use upsert for all saves to handle conflicts properly
-      const upsertData = {
+      // Create properly typed upsert data object
+      const baseUpsertData = {
         event_id: eventId,
         team_id: teamId,
         team_number: teamNumber,
@@ -297,10 +298,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         updated_at: new Date().toISOString()
       };
 
-      // If we have an existing record ID, include it in the upsert
-      if (existingRecordId) {
-        upsertData.id = existingRecordId;
-      }
+      // Add id if we have an existing record
+      const upsertData = existingRecordId 
+        ? { ...baseUpsertData, id: existingRecordId }
+        : baseUpsertData;
 
       const { data: upsertResult, error } = await supabase
         .from('event_selections')
