@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -60,17 +59,20 @@ const CalendarEvents = () => {
         type: event.event_type as Event['type'],
         title: event.title,
         date: event.date,
-        startTime: event.start_time || undefined,
-        endTime: event.end_time || undefined,
-        meetingTime: event.meeting_time || undefined,
+        startTime: event.start_time || '',
+        endTime: event.end_time || '',
+        meetingTime: event.meeting_time || '',
         location: event.location || '',
         gameFormat: event.game_format as GameFormat,
-        opponent: event.opponent || undefined,
-        isHome: event.is_home ?? undefined,
+        opponent: event.opponent || '',
+        isHome: event.is_home ?? true,
         teamId: event.team_id,
-        facilityId: event.facility_id || undefined,
-        trainingNotes: event.training_notes || undefined,
-        teams: [event.team_id]
+        facilityId: event.facility_id || '',
+        trainingNotes: event.training_notes || '',
+        teams: [event.team_id],
+        periods: [], // Add required periods property
+        createdAt: event.created_at || new Date().toISOString(), // Add required createdAt
+        updatedAt: event.updated_at || new Date().toISOString() // Add required updatedAt
       }));
 
       setEvents(eventsData);
@@ -271,7 +273,7 @@ const CalendarEvents = () => {
                         Create Event
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px]">
+                    <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
                       <DialogHeader>
                         <DialogTitle>
                           {editingEvent ? 'Edit Event' : 'Create New Event'}
@@ -524,8 +526,9 @@ const CalendarEvents = () => {
             </DialogHeader>
             {selectedEvent && (
               <TeamSelectionManager
-                event={selectedEvent}
-                onClose={() => setIsTeamSelectionOpen(false)}
+                eventId={selectedEvent.id}
+                teamId={selectedEvent.teamId}
+                gameFormat={selectedEvent.gameFormat}
               />
             )}
           </DialogContent>
