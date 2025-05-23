@@ -80,6 +80,114 @@ export type Database = {
         }
         Relationships: []
       }
+      event_attendees: {
+        Row: {
+          attendee_type: string
+          created_at: string
+          event_id: string
+          id: string
+          responded_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attendee_type: string
+          created_at?: string
+          event_id: string
+          id?: string
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attendee_type?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_attendees_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_attendees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_player_stats: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          is_captain: boolean
+          is_substitute: boolean
+          minutes_played: number
+          period_number: number
+          player_id: string
+          position: string | null
+          substitution_time: number | null
+          team_number: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          is_captain?: boolean
+          is_substitute?: boolean
+          minutes_played?: number
+          period_number?: number
+          player_id: string
+          position?: string | null
+          substitution_time?: number | null
+          team_number?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          is_captain?: boolean
+          is_substitute?: boolean
+          minutes_played?: number
+          period_number?: number
+          player_id?: string
+          position?: string | null
+          substitution_time?: number | null
+          team_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_player_stats_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_player_stats_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_selections: {
         Row: {
           captain_id: string | null
@@ -88,9 +196,11 @@ export type Database = {
           event_id: string
           formation: string
           id: string
+          kit_selection: Json | null
           performance_category: string | null
           period_number: number
           player_positions: Json
+          staff_selection: Json | null
           substitutes: Json
           team_id: string
           updated_at: string
@@ -102,9 +212,11 @@ export type Database = {
           event_id: string
           formation: string
           id?: string
+          kit_selection?: Json | null
           performance_category?: string | null
           period_number?: number
           player_positions?: Json
+          staff_selection?: Json | null
           substitutes?: Json
           team_id: string
           updated_at?: string
@@ -116,9 +228,11 @@ export type Database = {
           event_id?: string
           formation?: string
           id?: string
+          kit_selection?: Json | null
           performance_category?: string | null
           period_number?: number
           player_positions?: Json
+          staff_selection?: Json | null
           substitutes?: Json
           team_id?: string
           updated_at?: string
@@ -154,6 +268,7 @@ export type Database = {
           date: string
           end_time: string | null
           event_type: string
+          facility_booking_id: string | null
           facility_id: string | null
           game_format: string | null
           id: string
@@ -163,10 +278,12 @@ export type Database = {
           opponent: string | null
           player_of_match_id: string | null
           scores: Json | null
+          staff_notes: string | null
           start_time: string | null
           team_id: string
           title: string
           total_minutes: number | null
+          training_notes: string | null
           updated_at: string
         }
         Insert: {
@@ -175,6 +292,7 @@ export type Database = {
           date: string
           end_time?: string | null
           event_type: string
+          facility_booking_id?: string | null
           facility_id?: string | null
           game_format?: string | null
           id?: string
@@ -184,10 +302,12 @@ export type Database = {
           opponent?: string | null
           player_of_match_id?: string | null
           scores?: Json | null
+          staff_notes?: string | null
           start_time?: string | null
           team_id: string
           title: string
           total_minutes?: number | null
+          training_notes?: string | null
           updated_at?: string
         }
         Update: {
@@ -196,6 +316,7 @@ export type Database = {
           date?: string
           end_time?: string | null
           event_type?: string
+          facility_booking_id?: string | null
           facility_id?: string | null
           game_format?: string | null
           id?: string
@@ -205,13 +326,22 @@ export type Database = {
           opponent?: string | null
           player_of_match_id?: string | null
           scores?: Json | null
+          staff_notes?: string | null
           start_time?: string | null
           team_id?: string
           title?: string
           total_minutes?: number | null
+          training_notes?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_facility_booking_id_fkey"
+            columns: ["facility_booking_id"]
+            isOneToOne: false
+            referencedRelation: "facility_availability"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_facility_id_fkey"
             columns: ["facility_id"]
@@ -779,6 +909,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_user_clubs_club_id"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user_clubs_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "user_clubs_club_id_fkey"
             columns: ["club_id"]
             isOneToOne: false
@@ -813,6 +957,20 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_user_teams_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user_teams_user_id"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_teams_team_id_fkey"
             columns: ["team_id"]

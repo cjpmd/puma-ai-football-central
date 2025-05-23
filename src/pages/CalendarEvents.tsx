@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, Calendar, MapPin, Clock, Users } from 'lucide-react';
+import { PlusCircle, Calendar, MapPin, Clock, Users, Settings } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EventForm } from '@/components/events/EventForm';
 import { Event } from '@/types';
@@ -63,7 +62,11 @@ const CalendarEvents = () => {
         teams: [event.team_id],
         periods: [],
         createdAt: event.created_at,
-        updatedAt: event.updated_at
+        updatedAt: event.updated_at,
+        facilityId: event.facility_id,
+        coachNotes: event.coach_notes,
+        staffNotes: event.staff_notes,
+        trainingNotes: event.training_notes
       }));
 
       setEvents(transformedEvents);
@@ -83,21 +86,33 @@ const CalendarEvents = () => {
     try {
       console.log('Creating event:', eventData);
 
+      const insertData: any = {
+        event_type: eventData.type,
+        team_id: eventData.teamId,
+        title: eventData.title,
+        date: eventData.date,
+        meeting_time: eventData.meetingTime,
+        start_time: eventData.startTime,
+        end_time: eventData.endTime,
+        location: eventData.location,
+        game_format: eventData.gameFormat,
+        opponent: eventData.opponent,
+        is_home: eventData.isHome
+      };
+
+      // Add facility if selected
+      if (eventData.facilityId) {
+        insertData.facility_id = eventData.facilityId;
+      }
+
+      // Add notes for training events
+      if (eventData.type === 'training' && eventData.trainingNotes) {
+        insertData.training_notes = eventData.trainingNotes;
+      }
+
       const { data, error } = await supabase
         .from('events')
-        .insert({
-          event_type: eventData.type,
-          team_id: eventData.teamId,
-          title: eventData.title,
-          date: eventData.date,
-          meeting_time: eventData.meetingTime,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          location: eventData.location,
-          game_format: eventData.gameFormat,
-          opponent: eventData.opponent,
-          is_home: eventData.isHome
-        })
+        .insert(insertData)
         .select()
         .single();
 
@@ -131,21 +146,31 @@ const CalendarEvents = () => {
     try {
       console.log('Updating event:', eventData);
 
+      const updateData: any = {
+        event_type: eventData.type,
+        title: eventData.title,
+        date: eventData.date,
+        meeting_time: eventData.meetingTime,
+        start_time: eventData.startTime,
+        end_time: eventData.endTime,
+        location: eventData.location,
+        game_format: eventData.gameFormat,
+        opponent: eventData.opponent,
+        is_home: eventData.isHome,
+        updated_at: new Date().toISOString()
+      };
+
+      if (eventData.facilityId) {
+        updateData.facility_id = eventData.facilityId;
+      }
+
+      if (eventData.type === 'training' && eventData.trainingNotes) {
+        updateData.training_notes = eventData.trainingNotes;
+      }
+
       const { error } = await supabase
         .from('events')
-        .update({
-          event_type: eventData.type,
-          title: eventData.title,
-          date: eventData.date,
-          meeting_time: eventData.meetingTime,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          location: eventData.location,
-          game_format: eventData.gameFormat,
-          opponent: eventData.opponent,
-          is_home: eventData.isHome,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', selectedEvent.id);
 
       if (error) {
@@ -346,6 +371,16 @@ const CalendarEvents = () => {
                                   <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                                 </svg>
                               </Button>
+                              {(event.type === 'fixture' || event.type === 'friendly' || event.type === 'tournament' || event.type === 'festival') && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
+                                  title="Team Selection"
+                                >
+                                  <Settings className="h-3 w-3" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -391,6 +426,12 @@ const CalendarEvents = () => {
                               <span className="text-muted-foreground">Format:</span>
                               <span className="font-medium">{event.gameFormat}</span>
                             </div>
+                            {event.trainingNotes && (
+                              <div className="text-sm text-muted-foreground border-t pt-2">
+                                <strong>Training Notes:</strong>
+                                <p className="mt-1">{event.trainingNotes}</p>
+                              </div>
+                            )}
                           </div>
                         </CardContent>
                       </Card>

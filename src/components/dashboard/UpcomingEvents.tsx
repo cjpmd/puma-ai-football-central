@@ -1,60 +1,122 @@
 
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { Calendar, MapPin, Clock, Users } from 'lucide-react';
+
+interface UpcomingEvent {
+  id: string;
+  title: string;
+  event_type: string;
+  date: string;
+  start_time: string;
+  location: string;
+  game_format?: string;
+  opponent?: string;
+  is_home?: boolean;
+  team_name: string;
+  attendee_count: number;
+  total_players: number;
+}
 
 export function UpcomingEvents() {
-  const events = [
-    {
-      id: "1",
-      title: "Match vs Eagles FC",
-      type: "fixture",
-      date: "2023-06-15",
-      time: "10:00 AM",
-      location: "Central Park Pitch",
-      isHome: true,
-      gameFormat: "7-a-side",
-      confirmed: 14,
-      total: 18,
-    },
-    {
-      id: "2",
-      title: "Training Session",
-      type: "training",
-      date: "2023-06-12",
-      time: "6:00 PM",
-      location: "Training Ground",
-      confirmed: 16,
-      total: 18,
-    },
-    {
-      id: "3",
-      title: "Summer Tournament",
-      type: "tournament",
-      date: "2023-06-22",
-      time: "9:00 AM",
-      location: "City Sports Complex",
-      gameFormat: "7-a-side",
-      confirmed: 15,
-      total: 18,
-    },
-  ];
+  const { teams } = useAuth();
+  const [events, setEvents] = useState<UpcomingEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (teams.length > 0) {
+      loadUpcomingEvents();
+    }
+  }, [teams]);
+
+  const loadUpcomingEvents = async () => {
+    try {
+      const teamIds = teams.map(t => t.id);
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select(`
+          id,
+          title,
+          event_type,
+          date,
+          start_time,
+          location,
+          game_format,
+          opponent,
+          is_home,
+          teams:team_id (
+            name
+          )
+        `)
+        .in('team_id', teamIds)
+        .gte('date', today)
+        .order('date', { ascending: true })
+        .limit(5);
+
+      if (eventsError) {
+        console.error('Error loading events:', eventsError);
+        setEvents([]);
+        return;
+      }
+
+      // Get attendee counts for each event
+      const eventsWithCounts = await Promise.all(
+        (eventsData || []).map(async (event) => {
+          // Get confirmed attendees count
+          const { count: attendeeCount } = await supabase
+            .from('event_attendees')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_id', event.id)
+            .eq('status', 'accepted');
+
+          // Get total team players count
+          const { count: totalPlayers } = await supabase
+            .from('players')
+            .select('*', { count: 'exact', head: true })
+            .eq('team_id', event.teams?.id)
+            .eq('status', 'active');
+
+          return {
+            ...event,
+            team_name: event.teams?.name || 'Unknown Team',
+            attendee_count: attendeeCount || 0,
+            total_players: totalPlayers || 0
+          };
+        })
+      );
+
+      setEvents(eventsWithCounts);
+    } catch (error) {
+      console.error('Error in loadUpcomingEvents:', error);
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case "fixture":
-        return "bg-blue-100 text-blue-800";
+        return "bg-red-500 text-white";
       case "friendly":
-        return "bg-green-100 text-green-800";
+        return "bg-blue-500 text-white";
       case "tournament":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-500 text-white";
       case "festival":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-500 text-white";
       case "training":
-        return "bg-gray-100 text-gray-800";
+        return "bg-green-500 text-white";
+      case "social":
+        return "bg-pink-500 text-white";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-500 text-white";
     }
   };
 
@@ -67,46 +129,103 @@ export function UpcomingEvents() {
     });
   };
 
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
+        </div>
+        <div className="text-center py-8">Loading events...</div>
+      </div>
+    );
+  }
+
+  if (events.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
+          <Button size="sm" onClick={() => window.location.href = '/calendar'}>
+            View All
+          </Button>
+        </div>
+        <Card className="border-dashed border-2 border-muted">
+          <CardContent className="py-8 flex flex-col items-center justify-center text-center">
+            <div className="rounded-full bg-muted p-3 mb-4">
+              <Calendar className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="font-semibold text-lg mb-1">No Upcoming Events</h3>
+            <p className="text-muted-foreground mb-4 max-w-md">
+              Create your first event to get started with team management.
+            </p>
+            <Button onClick={() => window.location.href = '/calendar'}>
+              Create Event
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
-        <Button size="sm">View All</Button>
+        <Button size="sm" onClick={() => window.location.href = '/calendar'}>
+          View All
+        </Button>
       </div>
       
       <div className="grid gap-4">
         {events.map((event) => (
-          <Card key={event.id}>
+          <Card key={event.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>{event.title}</CardTitle>
-                  <CardDescription>
-                    {formatDate(event.date)} • {event.time}
+                  <CardTitle className="text-lg">{event.title}</CardTitle>
+                  <CardDescription className="flex items-center gap-2">
+                    <Clock className="h-3 w-3" />
+                    {formatDate(event.date)} • {formatTime(event.start_time)}
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className={getEventTypeColor(event.type)}>
-                  {event.type.charAt(0).toUpperCase() + event.type.slice(1)}
+                <Badge className={getEventTypeColor(event.event_type)}>
+                  {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Location</p>
-                  <p className="text-sm">{event.location}</p>
+                  <p className="text-sm font-medium text-muted-foreground">Team</p>
+                  <p className="text-sm">{event.team_name}</p>
                 </div>
-                {event.gameFormat && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Location</p>
+                  <div className="flex items-center gap-1">
+                    <MapPin className="h-3 w-3 text-muted-foreground" />
+                    <p className="text-sm">{event.location}</p>
+                  </div>
+                </div>
+                {event.game_format && (
                   <div>
                     <p className="text-sm font-medium text-muted-foreground">Format</p>
-                    <p className="text-sm">{event.gameFormat}</p>
+                    <p className="text-sm">{event.game_format}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Attendance</p>
                   <div className="flex items-center mt-1">
                     <div className="flex -space-x-2">
-                      {Array.from({ length: 3 }).map((_, i) => (
+                      {Array.from({ length: Math.min(3, event.attendee_count) }).map((_, i) => (
                         <Avatar key={i} className="h-6 w-6 border-2 border-white">
                           <AvatarFallback className="text-[10px] bg-puma-blue-100 text-puma-blue-500">
                             {String.fromCharCode(65 + i)}
@@ -114,15 +233,21 @@ export function UpcomingEvents() {
                         </Avatar>
                       ))}
                     </div>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {event.confirmed}/{event.total} confirmed
+                    <span className="ml-2 text-xs text-muted-foreground flex items-center gap-1">
+                      <Users className="h-3 w-3" />
+                      {event.attendee_count}/{event.total_players} confirmed
                     </span>
                   </div>
                 </div>
-                {event.isHome !== undefined && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Venue</p>
-                    <p className="text-sm">{event.isHome ? "Home" : "Away"}</p>
+                {event.opponent && (
+                  <div className="col-span-2">
+                    <p className="text-sm font-medium text-muted-foreground">Opponent</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">vs {event.opponent}</span>
+                      <Badge variant={event.is_home ? 'default' : 'secondary'}>
+                        {event.is_home ? 'Home' : 'Away'}
+                      </Badge>
+                    </div>
                   </div>
                 )}
               </div>
@@ -131,7 +256,7 @@ export function UpcomingEvents() {
               <Button variant="outline" size="sm">
                 Manage Squad
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={() => window.location.href = '/calendar'}>
                 View Details
               </Button>
             </CardFooter>
