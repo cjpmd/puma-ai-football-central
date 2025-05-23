@@ -283,8 +283,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         existingRecordId
       });
 
-      // Create properly typed upsert data object
-      const baseUpsertData = {
+      // Create properly typed upsert data
+      const upsertData: any = {
         event_id: eventId,
         team_id: teamId,
         team_number: teamNumber,
@@ -299,25 +299,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       };
 
       // Add id if we have an existing record
-      const upsertData = existingRecordId 
-        ? { ...baseUpsertData, id: existingRecordId }
-        : baseUpsertData;
+      if (existingRecordId) {
+        upsertData.id = existingRecordId;
+      }
 
       const { data: upsertResult, error } = await supabase
         .from('event_selections')
-        .upsert(upsertData, {
-          onConflict: 'event_id,team_id,period_number,team_number'
-        })
-        .select('id')
-        .single();
+        .upsert(upsertData);
 
       if (error) {
         console.error('Error saving team selection:', error);
         throw error;
-      }
-
-      if (upsertResult && !existingRecordId) {
-        setExistingRecordId(upsertResult.id);
       }
 
       console.log('Team selection saved successfully');
@@ -329,6 +321,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       
       // Reload players to update availability status
       await loadPlayers();
+      await loadTeamSelection();
       
       if (onSave) {
         onSave();

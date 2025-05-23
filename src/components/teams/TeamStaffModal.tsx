@@ -16,7 +16,7 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
   onClose,
   onUpdate
 }) => {
-  if (!team || !isOpen) {
+  if (!team) {
     return null;
   }
 

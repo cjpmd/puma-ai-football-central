@@ -86,7 +86,10 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         
         console.log('Processed staff members:', staffMembers);
         setStaff(staffMembers);
-        onUpdate({ staff: staffMembers });
+        // Only update team staff if we have valid staff members
+        if (staffMembers.length > 0) {
+          onUpdate({ staff: staffMembers });
+        }
       }
     } catch (error) {
       console.error('Error loading staff:', error);

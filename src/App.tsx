@@ -1,57 +1,43 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import TeamManagement from "./pages/TeamManagement";
-import ClubManagement from "./pages/ClubManagement";
-import StaffManagement from "./pages/StaffManagement";
-import PlayerManagement from "./pages/PlayerManagement";
-import CalendarEvents from "./pages/CalendarEvents";
-import SubscriptionManagement from "./pages/SubscriptionManagement";
-import Auth from "./pages/Auth";
-import NotFound from "./pages/NotFound";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ThemeProvider } from './components/theme-provider';
+import { Toaster } from "./components/ui/toaster";
+import Index from './pages/Index';
+import Dashboard from './pages/Dashboard';
+import Auth from './pages/Auth';
+import TeamManagement from './pages/TeamManagement';
+import PlayerManagement from './pages/PlayerManagement';
+import ClubManagement from './pages/ClubManagement';
+import CalendarEvents from './pages/CalendarEvents';
+import StaffManagement from './pages/StaffManagement';
+import UserManagement from './pages/UserManagement';
+import SubscriptionManagement from './pages/SubscriptionManagement';
+import NotFound from './pages/NotFound';
+import { ProtectedRoute } from './components/auth/ProtectedRoute';
+import { Toaster as SonnerToaster } from 'sonner';
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
+function App() {
+  return (
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+      <Router>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
+          <Route path="/players" element={<ProtectedRoute><PlayerManagement /></ProtectedRoute>} />
+          <Route path="/clubs" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
+          <Route path="/calendar" element={<ProtectedRoute><CalendarEvents /></ProtectedRoute>} />
+          <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+          <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+          <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionManagement /></ProtectedRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
       <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
-            
-            {/* Protected Routes */}
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
-            <Route path="/clubs" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
-            <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-            <Route path="/players" element={<ProtectedRoute><PlayerManagement /></ProtectedRoute>} />
-            <Route path="/calendar" element={<ProtectedRoute><CalendarEvents /></ProtectedRoute>} />
-            <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionManagement /></ProtectedRoute>} />
-            
-            {/* Legacy routes that redirect to dashboard */}
-            <Route path="/dashboard/squad" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/calendar" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/analytics" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/dashboard/settings" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+      <SonnerToaster position="top-right" richColors />
+    </ThemeProvider>
+  );
+}
 
 export default App;
