@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -66,18 +65,10 @@ const StaffManagement = () => {
     try {
       console.log('Fetching team staff for team:', teamId);
       
-      // Updated query to properly join user_teams with profiles
+      // First get user_teams data
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
-        .select(`
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('user_id, role')
         .eq('team_id', teamId);
 
       if (userTeamsError) {
@@ -92,14 +83,35 @@ const StaffManagement = () => {
         return;
       }
       
+      // Get user profiles for these user IDs
+      const userIds = userTeamsData.map(ut => ut.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Profiles data:', profilesData);
+      
+      // Combine the data
       const staffMembers: StaffMember[] = userTeamsData
-        .filter(teamUser => teamUser.profiles) // Filter out null profiles
-        .map(teamUser => ({
-          id: teamUser.user_id,
-          name: teamUser.profiles?.name || 'Unknown',
-          email: teamUser.profiles?.email || 'No email',
-          role: teamUser.role as UserRole
-        }));
+        .map(teamUser => {
+          const profile = profilesData?.find(p => p.id === teamUser.user_id);
+          if (profile) {
+            return {
+              id: teamUser.user_id,
+              name: profile.name || 'Unknown',
+              email: profile.email || 'No email',
+              role: teamUser.role as UserRole
+            };
+          }
+          return null;
+        })
+        .filter(member => member !== null) as StaffMember[];
       
       setTeamStaff(staffMembers);
     } catch (error: any) {
@@ -115,18 +127,10 @@ const StaffManagement = () => {
     try {
       console.log('Fetching club staff for club:', clubId);
       
-      // Updated query to properly join user_clubs with profiles
+      // First get user_clubs data
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
-        .select(`
-          user_id,
-          role,
-          profiles:user_id (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('user_id, role')
         .eq('club_id', clubId);
 
       if (userClubsError) {
@@ -141,14 +145,35 @@ const StaffManagement = () => {
         return;
       }
       
+      // Get user profiles for these user IDs
+      const userIds = userClubsData.map(uc => uc.user_id);
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Profiles data:', profilesData);
+      
+      // Combine the data
       const staffMembers: StaffMember[] = userClubsData
-        .filter(clubUser => clubUser.profiles) // Filter out null profiles
-        .map(clubUser => ({
-          id: clubUser.user_id,
-          name: clubUser.profiles?.name || 'Unknown',
-          email: clubUser.profiles?.email || 'No email',
-          role: clubUser.role as UserRole
-        }));
+        .map(clubUser => {
+          const profile = profilesData?.find(p => p.id === clubUser.user_id);
+          if (profile) {
+            return {
+              id: clubUser.user_id,
+              name: profile.name || 'Unknown',
+              email: profile.email || 'No email',
+              role: clubUser.role as UserRole
+            };
+          }
+          return null;
+        })
+        .filter(member => member !== null) as StaffMember[];
       
       setClubStaff(staffMembers);
     } catch (error: any) {
