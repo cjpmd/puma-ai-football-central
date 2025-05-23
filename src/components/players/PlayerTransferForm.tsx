@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Player, Team, SubscriptionType } from '@/types';
+import { Player, Team, SubscriptionType, GameFormat } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PlayerTransferFormProps {
@@ -56,14 +55,14 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
           id: team.id,
           name: team.name,
           ageGroup: team.age_group,
-          gameFormat: team.game_format,
+          gameFormat: team.game_format as GameFormat,
           seasonStart: team.season_start,
           seasonEnd: team.season_end,
           subscriptionType: team.subscription_type as SubscriptionType,
           createdAt: team.created_at,
           updatedAt: team.updated_at,
-          performanceCategories: [],
-          kitIcons: { home: '', away: '', training: '', goalkeeper: '' }
+          performanceCategories: team.performance_categories || [],
+          kitIcons: team.kit_icons || { home: '', away: '', training: '', goalkeeper: '' }
         })));
         setIsLoading(false);
       } catch (error) {
