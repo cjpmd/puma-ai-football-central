@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Position, Formation, Player } from '@/types';
 import { FormationSelector } from './FormationSelector';
-import { PitchView } from '@/components/dashboard/PitchView';
+import { getPositionsForFormation } from '@/utils/formationUtils';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
@@ -143,14 +143,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       console.log('PlayerSelectionPanel: Saving selection:', selection);
       setSaving(true);
 
+      // Filter out player positions with "none" value
+      const validPlayerPositions = selection.playerPositions.filter(pp => pp.position !== 'none');
+
       const selectionData = {
         event_id: eventId,
         team_id: teamId,
         period_number: periodNumber,
         team_number: teamNumber,
         formation: selection.formation,
-        captain_id: selection.captainId || null,
-        player_positions: selection.playerPositions,
+        captain_id: selection.captainId === 'none' ? null : selection.captainId || null,
+        player_positions: validPlayerPositions,
         substitutes: selection.substitutes,
         duration_minutes: selection.duration,
         updated_at: new Date().toISOString()
@@ -188,13 +191,23 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   const handlePlayerPositionChange = (playerId: string, position: Position) => {
     console.log('PlayerSelectionPanel: Changing player position:', playerId, position);
-    setSelection(prev => ({
-      ...prev,
-      playerPositions: [
-        ...prev.playerPositions.filter(pp => pp.playerId !== playerId),
-        { playerId, position }
-      ]
-    }));
+    
+    if (position === 'none') {
+      // Remove the player from positions
+      setSelection(prev => ({
+        ...prev,
+        playerPositions: prev.playerPositions.filter(pp => pp.playerId !== playerId)
+      }));
+    } else {
+      // Add or update the player position
+      setSelection(prev => ({
+        ...prev,
+        playerPositions: [
+          ...prev.playerPositions.filter(pp => pp.playerId !== playerId),
+          { playerId, position }
+        ]
+      }));
+    }
   };
 
   const handleSubstituteToggle = (playerId: string) => {
@@ -206,6 +219,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         : [...prev.substitutes, playerId]
     }));
   };
+
+  // Get available positions for the current formation
+  const availablePositions = getPositionsForFormation(selection.formation, gameFormat as any);
+  
+  // Get assigned positions to track what's been taken
+  const assignedPositions = selection.playerPositions.map(pp => pp.position);
 
   if (loading) {
     return (
@@ -236,7 +255,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               selectedFormation={selection.formation}
               onFormationChange={(formation) => setSelection(prev => ({ 
                 ...prev, 
-                formation: formation as Formation 
+                formation: formation as Formation,
+                // Clear player positions when formation changes
+                playerPositions: []
               }))}
             />
           </div>
@@ -257,8 +278,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           <div className="space-y-2">
             <Label>Captain</Label>
             <Select
-              value={selection.captainId}
-              onValueChange={(value) => setSelection(prev => ({ ...prev, captainId: value }))}
+              value={selection.captainId || 'none'}
+              onValueChange={(value) => setSelection(prev => ({ ...prev, captainId: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select captain" />
@@ -274,52 +295,99 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             </Select>
           </div>
 
-          {/* Player Positions */}
+          {/* Starting XI */}
           <div className="space-y-4">
-            <Label>Player Positions</Label>
-            <div className="grid gap-4">
-              {players.map((player) => {
-                const playerPosition = selection.playerPositions.find(pp => pp.playerId === player.id);
-                const isSubstitute = selection.substitutes.includes(player.id);
+            <div>
+              <Label className="text-lg font-semibold">Starting XI ({availablePositions.length} positions)</Label>
+              <p className="text-sm text-muted-foreground">
+                Assign players to specific positions for the {selection.formation} formation
+              </p>
+            </div>
+            
+            <div className="grid gap-2">
+              {availablePositions.map((position, index) => {
+                const assignedPlayer = selection.playerPositions.find(pp => pp.position === position);
+                const player = assignedPlayer ? players.find(p => p.id === assignedPlayer.playerId) : null;
                 
                 return (
-                  <div key={player.id} className="flex items-center gap-4 p-3 border rounded">
-                    <div className="flex-1">
-                      <div className="font-medium">{player.name}</div>
-                      <div className="text-sm text-muted-foreground">#{player.squadNumber}</div>
-                    </div>
-                    
+                  <div key={`${position}-${index}`} className="flex items-center gap-4 p-3 border rounded">
+                    <div className="w-12 text-center font-medium">{position}</div>
                     <Select
-                      value={playerPosition?.position || "none"}
-                      onValueChange={(position) => handlePlayerPositionChange(player.id, position as Position)}
+                      value={assignedPlayer?.playerId || 'none'}
+                      onValueChange={(playerId) => {
+                        if (playerId === 'none') {
+                          // Remove assignment
+                          setSelection(prev => ({
+                            ...prev,
+                            playerPositions: prev.playerPositions.filter(pp => pp.position !== position)
+                          }));
+                        } else {
+                          // Assign player to this position
+                          setSelection(prev => ({
+                            ...prev,
+                            playerPositions: [
+                              ...prev.playerPositions.filter(pp => pp.position !== position && pp.playerId !== playerId),
+                              { playerId, position }
+                            ]
+                          }));
+                        }
+                      }}
                     >
-                      <SelectTrigger className="w-32">
-                        <SelectValue placeholder="Position" />
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select player" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">No Position</SelectItem>
-                        <SelectItem value="GK">GK</SelectItem>
-                        <SelectItem value="DC">DC</SelectItem>
-                        <SelectItem value="DL">DL</SelectItem>
-                        <SelectItem value="DR">DR</SelectItem>
-                        <SelectItem value="MC">MC</SelectItem>
-                        <SelectItem value="ML">ML</SelectItem>
-                        <SelectItem value="MR">MR</SelectItem>
-                        <SelectItem value="AMC">AMC</SelectItem>
-                        <SelectItem value="STC">STC</SelectItem>
+                        <SelectItem value="none">No Player</SelectItem>
+                        {players
+                          .filter(p => {
+                            // Show unassigned players or the currently assigned player
+                            const isAssigned = selection.playerPositions.some(pp => pp.playerId === p.id && pp.position !== position);
+                            return !isAssigned || p.id === assignedPlayer?.playerId;
+                          })
+                          .map((p) => (
+                            <SelectItem key={p.id} value={p.id}>
+                              {p.name} (#{p.squadNumber})
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
-                    
-                    <Button
-                      variant={isSubstitute ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handleSubstituteToggle(player.id)}
-                    >
-                      {isSubstitute ? "Sub" : "Add Sub"}
-                    </Button>
+                    {player && (
+                      <Badge variant="outline" className="text-xs">
+                        #{player.squadNumber}
+                      </Badge>
+                    )}
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Substitutes */}
+          <div className="space-y-4">
+            <Label className="text-lg font-semibold">Substitutes</Label>
+            <div className="grid gap-2">
+              {players
+                .filter(player => !selection.playerPositions.some(pp => pp.playerId === player.id))
+                .map((player) => {
+                  const isSubstitute = selection.substitutes.includes(player.id);
+                  
+                  return (
+                    <div key={player.id} className="flex items-center gap-4 p-3 border rounded">
+                      <div className="flex-1">
+                        <div className="font-medium">{player.name}</div>
+                        <div className="text-sm text-muted-foreground">#{player.squadNumber}</div>
+                      </div>
+                      
+                      <Button
+                        variant={isSubstitute ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleSubstituteToggle(player.id)}
+                      >
+                        {isSubstitute ? "Remove from Subs" : "Add to Subs"}
+                      </Button>
+                    </div>
+                  );
+                })}
             </div>
           </div>
 
