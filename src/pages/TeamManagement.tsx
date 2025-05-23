@@ -139,6 +139,12 @@ const TeamManagement = () => {
     setIsTeamDialogOpen(true);
   };
 
+  const getClubName = (clubId?: string) => {
+    if (!clubId) return 'Independent';
+    const club = clubs.find(club => club.id === clubId);
+    return club?.name || 'Independent';
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -220,7 +226,7 @@ const TeamManagement = () => {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Club:</span>
                       <span className="font-medium">
-                        {clubs.find(club => club.id === team.clubId)?.name || 'Independent'}
+                        {getClubName(team.clubId)}
                       </span>
                     </div>
                     <div className="flex justify-between items-center text-sm">

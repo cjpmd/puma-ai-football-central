@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -32,6 +31,11 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   });
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Load staff from database on initial render
+  useEffect(() => {
+    loadStaffFromDatabase();
+  }, [team.id]);
 
   const saveStaffToDatabase = async (staffMember: TeamStaff) => {
     try {
@@ -179,11 +183,6 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       });
     }
   };
-
-  // Load staff from database on initial render
-  useState(() => {
-    loadStaffFromDatabase();
-  });
 
   function getRoleColor(role: TeamStaff['role']) {
     switch (role) {

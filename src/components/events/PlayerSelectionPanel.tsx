@@ -209,6 +209,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const handleSaveTeamSelection = async () => {
     try {
       setSaving(true);
+      
       // Convert playerPositions object to array of PlayerPosition objects
       const playerPositionsArray: PlayerPosition[] = Object.entries(playerPositions).map(
         ([positionId, playerId]) => ({
@@ -236,8 +237,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           .update({
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: playerPositionsArray as any, // Cast to any to satisfy Json type
-            substitutes: substitutes as any, // Cast to any to satisfy Json type
+            player_positions: JSON.stringify(playerPositionsArray),
+            substitutes: JSON.stringify(substitutes),
             performance_category_id: performanceCategoryId,
             updated_at: new Date().toISOString()
           })
@@ -255,8 +256,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             period_number: periodNumber,
             captain_id: captainId,
             formation: selectedFormation,
-            player_positions: playerPositionsArray as any, // Cast to any to satisfy Json type
-            substitutes: substitutes as any, // Cast to any to satisfy Json type
+            player_positions: JSON.stringify(playerPositionsArray),
+            substitutes: JSON.stringify(substitutes),
             performance_category_id: performanceCategoryId,
             duration_minutes: 45, // Default value
           });
@@ -284,6 +285,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
+  // Check if a player is assigned across all teams in this event, not just current team
   const isPlayerAssigned = (playerId: string) => {
     return Object.values(playerPositions).includes(playerId) || substitutes.includes(playerId);
   };
@@ -292,14 +294,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     return <div>Loading player selection...</div>;
   }
 
-  // Get available players for selection (not assigned to other positions)
+  // Get available players for selection (players can be selected for multiple teams)
   const getAvailablePlayersForPosition = (currentPosition: string) => {
     return players.filter(player => 
-      // Include if either:
-      // 1. Player is not assigned to any position
-      // 2. Player is assigned to this position
-      // 3. We want to allow players to be selected for multiple positions
-      !isPlayerAssigned(player.id) || playerPositions[currentPosition] === player.id
+      // Include all players - they can be selected for multiple teams in the same event
+      true
     );
   };
 
@@ -351,12 +350,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No player selected</SelectItem>
-                    {players.map(player => (
+                    {getAvailablePlayersForPosition(position).map(player => (
                       <SelectItem 
                         key={player.id} 
                         value={player.id}
-                        className={isPlayerAssigned(player.id) && playerPositions[position] !== player.id ? 
-                          "text-gray-400" : ""}
                       >
                         {player.squadNumber}. {player.name}
                       </SelectItem>
@@ -405,7 +402,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 <SelectItem 
                   key={player.id} 
                   value={player.id}
-                  className={isPlayerAssigned(player.id) ? "text-gray-400" : ""}
                 >
                   {player.squadNumber}. {player.name}
                 </SelectItem>
