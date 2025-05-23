@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -43,7 +44,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
             ...DEFAULT_PLAYER_ATTRIBUTES.goalkeeping.map((name, index) => ({
               id: `gk-${index}`,
               name,
-              group: 'goalkeeping',
+              group: "goalkeeping" as const,
               value: 5,
               enabled: true
             }))
@@ -54,21 +55,21 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
             ...DEFAULT_PLAYER_ATTRIBUTES.technical.map((name, index) => ({
               id: `tech-${index}`,
               name,
-              group: 'technical',
+              group: "technical" as const,
               value: 5,
               enabled: true
             })),
             ...DEFAULT_PLAYER_ATTRIBUTES.physical.map((name, index) => ({
               id: `phys-${index}`,
               name,
-              group: 'physical',
+              group: "physical" as const,
               value: 5,
               enabled: true
             })),
             ...DEFAULT_PLAYER_ATTRIBUTES.mental.map((name, index) => ({
               id: `ment-${index}`,
               name,
-              group: 'mental',
+              group: "mental" as const,
               value: 5,
               enabled: true
             }))
@@ -80,7 +81,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
             ...DEFAULT_PLAYER_ATTRIBUTES.goalkeeping.map((name, index) => ({
               id: `gk-${index}`,
               name,
-              group: 'goalkeeping',
+              group: "goalkeeping" as const,
               value: 5,
               enabled: false
             }))

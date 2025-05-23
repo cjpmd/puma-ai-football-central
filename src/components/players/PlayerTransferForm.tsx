@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Player, Team } from '@/types';
+import { Player, Team, SubscriptionType } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PlayerTransferFormProps {
@@ -59,7 +59,7 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
           gameFormat: team.game_format,
           seasonStart: team.season_start,
           seasonEnd: team.season_end,
-          subscriptionType: team.subscription_type,
+          subscriptionType: team.subscription_type as SubscriptionType,
           createdAt: team.created_at,
           updatedAt: team.updated_at,
           performanceCategories: [],

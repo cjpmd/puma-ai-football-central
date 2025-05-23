@@ -1,6 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
-import { Player, PlayerAttribute, PlayerObjective, PlayerComment, MatchStats, Position, Parent, PlayerTransfer, AttributeHistory } from '@/types';
+import { Player, PlayerAttribute, PlayerObjective, PlayerComment, MatchStats, Position, Parent, PlayerTransfer, AttributeHistory, SubscriptionStatus, PlayerSubscriptionType } from '@/types';
 
 export const playersService = {
   async getPlayersByTeamId(teamId: string): Promise<Player[]> {
@@ -381,8 +380,8 @@ export const playersService = {
       phone: parent.phone,
       playerId: parent.player_id,
       linkCode: parent.link_code,
-      subscriptionType: parent.subscription_type,
-      subscriptionStatus: parent.subscription_status,
+      subscriptionType: parent.subscription_type as PlayerSubscriptionType,
+      subscriptionStatus: parent.subscription_status as SubscriptionStatus,
       createdAt: parent.created_at,
       updatedAt: parent.updated_at
     }));
@@ -396,8 +395,8 @@ export const playersService = {
         email: parentData.email,
         phone: parentData.phone,
         player_id: parentData.playerId,
-        subscription_type: parentData.subscriptionType,
-        subscription_status: parentData.subscriptionStatus
+        subscription_type: parentData.subscriptionType as PlayerSubscriptionType,
+        subscription_status: parentData.subscriptionStatus as SubscriptionStatus
       }])
       .select()
       .single();
@@ -414,8 +413,8 @@ export const playersService = {
       phone: data.phone,
       playerId: data.player_id,
       linkCode: data.link_code,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as PlayerSubscriptionType,
+      subscriptionStatus: data.subscription_status as SubscriptionStatus,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -428,8 +427,8 @@ export const playersService = {
         name: parentData.name,
         email: parentData.email,
         phone: parentData.phone,
-        subscription_type: parentData.subscriptionType,
-        subscription_status: parentData.subscriptionStatus,
+        subscription_type: parentData.subscriptionType as PlayerSubscriptionType,
+        subscription_status: parentData.subscriptionStatus as SubscriptionStatus,
         updated_at: new Date().toISOString()
       })
       .eq('id', parentId)
@@ -448,8 +447,8 @@ export const playersService = {
       phone: data.phone,
       playerId: data.player_id,
       linkCode: data.link_code,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as PlayerSubscriptionType,
+      subscriptionStatus: data.subscription_status as SubscriptionStatus,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -509,7 +508,7 @@ export const playersService = {
         to_team_id: transferData.toTeamId,
         data_transfer_options: transferData.dataTransferOptions,
         requested_by: transferData.requestedById,
-        status: 'pending'
+        status: 'pending' as const
       }])
       .select()
       .single();
@@ -525,8 +524,14 @@ export const playersService = {
       fromTeamId: data.from_team_id,
       toTeamId: data.to_team_id,
       transferDate: data.transfer_date,
-      status: data.status,
-      dataTransferOptions: data.data_transfer_options,
+      status: data.status as "pending" | "accepted" | "rejected",
+      dataTransferOptions: data.data_transfer_options as {
+        full: boolean;
+        attributes: boolean;
+        comments: boolean;
+        objectives: boolean;
+        events: boolean;
+      },
       requestedBy: data.requested_by,
       acceptedBy: data.accepted_by,
       createdAt: data.created_at,
@@ -552,8 +557,14 @@ export const playersService = {
       fromTeamId: transfer.from_team_id,
       toTeamId: transfer.to_team_id,
       transferDate: transfer.transfer_date,
-      status: transfer.status,
-      dataTransferOptions: transfer.data_transfer_options,
+      status: transfer.status as "pending" | "accepted" | "rejected",
+      dataTransferOptions: transfer.data_transfer_options as {
+        full: boolean;
+        attributes: boolean;
+        comments: boolean;
+        objectives: boolean;
+        events: boolean;
+      },
       requestedBy: transfer.requested_by,
       acceptedBy: transfer.accepted_by,
       createdAt: transfer.created_at,
@@ -599,7 +610,7 @@ export const playersService = {
     const { data, error } = await supabase
       .from('player_transfers')
       .update({
-        status: 'accepted',
+        status: 'accepted' as const,
         accepted_by: acceptedById,
         updated_at: new Date().toISOString()
       })
@@ -618,8 +629,14 @@ export const playersService = {
       fromTeamId: data.from_team_id,
       toTeamId: data.to_team_id,
       transferDate: data.transfer_date,
-      status: data.status,
-      dataTransferOptions: data.data_transfer_options,
+      status: data.status as "pending" | "accepted" | "rejected",
+      dataTransferOptions: data.data_transfer_options as {
+        full: boolean;
+        attributes: boolean;
+        comments: boolean;
+        objectives: boolean;
+        events: boolean;
+      },
       requestedBy: data.requested_by,
       acceptedBy: data.accepted_by,
       createdAt: data.created_at,
@@ -631,7 +648,7 @@ export const playersService = {
     const { data, error } = await supabase
       .from('player_transfers')
       .update({
-        status: 'rejected',
+        status: 'rejected' as const,
         updated_at: new Date().toISOString()
       })
       .eq('id', transferId)
@@ -649,8 +666,14 @@ export const playersService = {
       fromTeamId: data.from_team_id,
       toTeamId: data.to_team_id,
       transferDate: data.transfer_date,
-      status: data.status,
-      dataTransferOptions: data.data_transfer_options,
+      status: data.status as "pending" | "accepted" | "rejected",
+      dataTransferOptions: data.data_transfer_options as {
+        full: boolean;
+        attributes: boolean;
+        comments: boolean;
+        objectives: boolean;
+        events: boolean;
+      },
       requestedBy: data.requested_by,
       acceptedBy: data.accepted_by,
       createdAt: data.created_at,
@@ -676,8 +699,14 @@ export const playersService = {
       fromTeamId: transfer.from_team_id,
       toTeamId: transfer.to_team_id,
       transferDate: transfer.transfer_date,
-      status: transfer.status,
-      dataTransferOptions: transfer.data_transfer_options,
+      status: transfer.status as "pending" | "accepted" | "rejected",
+      dataTransferOptions: transfer.data_transfer_options as {
+        full: boolean;
+        attributes: boolean;
+        comments: boolean;
+        objectives: boolean;
+        events: boolean;
+      },
       requestedBy: transfer.requested_by,
       acceptedBy: transfer.accepted_by,
       createdAt: transfer.created_at,
