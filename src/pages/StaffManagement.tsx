@@ -648,7 +648,7 @@ const StaffManagement = () => {
                                   size="sm"
                                   onClick={() => {
                                     if (confirm(`Are you sure you want to remove ${staff.name}?`)) {
-                                      handleRemoveClubStaff(staff.id);
+                                      handleRemoveClubStaff(staff.id, staff.role as UserRole);
                                     }
                                   }}
                                   className="text-red-600 hover:text-red-700"
