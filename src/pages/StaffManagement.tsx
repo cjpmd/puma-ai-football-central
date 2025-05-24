@@ -32,7 +32,7 @@ const StaffManagement = () => {
   const [isAddStaffDialogOpen, setIsAddStaffDialogOpen] = useState(false);
   const [isEditStaffDialogOpen, setIsEditStaffDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'teams' | 'clubs'>('teams');
-  const [clubView, setClubView] = useState<'overview' | 'staff'>('overview');
+  const [clubView, setClubView] = useState<'overview' | 'staff'>('staff');
   const [teamStaff, setTeamStaff] = useState<StaffMember[]>([]);
   const [clubStaff, setClubStaff] = useState<StaffMember[]>([]);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -67,11 +68,13 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       console.log('Club teams:', clubTeams);
 
       if (!clubTeams || clubTeams.length === 0) {
+        console.log('No teams linked to this club');
         setStaff([]);
         return;
       }
 
       const teamIds = clubTeams.map(ct => ct.team_id);
+      console.log('Team IDs:', teamIds);
 
       // Get all staff from linked teams
       const { data: teamStaff, error: staffError } = await supabase
@@ -87,9 +90,9 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         throw staffError;
       }
 
-      console.log('Team staff:', teamStaff);
+      console.log('Team staff data:', teamStaff);
 
-      if (teamStaff) {
+      if (teamStaff && teamStaff.length > 0) {
         const staffMembers: ClubStaffMember[] = teamStaff.map(staff => ({
           id: staff.id,
           name: staff.name || 'Unknown',
@@ -107,8 +110,10 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           certificates: Array.isArray(staff.certificates) ? staff.certificates : []
         }));
 
+        console.log('Processed staff members:', staffMembers);
         setStaff(staffMembers);
       } else {
+        console.log('No staff found in linked teams');
         setStaff([]);
       }
     } catch (error: any) {
@@ -222,7 +227,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
             <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h3 className="font-semibold mb-2">No Staff Found</h3>
             <p className="text-muted-foreground mb-4">
-              No staff members found in teams linked to this club.
+              No staff members found in teams linked to this club. Make sure teams are linked to this club and have staff assigned.
             </p>
           </CardContent>
         </Card>
@@ -312,7 +317,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
                             </div>
                           ) : (
                             <div className="text-xs text-muted-foreground">
-                              No badges recorded (FA API integration pending)
+                              No badges recorded
                             </div>
                           )}
                         </div>
@@ -327,4 +332,30 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       )}
     </div>
   );
+};
+
+const getRoleColor = (role: string) => {
+  switch (role) {
+    case 'manager': return 'bg-blue-500';
+    case 'assistant_manager': return 'bg-purple-500';
+    case 'coach': return 'bg-green-500';
+    case 'helper': return 'bg-orange-500';
+    default: return 'bg-gray-500';
+  }
+};
+
+const formatRoleName = (role: string): string => {
+  return role
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '';
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
 };
