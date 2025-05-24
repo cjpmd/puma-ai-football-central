@@ -109,7 +109,18 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
         console.error('Kit data error:', kitError);
         setKitIssues([]);
       } else {
-        setKitIssues(kitData || []);
+        // Transform the data to handle JSON types properly
+        const transformedKitData: KitIssue[] = (kitData || []).map(issue => ({
+          id: issue.id,
+          kit_item_name: issue.kit_item_name,
+          kit_size: issue.kit_size,
+          quantity: issue.quantity,
+          date_issued: issue.date_issued,
+          player_ids: Array.isArray(issue.player_ids) ? issue.player_ids as string[] : [],
+          issued_by: issue.issued_by || '',
+          created_at: issue.created_at,
+        }));
+        setKitIssues(transformedKitData);
       }
 
       setPlayers(playersData || []);

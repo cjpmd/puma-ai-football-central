@@ -85,7 +85,14 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
 
       // Get all unique player IDs from kit issues
       const allPlayerIds = Array.from(new Set(
-        kitIssuesData?.flatMap(issue => issue.player_ids) || []
+        kitIssuesData?.flatMap(issue => {
+          // Safely handle the JSON type
+          const playerIds = issue.player_ids;
+          if (Array.isArray(playerIds)) {
+            return playerIds as string[];
+          }
+          return [];
+        }) || []
       ));
 
       // Get player names
@@ -102,7 +109,10 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
       if (kitIssuesData && teamsData && playersData) {
         const kitItems: KitIssue[] = kitIssuesData.map(issue => {
           const team = teamsData.find(t => t.id === issue.team_id);
-          const playerNames = issue.player_ids.map(playerId => {
+          
+          // Safely handle player_ids JSON
+          const playerIds = Array.isArray(issue.player_ids) ? issue.player_ids as string[] : [];
+          const playerNames = playerIds.map(playerId => {
             const player = playersData.find(p => p.id === playerId);
             return player ? `${player.name} (#${player.squad_number})` : 'Unknown Player';
           });
@@ -113,7 +123,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
             kit_size: issue.kit_size,
             quantity: issue.quantity,
             date_issued: issue.date_issued,
-            player_ids: issue.player_ids,
+            player_ids: playerIds,
             teamName: team?.name || 'Unknown Team',
             teamId: issue.team_id,
             playerNames,
