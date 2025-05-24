@@ -50,18 +50,33 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // Get all teams linked to this club - using a more direct approach
+      // First get teams linked to this club
+      const { data: clubTeams, error: clubTeamsError } = await supabase
+        .from('club_teams')
+        .select('team_id')
+        .eq('club_id', clubId);
+
+      if (clubTeamsError) {
+        console.error('Error fetching club teams:', clubTeamsError);
+        throw clubTeamsError;
+      }
+
+      console.log('Club teams found:', clubTeams);
+
+      if (!clubTeams || clubTeams.length === 0) {
+        console.log('No teams linked to this club');
+        setStaff([]);
+        return;
+      }
+
+      const teamIds = clubTeams.map(ct => ct.team_id);
+      console.log('Team IDs:', teamIds);
+
+      // Get staff for these teams
       const { data: teamStaff, error: staffError } = await supabase
         .from('team_staff')
-        .select(`
-          *,
-          teams!inner(
-            id,
-            name,
-            club_teams!inner(club_id)
-          )
-        `)
-        .eq('teams.club_teams.club_id', clubId);
+        .select('*')
+        .in('team_id', teamIds);
 
       if (staffError) {
         console.error('Error fetching team staff:', staffError);
@@ -70,23 +85,37 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
       console.log('Team staff data:', teamStaff);
 
-      if (teamStaff && teamStaff.length > 0) {
-        const staffMembers: ClubStaffMember[] = teamStaff.map(staff => ({
-          id: staff.id,
-          name: staff.name || 'Unknown',
-          email: staff.email || '',
-          phone: staff.phone || '',
-          role: staff.role,
-          teamName: staff.teams?.name || 'Unknown Team',
-          teamId: staff.team_id,
-          pvgChecked: staff.pvg_checked || false,
-          pvgCheckedBy: staff.pvg_checked_by || '',
-          pvgCheckedAt: staff.pvg_checked_at || '',
-          coachingBadges: Array.isArray(staff.coaching_badges) 
-            ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
-            : [],
-          certificates: Array.isArray(staff.certificates) ? staff.certificates : []
-        }));
+      // Get team names
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds);
+
+      if (teamsError) {
+        console.error('Error fetching teams data:', teamsError);
+        throw teamsError;
+      }
+
+      if (teamStaff && teamStaff.length > 0 && teamsData) {
+        const staffMembers: ClubStaffMember[] = teamStaff.map(staff => {
+          const team = teamsData.find(t => t.id === staff.team_id);
+          return {
+            id: staff.id,
+            name: staff.name || 'Unknown',
+            email: staff.email || '',
+            phone: staff.phone || '',
+            role: staff.role,
+            teamName: team?.name || 'Unknown Team',
+            teamId: staff.team_id,
+            pvgChecked: staff.pvg_checked || false,
+            pvgCheckedBy: staff.pvg_checked_by || '',
+            pvgCheckedAt: staff.pvg_checked_at || '',
+            coachingBadges: Array.isArray(staff.coaching_badges) 
+              ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
+              : [],
+            certificates: Array.isArray(staff.certificates) ? staff.certificates : []
+          };
+        });
 
         console.log('Processed staff members:', staffMembers);
         setStaff(staffMembers);
