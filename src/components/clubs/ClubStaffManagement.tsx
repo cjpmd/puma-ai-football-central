@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,21 +51,10 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // First, let's check if the club exists
-      const { data: clubData, error: clubError } = await supabase
-        .from('clubs')
-        .select('id, name')
-        .eq('id', clubId)
-        .single();
+      // First, ensure we have the club-team relationships properly set up
+      await ensureClubTeamRelationships();
 
-      if (clubError) {
-        console.error('Error fetching club:', clubError);
-        throw clubError;
-      }
-
-      console.log('Club found:', clubData);
-
-      // Get all teams linked to this club with detailed logging
+      // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
         .from('club_teams')
         .select(`
@@ -78,30 +68,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         throw clubTeamsError;
       }
 
-      console.log('Club teams query result:', clubTeams);
-
-      // Also check if there are any teams that should be linked
-      const { data: allTeams, error: allTeamsError } = await supabase
-        .from('teams')
-        .select('id, name');
-
-      if (allTeamsError) {
-        console.error('Error fetching all teams:', allTeamsError);
-      } else {
-        console.log('All teams in database:', allTeams);
-      }
-
-      // Check club_teams table directly
-      const { data: directClubTeams, error: directError } = await supabase
-        .from('club_teams')
-        .select('*')
-        .eq('club_id', clubId);
-
-      if (directError) {
-        console.error('Error fetching direct club teams:', directError);
-      } else {
-        console.log('Direct club_teams lookup:', directClubTeams);
-      }
+      console.log('Club teams found:', clubTeams);
 
       if (!clubTeams || clubTeams.length === 0) {
         console.log('No teams linked to this club');
@@ -162,6 +129,46 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setStaff([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const ensureClubTeamRelationships = async () => {
+    try {
+      // Check if there are teams with this club_id that aren't in club_teams
+      const { data: teamsWithClubId, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name, club_id')
+        .eq('club_id', clubId);
+
+      if (teamsError) {
+        console.error('Error fetching teams with club_id:', teamsError);
+        return;
+      }
+
+      if (teamsWithClubId && teamsWithClubId.length > 0) {
+        console.log('Found teams with club_id:', teamsWithClubId);
+        
+        // Insert missing club_teams relationships
+        for (const team of teamsWithClubId) {
+          const { error: insertError } = await supabase
+            .from('club_teams')
+            .insert({
+              club_id: clubId,
+              team_id: team.id,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
+            console.error('Error inserting club_teams relationship:', insertError);
+          } else {
+            console.log('Successfully linked team to club:', team.name);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring club-team relationships:', error);
     }
   };
 
@@ -265,9 +272,12 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
             <p className="text-muted-foreground mb-4">
               No staff members found in teams linked to this club. Make sure teams are linked to this club and have staff assigned.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Check the browser console for detailed debugging information.
-            </p>
+            <Button
+              onClick={() => window.location.href = '/teams'}
+              className="bg-puma-blue-500 hover:bg-puma-blue-600"
+            >
+              Manage Teams
+            </Button>
           </CardContent>
         </Card>
       ) : (
@@ -371,30 +381,4 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       )}
     </div>
   );
-};
-
-const getRoleColor = (role: string) => {
-  switch (role) {
-    case 'manager': return 'bg-blue-500';
-    case 'assistant_manager': return 'bg-purple-500';
-    case 'coach': return 'bg-green-500';
-    case 'helper': return 'bg-orange-500';
-    default: return 'bg-gray-500';
-  }
-};
-
-const formatRoleName = (role: string): string => {
-  return role
-    .split('_')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  });
 };
