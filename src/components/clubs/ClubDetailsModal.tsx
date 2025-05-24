@@ -5,6 +5,7 @@ import { Club } from '@/types';
 import { ClubStaffManagement } from './ClubStaffManagement';
 import { ClubTeamsOverview } from './ClubTeamsOverview';
 import { ClubCalendar } from './ClubCalendar';
+import { ClubEquipmentOverview } from './ClubEquipmentOverview';
 
 interface ClubDetailsModalProps {
   club: Club | null;
@@ -32,9 +33,10 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
         </DialogHeader>
         
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="staff">Staff</TabsTrigger>
+            <TabsTrigger value="equipment">Equipment</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="facilities">Facilities</TabsTrigger>
           </TabsList>
@@ -48,6 +50,13 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
           
           <TabsContent value="staff" className="space-y-6">
             <ClubStaffManagement
+              clubId={club.id}
+              clubName={club.name}
+            />
+          </TabsContent>
+          
+          <TabsContent value="equipment" className="space-y-6">
+            <ClubEquipmentOverview
               clubId={club.id}
               clubName={club.name}
             />

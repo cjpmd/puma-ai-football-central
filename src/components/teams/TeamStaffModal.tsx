@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, UserPlus, Award, CheckCircle, Clock } from 'lucide-react';
+import { Trash2, Plus, UserPlus, Award, CheckCircle, Clock, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -286,6 +286,18 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Info about PVG checking */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 text-blue-800">
+                <Info className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  PVG status can only be checked/unchecked by club officials in Club Management
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Add Staff Section */}
           <Card>
             <CardHeader>
@@ -373,8 +385,8 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
                             <div>
                               <div className="flex items-center gap-3 mb-2">
                                 <h4 className="font-semibold">{staffMember.name}</h4>
-                                <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
-                                  {formatRoleName(staffMember.role)}
+                                <Badge className={`text-white bg-green-500`}>
+                                  {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                                 </Badge>
                               </div>
                               
@@ -387,21 +399,18 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
                                 </div>
                                 
                                 <div className="space-y-2">
-                                  {/* PVG Check Section */}
+                                  {/* PVG Check Section - READ ONLY */}
                                   <div className="flex items-center gap-2">
                                     <Checkbox
                                       id={`pvg-${staffMember.id}`}
                                       checked={staffMember.pvgChecked}
-                                      onCheckedChange={(checked) => 
-                                        handlePVGCheck(staffMember.id, checked as boolean)
-                                      }
-                                      disabled={updating === staffMember.id}
+                                      disabled={true}
                                     />
                                     <label 
                                       htmlFor={`pvg-${staffMember.id}`}
-                                      className="text-sm font-medium cursor-pointer"
+                                      className="text-sm font-medium text-muted-foreground"
                                     >
-                                      PVG Checked
+                                      PVG Checked (Read Only)
                                     </label>
                                     {staffMember.pvgChecked && (
                                       <CheckCircle className="h-4 w-4 text-green-600" />
@@ -410,7 +419,11 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
                                   {staffMember.pvgChecked && staffMember.pvgCheckedAt && (
                                     <div className="text-xs text-muted-foreground flex items-center gap-1">
                                       <Clock className="h-3 w-3" />
-                                      Checked on {formatDate(staffMember.pvgCheckedAt)}
+                                      Checked on {new Date(staffMember.pvgCheckedAt).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric'
+                                      })}
                                     </div>
                                   )}
                                 </div>

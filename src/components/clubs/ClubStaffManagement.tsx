@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,39 +50,18 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // Get all teams linked to this club via club_teams table
-      const { data: clubTeams, error: clubTeamsError } = await supabase
-        .from('club_teams')
-        .select(`
-          team_id,
-          teams!inner(id, name)
-        `)
-        .eq('club_id', clubId);
-
-      if (clubTeamsError) {
-        console.error('Error fetching club teams:', clubTeamsError);
-        throw clubTeamsError;
-      }
-
-      console.log('Club teams found:', clubTeams);
-
-      if (!clubTeams || clubTeams.length === 0) {
-        console.log('No teams linked to this club');
-        setStaff([]);
-        return;
-      }
-
-      const teamIds = clubTeams.map(ct => ct.team_id);
-      console.log('Team IDs:', teamIds);
-
-      // Get all staff from linked teams
+      // Get all teams linked to this club - using a more direct approach
       const { data: teamStaff, error: staffError } = await supabase
         .from('team_staff')
         .select(`
           *,
-          teams!inner(id, name)
+          teams!inner(
+            id,
+            name,
+            club_teams!inner(club_id)
+          )
         `)
-        .in('team_id', teamIds);
+        .eq('teams.club_teams.club_id', clubId);
 
       if (staffError) {
         console.error('Error fetching team staff:', staffError);
@@ -254,8 +232,8 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
                       <div>
                         <div className="flex items-center gap-3 mb-2">
                           <h4 className="font-semibold text-lg">{staffMember.name}</h4>
-                          <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
-                            {formatRoleName(staffMember.role)}
+                          <Badge className={`text-white bg-green-500`}>
+                            {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                           </Badge>
                         </div>
                         
@@ -302,7 +280,11 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
                           {staffMember.pvgChecked && staffMember.pvgCheckedAt && (
                             <div className="text-xs text-muted-foreground flex items-center gap-1">
                               <Clock className="h-3 w-3" />
-                              Checked on {formatDate(staffMember.pvgCheckedAt)}
+                              Checked on {new Date(staffMember.pvgCheckedAt).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                              })}
                             </div>
                           )}
                         </div>
