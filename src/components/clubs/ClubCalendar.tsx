@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +42,7 @@ export const ClubCalendar: React.FC<ClubCalendarProps> = ({
       setLoading(true);
       console.log('Loading events for club:', clubId);
 
-      // Get all teams linked to this club
+      // Get all teams linked to this club via club_teams table
       const { data: clubTeams, error: clubTeamsError } = await supabase
         .from('club_teams')
         .select(`

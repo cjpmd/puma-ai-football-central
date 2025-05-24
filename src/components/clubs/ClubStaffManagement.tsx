@@ -51,10 +51,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // First, ensure we have the club-team relationships properly set up
-      await ensureClubTeamRelationships();
-
-      // Get all teams linked to this club
+      // Get all teams linked to this club via club_teams table
       const { data: clubTeams, error: clubTeamsError } = await supabase
         .from('club_teams')
         .select(`
@@ -129,46 +126,6 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setStaff([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const ensureClubTeamRelationships = async () => {
-    try {
-      // Check if there are teams with this club_id that aren't in club_teams
-      const { data: teamsWithClubId, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name, club_id')
-        .eq('club_id', clubId);
-
-      if (teamsError) {
-        console.error('Error fetching teams with club_id:', teamsError);
-        return;
-      }
-
-      if (teamsWithClubId && teamsWithClubId.length > 0) {
-        console.log('Found teams with club_id:', teamsWithClubId);
-        
-        // Insert missing club_teams relationships
-        for (const team of teamsWithClubId) {
-          const { error: insertError } = await supabase
-            .from('club_teams')
-            .insert({
-              club_id: clubId,
-              team_id: team.id,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-          if (insertError && insertError.code !== '23505') { // Ignore duplicate key errors
-            console.error('Error inserting club_teams relationship:', insertError);
-          } else {
-            console.log('Successfully linked team to club:', team.name);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error ensuring club-team relationships:', error);
     }
   };
 
