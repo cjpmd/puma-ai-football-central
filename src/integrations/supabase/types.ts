@@ -989,6 +989,36 @@ export type Database = {
           },
         ]
       }
+      team_clothing_sizes: {
+        Row: {
+          category: string
+          created_at: string
+          display_order: number
+          id: string
+          size_name: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          size_name: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          size_name?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       team_equipment: {
         Row: {
           condition: string
@@ -1068,6 +1098,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      team_kit_items: {
+        Row: {
+          available_sizes: Json
+          category: string
+          created_at: string
+          id: string
+          name: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          available_sizes?: Json
+          category?: string
+          created_at?: string
+          id?: string
+          name: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          available_sizes?: Json
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       team_privacy_settings: {
         Row: {

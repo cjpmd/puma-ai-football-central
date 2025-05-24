@@ -10,12 +10,11 @@ import { TeamBasicSettings } from './settings/TeamBasicSettings';
 import { TeamSubscriptionSettings } from './settings/TeamSubscriptionSettings';
 import { TeamAttributeSettings } from './settings/TeamAttributeSettings';
 import { TeamFAConnection } from './settings/TeamFAConnection';
-import { TeamKitSettings } from './settings/TeamKitSettings';
 import { TeamKitManagementSettings } from './settings/TeamKitManagementSettings';
 import { TeamPerformanceSettings } from './settings/TeamPerformanceSettings';
 import { TeamEquipmentSettings } from './settings/TeamEquipmentSettings';
 import { TeamPrivacySettings } from './settings/TeamPrivacySettings';
-import { Settings, Trophy, Star, Wifi, Shirt, Target, Package, Shield, Wrench } from 'lucide-react';
+import { Settings, Trophy, Star, Wifi, Target, Package, Shield, Wrench } from 'lucide-react';
 
 interface TeamSettingsModalProps {
   team: Team;
@@ -64,12 +63,6 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       component: <TeamFAConnection team={team as any} onUpdate={onUpdate} />
     },
     {
-      id: 'kit',
-      label: 'Kit Icons',
-      icon: <Shirt className="h-4 w-4" />,
-      component: <TeamKitSettings team={team} onUpdate={onUpdate} />
-    },
-    {
       id: 'kit-management',
       label: 'Kit Management',
       icon: <Wrench className="h-4 w-4" />,
@@ -100,7 +93,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-9 flex-shrink-0 mb-4">
+          <TabsList className="grid w-full grid-cols-8 flex-shrink-0 mb-4">
             {settingsTabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
                 {tab.icon}
