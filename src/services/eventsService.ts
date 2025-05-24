@@ -11,7 +11,7 @@ export interface CreateEventData {
   end_time?: string;
   location?: string;
   notes?: string;
-  event_type: 'training' | 'match' | 'fixture';
+  event_type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
 }
 
 export interface UpdateEventData extends CreateEventData {

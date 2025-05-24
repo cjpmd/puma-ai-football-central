@@ -9,7 +9,7 @@ export interface DatabaseEvent {
   end_time?: string;
   location?: string;
   notes?: string;
-  event_type: 'training' | 'match' | 'fixture';
+  event_type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   opponent?: string;
   is_home?: boolean;
   game_format?: string;

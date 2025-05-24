@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -8,18 +7,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, CheckCircle2, Users, Trash2, Edit, Trophy } from 'lucide-react';
+import { CalendarIcon, Users, Trash2, Edit, Trophy, Settings } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from '@/lib/utils';
-import { addDays, format } from 'date-fns';
+import { format } from 'date-fns';
 import { DatabaseEvent } from '@/types/event';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsService, CreateEventData, UpdateEventData } from '@/services/eventsService';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
+import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 
 const CalendarEventsPage = () => {
   const { teams } = useAuth();
@@ -28,6 +28,7 @@ const CalendarEventsPage = () => {
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const [eventTitle, setEventTitle] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
@@ -35,9 +36,20 @@ const CalendarEventsPage = () => {
   const [eventEndTime, setEventEndTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [eventNotes, setEventNotes] = useState('');
-  const [eventEventType, setEventEventType] = useState<'training' | 'match' | 'fixture'>('training');
+  const [eventEventType, setEventEventType] = useState<'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly'>('training');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
+
+  // Full list of event types
+  const eventTypes = [
+    { value: 'training', label: 'Training' },
+    { value: 'fixture', label: 'Fixture' },
+    { value: 'friendly', label: 'Friendly' },
+    { value: 'match', label: 'Match' },
+    { value: 'tournament', label: 'Tournament' },
+    { value: 'festival', label: 'Festival' },
+    { value: 'social', label: 'Social Event' }
+  ];
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events', selectedTeamId],
@@ -106,7 +118,7 @@ const CalendarEventsPage = () => {
       end_time: eventEndTime,
       location: eventLocation,
       notes: eventNotes,
-      event_type: eventEventType,
+      event_type: eventEventType as 'training' | 'match' | 'fixture',
     };
 
     createEvent(newEvent);
@@ -121,7 +133,7 @@ const CalendarEventsPage = () => {
     setEventEndTime(event.end_time || '');
     setEventLocation(event.location || '');
     setEventNotes(event.notes || '');
-    setEventEventType(event.event_type);
+    setEventEventType(event.event_type as any);
     setIsEditModalOpen(true);
   };
 
@@ -138,7 +150,7 @@ const CalendarEventsPage = () => {
       end_time: eventEndTime,
       location: eventLocation,
       notes: eventNotes,
-      event_type: eventEventType,
+      event_type: eventEventType as 'training' | 'match' | 'fixture',
     };
 
     updateEvent(updatedEvent);
@@ -177,15 +189,20 @@ const CalendarEventsPage = () => {
     setEventEventType('training');
   };
 
+  const handleTeamSelection = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
+    setIsTeamSelectionOpen(true);
+  };
+
+  const handlePostGameEdit = (event: DatabaseEvent) => {
+    setPostGameEventId(event.id);
+  };
+
   const filteredEvents = events.filter((event) => {
     if (!date?.from || !date?.to) return true;
     const eventDateObj = new Date(event.date);
     return eventDateObj >= date.from && eventDateObj <= date.to;
   });
-
-  const handlePostGameEdit = (event: DatabaseEvent) => {
-    setPostGameEventId(event.id);
-  };
 
   return (
     <DashboardLayout>
@@ -255,120 +272,105 @@ const CalendarEventsPage = () => {
           </div>
         </div>
 
-        <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {isLoading ? (
-                <div className="text-center py-4 col-span-full">Loading events...</div>
-              ) : filteredEvents.length === 0 ? (
-                <div className="text-center py-4 col-span-full">No events found for the selected date range.</div>
-              ) : (
-                filteredEvents.map((event) => (
-                  <div key={event.id} className="border rounded-md p-4">
-                    <h3 className="text-lg font-semibold">{event.title}</h3>
-                    <p className="text-sm text-muted-foreground">{formatDate(event.date, 'dd MMM yyyy')}</p>
-                    {event.start_time && event.end_time && (
-                      <p className="text-sm text-muted-foreground">
-                        {event.start_time} - {event.end_time}
-                      </p>
-                    )}
-                    {event.location && (
-                      <p className="text-sm text-muted-foreground">Location: {event.location}</p>
-                    )}
-                    {event.description && (
-                      <p className="text-sm mt-2">{event.description}</p>
-                    )}
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      
-        {/* Updated event list section with post-game edit button */}
+        {/* Events List */}
         <div className="space-y-3">
-          {filteredEvents.map((event) => {
-            const isCompleted = new Date(event.date) < new Date() || 
-              (new Date(event.date).toDateString() === new Date().toDateString() && 
-               event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
-            
-            return (
-              <div key={event.id} className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Badge 
-                    className={
-                      event.event_type === "match" || event.event_type === "fixture" 
-                        ? "bg-red-500" 
-                        : "bg-blue-500"
-                    }
-                  >
-                    {event.event_type}
-                  </Badge>
-                  <div className="flex items-center gap-2">
-                    {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
-                      <span className="text-lg text-green-600">🏆</span>
-                    )}
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditEvent(event)}
-                      >
-                        Edit
-                      </Button>
-                      {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
+          {isLoading ? (
+            <div className="text-center py-4">Loading events...</div>
+          ) : filteredEvents.length === 0 ? (
+            <div className="text-center py-4">No events found for the selected date range.</div>
+          ) : (
+            filteredEvents.map((event) => {
+              const isCompleted = new Date(event.date) < new Date() || 
+                (new Date(event.date).toDateString() === new Date().toDateString() && 
+                 event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
+              
+              const isMatchType = event.event_type === "match" || event.event_type === "fixture" || event.event_type === "friendly";
+              
+              return (
+                <div key={event.id} className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Badge 
+                      className={
+                        isMatchType 
+                          ? "bg-red-500" 
+                          : "bg-blue-500"
+                      }
+                    >
+                      {event.event_type}
+                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {isCompleted && isMatchType && (
+                        <span className="text-lg text-green-600">🏆</span>
+                      )}
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => handlePostGameEdit(event)}
+                          onClick={() => handleEditEvent(event)}
+                          title="Edit Event"
                         >
-                          <Trophy className="h-4 w-4" />
+                          <Edit className="h-4 w-4" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSelectedEvent(event)}
-                      >
-                        <Users className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDeleteEvent(event.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleTeamSelection(event)}
+                          title="Team Selection"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
+                        
+                        {isCompleted && isMatchType && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handlePostGameEdit(event)}
+                            title="Post-Game Editor"
+                          >
+                            <Trophy className="h-4 w-4" />
+                          </Button>
+                        )}
+                        
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700"
+                          onClick={() => handleDeleteEvent(event.id)}
+                          title="Delete Event"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-                
-                <Card>
-                  <CardContent>
-                    <h3 className="text-lg font-semibold">{event.title}</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(event.date, 'dd MMM yyyy')}
-                    </p>
-                    {event.start_time && event.end_time && (
+                  
+                  <Card>
+                    <CardContent className="pt-4">
+                      <h3 className="text-lg font-semibold">{event.title}</h3>
                       <p className="text-sm text-muted-foreground">
-                        {event.start_time} - {event.end_time}
+                        {formatDate(event.date, 'dd MMM yyyy')}
                       </p>
-                    )}
-                    {event.location && (
-                      <p className="text-sm text-muted-foreground">Location: {event.location}</p>
-                    )}
-                    {event.description && (
-                      <p className="text-sm mt-2">{event.description}</p>
-                    )}
-                    {event.notes && (
-                      <p className="text-sm mt-2">Notes: {event.notes}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          })}
+                      {event.start_time && event.end_time && (
+                        <p className="text-sm text-muted-foreground">
+                          {event.start_time} - {event.end_time}
+                        </p>
+                      )}
+                      {event.location && (
+                        <p className="text-sm text-muted-foreground">Location: {event.location}</p>
+                      )}
+                      {event.description && (
+                        <p className="text-sm mt-2">{event.description}</p>
+                      )}
+                      {event.notes && (
+                        <p className="text-sm mt-2">Notes: {event.notes}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Create Event Modal */}
@@ -379,17 +381,37 @@ const CalendarEventsPage = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="eventType" className="text-right">
+                  Event Type
+                </Label>
+                <Select value={eventEventType} onValueChange={value => setEventEventType(value as any)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="title" className="text-right">
                   Title
                 </Label>
                 <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="description" className="text-right">
                   Description
                 </Label>
                 <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="date" className="text-right">
                   Date
@@ -422,47 +444,36 @@ const CalendarEventsPage = () => {
                   </PopoverContent>
                 </Popover>
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="startTime" className="text-right">
                   Start Time
                 </Label>
                 <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="endTime" className="text-right">
                   End Time
                 </Label>
                 <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="location" className="text-right">
                   Location
                 </Label>
                 <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="notes" className="text-right">
                   Notes
                 </Label>
                 <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="eventType" className="text-right">
-                  Event Type
-                </Label>
-                <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select event type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="training">Training</SelectItem>
-                    <SelectItem value="match">Match</SelectItem>
-                    <SelectItem value="fixture">Fixture</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={closeCreateModal}>
                 Cancel
               </Button>
@@ -481,17 +492,37 @@ const CalendarEventsPage = () => {
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="eventType" className="text-right">
+                  Event Type
+                </Label>
+                <Select value={eventEventType} onValueChange={value => setEventEventType(value as any)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="title" className="text-right">
                   Title
                 </Label>
                 <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="description" className="text-right">
                   Description
                 </Label>
                 <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="date" className="text-right">
                   Date
@@ -524,47 +555,36 @@ const CalendarEventsPage = () => {
                   </PopoverContent>
                 </Popover>
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="startTime" className="text-right">
                   Start Time
                 </Label>
                 <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="endTime" className="text-right">
                   End Time
                 </Label>
                 <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="location" className="text-right">
                   Location
                 </Label>
                 <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
               </div>
+              
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="notes" className="text-right">
                   Notes
                 </Label>
                 <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
               </div>
-               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="eventType" className="text-right">
-                  Event Type
-                </Label>
-                <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select event type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="training">Training</SelectItem>
-                    <SelectItem value="match">Match</SelectItem>
-                    <SelectItem value="fixture">Fixture</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-            <div className="flex justify-end">
+            <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={closeEditModal}>
                 Cancel
               </Button>
@@ -572,6 +592,22 @@ const CalendarEventsPage = () => {
                 {isUpdateLoading ? "Updating..." : "Update Event"}
               </Button>
             </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Team Selection Modal */}
+        <Dialog open={isTeamSelectionOpen} onOpenChange={setIsTeamSelectionOpen}>
+          <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
+            </DialogHeader>
+            {selectedEvent && (
+              <EventTeamsTable
+                eventId={selectedEvent.id}
+                primaryTeamId={selectedTeamId}
+                gameFormat={selectedEvent.game_format || '7-a-side'}
+              />
+            )}
           </DialogContent>
         </Dialog>
 
