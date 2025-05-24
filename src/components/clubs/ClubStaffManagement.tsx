@@ -50,10 +50,13 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // First get teams linked to this club
+      // First get teams linked to this club with proper join
       const { data: clubTeams, error: clubTeamsError } = await supabase
         .from('club_teams')
-        .select('team_id')
+        .select(`
+          team_id,
+          teams!inner(id, name)
+        `)
         .eq('club_id', clubId);
 
       if (clubTeamsError) {
@@ -85,27 +88,16 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
       console.log('Team staff data:', teamStaff);
 
-      // Get team names
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name')
-        .in('id', teamIds);
-
-      if (teamsError) {
-        console.error('Error fetching teams data:', teamsError);
-        throw teamsError;
-      }
-
-      if (teamStaff && teamStaff.length > 0 && teamsData) {
+      if (teamStaff && teamStaff.length > 0) {
         const staffMembers: ClubStaffMember[] = teamStaff.map(staff => {
-          const team = teamsData.find(t => t.id === staff.team_id);
+          const team = clubTeams.find(ct => ct.team_id === staff.team_id);
           return {
             id: staff.id,
             name: staff.name || 'Unknown',
             email: staff.email || '',
             phone: staff.phone || '',
             role: staff.role,
-            teamName: team?.name || 'Unknown Team',
+            teamName: team?.teams?.name || 'Unknown Team',
             teamId: staff.team_id,
             pvgChecked: staff.pvg_checked || false,
             pvgCheckedBy: staff.pvg_checked_by || '',

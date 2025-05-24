@@ -7,6 +7,7 @@ import { ClubTeamsOverview } from './ClubTeamsOverview';
 import { ClubCalendar } from './ClubCalendar';
 import { ClubEquipmentOverview } from './ClubEquipmentOverview';
 import { ClubKitOverview } from './ClubKitOverview';
+import { FacilitiesManagement } from './FacilitiesManagement';
 
 interface ClubDetailsModalProps {
   club: Club | null;
@@ -79,9 +80,9 @@ export const ClubDetailsModal: React.FC<ClubDetailsModalProps> = ({
           </TabsContent>
           
           <TabsContent value="facilities" className="space-y-6">
-            <div className="text-center py-8 text-muted-foreground">
-              Facilities management coming soon...
-            </div>
+            <FacilitiesManagement
+              clubId={club.id}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>
