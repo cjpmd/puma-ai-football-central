@@ -27,7 +27,7 @@ export const eventsService = {
       .order('date', { ascending: true });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as DatabaseEvent[];
   },
 
   async createEvent(eventData: CreateEventData): Promise<DatabaseEvent> {
@@ -38,7 +38,7 @@ export const eventsService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as DatabaseEvent;
   },
 
   async updateEvent(eventData: UpdateEventData): Promise<DatabaseEvent> {
@@ -51,7 +51,7 @@ export const eventsService = {
       .single();
 
     if (error) throw error;
-    return data;
+    return data as DatabaseEvent;
   },
 
   async deleteEvent(eventId: string): Promise<void> {
