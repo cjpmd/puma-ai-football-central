@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +26,11 @@ interface PlayerStats {
   position: string;
   is_captain: boolean;
   player_name?: string;
+}
+
+interface EventScores {
+  home?: number;
+  away?: number;
 }
 
 export const PostGameEditor: React.FC<PostGameEditorProps> = ({
@@ -76,13 +81,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
   });
 
   // Set initial values when data loads
-  useState(() => {
+  useEffect(() => {
     if (event) {
-      const eventScores = event.scores || {};
-      setScores({
-        home: eventScores.home?.toString() || '',
-        away: eventScores.away?.toString() || ''
-      });
+      const eventScores = event.scores as EventScores;
+      if (eventScores && typeof eventScores === 'object') {
+        setScores({
+          home: eventScores.home?.toString() || '',
+          away: eventScores.away?.toString() || ''
+        });
+      }
       setPlayerOfMatchId(event.player_of_match_id || '');
     }
   }, [event]);

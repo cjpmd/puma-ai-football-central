@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
@@ -15,7 +16,7 @@ import { cn, formatDate } from '@/lib/utils';
 import { addDays, format } from 'date-fns';
 import { Event } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { eventsService } from '@/services/eventsService';
+import { eventsService, CreateEventData, UpdateEventData } from '@/services/eventsService';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
 import { playerStatsService } from '@/services/playerStatsService';
@@ -45,8 +46,8 @@ const CalendarEventsPage = () => {
     enabled: !!selectedTeamId,
   });
 
-  const { mutate: createEvent, isLoading: isCreateLoading } = useMutation({
-    mutationFn: eventsService.createEvent,
+  const { mutate: createEvent, isPending: isCreateLoading } = useMutation({
+    mutationFn: (eventData: CreateEventData) => eventsService.createEvent(eventData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
       toast.success('Event created successfully!');
@@ -58,8 +59,8 @@ const CalendarEventsPage = () => {
     },
   });
 
-  const { mutate: updateEvent, isLoading: isUpdateLoading } = useMutation({
-    mutationFn: eventsService.updateEvent,
+  const { mutate: updateEvent, isPending: isUpdateLoading } = useMutation({
+    mutationFn: (eventData: UpdateEventData) => eventsService.updateEvent(eventData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
       toast.success('Event updated successfully!');
@@ -71,8 +72,8 @@ const CalendarEventsPage = () => {
     },
   });
 
-  const { mutate: deleteEvent, isLoading: isDeleteLoading } = useMutation({
-    mutationFn: eventsService.deleteEvent,
+  const { mutate: deleteEvent, isPending: isDeleteLoading } = useMutation({
+    mutationFn: (eventId: string) => eventsService.deleteEvent(eventId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
       toast.success('Event deleted successfully!');
@@ -97,7 +98,7 @@ const CalendarEventsPage = () => {
       return;
     }
 
-    const newEvent = {
+    const newEvent: CreateEventData = {
       team_id: selectedTeamId,
       title: eventTitle,
       description: eventDescription,
@@ -126,9 +127,9 @@ const CalendarEventsPage = () => {
   };
 
   const handleUpdateEvent = () => {
-    if (!selectedEvent) return;
+    if (!selectedEvent || !eventDate) return;
 
-    const updatedEvent = {
+    const updatedEvent: UpdateEventData = {
       id: selectedEvent.id,
       team_id: selectedTeamId,
       title: eventTitle,
