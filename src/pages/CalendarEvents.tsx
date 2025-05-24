@@ -1,314 +1,188 @@
 import { useState, useEffect } from 'react';
+import { Calendar } from '@/components/ui/calendar';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { EventForm } from '@/components/events/EventForm';
-import { TeamSelectionManager } from '@/components/events/TeamSelectionManager';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { Event, GameFormat } from '@/types';
-import { Plus, Calendar as CalendarIcon, List, Clock, MapPin, Users, ChevronLeft, ChevronRight, Trophy, Target, Trash2 } from 'lucide-react';
+import { CalendarIcon, CheckCircle2, Users, Trash2, Edit, Trophy } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn, formatDate } from '@/lib/utils';
+import { addDays, format } from 'date-fns';
+import { Event } from '@/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { eventsService } from '@/services/eventsService';
 import { toast } from 'sonner';
+import { DateRange } from 'react-day-picker';
+import { playerStatsService } from '@/services/playerStatsService';
+import { PostGameEditor } from '@/components/events/PostGameEditor';
 
-const CalendarEvents = () => {
+const CalendarEventsPage = () => {
   const { teams } = useAuth();
-  const [events, setEvents] = useState<Event[]>([]);
-  const [selectedTeam, setSelectedTeam] = useState<string>('');
-  const [selectedDate, setSelectedDate] = useState<Date>();
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [activeView, setActiveView] = useState<'list' | 'calendar'>('list');
-  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
-  const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventDescription, setEventDescription] = useState('');
+  const [eventDate, setEventDate] = useState<Date | undefined>(undefined);
+  const [eventStartTime, setEventStartTime] = useState('');
+  const [eventEndTime, setEventEndTime] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventNotes, setEventNotes] = useState('');
+  const [eventEventType, setEventEventType] = useState<'training' | 'match' | 'fixture'>('training');
+  const queryClient = useQueryClient();
+  const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
 
-  // Auto-select single team
-  useEffect(() => {
-    if (teams.length === 1 && !selectedTeam) {
-      setSelectedTeam(teams[0].id);
+  const { data: events = [], isLoading } = useQuery({
+    queryKey: ['events', selectedTeamId],
+    queryFn: () => eventsService.getEventsByTeamId(selectedTeamId),
+    enabled: !!selectedTeamId,
+  });
+
+  const { mutate: createEvent, isLoading: isCreateLoading } = useMutation({
+    mutationFn: eventsService.createEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
+      toast.success('Event created successfully!');
+      closeCreateModal();
+    },
+    onError: (error) => {
+      console.error("Error creating event:", error);
+      toast.error('Failed to create event.');
+    },
+  });
+
+  const { mutate: updateEvent, isLoading: isUpdateLoading } = useMutation({
+    mutationFn: eventsService.updateEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
+      toast.success('Event updated successfully!');
+      closeEditModal();
+    },
+    onError: (error) => {
+      console.error("Error updating event:", error);
+      toast.error('Failed to update event.');
+    },
+  });
+
+  const { mutate: deleteEvent, isLoading: isDeleteLoading } = useMutation({
+    mutationFn: eventsService.deleteEvent,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
+      toast.success('Event deleted successfully!');
+    },
+    onError: (error) => {
+      console.error("Error deleting event:", error);
+      toast.error('Failed to delete event.');
+    },
+  });
+
+  const handleTeamChange = (teamId: string) => {
+    setSelectedTeamId(teamId);
+  };
+
+  const handleDateSelect = (date: DateRange | undefined) => {
+    setDate(date);
+  };
+
+  const handleCreateEvent = () => {
+    if (!eventTitle || !eventDate) {
+      toast.error('Please fill in all required fields.');
+      return;
     }
-  }, [teams, selectedTeam]);
 
-  useEffect(() => {
-    if (selectedTeam) {
-      loadEvents();
-    }
-  }, [selectedTeam, currentMonth]);
+    const newEvent = {
+      team_id: selectedTeamId,
+      title: eventTitle,
+      description: eventDescription,
+      date: format(eventDate, 'yyyy-MM-dd'),
+      start_time: eventStartTime,
+      end_time: eventEndTime,
+      location: eventLocation,
+      notes: eventNotes,
+      event_type: eventEventType,
+    };
 
-  const loadEvents = async () => {
-    if (!selectedTeam) return;
-
-    try {
-      setLoading(true);
-      
-      // Load events for the entire year to show proper dots on calendar
-      const startOfYear = new Date(currentMonth.getFullYear(), 0, 1);
-      const endOfYear = new Date(currentMonth.getFullYear(), 11, 31);
-
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .eq('team_id', selectedTeam)
-        .gte('date', startOfYear.toISOString().split('T')[0])
-        .lte('date', endOfYear.toISOString().split('T')[0])
-        .order('date')
-        .order('start_time');
-
-      if (error) throw error;
-
-      const eventsData: Event[] = (data || []).map(event => ({
-        id: event.id,
-        type: event.event_type as Event['type'],
-        title: event.title,
-        date: event.date,
-        startTime: event.start_time || '',
-        endTime: event.end_time || '',
-        meetingTime: event.meeting_time || '',
-        location: event.location || '',
-        gameFormat: event.game_format as GameFormat,
-        opponent: event.opponent || '',
-        isHome: event.is_home ?? true,
-        teamId: event.team_id,
-        facilityId: event.facility_id || '',
-        trainingNotes: event.training_notes || '',
-        teams: [event.team_id],
-        periods: [],
-        scores: event.scores as { home: number; away: number } | undefined,
-        playerOfTheMatchId: event.player_of_match_id || undefined,
-        createdAt: event.created_at || new Date().toISOString(),
-        updatedAt: event.updated_at || new Date().toISOString()
-      }));
-
-      setEvents(eventsData);
-    } catch (error: any) {
-      console.error('Error loading events:', error);
-      toast.error('Failed to load events');
-    } finally {
-      setLoading(false);
-    }
+    createEvent(newEvent);
   };
 
-  const handleCreateEvent = async (eventData: Partial<Event>) => {
-    try {
-      const { error } = await supabase
-        .from('events')
-        .insert({
-          team_id: selectedTeam,
-          event_type: eventData.type,
-          title: eventData.title,
-          date: eventData.date,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          meeting_time: eventData.meetingTime,
-          location: eventData.location,
-          game_format: eventData.gameFormat,
-          opponent: eventData.opponent,
-          is_home: eventData.isHome,
-          facility_id: eventData.facilityId,
-          training_notes: eventData.trainingNotes,
-          scores: eventData.scores,
-          player_of_match_id: eventData.playerOfTheMatchId
-        });
-
-      if (error) throw error;
-
-      // If multiple teams, create event_teams entries
-      if (eventData.teams && eventData.teams.length > 1) {
-        const eventTeamsData = eventData.teams.map((teamId, index) => ({
-          event_id: undefined, // Will be filled by the response
-          team_id: teamId,
-          team_number: index + 1
-        }));
-
-        // We need the event ID, so let's get it from the inserted event
-        const { data: insertedEvent } = await supabase
-          .from('events')
-          .select('id')
-          .eq('team_id', selectedTeam)
-          .eq('title', eventData.title)
-          .eq('date', eventData.date)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-
-        if (insertedEvent) {
-          const eventTeamsWithId = eventTeamsData.map(et => ({
-            ...et,
-            event_id: insertedEvent.id
-          }));
-
-          await supabase
-            .from('event_teams')
-            .insert(eventTeamsWithId);
-        }
-      }
-
-      toast.success('Event created successfully');
-      setIsEventFormOpen(false);
-      loadEvents();
-    } catch (error: any) {
-      console.error('Error creating event:', error);
-      toast.error('Failed to create event');
-    }
+  const handleEditEvent = (event: Event) => {
+    setSelectedEvent(event);
+    setEventTitle(event.title);
+    setEventDescription(event.description || '');
+    setEventDate(new Date(event.date));
+    setEventStartTime(event.start_time || '');
+    setEventEndTime(event.end_time || '');
+    setEventLocation(event.location || '');
+    setEventNotes(event.notes || '');
+    setEventEventType(event.event_type);
+    setIsEditModalOpen(true);
   };
 
-  const handleEditEvent = async (eventData: Partial<Event>) => {
-    if (!editingEvent) return;
+  const handleUpdateEvent = () => {
+    if (!selectedEvent) return;
 
-    try {
-      const { error } = await supabase
-        .from('events')
-        .update({
-          event_type: eventData.type,
-          title: eventData.title,
-          date: eventData.date,
-          start_time: eventData.startTime,
-          end_time: eventData.endTime,
-          meeting_time: eventData.meetingTime,
-          location: eventData.location,
-          game_format: eventData.gameFormat,
-          opponent: eventData.opponent,
-          is_home: eventData.isHome,
-          facility_id: eventData.facilityId,
-          training_notes: eventData.trainingNotes,
-          scores: eventData.scores,
-          player_of_match_id: eventData.playerOfTheMatchId
-        })
-        .eq('id', editingEvent.id);
+    const updatedEvent = {
+      id: selectedEvent.id,
+      team_id: selectedTeamId,
+      title: eventTitle,
+      description: eventDescription,
+      date: format(eventDate, 'yyyy-MM-dd'),
+      start_time: eventStartTime,
+      end_time: eventEndTime,
+      location: eventLocation,
+      notes: eventNotes,
+      event_type: eventEventType,
+    };
 
-      if (error) throw error;
-
-      // Update event_teams if multiple teams
-      if (eventData.teams && eventData.teams.length > 1) {
-        // Delete existing event_teams
-        await supabase
-          .from('event_teams')
-          .delete()
-          .eq('event_id', editingEvent.id);
-
-        // Insert new event_teams
-        const eventTeamsData = eventData.teams.map((teamId, index) => ({
-          event_id: editingEvent.id,
-          team_id: teamId,
-          team_number: index + 1
-        }));
-
-        await supabase
-          .from('event_teams')
-          .insert(eventTeamsData);
-      }
-
-      toast.success('Event updated successfully');
-      setIsEventFormOpen(false);
-      setEditingEvent(null);
-      loadEvents();
-    } catch (error: any) {
-      console.error('Error updating event:', error);
-      toast.error('Failed to update event');
-    }
+    updateEvent(updatedEvent);
   };
 
-  const handleDeleteEvent = async (eventId: string) => {
-    try {
-      // Delete related event_teams first
-      await supabase
-        .from('event_teams')
-        .delete()
-        .eq('event_id', eventId);
-
-      // Delete event_selections
-      await supabase
-        .from('event_selections')
-        .delete()
-        .eq('event_id', eventId);
-
-      // Delete the event
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId);
-
-      if (error) throw error;
-
-      toast.success('Event deleted successfully');
-      loadEvents();
-    } catch (error: any) {
-      console.error('Error deleting event:', error);
-      toast.error('Failed to delete event');
-    }
+  const handleDeleteEvent = (eventId: string) => {
+    deleteEvent(eventId);
   };
 
-  const getEventTypeColor = (type: Event['type']) => {
-    switch (type) {
-      case 'training': return 'bg-blue-500';
-      case 'fixture': return 'bg-red-500';
-      case 'friendly': return 'bg-green-500';
-      case 'tournament': return 'bg-purple-500';
-      case 'festival': return 'bg-orange-500';
-      case 'social': return 'bg-pink-500';
-      default: return 'bg-gray-500';
-    }
+  const openCreateModal = () => {
+    setIsCreateModalOpen(true);
   };
 
-  const getMatchResult = (scores?: { home: number; away: number }, isHome?: boolean) => {
-    if (!scores) return null;
-    
-    const teamScore = isHome ? scores.home : scores.away;
-    const opponentScore = isHome ? scores.away : scores.home;
-    
-    if (teamScore > opponentScore) return { result: 'win', icon: '🏆', color: 'text-green-600' };
-    if (teamScore < opponentScore) return { result: 'loss', icon: '❌', color: 'text-red-600' };
-    return { result: 'draw', icon: '🤝', color: 'text-yellow-600' };
+  const closeCreateModal = () => {
+    setIsCreateModalOpen(false);
+    setEventTitle('');
+    setEventDescription('');
+    setEventDate(undefined);
+    setEventStartTime('');
+    setEventEndTime('');
+    setEventLocation('');
+    setEventNotes('');
+    setEventEventType('training');
   };
 
-  const formatTime = (time?: string) => {
-    if (!time) return '';
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedEvent(null);
+    setEventTitle('');
+    setEventDescription('');
+    setEventDate(undefined);
+    setEventStartTime('');
+    setEventEndTime('');
+    setEventLocation('');
+    setEventNotes('');
+    setEventEventType('training');
   };
 
-  const getEventsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return events.filter(event => event.date === dateStr);
-  };
+  const filteredEvents = events.filter((event) => {
+    if (!date?.from || !date?.to) return true;
+    const eventDateObj = new Date(event.date);
+    return eventDateObj >= date.from && eventDateObj <= date.to;
+  });
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentMonth);
-    if (direction === 'prev') {
-      newDate.setMonth(newDate.getMonth() - 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() + 1);
-    }
-    setCurrentMonth(newDate);
-  };
-
-  const getCurrentMonthEvents = () => {
-    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const endOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    
-    return events
-      .filter(event => {
-        const eventDate = new Date(event.date);
-        return eventDate >= startOfMonth && eventDate <= endOfMonth;
-      })
-      .sort((a, b) => {
-        if (a.date === b.date) {
-          const timeA = a.startTime || '00:00';
-          const timeB = b.startTime || '00:00';
-          return timeA.localeCompare(timeB);
-        }
-        return a.date.localeCompare(b.date);
-      });
+  const handlePostGameEdit = (event: Event) => {
+    setPostGameEventId(event.id);
   };
 
   return (
@@ -321,433 +195,392 @@ const CalendarEvents = () => {
               Manage your team's schedule and events
             </p>
           </div>
+
+          <div className="flex items-center space-x-4">
+            {teams.length > 1 && (
+              <div className="min-w-[250px]">
+                <Select value={selectedTeamId} onValueChange={handleTeamChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className={cn(
+                    "w-[300px] justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      `${format(date.from, "MMM dd, yyyy")} - ${format(date.to, "MMM dd, yyyy")}`
+                    ) : (
+                      format(date.from, "MMM dd, yyyy")
+                    )
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={date?.from}
+                  selected={date}
+                  onSelect={handleDateSelect}
+                  numberOfMonths={2}
+                />
+              </PopoverContent>
+            </Popover>
+
+            <Button onClick={openCreateModal}>
+              Create Event
+            </Button>
+          </div>
         </div>
 
-        {teams.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-              <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="font-semibold text-lg mb-1">No Teams Available</h3>
-              <p className="text-muted-foreground mb-4 max-w-md">
-                You need to create a team before you can manage events.
-              </p>
-              <Button
-                onClick={() => window.location.href = '/teams'}
-                className="bg-puma-blue-500 hover:bg-puma-blue-600"
-              >
-                Create Team
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                {teams.length > 1 && (
-                  <div className="space-y-2">
-                    <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                      <SelectTrigger className="w-64">
-                        <SelectValue placeholder="Select a team" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {teams.map((team) => (
-                          <SelectItem key={team.id} value={team.id}>
-                            {team.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {isLoading ? (
+                <div className="text-center py-4 col-span-full">Loading events...</div>
+              ) : filteredEvents.length === 0 ? (
+                <div className="text-center py-4 col-span-full">No events found for the selected date range.</div>
+              ) : (
+                filteredEvents.map((event) => (
+                  <div key={event.id} className="border rounded-md p-4">
+                    <h3 className="text-lg font-semibold">{event.title}</h3>
+                    <p className="text-sm text-muted-foreground">{formatDate(event.date, 'dd MMM yyyy')}</p>
+                    {event.start_time && event.end_time && (
+                      <p className="text-sm text-muted-foreground">
+                        {event.start_time} - {event.end_time}
+                      </p>
+                    )}
+                    {event.location && (
+                      <p className="text-sm text-muted-foreground">Location: {event.location}</p>
+                    )}
+                    {event.description && (
+                      <p className="text-sm mt-2">{event.description}</p>
+                    )}
                   </div>
-                )}
-
-                {selectedTeam && (
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => navigateMonth('prev')}>
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <div className="text-sm font-medium min-w-[120px] text-center">
-                      {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => navigateMonth('next')}>
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-
-              {selectedTeam && (
-                <div className="flex gap-2">
-                  <Dialog open={isEventFormOpen} onOpenChange={setIsEventFormOpen}>
-                    <DialogTrigger asChild>
-                      <Button
-                        className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                        onClick={() => {
-                          setEditingEvent(null);
-                          setIsEventFormOpen(true);
-                        }}
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Create Event
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[600px] max-h-[90vh]">
-                      <DialogHeader>
-                        <DialogTitle>
-                          {editingEvent ? 'Edit Event' : 'Create New Event'}
-                        </DialogTitle>
-                      </DialogHeader>
-                      <EventForm
-                        event={editingEvent}
-                        teamId={selectedTeam}
-                        onSubmit={editingEvent ? handleEditEvent : handleCreateEvent}
-                        onCancel={() => {
-                          setIsEventFormOpen(false);
-                          setEditingEvent(null);
-                        }}
-                      />
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                ))
               )}
             </div>
-
-            {selectedTeam ? (
-              <Tabs value={activeView} onValueChange={(v) => setActiveView(v as 'calendar' | 'list')}>
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="list" className="flex items-center gap-2">
-                    <List className="h-4 w-4" />
-                    List View
-                  </TabsTrigger>
-                  <TabsTrigger value="calendar" className="flex items-center gap-2">
-                    <CalendarIcon className="h-4 w-4" />
-                    Calendar View
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="list">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>
-                        Events for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </CardTitle>
-                      <CardDescription>
-                        All events for the selected month
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <ScrollArea className="h-[600px]">
-                        {loading ? (
-                          <div className="text-center py-8">Loading events...</div>
-                        ) : getCurrentMonthEvents().length === 0 ? (
-                          <div className="text-center py-8">
-                            <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                            <h3 className="font-semibold mb-2">No Events This Month</h3>
-                            <p className="text-muted-foreground mb-4">
-                              No events scheduled for {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}.
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                            {getCurrentMonthEvents().map((event) => {
-                              const matchResult = getMatchResult(event.scores, event.isHome);
-                              return (
-                                <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                                  <CardContent className="p-4">
-                                    <div className="space-y-3">
-                                      <div className="flex items-center justify-between">
-                                        <Badge className={`text-white ${getEventTypeColor(event.type)}`}>
-                                          {event.type}
-                                        </Badge>
-                                        <div className="flex items-center gap-2">
-                                          {matchResult && (
-                                            <span className={`text-lg ${matchResult.color}`}>
-                                              {matchResult.icon}
-                                            </span>
-                                          )}
-                                          <div className="flex gap-1">
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => {
-                                                setEditingEvent(event);
-                                                setIsEventFormOpen(true);
-                                              }}
-                                            >
-                                              Edit
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => {
-                                                setSelectedEvent(event);
-                                                setIsTeamSelectionOpen(true);
-                                              }}
-                                            >
-                                              <Users className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => handleDeleteEvent(event.id)}
-                                              className="text-red-600 hover:text-red-700"
-                                            >
-                                              <Trash2 className="h-4 w-4" />
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      
-                                      <div>
-                                        <h4 className="font-semibold text-lg mb-2">{event.title}</h4>
-                                        <div className="space-y-2 text-sm text-muted-foreground">
-                                          <div className="flex items-center gap-2">
-                                            <CalendarIcon className="h-3 w-3" />
-                                            <span>{new Date(event.date).toLocaleDateString('en-US', { 
-                                              weekday: 'long', 
-                                              month: 'short', 
-                                              day: 'numeric' 
-                                            })}</span>
-                                          </div>
-                                          {event.startTime && (
-                                            <div className="flex items-center gap-2">
-                                              <Clock className="h-3 w-3" />
-                                              <span>
-                                                {formatTime(event.startTime)}
-                                                {event.endTime && ` - ${formatTime(event.endTime)}`}
-                                              </span>
-                                            </div>
-                                          )}
-                                          <div className="flex items-center gap-2">
-                                            <MapPin className="h-3 w-3" />
-                                            <span className="truncate">{event.location}</span>
-                                          </div>
-                                          {event.opponent && (
-                                            <div className="text-sm">
-                                              <span className="font-medium">vs {event.opponent}</span>
-                                              <span className="ml-2 text-xs">
-                                                ({event.isHome ? 'Home' : 'Away'})
-                                              </span>
-                                            </div>
-                                          )}
-                                          {event.scores && (
-                                            <div className="flex items-center gap-2">
-                                              <Trophy className="h-3 w-3" />
-                                              <span className="font-medium">
-                                                {event.isHome 
-                                                  ? `${event.scores.home} - ${event.scores.away}`
-                                                  : `${event.scores.away} - ${event.scores.home}`
-                                                }
-                                              </span>
-                                              {matchResult && (
-                                                <span className={`text-xs ${matchResult.color}`}>
-                                                  ({matchResult.result})
-                                                </span>
-                                              )}
-                                            </div>
-                                          )}
-                                          {event.playerOfTheMatchId && (
-                                            <div className="flex items-center gap-2">
-                                              <Target className="h-3 w-3" />
-                                              <span className="text-xs">Player of the Match selected</span>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </ScrollArea>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-
-                <TabsContent value="calendar">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>
-                        {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      {loading ? (
-                        <div className="text-center py-8">Loading events...</div>
-                      ) : (
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate}
-                          onSelect={setSelectedDate}
-                          month={currentMonth}
-                          onMonthChange={setCurrentMonth}
-                          className="rounded-md border"
-                          modifiers={{
-                            hasEvents: (date) => getEventsForDate(date).length > 0
-                          }}
-                          modifiersStyles={{
-                            hasEvents: { 
-                              backgroundColor: '#dbeafe',
-                              borderRadius: '6px'
-                            }
-                          }}
-                          components={{
-                            Day: ({ date, ...props }) => {
-                              const dayEvents = getEventsForDate(date);
-                              const hasFixtures = dayEvents.some(e => e.type === 'fixture' || e.type === 'friendly');
-                              const hasTraining = dayEvents.some(e => e.type === 'training');
-                              
-                              return (
-                                <div className="relative w-full h-full">
-                                  <button {...props} className="w-full h-full">
-                                    {date.getDate()}
-                                  </button>
-                                  {dayEvents.length > 0 && (
-                                    <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 flex gap-1">
-                                      {hasFixtures && (
-                                        <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
-                                      )}
-                                      {hasTraining && (
-                                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            }
-                          }}
-                        />
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  {selectedDate && (
-                    <Card className="mt-4">
-                      <CardHeader>
-                        <CardTitle>
-                          Events for {selectedDate.toLocaleDateString('en-US', { 
-                            weekday: 'long', 
-                            year: 'numeric', 
-                            month: 'long', 
-                            day: 'numeric' 
-                          })}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <ScrollArea className="h-[300px]">
-                          {getEventsForDate(selectedDate).length === 0 ? (
-                            <p className="text-muted-foreground text-center py-8">
-                              No events scheduled for this date
-                            </p>
-                          ) : (
-                            <div className="space-y-3">
-                              {getEventsForDate(selectedDate).map((event) => {
-                                const matchResult = getMatchResult(event.scores, event.isHome);
-                                return (
-                                  <Card key={event.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                                    <CardContent className="p-4">
-                                      <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                          <Badge className={`text-white ${getEventTypeColor(event.type)}`}>
-                                            {event.type}
-                                          </Badge>
-                                          <div>
-                                            <h4 className="font-semibold">{event.title}</h4>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                              {event.startTime && (
-                                                <div className="flex items-center gap-1">
-                                                  <Clock className="h-3 w-3" />
-                                                  {formatTime(event.startTime)}
-                                                  {event.endTime && ` - ${formatTime(event.endTime)}`}
-                                                </div>
-                                              )}
-                                              <div className="flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                {event.location}
-                                              </div>
-                                              {matchResult && (
-                                                <div className="flex items-center gap-1">
-                                                  <span className={matchResult.color}>
-                                                    {matchResult.icon}
-                                                  </span>
-                                                </div>
-                                              )}
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                              setEditingEvent(event);
-                                              setIsEventFormOpen(true);
-                                            }}
-                                          >
-                                            Edit
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => {
-                                              setSelectedEvent(event);
-                                              setIsTeamSelectionOpen(true);
-                                            }}
-                                          >
-                                            <Users className="h-4 w-4" />
-                                          </Button>
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleDeleteEvent(event.id)}
-                                            className="text-red-600 hover:text-red-700"
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </ScrollArea>
-                      </CardContent>
-                    </Card>
+          </CardContent>
+        </Card>
+      
+      {/* Updated event list section with post-game edit button */}
+      <div className="space-y-3">
+        {filteredEvents.map((event) => {
+          const isCompleted = new Date(event.date) < new Date() || 
+            (new Date(event.date).toDateString() === new Date().toDateString() && 
+             event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
+          
+          return (
+            <div key={event.id} className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Badge 
+                  className={
+                    event.event_type === "match" || event.event_type === "fixture" 
+                      ? "bg-red-500" 
+                      : "bg-blue-500"
+                  }
+                >
+                  {event.event_type}
+                </Badge>
+                <div className="flex items-center gap-2">
+                  {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
+                    <span className="text-lg text-green-600">🏆</span>
                   )}
-                </TabsContent>
-              </Tabs>
-            ) : (
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleEditEvent(event)}
+                    >
+                      Edit
+                    </Button>
+                    {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handlePostGameEdit(event)}
+                      >
+                        <Trophy className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedEvent(event)}
+                    >
+                      <Users className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700"
+                      onClick={() => handleDeleteEvent(event.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              
               <Card>
-                <CardContent className="py-8 text-center">
-                  <p className="text-muted-foreground">Please select a team to view events</p>
+                <CardContent>
+                  <h3 className="text-lg font-semibold">{event.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {formatDate(event.date, 'dd MMM yyyy')}
+                  </p>
+                  {event.start_time && event.end_time && (
+                    <p className="text-sm text-muted-foreground">
+                      {event.start_time} - {event.end_time}
+                    </p>
+                  )}
+                  {event.location && (
+                    <p className="text-sm text-muted-foreground">Location: {event.location}</p>
+                  )}
+                  {event.description && (
+                    <p className="text-sm mt-2">{event.description}</p>
+                  )}
+                  {event.notes && (
+                    <p className="text-sm mt-2">Notes: {event.notes}</p>
+                  )}
                 </CardContent>
               </Card>
-            )}
-          </>
-        )}
-
-        <Dialog open={isTeamSelectionOpen} onOpenChange={setIsTeamSelectionOpen}>
-          <DialogContent className="sm:max-w-[90vw] max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
-            </DialogHeader>
-            {selectedEvent && (
-              <ScrollArea className="h-[80vh]">
-                <TeamSelectionManager
-                  eventId={selectedEvent.id}
-                  teamId={selectedEvent.teamId}
-                  gameFormat={selectedEvent.gameFormat}
-                />
-              </ScrollArea>
-            )}
-          </DialogContent>
-        </Dialog>
+            </div>
+          );
+        })}
       </div>
+
+      <Dialog open={isCreateModalOpen} onOpenChange={closeCreateModal}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Create Event</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Title
+              </Label>
+              <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal",
+                      !eventDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {eventDate ? (
+                      format(eventDate, "MMM dd, yyyy")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={eventDate}
+                    onSelect={setEventDate}
+                    defaultMonth={eventDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">
+                Start Time
+              </Label>
+              <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endTime" className="text-right">
+                End Time
+              </Label>
+              <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="location" className="text-right">
+                Location
+              </Label>
+              <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="notes" className="text-right">
+                Notes
+              </Label>
+              <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="eventType" className="text-right">
+                Event Type
+              </Label>
+              <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select event type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="match">Match</SelectItem>
+                  <SelectItem value="fixture">Fixture</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" onClick={closeCreateModal}>
+              Cancel
+            </Button>
+            <Button type="submit" onClick={handleCreateEvent} disabled={isCreateLoading}>
+              {isCreateLoading ? "Creating..." : "Create Event"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
+        <DialogContent className="sm:max-w-[525px]">
+          <DialogHeader>
+            <DialogTitle>Edit Event</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                Title
+              </Label>
+              <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="description" className="text-right">
+                Description
+              </Label>
+              <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="date" className="text-right">
+                Date
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant={"outline"}
+                    className={cn(
+                      "w-[240px] justify-start text-left font-normal",
+                      !eventDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {eventDate ? (
+                      format(eventDate, "MMM dd, yyyy")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={eventDate}
+                    onSelect={setEventDate}
+                    defaultMonth={eventDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="startTime" className="text-right">
+                Start Time
+              </Label>
+              <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endTime" className="text-right">
+                End Time
+              </Label>
+              <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="location" className="text-right">
+                Location
+              </Label>
+              <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="notes" className="text-right">
+                Notes
+              </Label>
+              <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
+            </div>
+             <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="eventType" className="text-right">
+                Event Type
+              </Label>
+              <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Select event type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="training">Training</SelectItem>
+                  <SelectItem value="match">Match</SelectItem>
+                  <SelectItem value="fixture">Fixture</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <Button type="button" variant="secondary" onClick={closeEditModal}>
+              Cancel
+            </Button>
+            <Button type="submit" onClick={handleUpdateEvent} disabled={isUpdateLoading}>
+              {isUpdateLoading ? "Updating..." : "Update Event"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Post-Game Editor Modal */}
+      {postGameEventId && (
+        <PostGameEditor
+          eventId={postGameEventId}
+          isOpen={!!postGameEventId}
+          onClose={() => setPostGameEventId(null)}
+        />
+      )}
     </DashboardLayout>
   );
 };
 
-export default CalendarEvents;
+export default CalendarEventsPage;

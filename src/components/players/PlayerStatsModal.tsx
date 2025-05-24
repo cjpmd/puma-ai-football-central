@@ -13,7 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Trophy, Clock, MapPin } from 'lucide-react';
+import { Crown, Trophy, Clock, MapPin, RotateCcw } from 'lucide-react';
+import { playerStatsService } from '@/services/playerStatsService';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface PlayerStatsModalProps {
   player: Player;
@@ -26,6 +30,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   isOpen,
   onClose
 }) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const queryClient = useQueryClient();
   const { matchStats } = player;
 
   // Get top 3 positions by minutes played
@@ -46,12 +52,40 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const potmPercentage = matchStats.totalGames > 0 ? 
     Math.round((matchStats.playerOfTheMatchCount / matchStats.totalGames) * 100) : 0;
 
+  const handleRefreshStats = async () => {
+    setIsRefreshing(true);
+    try {
+      await playerStatsService.updatePlayerStats(player.id);
+      
+      // Invalidate and refetch player data
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
+      
+      toast.success('Match statistics updated successfully');
+    } catch (error) {
+      console.error('Error refreshing player stats:', error);
+      toast.error('Failed to update match statistics');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            Match Statistics - {player.name}
+          <DialogTitle className="flex items-center justify-between">
+            <span>Match Statistics - {player.name}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefreshStats}
+              disabled={isRefreshing}
+              className="flex items-center gap-2"
+            >
+              <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh Stats
+            </Button>
           </DialogTitle>
         </DialogHeader>
         

@@ -1479,6 +1479,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      update_all_completed_events_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_event_player_stats: {
+        Args: { event_uuid: string }
+        Returns: undefined
+      }
+      update_player_match_stats: {
+        Args: { player_uuid: string }
+        Returns: undefined
+      }
       user_is_global_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
