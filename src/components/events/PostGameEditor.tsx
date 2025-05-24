@@ -39,7 +39,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
   onClose
 }) => {
   const [scores, setScores] = useState({ home: '', away: '' });
-  const [playerOfMatchId, setPlayerOfMatchId] = useState<string>('');
+  const [playerOfMatchId, setPlayerOfMatchId] = useState<string>('none');
   const [isSaving, setIsSaving] = useState(false);
   const queryClient = useQueryClient();
 
@@ -90,7 +90,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
           away: eventScores.away?.toString() || ''
         });
       }
-      setPlayerOfMatchId(event.player_of_match_id || '');
+      setPlayerOfMatchId(event.player_of_match_id || 'none');
     }
   }, [event]);
 
@@ -107,7 +107,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
             home: parseInt(scores.home) || 0,
             away: parseInt(scores.away) || 0
           },
-          player_of_match_id: playerOfMatchId || null,
+          player_of_match_id: playerOfMatchId === 'none' ? null : playerOfMatchId,
           updated_at: new Date().toISOString()
         })
         .eq('id', eventId);
@@ -228,7 +228,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
                     <SelectValue placeholder="Select Player of the Match" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No selection</SelectItem>
+                    <SelectItem value="none">No selection</SelectItem>
                     {playerStats?.map((stat) => (
                       <SelectItem key={stat.player_id} value={stat.player_id}>
                         {stat.player_name}
