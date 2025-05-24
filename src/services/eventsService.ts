@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { DatabaseEvent } from '@/types/event';
 
 export interface CreateEventData {
   team_id: string;
@@ -18,7 +19,7 @@ export interface UpdateEventData extends CreateEventData {
 }
 
 export const eventsService = {
-  async getEventsByTeamId(teamId: string) {
+  async getEventsByTeamId(teamId: string): Promise<DatabaseEvent[]> {
     const { data, error } = await supabase
       .from('events')
       .select('*')
@@ -29,7 +30,7 @@ export const eventsService = {
     return data || [];
   },
 
-  async createEvent(eventData: CreateEventData) {
+  async createEvent(eventData: CreateEventData): Promise<DatabaseEvent> {
     const { data, error } = await supabase
       .from('events')
       .insert([eventData])
@@ -40,7 +41,7 @@ export const eventsService = {
     return data;
   },
 
-  async updateEvent(eventData: UpdateEventData) {
+  async updateEvent(eventData: UpdateEventData): Promise<DatabaseEvent> {
     const { id, ...updateData } = eventData;
     const { data, error } = await supabase
       .from('events')
@@ -53,7 +54,7 @@ export const eventsService = {
     return data;
   },
 
-  async deleteEvent(eventId: string) {
+  async deleteEvent(eventId: string): Promise<void> {
     const { error } = await supabase
       .from('events')
       .delete()

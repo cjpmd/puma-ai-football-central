@@ -14,19 +14,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from '@/lib/utils';
 import { addDays, format } from 'date-fns';
-import { Event } from '@/types';
+import { DatabaseEvent } from '@/types/event';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsService, CreateEventData, UpdateEventData } from '@/services/eventsService';
 import { toast } from 'sonner';
 import { DateRange } from 'react-day-picker';
-import { playerStatsService } from '@/services/playerStatsService';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
 
 const CalendarEventsPage = () => {
   const { teams } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
   const [date, setDate] = useState<DateRange | undefined>(undefined);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [eventTitle, setEventTitle] = useState('');
@@ -113,7 +112,7 @@ const CalendarEventsPage = () => {
     createEvent(newEvent);
   };
 
-  const handleEditEvent = (event: Event) => {
+  const handleEditEvent = (event: DatabaseEvent) => {
     setSelectedEvent(event);
     setEventTitle(event.title);
     setEventDescription(event.description || '');
@@ -184,7 +183,7 @@ const CalendarEventsPage = () => {
     return eventDateObj >= date.from && eventDateObj <= date.to;
   });
 
-  const handlePostGameEdit = (event: Event) => {
+  const handlePostGameEdit = (event: DatabaseEvent) => {
     setPostGameEventId(event.id);
   };
 

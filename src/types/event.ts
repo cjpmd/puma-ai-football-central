@@ -1,0 +1,30 @@
+
+export interface DatabaseEvent {
+  id: string;
+  team_id: string;
+  title: string;
+  description?: string;
+  date: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  notes?: string;
+  event_type: 'training' | 'match' | 'fixture';
+  opponent?: string;
+  is_home?: boolean;
+  game_format?: string;
+  scores?: {
+    home: number;
+    away: number;
+  };
+  player_of_match_id?: string;
+  coach_notes?: string;
+  staff_notes?: string;
+  training_notes?: string;
+  facility_id?: string;
+  facility_booking_id?: string;
+  meeting_time?: string;
+  total_minutes?: number;
+  created_at: string;
+  updated_at: string;
+}
