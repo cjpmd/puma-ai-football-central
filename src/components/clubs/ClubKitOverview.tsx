@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +19,7 @@ interface KitIssue {
   playerNames: string[];
 }
 
-interface Team {
+interface SimpleTeam {
   id: string;
   name: string;
 }
@@ -35,9 +34,9 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
   clubName
 }) => {
   const [kitIssues, setKitIssues] = useState<KitIssue[]>([]);
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<SimpleTeam[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<SimpleTeam | null>(null);
   const [isOverviewModalOpen, setIsOverviewModalOpen] = useState(false);
   const { toast } = useToast();
 
@@ -73,7 +72,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
       }
 
       const teamIds = clubTeams.map(ct => ct.team_id);
-      const teamData: Team[] = clubTeams.map(ct => ({
+      const teamData: SimpleTeam[] = clubTeams.map(ct => ({
         id: ct.teams.id,
         name: ct.teams.name
       }));
@@ -155,7 +154,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
     }
   };
 
-  const handleViewTeamKitOverview = (team: Team) => {
+  const handleViewTeamKitOverview = (team: SimpleTeam) => {
     setSelectedTeam(team);
     setIsOverviewModalOpen(true);
   };

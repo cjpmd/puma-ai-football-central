@@ -5,15 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Users, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Team } from '@/types';
+
+interface SimpleTeam {
+  id: string;
+  name: string;
+}
 
 interface PlayerKitOverviewModalProps {
-  team: Team;
+  team: SimpleTeam;
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface Player {
+interface SimplePlayer {
   id: string;
   name: string;
   squad_number: number;
@@ -31,7 +35,7 @@ export const PlayerKitOverviewModal: React.FC<PlayerKitOverviewModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<SimplePlayer[]>([]);
   const [kitItems, setKitItems] = useState<KitItem[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -57,6 +61,16 @@ export const PlayerKitOverviewModal: React.FC<PlayerKitOverviewModalProps> = ({
 
       if (playersError) throw playersError;
 
+      // Transform the data to ensure kit_sizes is properly typed
+      const transformedPlayers: SimplePlayer[] = (playersData || []).map(player => ({
+        id: player.id,
+        name: player.name,
+        squad_number: player.squad_number,
+        kit_sizes: typeof player.kit_sizes === 'object' && player.kit_sizes !== null 
+          ? player.kit_sizes as Record<string, string>
+          : {}
+      }));
+
       // Load kit items
       const { data: kitItemsData, error: kitItemsError } = await supabase
         .from('team_kit_items')
@@ -66,7 +80,7 @@ export const PlayerKitOverviewModal: React.FC<PlayerKitOverviewModalProps> = ({
 
       if (kitItemsError) throw kitItemsError;
 
-      setPlayers(playersData || []);
+      setPlayers(transformedPlayers);
       setKitItems(kitItemsData || []);
     } catch (error: any) {
       console.error('Error loading kit overview data:', error);
@@ -77,7 +91,7 @@ export const PlayerKitOverviewModal: React.FC<PlayerKitOverviewModalProps> = ({
     }
   };
 
-  const getPlayerSizeForItem = (player: Player, itemName: string) => {
+  const getPlayerSizeForItem = (player: SimplePlayer, itemName: string) => {
     if (!player.kit_sizes) return 'Not set';
     
     // Try to find a matching kit size based on item name
