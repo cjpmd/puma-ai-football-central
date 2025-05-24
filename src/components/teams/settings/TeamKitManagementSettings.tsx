@@ -41,9 +41,13 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
   const [clothingSizes, setClothingSizes] = useState<ClothingSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isSizeDialogOpen, setIsSizeDialogOpen] = useState(false);
+  const [isEditSizeDialogOpen, setIsEditSizeDialogOpen] = useState(false);
   const [newItem, setNewItem] = useState({ name: '', category: 'clothing' });
+  const [editingItem, setEditingItem] = useState<KitItem | null>(null);
   const [newSize, setNewSize] = useState({ size_name: '', category: 'clothing' });
+  const [editingSize, setEditingSize] = useState<ClothingSize | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -72,7 +76,15 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
 
       if (sizesError) throw sizesError;
 
-      setKitItems(itemsData || []);
+      // Transform the data to match our interface
+      const transformedItems = (itemsData || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes : []
+      }));
+
+      setKitItems(transformedItems);
       setClothingSizes(sizesData || []);
     } catch (error: any) {
       console.error('Error loading kit configuration:', error);
@@ -113,6 +125,42 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       toast({
         title: 'Error',
         description: error.message || 'Failed to add kit item',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditKitItem = (item: KitItem) => {
+    setEditingItem(item);
+    setIsEditItemDialogOpen(true);
+  };
+
+  const handleUpdateKitItem = async () => {
+    if (!editingItem || !editingItem.name.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('team_kit_items')
+        .update({
+          name: editingItem.name,
+          category: editingItem.category
+        })
+        .eq('id', editingItem.id);
+
+      if (error) throw error;
+
+      setEditingItem(null);
+      setIsEditItemDialogOpen(false);
+      loadKitConfiguration();
+      
+      toast({
+        title: 'Success',
+        description: 'Kit item updated successfully',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update kit item',
         variant: 'destructive',
       });
     }
@@ -176,6 +224,42 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
     }
   };
 
+  const handleEditSize = (size: ClothingSize) => {
+    setEditingSize(size);
+    setIsEditSizeDialogOpen(true);
+  };
+
+  const handleUpdateSize = async () => {
+    if (!editingSize || !editingSize.size_name.trim()) return;
+
+    try {
+      const { error } = await supabase
+        .from('team_clothing_sizes')
+        .update({
+          size_name: editingSize.size_name,
+          category: editingSize.category
+        })
+        .eq('id', editingSize.id);
+
+      if (error) throw error;
+
+      setEditingSize(null);
+      setIsEditSizeDialogOpen(false);
+      loadKitConfiguration();
+      
+      toast({
+        title: 'Success',
+        description: 'Size updated successfully',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update size',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleDeleteSize = async (sizeId: string) => {
     try {
       const { error } = await supabase
@@ -222,11 +306,10 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       </div>
 
       <Tabs defaultValue="issue" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="issue">Issue Kit</TabsTrigger>
           <TabsTrigger value="items">Kit Items</TabsTrigger>
           <TabsTrigger value="sizes">Sizes</TabsTrigger>
-          <TabsTrigger value="icons">Kit Icons</TabsTrigger>
         </TabsList>
 
         <TabsContent value="issue" className="space-y-4">
@@ -234,20 +317,57 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Kit Issue Tracking
+                Kit Issue Tracking & Icons
               </CardTitle>
               <CardDescription>
-                Track which kit items have been issued to players and when
+                Track which kit items have been issued to players and manage kit icons
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <Button 
-                onClick={() => setIsKitModalOpen(true)}
-                className="bg-puma-blue-500 hover:bg-puma-blue-600"
-              >
-                <Package className="h-4 w-4 mr-2" />
-                Manage Kit Issues
-              </Button>
+            <CardContent className="space-y-6">
+              <div>
+                <h4 className="font-medium mb-4">Kit Issue Management</h4>
+                <Button 
+                  onClick={() => setIsKitModalOpen(true)}
+                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                >
+                  <Package className="h-4 w-4 mr-2" />
+                  Manage Kit Issues
+                </Button>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-4">Kit Icons</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {['home', 'away', 'training', 'goalkeeper'].map((kitType) => (
+                    <div key={kitType} className="space-y-3">
+                      <Label className="capitalize">{kitType} Kit</Label>
+                      <div className="flex items-center gap-3">
+                        {team.kitIcons?.[kitType as keyof typeof team.kitIcons] && (
+                          <img
+                            src={team.kitIcons[kitType as keyof typeof team.kitIcons]}
+                            alt={`${kitType} kit`}
+                            className="w-12 h-12 object-cover rounded border"
+                          />
+                        )}
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const reader = new FileReader();
+                              reader.onload = (event) => {
+                                handleKitIconUpdate(kitType, event.target?.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -276,13 +396,22 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                       <h4 className="font-medium">{item.name}</h4>
                       <p className="text-sm text-muted-foreground capitalize">{item.category}</p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteKitItem(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditKitItem(item)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteKitItem(item.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {kitItems.length === 0 && (
@@ -319,13 +448,22 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                     {clothingSizes.filter(s => s.category === 'clothing').map((size) => (
                       <div key={size.id} className="flex items-center justify-between p-2 border rounded">
                         <span>{size.size_name}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteSize(size.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditSize(size)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteSize(size.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -336,63 +474,26 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                     {clothingSizes.filter(s => s.category === 'boots').map((size) => (
                       <div key={size.id} className="flex items-center justify-between p-2 border rounded">
                         <span>{size.size_name}</span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteSize(size.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditSize(size)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteSize(size.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="icons" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Image className="h-5 w-5" />
-                Kit Icons
-              </CardTitle>
-              <CardDescription>
-                Upload custom kit icons for different kit types
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {['home', 'away', 'training', 'goalkeeper'].map((kitType) => (
-                  <div key={kitType} className="space-y-3">
-                    <Label className="capitalize">{kitType} Kit</Label>
-                    <div className="flex items-center gap-3">
-                      {team.kitIcons?.[kitType as keyof typeof team.kitIcons] && (
-                        <img
-                          src={team.kitIcons[kitType as keyof typeof team.kitIcons]}
-                          alt={`${kitType} kit`}
-                          className="w-12 h-12 object-cover rounded border"
-                        />
-                      )}
-                      <Input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (event) => {
-                              handleKitIconUpdate(kitType, event.target?.result as string);
-                            };
-                            reader.readAsDataURL(file);
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>
@@ -441,6 +542,53 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         </DialogContent>
       </Dialog>
 
+      {/* Edit Kit Item Dialog */}
+      <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Kit Item</DialogTitle>
+            <DialogDescription>
+              Update the kit item details
+            </DialogDescription>
+          </DialogHeader>
+          {editingItem && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-item-name">Item Name</Label>
+                <Input
+                  id="edit-item-name"
+                  value={editingItem.name}
+                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                  placeholder="e.g., Training Shirt, Boots"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-item-category">Category</Label>
+                <Select 
+                  value={editingItem.category} 
+                  onValueChange={(value) => setEditingItem({ ...editingItem, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clothing">Clothing</SelectItem>
+                    <SelectItem value="boots">Boots</SelectItem>
+                    <SelectItem value="equipment">Equipment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateKitItem}>Update Item</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Add Size Dialog */}
       <Dialog open={isSizeDialogOpen} onOpenChange={setIsSizeDialogOpen}>
         <DialogContent>
@@ -479,6 +627,52 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
               <Button onClick={handleAddSize}>Add Size</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Size Dialog */}
+      <Dialog open={isEditSizeDialogOpen} onOpenChange={setIsEditSizeDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Size</DialogTitle>
+            <DialogDescription>
+              Update the size details
+            </DialogDescription>
+          </DialogHeader>
+          {editingSize && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-size-name">Size Name</Label>
+                <Input
+                  id="edit-size-name"
+                  value={editingSize.size_name}
+                  onChange={(e) => setEditingSize({ ...editingSize, size_name: e.target.value })}
+                  placeholder="e.g., XL, UK 8"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-size-category">Category</Label>
+                <Select 
+                  value={editingSize.category} 
+                  onValueChange={(value) => setEditingSize({ ...editingSize, category: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clothing">Clothing</SelectItem>
+                    <SelectItem value="boots">Boots</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsEditSizeDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateSize}>Update Size</Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

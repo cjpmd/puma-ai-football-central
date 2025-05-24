@@ -147,6 +147,7 @@ export type Player = {
   status?: "active" | "inactive"; // Player status (active or left the team)
   leaveDate?: string; // Date when player left the team
   leaveComments?: string; // Comments about player leaving
+  kit_sizes?: Record<string, string>; // Added kit_sizes property
   createdAt: string;
   updatedAt: string;
 };
