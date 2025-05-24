@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -102,7 +101,9 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           pvgChecked: staff.pvg_checked || false,
           pvgCheckedBy: staff.pvg_checked_by || '',
           pvgCheckedAt: staff.pvg_checked_at || '',
-          coachingBadges: Array.isArray(staff.coaching_badges) ? staff.coaching_badges : [],
+          coachingBadges: Array.isArray(staff.coaching_badges) 
+            ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
+            : [],
           certificates: Array.isArray(staff.certificates) ? staff.certificates : []
         }));
 
