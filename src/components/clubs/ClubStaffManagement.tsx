@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,7 +50,21 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // Get all teams linked to this club
+      // First, let's check if the club exists
+      const { data: clubData, error: clubError } = await supabase
+        .from('clubs')
+        .select('id, name')
+        .eq('id', clubId)
+        .single();
+
+      if (clubError) {
+        console.error('Error fetching club:', clubError);
+        throw clubError;
+      }
+
+      console.log('Club found:', clubData);
+
+      // Get all teams linked to this club with detailed logging
       const { data: clubTeams, error: clubTeamsError } = await supabase
         .from('club_teams')
         .select(`
@@ -65,7 +78,30 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         throw clubTeamsError;
       }
 
-      console.log('Club teams:', clubTeams);
+      console.log('Club teams query result:', clubTeams);
+
+      // Also check if there are any teams that should be linked
+      const { data: allTeams, error: allTeamsError } = await supabase
+        .from('teams')
+        .select('id, name');
+
+      if (allTeamsError) {
+        console.error('Error fetching all teams:', allTeamsError);
+      } else {
+        console.log('All teams in database:', allTeams);
+      }
+
+      // Check club_teams table directly
+      const { data: directClubTeams, error: directError } = await supabase
+        .from('club_teams')
+        .select('*')
+        .eq('club_id', clubId);
+
+      if (directError) {
+        console.error('Error fetching direct club teams:', directError);
+      } else {
+        console.log('Direct club_teams lookup:', directClubTeams);
+      }
 
       if (!clubTeams || clubTeams.length === 0) {
         console.log('No teams linked to this club');
@@ -228,6 +264,9 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
             <h3 className="font-semibold mb-2">No Staff Found</h3>
             <p className="text-muted-foreground mb-4">
               No staff members found in teams linked to this club. Make sure teams are linked to this club and have staff assigned.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Check the browser console for detailed debugging information.
             </p>
           </CardContent>
         </Card>
