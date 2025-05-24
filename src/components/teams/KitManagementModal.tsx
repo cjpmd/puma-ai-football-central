@@ -20,6 +20,13 @@ interface Player {
   squad_number: number;
 }
 
+interface KitItem {
+  id: string;
+  name: string;
+  category: string;
+  available_sizes: string[];
+}
+
 interface KitIssue {
   id: string;
   kit_item_name: string;
@@ -43,38 +50,19 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
   onClose
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [kitItems, setKitItems] = useState<KitItem[]>([]);
   const [kitIssues, setKitIssues] = useState<KitIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isAddingKit, setIsAddingKit] = useState(false);
   const [newKit, setNewKit] = useState({
-    name: '',
+    itemId: '',
     size: '',
     quantity: 1,
     selectedPlayers: [] as string[]
   });
   const { toast } = useToast();
   const { user } = useAuth();
-
-  // Predefined kit items and sizes
-  const kitItemTypes = [
-    'Training Shirt',
-    'Match Shirt (Home)',
-    'Match Shirt (Away)',
-    'Shorts',
-    'Socks',
-    'Training Jacket',
-    'Tracksuit',
-    'Goalkeeper Kit',
-    'Boots',
-    'Shin Pads',
-    'Water Bottle'
-  ];
-
-  const kitSizes = [
-    '3XS', '2XS', 'XS', 'S', 'M', 'L', 'XL', '2XL', '3XL',
-    'UK 3', 'UK 4', 'UK 5', 'UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11', 'UK 12'
-  ];
 
   useEffect(() => {
     if (isOpen && team?.id) {
@@ -97,6 +85,23 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
         .order('squad_number');
 
       if (playersError) throw playersError;
+
+      // Load configured kit items
+      const { data: kitItemsData, error: kitItemsError } = await supabase
+        .from('team_kit_items')
+        .select('*')
+        .eq('team_id', team.id)
+        .order('name');
+
+      if (kitItemsError) throw kitItemsError;
+
+      // Transform kit items data
+      const transformedKitItems: KitItem[] = (kitItemsData || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
+      }));
 
       // Load kit issues
       const { data: kitData, error: kitError } = await supabase
@@ -124,6 +129,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
       }
 
       setPlayers(playersData || []);
+      setKitItems(transformedKitItems);
     } catch (error: any) {
       console.error('Error loading kit data:', error);
       toast({
@@ -146,10 +152,20 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
   };
 
   const handleIssueKit = async () => {
-    if (!team?.id || !newKit.name.trim() || newKit.selectedPlayers.length === 0) {
+    if (!team?.id || !newKit.itemId || newKit.selectedPlayers.length === 0) {
       toast({
         title: 'Error',
         description: 'Please select kit item and at least one player',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const selectedKitItem = kitItems.find(item => item.id === newKit.itemId);
+    if (!selectedKitItem) {
+      toast({
+        title: 'Error',
+        description: 'Selected kit item not found',
         variant: 'destructive',
       });
       return;
@@ -163,7 +179,8 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
         .insert([
           {
             team_id: team.id,
-            kit_item_name: newKit.name,
+            kit_item_id: newKit.itemId,
+            kit_item_name: selectedKitItem.name,
             kit_size: newKit.size || null,
             quantity: newKit.quantity,
             player_ids: newKit.selectedPlayers,
@@ -176,7 +193,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
 
       // Reset form
       setNewKit({
-        name: '',
+        itemId: '',
         size: '',
         quantity: 1,
         selectedPlayers: []
@@ -205,6 +222,10 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
   const getPlayerName = (playerId: string) => {
     const player = players.find(p => p.id === playerId);
     return player ? `${player.name} (#${player.squad_number})` : 'Unknown Player';
+  };
+
+  const getSelectedKitItem = () => {
+    return kitItems.find(item => item.id === newKit.itemId);
   };
 
   return (
@@ -239,18 +260,23 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="kit-item">Kit Item *</Label>
-                      <Select value={newKit.name} onValueChange={(value) => setNewKit({ ...newKit, name: value })}>
+                      <Select value={newKit.itemId} onValueChange={(value) => setNewKit({ ...newKit, itemId: value, size: '' })}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select kit item" />
                         </SelectTrigger>
                         <SelectContent>
-                          {kitItemTypes.map((item) => (
-                            <SelectItem key={item} value={item}>
-                              {item}
+                          {kitItems.map((item) => (
+                            <SelectItem key={item.id} value={item.id}>
+                              {item.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                      {kitItems.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          No kit items configured. Add kit items in settings first.
+                        </p>
+                      )}
                     </div>
                     
                     <div className="space-y-2">
@@ -260,7 +286,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
                           <SelectValue placeholder="Select size (optional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          {kitSizes.map((size) => (
+                          {getSelectedKitItem()?.available_sizes.map((size) => (
                             <SelectItem key={size} value={size}>
                               {size}
                             </SelectItem>

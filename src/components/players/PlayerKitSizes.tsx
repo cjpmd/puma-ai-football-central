@@ -20,9 +20,11 @@ interface PlayerKitSizesProps {
   onUpdate: (kitSizes: Record<string, string>) => void;
 }
 
-interface ClothingSize {
-  size_name: string;
+interface KitItem {
+  id: string;
+  name: string;
   category: string;
+  available_sizes: string[];
 }
 
 export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
@@ -30,73 +32,51 @@ export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
   onUpdate
 }) => {
   const [kitSizes, setKitSizes] = useState<Record<string, string>>(player.kit_sizes || {});
-  const [availableSizes, setAvailableSizes] = useState<ClothingSize[]>([]);
+  const [kitItems, setKitItems] = useState<KitItem[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadAvailableSizes();
+    loadKitItems();
   }, [player.team_id]);
 
-  const loadAvailableSizes = async () => {
+  const loadKitItems = async () => {
     try {
       setLoading(true);
 
-      const { data: sizesData, error } = await supabase
-        .from('team_clothing_sizes')
-        .select('size_name, category')
+      const { data: kitItemsData, error } = await supabase
+        .from('team_kit_items')
+        .select('*')
         .eq('team_id', player.team_id)
-        .order('category, display_order');
+        .order('name');
 
       if (error) throw error;
 
-      setAvailableSizes(sizesData || []);
+      // Transform kit items data
+      const transformedKitItems: KitItem[] = (kitItemsData || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        category: item.category,
+        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
+      }));
+
+      setKitItems(transformedKitItems);
     } catch (error: any) {
-      console.error('Error loading available sizes:', error);
-      // Fallback to default sizes if team hasn't configured custom ones
-      setAvailableSizes([
-        { size_name: '3XS', category: 'clothing' },
-        { size_name: '2XS', category: 'clothing' },
-        { size_name: 'XS', category: 'clothing' },
-        { size_name: 'S', category: 'clothing' },
-        { size_name: 'M', category: 'clothing' },
-        { size_name: 'L', category: 'clothing' },
-        { size_name: 'XL', category: 'clothing' },
-        { size_name: '2XL', category: 'clothing' },
-        { size_name: '3XL', category: 'clothing' },
-        { size_name: 'UK 3', category: 'boots' },
-        { size_name: 'UK 4', category: 'boots' },
-        { size_name: 'UK 5', category: 'boots' },
-        { size_name: 'UK 6', category: 'boots' },
-        { size_name: 'UK 7', category: 'boots' },
-        { size_name: 'UK 8', category: 'boots' },
-        { size_name: 'UK 9', category: 'boots' },
-        { size_name: 'UK 10', category: 'boots' },
-        { size_name: 'UK 11', category: 'boots' },
-        { size_name: 'UK 12', category: 'boots' },
-      ]);
+      console.error('Error loading kit items:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load kit items',
+        variant: 'destructive',
+      });
+      setKitItems([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const kitCategories = [
-    { key: 'shirt', label: 'Shirt', category: 'clothing' },
-    { key: 'shorts', label: 'Shorts', category: 'clothing' },
-    { key: 'socks', label: 'Socks', category: 'clothing' },
-    { key: 'boots', label: 'Boots', category: 'boots' },
-    { key: 'tracksuit', label: 'Tracksuit', category: 'clothing' },
-    { key: 'training_top', label: 'Training Top', category: 'clothing' },
-    { key: 'goalkeeper_kit', label: 'Goalkeeper Kit', category: 'clothing' }
-  ];
-
-  const getSizesForCategory = (category: string) => {
-    return availableSizes.filter(size => size.category === category).map(size => size.size_name);
-  };
-
-  const handleSizeChange = (category: string, size: string) => {
-    const newSizes = { ...kitSizes, [category]: size };
+  const handleSizeChange = (itemName: string, size: string) => {
+    const newSizes = { ...kitSizes, [itemName]: size };
     setKitSizes(newSizes);
   };
 
@@ -138,7 +118,7 @@ export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-4">Loading size options...</div>
+          <div className="text-center py-4">Loading kit items...</div>
         </CardContent>
       </Card>
     );
@@ -152,45 +132,53 @@ export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
           Kit Sizes
         </CardTitle>
         <CardDescription>
-          Specify kit sizes for ordering from suppliers
+          Specify kit sizes for each configured kit item
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {kitCategories.map((category) => {
-            const availableCategorySizes = getSizesForCategory(category.category);
-            if (availableCategorySizes.length === 0) return null;
+        {kitItems.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No kit items configured for this team yet. Configure kit items in team settings first.
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {kitItems.map((item) => (
+                <div key={item.id} className="space-y-2">
+                  <Label htmlFor={`size-${item.id}`}>{item.name}</Label>
+                  <Select 
+                    value={kitSizes[item.name] || ''} 
+                    onValueChange={(value) => handleSizeChange(item.name, value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Select ${item.name.toLowerCase()} size`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {item.available_sizes.map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {item.available_sizes.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      No sizes configured for this item
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
 
-            return (
-              <div key={category.key} className="space-y-2">
-                <Label htmlFor={`size-${category.key}`}>{category.label}</Label>
-                <Select 
-                  value={kitSizes[category.key] || ''} 
-                  onValueChange={(value) => handleSizeChange(category.key, value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Select ${category.label.toLowerCase()} size`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCategorySizes.map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            );
-          })}
-        </div>
-
-        <Button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="bg-puma-blue-500 hover:bg-puma-blue-600"
-        >
-          {saving ? 'Saving...' : 'Save Kit Sizes'}
-        </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={saving}
+              className="bg-puma-blue-500 hover:bg-puma-blue-600"
+            >
+              {saving ? 'Saving...' : 'Save Kit Sizes'}
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   );

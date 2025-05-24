@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Package, Shirt, Settings, Plus, Trash2, Upload, Image } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Package, Shirt, Settings, Plus, Trash2, Upload, Image, Users } from 'lucide-react';
 import { Team } from '@/types/index';
 import { KitManagementModal } from '../KitManagementModal';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,7 @@ interface KitItem {
   id: string;
   name: string;
   category: string;
+  size_category: string;
   available_sizes: string[];
 }
 
@@ -36,6 +38,7 @@ interface DbKitItem {
   id: string;
   name: string;
   category: string;
+  size_category: string;
   available_sizes: any; // JSON type from Supabase
 }
 
@@ -51,7 +54,13 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
   const [isEditItemDialogOpen, setIsEditItemDialogOpen] = useState(false);
   const [isSizeDialogOpen, setIsSizeDialogOpen] = useState(false);
   const [isEditSizeDialogOpen, setIsEditSizeDialogOpen] = useState(false);
-  const [newItem, setNewItem] = useState({ name: '', category: 'clothing' });
+  const [isKitOverviewOpen, setIsKitOverviewOpen] = useState(false);
+  const [newItem, setNewItem] = useState({ 
+    name: '', 
+    category: 'clothing', 
+    size_category: 'clothing',
+    selectedSizes: [] as string[]
+  });
   const [editingItem, setEditingItem] = useState<KitItem | null>(null);
   const [newSize, setNewSize] = useState({ size_name: '', category: 'clothing' });
   const [editingSize, setEditingSize] = useState<ClothingSize | null>(null);
@@ -65,7 +74,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
     try {
       setLoading(true);
 
-      // Load kit items
+      // Load kit items with their configured sizes
       const { data: itemsData, error: itemsError } = await supabase
         .from('team_kit_items')
         .select('*')
@@ -83,11 +92,12 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
 
       if (sizesError) throw sizesError;
 
-      // Transform the data to match our interface with proper type handling
+      // Transform the data to match our interface
       const transformedItems: KitItem[] = (itemsData || []).map((item: DbKitItem) => ({
         id: item.id,
         name: item.name,
         category: item.category,
+        size_category: item.size_category || 'clothing',
         available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
       }));
 
@@ -115,12 +125,18 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
           team_id: team.id,
           name: newItem.name,
           category: newItem.category,
-          available_sizes: []
+          size_category: newItem.size_category,
+          available_sizes: newItem.selectedSizes
         }]);
 
       if (error) throw error;
 
-      setNewItem({ name: '', category: 'clothing' });
+      setNewItem({ 
+        name: '', 
+        category: 'clothing', 
+        size_category: 'clothing',
+        selectedSizes: []
+      });
       setIsAddItemDialogOpen(false);
       loadKitConfiguration();
       
@@ -138,7 +154,10 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
   };
 
   const handleEditKitItem = (item: KitItem) => {
-    setEditingItem(item);
+    setEditingItem({
+      ...item,
+      available_sizes: item.available_sizes || []
+    });
     setIsEditItemDialogOpen(true);
   };
 
@@ -150,7 +169,9 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         .from('team_kit_items')
         .update({
           name: editingItem.name,
-          category: editingItem.category
+          category: editingItem.category,
+          size_category: editingItem.size_category,
+          available_sizes: editingItem.available_sizes
         })
         .eq('id', editingItem.id);
 
@@ -299,6 +320,32 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
     onUpdate({ kitIcons: updatedKitIcons });
   };
 
+  const handleSizeSelectionChange = (sizeId: string, checked: boolean) => {
+    if (editingItem) {
+      const updatedSizes = checked 
+        ? [...editingItem.available_sizes, sizeId]
+        : editingItem.available_sizes.filter(id => id !== sizeId);
+      
+      setEditingItem({
+        ...editingItem,
+        available_sizes: updatedSizes
+      });
+    } else {
+      const updatedSizes = checked 
+        ? [...newItem.selectedSizes, sizeId]
+        : newItem.selectedSizes.filter(id => id !== sizeId);
+      
+      setNewItem({
+        ...newItem,
+        selectedSizes: updatedSizes
+      });
+    }
+  };
+
+  const getSizesForCategory = (category: string) => {
+    return clothingSizes.filter(size => size.category === category);
+  };
+
   if (loading) {
     return <div className="text-center py-8">Loading kit configuration...</div>;
   }
@@ -313,10 +360,11 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       </div>
 
       <Tabs defaultValue="issue" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="issue">Issue Kit</TabsTrigger>
           <TabsTrigger value="items">Kit Items</TabsTrigger>
           <TabsTrigger value="sizes">Sizes</TabsTrigger>
+          <TabsTrigger value="overview">Kit Overview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="issue" className="space-y-4">
@@ -342,6 +390,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                 </Button>
               </div>
 
+              {/* ... keep existing code (kit icons section) */}
               <div>
                 <h4 className="font-medium mb-4">Kit Icons</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -386,7 +435,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                 <div>
                   <CardTitle>Kit Items Configuration</CardTitle>
                   <CardDescription>
-                    Manage the types of kit items available for your team
+                    Manage the types of kit items and their available sizes
                   </CardDescription>
                 </div>
                 <Button onClick={() => setIsAddItemDialogOpen(true)} size="sm">
@@ -402,6 +451,9 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                     <div>
                       <h4 className="font-medium">{item.name}</h4>
                       <p className="text-sm text-muted-foreground capitalize">{item.category}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.available_sizes.length} sizes configured
+                      </p>
                     </div>
                     <div className="flex gap-2">
                       <Button
@@ -432,6 +484,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         </TabsContent>
 
         <TabsContent value="sizes" className="space-y-4">
+          {/* ... keep existing code (sizes tab content) */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -505,40 +558,94 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Kit Size Overview
+              </CardTitle>
+              <CardDescription>
+                View all players and their configured kit sizes by item
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => setIsKitOverviewOpen(true)}>
+                <Users className="h-4 w-4 mr-2" />
+                View Player Kit Sizes
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
-      {/* Add Kit Item Dialog */}
+      {/* Add Kit Item Dialog with Size Selection */}
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Add Kit Item</DialogTitle>
             <DialogDescription>
-              Add a new kit item type that can be issued to players
+              Add a new kit item type and configure its available sizes
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="item-name">Item Name</Label>
-              <Input
-                id="item-name"
-                value={newItem.name}
-                onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
-                placeholder="e.g., Training Shirt, Boots"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="item-name">Item Name</Label>
+                <Input
+                  id="item-name"
+                  value={newItem.name}
+                  onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
+                  placeholder="e.g., Training Shirt, Boots"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="item-category">Category</Label>
+                <Select value={newItem.category} onValueChange={(value) => setNewItem({ ...newItem, category: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clothing">Clothing</SelectItem>
+                    <SelectItem value="boots">Boots</SelectItem>
+                    <SelectItem value="equipment">Equipment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            
             <div className="space-y-2">
-              <Label htmlFor="item-category">Category</Label>
-              <Select value={newItem.category} onValueChange={(value) => setNewItem({ ...newItem, category: value })}>
+              <Label htmlFor="size-category">Size Category</Label>
+              <Select value={newItem.size_category} onValueChange={(value) => setNewItem({ ...newItem, size_category: value })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="clothing">Clothing</SelectItem>
-                  <SelectItem value="boots">Boots</SelectItem>
-                  <SelectItem value="equipment">Equipment</SelectItem>
+                  <SelectItem value="clothing">Clothing Sizes</SelectItem>
+                  <SelectItem value="boots">Boot Sizes</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Available Sizes</Label>
+              <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                {getSizesForCategory(newItem.size_category).map((size) => (
+                  <div key={size.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`size-${size.id}`}
+                      checked={newItem.selectedSizes.includes(size.size_name)}
+                      onCheckedChange={(checked) => handleSizeSelectionChange(size.size_name, checked as boolean)}
+                    />
+                    <label htmlFor={`size-${size.id}`} className="text-sm cursor-pointer">
+                      {size.size_name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsAddItemDialogOpen(false)}>
                 Cancel
@@ -551,40 +658,77 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
 
       {/* Edit Kit Item Dialog */}
       <Dialog open={isEditItemDialogOpen} onOpenChange={setIsEditItemDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
             <DialogTitle>Edit Kit Item</DialogTitle>
             <DialogDescription>
-              Update the kit item details
+              Update the kit item details and available sizes
             </DialogDescription>
           </DialogHeader>
           {editingItem && (
             <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-item-name">Item Name</Label>
-                <Input
-                  id="edit-item-name"
-                  value={editingItem.name}
-                  onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
-                  placeholder="e.g., Training Shirt, Boots"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-name">Item Name</Label>
+                  <Input
+                    id="edit-item-name"
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                    placeholder="e.g., Training Shirt, Boots"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-item-category">Category</Label>
+                  <Select 
+                    value={editingItem.category} 
+                    onValueChange={(value) => setEditingItem({ ...editingItem, category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clothing">Clothing</SelectItem>
+                      <SelectItem value="boots">Boots</SelectItem>
+                      <SelectItem value="equipment">Equipment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="edit-item-category">Category</Label>
+                <Label htmlFor="edit-size-category">Size Category</Label>
                 <Select 
-                  value={editingItem.category} 
-                  onValueChange={(value) => setEditingItem({ ...editingItem, category: value })}
+                  value={editingItem.size_category} 
+                  onValueChange={(value) => setEditingItem({ ...editingItem, size_category: value })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="clothing">Clothing</SelectItem>
-                    <SelectItem value="boots">Boots</SelectItem>
-                    <SelectItem value="equipment">Equipment</SelectItem>
+                    <SelectItem value="clothing">Clothing Sizes</SelectItem>
+                    <SelectItem value="boots">Boot Sizes</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Available Sizes</Label>
+                <div className="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto border rounded p-2">
+                  {getSizesForCategory(editingItem.size_category).map((size) => (
+                    <div key={size.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`edit-size-${size.id}`}
+                        checked={editingItem.available_sizes.includes(size.size_name)}
+                        onCheckedChange={(checked) => handleSizeSelectionChange(size.size_name, checked as boolean)}
+                      />
+                      <label htmlFor={`edit-size-${size.id}`} className="text-sm cursor-pointer">
+                        {size.size_name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setIsEditItemDialogOpen(false)}>
                   Cancel

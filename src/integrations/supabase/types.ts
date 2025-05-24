@@ -1058,6 +1058,7 @@ export type Database = {
           date_issued: string
           id: string
           issued_by: string | null
+          kit_item_id: string | null
           kit_item_name: string
           kit_size: string | null
           player_ids: Json
@@ -1070,6 +1071,7 @@ export type Database = {
           date_issued?: string
           id?: string
           issued_by?: string | null
+          kit_item_id?: string | null
           kit_item_name: string
           kit_size?: string | null
           player_ids?: Json
@@ -1082,6 +1084,7 @@ export type Database = {
           date_issued?: string
           id?: string
           issued_by?: string | null
+          kit_item_id?: string | null
           kit_item_name?: string
           kit_size?: string | null
           player_ids?: Json
@@ -1090,6 +1093,20 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "team_kit_issues_kit_item_id_fkey"
+            columns: ["kit_item_id"]
+            isOneToOne: false
+            referencedRelation: "kit_items_with_sizes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_kit_issues_kit_item_id_fkey"
+            columns: ["kit_item_id"]
+            isOneToOne: false
+            referencedRelation: "team_kit_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "team_kit_issues_team_id_fkey"
             columns: ["team_id"]
@@ -1106,6 +1123,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          size_category: string | null
           team_id: string
           updated_at: string
         }
@@ -1115,6 +1133,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          size_category?: string | null
           team_id: string
           updated_at?: string
         }
@@ -1124,6 +1143,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          size_category?: string | null
           team_id?: string
           updated_at?: string
         }
@@ -1437,7 +1457,18 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      kit_items_with_sizes: {
+        Row: {
+          available_size_ids: string[] | null
+          available_size_names: string[] | null
+          category: string | null
+          id: string | null
+          name: string | null
+          size_category: string | null
+          team_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       generate_club_serial: {
