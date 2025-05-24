@@ -44,9 +44,11 @@ export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
     try {
       setSaving(true);
 
+      const updateData: any = { kit_sizes: kitSizes };
+
       const { error } = await supabase
         .from('players')
-        .update({ kit_sizes: kitSizes })
+        .update(updateData)
         .eq('id', player.id);
 
       if (error) throw error;

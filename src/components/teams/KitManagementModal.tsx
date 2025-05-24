@@ -20,10 +20,10 @@ interface Player {
   squad_number: number;
 }
 
-interface KitItem {
+interface KitIssue {
   id: string;
-  name: string;
-  size?: string;
+  kit_item_name: string;
+  kit_size?: string;
   quantity: number;
   date_issued: string;
   player_ids: string[];
@@ -43,7 +43,7 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
   onClose
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
-  const [kitItems, setKitItems] = useState<KitItem[]>([]);
+  const [kitIssues, setKitIssues] = useState<KitIssue[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [isAddingKit, setIsAddingKit] = useState(false);
@@ -98,19 +98,21 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
 
       if (playersError) throw playersError;
 
-      // Load kit items (we'll create this table)
+      // Load kit issues
       const { data: kitData, error: kitError } = await supabase
         .from('team_kit_issues')
         .select('*')
         .eq('team_id', team.id)
         .order('date_issued', { ascending: false });
 
-      if (kitError && kitError.code !== 'PGRST116') { // Ignore table not found error for now
+      if (kitError) {
         console.error('Kit data error:', kitError);
+        setKitIssues([]);
+      } else {
+        setKitIssues(kitData || []);
       }
 
       setPlayers(playersData || []);
-      setKitItems(kitData || []);
     } catch (error: any) {
       console.error('Error loading kit data:', error);
       toast({
@@ -300,36 +302,36 @@ export const KitManagementModal: React.FC<KitManagementModalProps> = ({
               {/* Kit Issues History */}
               {loading ? (
                 <div className="text-center py-8">Loading kit history...</div>
-              ) : kitItems.length === 0 ? (
+              ) : kitIssues.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   No kit has been issued yet. Start by issuing some kit to players.
                 </div>
               ) : (
                 <div className="space-y-4">
                   <h4 className="font-semibold">Kit Issue History</h4>
-                  {kitItems.map((item) => (
-                    <Card key={item.id} className="hover:shadow-md transition-shadow">
+                  {kitIssues.map((issue) => (
+                    <Card key={issue.id} className="hover:shadow-md transition-shadow">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-3">
                               <Package className="h-4 w-4 text-puma-blue-500" />
-                              <h5 className="font-semibold">{item.kit_item_name}</h5>
-                              {item.kit_size && (
-                                <Badge variant="outline">Size: {item.kit_size}</Badge>
+                              <h5 className="font-semibold">{issue.kit_item_name}</h5>
+                              {issue.kit_size && (
+                                <Badge variant="outline">Size: {issue.kit_size}</Badge>
                               )}
-                              <Badge>Qty: {item.quantity}</Badge>
+                              <Badge>Qty: {issue.quantity}</Badge>
                             </div>
                             
                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
                               <Calendar className="h-3 w-3" />
-                              <span>Issued on {new Date(item.date_issued).toLocaleDateString()}</span>
+                              <span>Issued on {new Date(issue.date_issued).toLocaleDateString()}</span>
                             </div>
                             
                             <div className="flex items-start gap-2 text-sm">
                               <Users className="h-3 w-3 mt-1 text-muted-foreground" />
                               <div className="flex flex-wrap gap-1">
-                                {item.player_ids.map((playerId) => (
+                                {issue.player_ids.map((playerId) => (
                                   <Badge key={playerId} variant="secondary" className="text-xs">
                                     {getPlayerName(playerId)}
                                   </Badge>

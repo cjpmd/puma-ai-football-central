@@ -827,6 +827,7 @@ export type Database = {
           created_at: string
           date_of_birth: string
           id: string
+          kit_sizes: Json | null
           leave_comments: string | null
           leave_date: string | null
           match_stats: Json | null
@@ -849,6 +850,7 @@ export type Database = {
           created_at?: string
           date_of_birth: string
           id?: string
+          kit_sizes?: Json | null
           leave_comments?: string | null
           leave_date?: string | null
           match_stats?: Json | null
@@ -871,6 +873,7 @@ export type Database = {
           created_at?: string
           date_of_birth?: string
           id?: string
+          kit_sizes?: Json | null
           leave_comments?: string | null
           leave_date?: string | null
           match_stats?: Json | null
@@ -1018,6 +1021,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      team_kit_issues: {
+        Row: {
+          created_at: string
+          date_issued: string
+          id: string
+          issued_by: string | null
+          kit_item_name: string
+          kit_size: string | null
+          player_ids: Json
+          quantity: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date_issued?: string
+          id?: string
+          issued_by?: string | null
+          kit_item_name: string
+          kit_size?: string | null
+          player_ids?: Json
+          quantity?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date_issued?: string
+          id?: string
+          issued_by?: string | null
+          kit_item_name?: string
+          kit_size?: string | null
+          player_ids?: Json
+          quantity?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_kit_issues_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_privacy_settings: {
         Row: {

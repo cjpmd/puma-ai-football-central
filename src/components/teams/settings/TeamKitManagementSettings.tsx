@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Package, Shirt, Settings } from 'lucide-react';
-import { Team } from '@/types/team';
+import { Team } from '@/types/index';
 import { KitManagementModal } from '../KitManagementModal';
 
 interface TeamKitManagementSettingsProps {

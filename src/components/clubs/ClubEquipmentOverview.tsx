@@ -40,35 +40,66 @@ export const ClubEquipmentOverview: React.FC<ClubEquipmentOverviewProps> = ({
       setLoading(true);
       console.log('Loading equipment for club:', clubId);
 
-      const { data: equipmentData, error } = await supabase
-        .from('team_equipment')
-        .select(`
-          *,
-          teams!inner(
-            id,
-            name,
-            club_teams!inner(club_id)
-          )
-        `)
-        .eq('teams.club_teams.club_id', clubId);
+      // First get teams linked to this club
+      const { data: clubTeams, error: clubTeamsError } = await supabase
+        .from('club_teams')
+        .select('team_id')
+        .eq('club_id', clubId);
 
-      if (error) {
-        console.error('Error fetching team equipment:', error);
-        throw error;
+      if (clubTeamsError) {
+        console.error('Error fetching club teams:', clubTeamsError);
+        throw clubTeamsError;
       }
 
-      console.log('Team equipment data:', equipmentData);
+      if (!clubTeams || clubTeams.length === 0) {
+        setEquipment([]);
+        return;
+      }
 
-      if (equipmentData && equipmentData.length > 0) {
-        const equipmentItems: TeamEquipment[] = equipmentData.map(item => ({
-          id: item.id,
-          name: item.name,
-          description: item.description,
-          quantity: item.quantity,
-          condition: item.condition,
-          teamName: item.teams?.name || 'Unknown Team',
-          teamId: item.team_id,
-        }));
+      const teamIds = clubTeams.map(ct => ct.team_id);
+
+      // Get equipment for these teams
+      const { data: equipmentData, error: equipmentError } = await supabase
+        .from('team_equipment')
+        .select(`
+          id,
+          name,
+          description,
+          quantity,
+          condition,
+          team_id
+        `)
+        .in('team_id', teamIds);
+
+      if (equipmentError) {
+        console.error('Error fetching team equipment:', equipmentError);
+        throw equipmentError;
+      }
+
+      // Get team names
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name')
+        .in('id', teamIds);
+
+      if (teamsError) {
+        console.error('Error fetching teams data:', teamsError);
+        throw teamsError;
+      }
+
+      if (equipmentData && teamsData) {
+        const equipmentItems: TeamEquipment[] = equipmentData.map(item => {
+          const team = teamsData.find(t => t.id === item.team_id);
+          return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            quantity: item.quantity,
+            condition: item.condition as 'excellent' | 'good' | 'fair' | 'poor',
+            teamName: team?.name || 'Unknown Team',
+            teamId: item.team_id,
+          };
+        });
 
         setEquipment(equipmentItems);
       } else {
