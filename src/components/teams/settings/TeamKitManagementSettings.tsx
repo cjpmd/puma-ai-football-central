@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +29,14 @@ interface ClothingSize {
   size_name: string;
   category: string;
   display_order: number;
+}
+
+// Database types from Supabase
+interface DbKitItem {
+  id: string;
+  name: string;
+  category: string;
+  available_sizes: any; // JSON type from Supabase
 }
 
 export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps> = ({
@@ -76,12 +83,12 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
 
       if (sizesError) throw sizesError;
 
-      // Transform the data to match our interface
-      const transformedItems = (itemsData || []).map(item => ({
+      // Transform the data to match our interface with proper type handling
+      const transformedItems: KitItem[] = (itemsData || []).map((item: DbKitItem) => ({
         id: item.id,
         name: item.name,
         category: item.category,
-        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes : []
+        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
       }));
 
       setKitItems(transformedItems);
