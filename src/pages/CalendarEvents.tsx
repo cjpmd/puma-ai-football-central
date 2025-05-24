@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/contexts/AuthContext';
 import { CalendarIcon, CheckCircle2, Users, Trash2, Edit, Trophy } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from '@/lib/utils';
 import { addDays, format } from 'date-fns';
 import { Event } from '@/types';
@@ -283,302 +285,305 @@ const CalendarEventsPage = () => {
           </CardContent>
         </Card>
       
-      {/* Updated event list section with post-game edit button */}
-      <div className="space-y-3">
-        {filteredEvents.map((event) => {
-          const isCompleted = new Date(event.date) < new Date() || 
-            (new Date(event.date).toDateString() === new Date().toDateString() && 
-             event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
-          
-          return (
-            <div key={event.id} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Badge 
-                  className={
-                    event.event_type === "match" || event.event_type === "fixture" 
-                      ? "bg-red-500" 
-                      : "bg-blue-500"
-                  }
-                >
-                  {event.event_type}
-                </Badge>
-                <div className="flex items-center gap-2">
-                  {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
-                    <span className="text-lg text-green-600">🏆</span>
-                  )}
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditEvent(event)}
-                    >
-                      Edit
-                    </Button>
+        {/* Updated event list section with post-game edit button */}
+        <div className="space-y-3">
+          {filteredEvents.map((event) => {
+            const isCompleted = new Date(event.date) < new Date() || 
+              (new Date(event.date).toDateString() === new Date().toDateString() && 
+               event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
+            
+            return (
+              <div key={event.id} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Badge 
+                    className={
+                      event.event_type === "match" || event.event_type === "fixture" 
+                        ? "bg-red-500" 
+                        : "bg-blue-500"
+                    }
+                  >
+                    {event.event_type}
+                  </Badge>
+                  <div className="flex items-center gap-2">
                     {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
+                      <span className="text-lg text-green-600">🏆</span>
+                    )}
+                    <div className="flex gap-1">
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handlePostGameEdit(event)}
+                        onClick={() => handleEditEvent(event)}
                       >
-                        <Trophy className="h-4 w-4" />
+                        Edit
                       </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelectedEvent(event)}
-                    >
-                      <Users className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700"
-                      onClick={() => handleDeleteEvent(event.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      {isCompleted && (event.event_type === "match" || event.event_type === "fixture") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePostGameEdit(event)}
+                        >
+                          <Trophy className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedEvent(event)}
+                      >
+                        <Users className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteEvent(event.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              
-              <Card>
-                <CardContent>
-                  <h3 className="text-lg font-semibold">{event.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {formatDate(event.date, 'dd MMM yyyy')}
-                  </p>
-                  {event.start_time && event.end_time && (
+                
+                <Card>
+                  <CardContent>
+                    <h3 className="text-lg font-semibold">{event.title}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {event.start_time} - {event.end_time}
+                      {formatDate(event.date, 'dd MMM yyyy')}
                     </p>
-                  )}
-                  {event.location && (
-                    <p className="text-sm text-muted-foreground">Location: {event.location}</p>
-                  )}
-                  {event.description && (
-                    <p className="text-sm mt-2">{event.description}</p>
-                  )}
-                  {event.notes && (
-                    <p className="text-sm mt-2">Notes: {event.notes}</p>
-                  )}
-                </CardContent>
-              </Card>
+                    {event.start_time && event.end_time && (
+                      <p className="text-sm text-muted-foreground">
+                        {event.start_time} - {event.end_time}
+                      </p>
+                    )}
+                    {event.location && (
+                      <p className="text-sm text-muted-foreground">Location: {event.location}</p>
+                    )}
+                    {event.description && (
+                      <p className="text-sm mt-2">{event.description}</p>
+                    )}
+                    {event.notes && (
+                      <p className="text-sm mt-2">Notes: {event.notes}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Create Event Modal */}
+        <Dialog open={isCreateModalOpen} onOpenChange={closeCreateModal}>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Create Event</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Title
+                </Label>
+                <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">
+                  Date
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !eventDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {eventDate ? (
+                        format(eventDate, "MMM dd, yyyy")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={eventDate}
+                      onSelect={setEventDate}
+                      defaultMonth={eventDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="startTime" className="text-right">
+                  Start Time
+                </Label>
+                <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="endTime" className="text-right">
+                  End Time
+                </Label>
+                <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="location" className="text-right">
+                  Location
+                </Label>
+                <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="notes" className="text-right">
+                  Notes
+                </Label>
+                <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="eventType" className="text-right">
+                  Event Type
+                </Label>
+                <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="training">Training</SelectItem>
+                    <SelectItem value="match">Match</SelectItem>
+                    <SelectItem value="fixture">Fixture</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          );
-        })}
+            <div className="flex justify-end">
+              <Button type="button" variant="secondary" onClick={closeCreateModal}>
+                Cancel
+              </Button>
+              <Button type="submit" onClick={handleCreateEvent} disabled={isCreateLoading}>
+                {isCreateLoading ? "Creating..." : "Create Event"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Event Modal */}
+        <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
+          <DialogContent className="sm:max-w-[525px]">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Title
+                </Label>
+                <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="description" className="text-right">
+                  Description
+                </Label>
+                <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="date" className="text-right">
+                  Date
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant={"outline"}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !eventDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {eventDate ? (
+                        format(eventDate, "MMM dd, yyyy")
+                      ) : (
+                        <span>Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={eventDate}
+                      onSelect={setEventDate}
+                      defaultMonth={eventDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="startTime" className="text-right">
+                  Start Time
+                </Label>
+                <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="endTime" className="text-right">
+                  End Time
+                </Label>
+                <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="location" className="text-right">
+                  Location
+                </Label>
+                <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="notes" className="text-right">
+                  Notes
+                </Label>
+                <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
+              </div>
+               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="eventType" className="text-right">
+                  Event Type
+                </Label>
+                <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="training">Training</SelectItem>
+                    <SelectItem value="match">Match</SelectItem>
+                    <SelectItem value="fixture">Fixture</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button type="button" variant="secondary" onClick={closeEditModal}>
+                Cancel
+              </Button>
+              <Button type="submit" onClick={handleUpdateEvent} disabled={isUpdateLoading}>
+                {isUpdateLoading ? "Updating..." : "Update Event"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Post-Game Editor Modal */}
+        {postGameEventId && (
+          <PostGameEditor
+            eventId={postGameEventId}
+            isOpen={!!postGameEventId}
+            onClose={() => setPostGameEventId(null)}
+          />
+        )}
       </div>
-
-      <Dialog open={isCreateModalOpen} onOpenChange={closeCreateModal}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Create Event</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Title
-              </Label>
-              <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description
-              </Label>
-              <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[240px] justify-start text-left font-normal",
-                      !eventDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {eventDate ? (
-                      format(eventDate, "MMM dd, yyyy")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={eventDate}
-                    onSelect={setEventDate}
-                    defaultMonth={eventDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="startTime" className="text-right">
-                Start Time
-              </Label>
-              <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="endTime" className="text-right">
-                End Time
-              </Label>
-              <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">
-                Location
-              </Label>
-              <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="notes" className="text-right">
-                Notes
-              </Label>
-              <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="eventType" className="text-right">
-                Event Type
-              </Label>
-              <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="match">Match</SelectItem>
-                  <SelectItem value="fixture">Fixture</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button type="button" variant="secondary" onClick={closeCreateModal}>
-              Cancel
-            </Button>
-            <Button type="submit" onClick={handleCreateEvent} disabled={isCreateLoading}>
-              {isCreateLoading ? "Creating..." : "Create Event"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
-        <DialogContent className="sm:max-w-[525px]">
-          <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                Title
-              </Label>
-              <Input id="title" value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="description" className="text-right">
-                Description
-              </Label>
-              <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="date" className="text-right">
-                Date
-              </Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn(
-                      "w-[240px] justify-start text-left font-normal",
-                      !eventDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {eventDate ? (
-                      format(eventDate, "MMM dd, yyyy")
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={eventDate}
-                    onSelect={setEventDate}
-                    defaultMonth={eventDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="startTime" className="text-right">
-                Start Time
-              </Label>
-              <Input type="time" id="startTime" value={eventStartTime} onChange={(e) => setEventStartTime(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="endTime" className="text-right">
-                End Time
-              </Label>
-              <Input type="time" id="endTime" value={eventEndTime} onChange={(e) => setEventEndTime(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="location" className="text-right">
-                Location
-              </Label>
-              <Input id="location" value={eventLocation} onChange={(e) => setEventLocation(e.target.value)} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="notes" className="text-right">
-                Notes
-              </Label>
-              <Input id="notes" value={eventNotes} onChange={(e) => setEventNotes(e.target.value)} className="col-span-3" />
-            </div>
-             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="eventType" className="text-right">
-                Event Type
-              </Label>
-              <Select value={eventEventType} onValueChange={value => setEventEventType(value as 'training' | 'match' | 'fixture')}>
-                <SelectTrigger className="col-span-3">
-                  <SelectValue placeholder="Select event type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="match">Match</SelectItem>
-                  <SelectItem value="fixture">Fixture</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end">
-            <Button type="button" variant="secondary" onClick={closeEditModal}>
-              Cancel
-            </Button>
-            <Button type="submit" onClick={handleUpdateEvent} disabled={isUpdateLoading}>
-              {isUpdateLoading ? "Updating..." : "Update Event"}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Post-Game Editor Modal */}
-      {postGameEventId && (
-        <PostGameEditor
-          eventId={postGameEventId}
-          isOpen={!!postGameEventId}
-          onClose={() => setPostGameEventId(null)}
-        />
-      )}
     </DashboardLayout>
   );
 };
