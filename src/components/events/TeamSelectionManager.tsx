@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -147,14 +146,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         <CardHeader className="flex-shrink-0">
           <CardTitle>Team Selection</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 overflow-hidden p-6">
-          <div className="flex justify-end mb-4">
+        <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
+          <div className="flex justify-end mb-4 flex-shrink-0">
             <Button onClick={addTeam} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-1" /> Add Team
             </Button>
           </div>
           
-          <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="h-full flex flex-col">
+          <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="mb-4 flex-shrink-0">
               {Object.keys(periods).sort().map((teamKey) => (
                 <TabsTrigger key={teamKey} value={teamKey}>Team {teamKey.replace('team-', '')}</TabsTrigger>
@@ -164,7 +163,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             <div className="flex-1 overflow-hidden">
               {Object.keys(periods).sort().map((teamKey) => (
                 <TabsContent key={teamKey} value={teamKey} className="h-full mt-0 overflow-hidden">
-                  <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab} className="h-full flex flex-col">
+                  <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab} className="h-full flex flex-col overflow-hidden">
                     <div className="flex items-center space-x-2 mb-2 flex-shrink-0">
                       <TabsList>
                         {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
@@ -187,16 +186,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
                         <TabsContent key={i} value={`period-${i + 1}`} className="h-full mt-0 overflow-hidden">
                           <ScrollArea className="h-full">
-                            <div className="pr-4">
-                              <PlayerSelectionPanel
-                                eventId={eventId}
-                                teamId={teamId}
-                                gameFormat={gameFormat}
-                                periodNumber={i + 1}
-                                teamNumber={parseInt(teamKey.replace('team-', ''))}
-                                totalTeams={totalTeams}
-                              />
-                            </div>
+                            <PlayerSelectionPanel
+                              eventId={eventId}
+                              teamId={teamId}
+                              gameFormat={gameFormat}
+                              periodNumber={i + 1}
+                              teamNumber={parseInt(teamKey.replace('team-', ''))}
+                              totalTeams={totalTeams}
+                            />
                           </ScrollArea>
                         </TabsContent>
                       ))}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -91,15 +90,11 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
             <div className="flex-1 overflow-hidden">
               {teams.map(team => (
                 <TabsContent key={team.id} value={team.id} className="h-full mt-0 overflow-hidden">
-                  <ScrollArea className="h-full">
-                    <div className="pr-4">
-                      <TeamSelectionManager 
-                        eventId={eventId}
-                        teamId={team.id}
-                        gameFormat={gameFormat}
-                      />
-                    </div>
-                  </ScrollArea>
+                  <TeamSelectionManager 
+                    eventId={eventId}
+                    teamId={team.id}
+                    gameFormat={gameFormat}
+                  />
                 </TabsContent>
               ))}
             </div>
