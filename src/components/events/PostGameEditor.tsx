@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -31,6 +30,12 @@ interface PlayerStats {
 interface EventScores {
   home?: number;
   away?: number;
+}
+
+interface PlayerPosition {
+  playerId?: string;
+  player_id?: string;
+  position: string;
 }
 
 export const PostGameEditor: React.FC<PostGameEditorProps> = ({
@@ -154,14 +159,23 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
       // Process each selection to create player stats
       for (const selection of selections) {
-        const playerPositions = Array.isArray(selection.player_positions) ? selection.player_positions : [];
-        const substitutes = Array.isArray(selection.substitutes) ? selection.substitutes : [];
+        // Safely parse player_positions as array of PlayerPosition objects
+        const playerPositions: PlayerPosition[] = Array.isArray(selection.player_positions) 
+          ? selection.player_positions as PlayerPosition[]
+          : [];
+        
+        // Safely parse substitutes as array of strings
+        const substitutes: string[] = Array.isArray(selection.substitutes) 
+          ? (selection.substitutes as string[]).filter(sub => typeof sub === 'string')
+          : [];
+        
         const durationMinutes = selection.duration_minutes || 90;
 
         // Create stats for starting players
         for (const playerPos of playerPositions) {
+          // Handle both playerId and player_id properties
           const playerId = playerPos.playerId || playerPos.player_id;
-          if (!playerId) continue;
+          if (!playerId || typeof playerId !== 'string') continue;
 
           await upsertPlayerStat({
             event_id: eventId,
