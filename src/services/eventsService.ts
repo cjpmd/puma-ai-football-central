@@ -16,6 +16,16 @@ export interface CreateEventData {
 
 export interface UpdateEventData extends CreateEventData {
   id: string;
+  scores?: {
+    home: number;
+    away: number;
+  };
+  is_home?: boolean;
+  opponent?: string;
+  player_of_match_id?: string;
+  coach_notes?: string;
+  staff_notes?: string;
+  training_notes?: string;
 }
 
 export const eventsService = {

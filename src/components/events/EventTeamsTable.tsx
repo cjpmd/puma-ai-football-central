@@ -1,6 +1,8 @@
+
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TeamSelectionManager } from './TeamSelectionManager';
@@ -71,10 +73,13 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   }
 
   return (
-    <Card>
-      <CardContent className="p-6">
-        <Tabs value={activeTeam} onValueChange={setActiveTeam}>
-          <TabsList className="mb-6">
+    <Card className="h-full">
+      <CardHeader>
+        <CardTitle>Team Selection</CardTitle>
+      </CardHeader>
+      <CardContent className="h-full">
+        <Tabs value={activeTeam} onValueChange={setActiveTeam} className="h-full flex flex-col">
+          <TabsList className="mb-4">
             {teams.map(team => (
               <TabsTrigger key={team.id} value={team.id}>
                 {team.name}
@@ -82,15 +87,19 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
             ))}
           </TabsList>
 
-          {teams.map(team => (
-            <TabsContent key={team.id} value={team.id}>
-              <TeamSelectionManager 
-                eventId={eventId}
-                teamId={team.id}
-                gameFormat={gameFormat}
-              />
-            </TabsContent>
-          ))}
+          <div className="flex-1 overflow-hidden">
+            {teams.map(team => (
+              <TabsContent key={team.id} value={team.id} className="h-full mt-0">
+                <ScrollArea className="h-full">
+                  <TeamSelectionManager 
+                    eventId={eventId}
+                    teamId={team.id}
+                    gameFormat={gameFormat}
+                  />
+                </ScrollArea>
+              </TabsContent>
+            ))}
+          </div>
         </Tabs>
       </CardContent>
     </Card>
