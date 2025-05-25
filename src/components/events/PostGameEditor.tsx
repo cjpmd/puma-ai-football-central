@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -159,15 +160,26 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
       // Process each selection to create player stats
       for (const selection of selections) {
-        // Safely parse player_positions as array of PlayerPosition objects
-        const playerPositions: PlayerPosition[] = Array.isArray(selection.player_positions) 
-          ? selection.player_positions as PlayerPosition[]
-          : [];
+        // Safely parse player_positions - convert through unknown first
+        let playerPositions: PlayerPosition[] = [];
+        if (Array.isArray(selection.player_positions)) {
+          playerPositions = (selection.player_positions as unknown as PlayerPosition[])
+            .filter((pos): pos is PlayerPosition => 
+              pos && 
+              typeof pos === 'object' && 
+              'position' in pos && 
+              typeof pos.position === 'string' &&
+              (('playerId' in pos && typeof pos.playerId === 'string') || 
+               ('player_id' in pos && typeof pos.player_id === 'string'))
+            );
+        }
         
-        // Safely parse substitutes as array of strings
-        const substitutes: string[] = Array.isArray(selection.substitutes) 
-          ? (selection.substitutes as string[]).filter(sub => typeof sub === 'string')
-          : [];
+        // Safely parse substitutes - convert through unknown first
+        let substitutes: string[] = [];
+        if (Array.isArray(selection.substitutes)) {
+          substitutes = (selection.substitutes as unknown as string[])
+            .filter((sub): sub is string => typeof sub === 'string');
+        }
         
         const durationMinutes = selection.duration_minutes || 90;
 
