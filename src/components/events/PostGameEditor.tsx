@@ -114,6 +114,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
       if (eventError) throw eventError;
 
+      // Generate player stats from event selections if they don't exist
+      await generatePlayerStatsFromSelections();
+
       // Trigger player stats update for this event
       await playerStatsService.updateEventPlayerStats(eventId);
 
@@ -129,6 +132,83 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       toast.error('Failed to update match details');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const generatePlayerStatsFromSelections = async () => {
+    try {
+      console.log('Generating player stats from event selections for event:', eventId);
+      
+      // Get all event selections for this event
+      const { data: selections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select('*')
+        .eq('event_id', eventId);
+
+      if (selectionsError) throw selectionsError;
+
+      if (!selections || selections.length === 0) {
+        console.log('No event selections found for event:', eventId);
+        return;
+      }
+
+      // Process each selection to create player stats
+      for (const selection of selections) {
+        const playerPositions = Array.isArray(selection.player_positions) ? selection.player_positions : [];
+        const substitutes = Array.isArray(selection.substitutes) ? selection.substitutes : [];
+        const durationMinutes = selection.duration_minutes || 90;
+
+        // Create stats for starting players
+        for (const playerPos of playerPositions) {
+          const playerId = playerPos.playerId || playerPos.player_id;
+          if (!playerId) continue;
+
+          await upsertPlayerStat({
+            event_id: eventId,
+            player_id: playerId,
+            team_number: selection.team_number || 1,
+            period_number: selection.period_number,
+            position: playerPos.position,
+            minutes_played: durationMinutes,
+            is_substitute: false,
+            is_captain: selection.captain_id === playerId
+          });
+        }
+
+        // Create stats for substitutes (0 minutes initially)
+        for (const subId of substitutes) {
+          if (typeof subId !== 'string') continue;
+
+          await upsertPlayerStat({
+            event_id: eventId,
+            player_id: subId,
+            team_number: selection.team_number || 1,
+            period_number: selection.period_number,
+            position: 'SUB',
+            minutes_played: 0,
+            is_substitute: true,
+            is_captain: false
+          });
+        }
+      }
+
+      console.log('Player stats generated from selections successfully');
+    } catch (error) {
+      console.error('Error generating player stats from selections:', error);
+    }
+  };
+
+  const upsertPlayerStat = async (statData: any) => {
+    try {
+      const { error } = await supabase
+        .from('event_player_stats')
+        .upsert(statData, {
+          onConflict: 'event_id,player_id,team_number,period_number'
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error upserting player stat:', error);
     }
   };
 

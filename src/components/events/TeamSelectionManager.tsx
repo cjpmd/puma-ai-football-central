@@ -143,66 +143,68 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
+      <Card className="h-[600px] flex flex-col">
+        <CardHeader className="flex-shrink-0">
           <CardTitle>Team Selection</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 overflow-hidden p-6">
           <div className="flex justify-end mb-4">
             <Button onClick={addTeam} variant="outline" size="sm">
               <Plus className="h-4 w-4 mr-1" /> Add Team
             </Button>
           </div>
           
-          <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="w-full">
-            <TabsList className="mb-4">
+          <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="h-full flex flex-col">
+            <TabsList className="mb-4 flex-shrink-0">
               {Object.keys(periods).sort().map((teamKey) => (
                 <TabsTrigger key={teamKey} value={teamKey}>Team {teamKey.replace('team-', '')}</TabsTrigger>
               ))}
             </TabsList>
             
-            {Object.keys(periods).sort().map((teamKey) => (
-              <TabsContent key={teamKey} value={teamKey} className="space-y-4">
-                <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab}>
-                  <div className="flex items-center space-x-2 mb-2">
-                    <TabsList>
-                      {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                        <TabsTrigger key={i} value={`period-${i + 1}`}>
-                          Period {i + 1}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
+            <div className="flex-1 overflow-hidden">
+              {Object.keys(periods).sort().map((teamKey) => (
+                <TabsContent key={teamKey} value={teamKey} className="h-full mt-0 overflow-hidden">
+                  <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab} className="h-full flex flex-col">
+                    <div className="flex items-center space-x-2 mb-2 flex-shrink-0">
+                      <TabsList>
+                        {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
+                          <TabsTrigger key={i} value={`period-${i + 1}`}>
+                            Period {i + 1}
+                          </TabsTrigger>
+                        ))}
+                      </TabsList>
+                      
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={() => handleAddPeriod(teamKey)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" /> Add Period
+                      </Button>
+                    </div>
                     
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => handleAddPeriod(teamKey)}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Add Period
-                    </Button>
-                  </div>
-                  
-                  <div className="max-h-[600px] overflow-hidden">
-                    {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                      <TabsContent key={i} value={`period-${i + 1}`} className="mt-0 h-full">
-                        <ScrollArea className="h-[600px]">
-                          <div className="pr-4">
-                            <PlayerSelectionPanel
-                              eventId={eventId}
-                              teamId={teamId}
-                              gameFormat={gameFormat}
-                              periodNumber={i + 1}
-                              teamNumber={parseInt(teamKey.replace('team-', ''))}
-                              totalTeams={totalTeams}
-                            />
-                          </div>
-                        </ScrollArea>
-                      </TabsContent>
-                    ))}
-                  </div>
-                </Tabs>
-              </TabsContent>
-            ))}
+                    <div className="flex-1 overflow-hidden">
+                      {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
+                        <TabsContent key={i} value={`period-${i + 1}`} className="h-full mt-0 overflow-hidden">
+                          <ScrollArea className="h-full">
+                            <div className="pr-4">
+                              <PlayerSelectionPanel
+                                eventId={eventId}
+                                teamId={teamId}
+                                gameFormat={gameFormat}
+                                periodNumber={i + 1}
+                                teamNumber={parseInt(teamKey.replace('team-', ''))}
+                                totalTeams={totalTeams}
+                              />
+                            </div>
+                          </ScrollArea>
+                        </TabsContent>
+                      ))}
+                    </div>
+                  </Tabs>
+                </TabsContent>
+              ))}
+            </div>
           </Tabs>
         </CardContent>
       </Card>
