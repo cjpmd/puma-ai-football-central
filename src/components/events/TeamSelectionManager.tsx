@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
@@ -181,18 +182,24 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     </Button>
                   </div>
                   
-                  {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                    <TabsContent key={i} value={`period-${i + 1}`} className="space-y-4">
-                      <PlayerSelectionPanel
-                        eventId={eventId}
-                        teamId={teamId}
-                        gameFormat={gameFormat}
-                        periodNumber={i + 1}
-                        teamNumber={parseInt(teamKey.replace('team-', ''))}
-                        totalTeams={totalTeams}
-                      />
-                    </TabsContent>
-                  ))}
+                  <div className="max-h-[600px] overflow-hidden">
+                    {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
+                      <TabsContent key={i} value={`period-${i + 1}`} className="mt-0 h-full">
+                        <ScrollArea className="h-[600px]">
+                          <div className="pr-4">
+                            <PlayerSelectionPanel
+                              eventId={eventId}
+                              teamId={teamId}
+                              gameFormat={gameFormat}
+                              periodNumber={i + 1}
+                              teamNumber={parseInt(teamKey.replace('team-', ''))}
+                              totalTeams={totalTeams}
+                            />
+                          </div>
+                        </ScrollArea>
+                      </TabsContent>
+                    ))}
+                  </div>
                 </Tabs>
               </TabsContent>
             ))}

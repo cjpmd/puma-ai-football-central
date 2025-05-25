@@ -73,13 +73,13 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   }
 
   return (
-    <div className="h-[600px] flex flex-col">
-      <Card className="flex-1 flex flex-col">
+    <div className="h-full flex flex-col">
+      <Card className="flex-1 flex flex-col overflow-hidden">
         <CardHeader className="flex-shrink-0">
           <CardTitle>Team Selection</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0">
-          <Tabs value={activeTeam} onValueChange={setActiveTeam} className="flex-1 flex flex-col">
+        <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
+          <Tabs value={activeTeam} onValueChange={setActiveTeam} className="flex-1 flex flex-col overflow-hidden">
             <TabsList className="mb-4 flex-shrink-0">
               {teams.map(team => (
                 <TabsTrigger key={team.id} value={team.id}>
@@ -88,15 +88,17 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
               ))}
             </TabsList>
 
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 overflow-hidden">
               {teams.map(team => (
-                <TabsContent key={team.id} value={team.id} className="h-full mt-0">
+                <TabsContent key={team.id} value={team.id} className="h-full mt-0 overflow-hidden">
                   <ScrollArea className="h-full">
-                    <TeamSelectionManager 
-                      eventId={eventId}
-                      teamId={team.id}
-                      gameFormat={gameFormat}
-                    />
+                    <div className="pr-4">
+                      <TeamSelectionManager 
+                        eventId={eventId}
+                        teamId={team.id}
+                        gameFormat={gameFormat}
+                      />
+                    </div>
                   </ScrollArea>
                 </TabsContent>
               ))}
