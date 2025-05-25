@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, Users, Trash2, Edit, Trophy, Settings, Calendar as CalendarGridIcon, List } from 'lucide-react';
+import { CalendarIcon, Users, Trash2, Edit, Trophy, Settings, Calendar as CalendarGridIcon, List, Grid } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -20,6 +20,7 @@ import { DateRange } from 'react-day-picker';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 import { CalendarGridView } from '@/components/events/CalendarGridView';
+import { EventsGridView } from '@/components/events/EventsGridView';
 import { ScoreInput } from '@/components/events/ScoreInput';
 import { Calendar } from '@/components/ui/calendar';
 
@@ -32,7 +33,7 @@ const CalendarEventsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'grid'>('grid');
   
   const [eventTitle, setEventTitle] = useState('');
   const [eventDescription, setEventDescription] = useState('');
@@ -261,6 +262,13 @@ const CalendarEventsPage = () => {
                 size="sm"
                 onClick={() => setViewMode('grid')}
               >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'calendar' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('calendar')}
+              >
                 <CalendarGridIcon className="h-4 w-4" />
               </Button>
               <Button
@@ -315,6 +323,15 @@ const CalendarEventsPage = () => {
 
         {/* Main Content */}
         {viewMode === 'grid' ? (
+          <EventsGridView
+            events={events}
+            onEditEvent={handleEditEvent}
+            onTeamSelection={handleTeamSelection}
+            onPostGameEdit={handlePostGameEdit}
+            onDeleteEvent={handleDeleteEvent}
+            onScoreEdit={handleScoreEdit}
+          />
+        ) : viewMode === 'calendar' ? (
           <CalendarGridView
             events={events}
             onEditEvent={handleEditEvent}

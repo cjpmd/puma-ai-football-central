@@ -73,35 +73,37 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   }
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <CardTitle>Team Selection</CardTitle>
-      </CardHeader>
-      <CardContent className="h-full">
-        <Tabs value={activeTeam} onValueChange={setActiveTeam} className="h-full flex flex-col">
-          <TabsList className="mb-4">
-            {teams.map(team => (
-              <TabsTrigger key={team.id} value={team.id}>
-                {team.name}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+    <div className="h-[600px] flex flex-col">
+      <Card className="flex-1 flex flex-col">
+        <CardHeader className="flex-shrink-0">
+          <CardTitle>Team Selection</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col min-h-0">
+          <Tabs value={activeTeam} onValueChange={setActiveTeam} className="flex-1 flex flex-col">
+            <TabsList className="mb-4 flex-shrink-0">
+              {teams.map(team => (
+                <TabsTrigger key={team.id} value={team.id}>
+                  {team.name}
+                </TabsTrigger>
+              ))}
+            </TabsList>
 
-          <div className="flex-1 overflow-hidden">
-            {teams.map(team => (
-              <TabsContent key={team.id} value={team.id} className="h-full mt-0">
-                <ScrollArea className="h-full">
-                  <TeamSelectionManager 
-                    eventId={eventId}
-                    teamId={team.id}
-                    gameFormat={gameFormat}
-                  />
-                </ScrollArea>
-              </TabsContent>
-            ))}
-          </div>
-        </Tabs>
-      </CardContent>
-    </Card>
+            <div className="flex-1 min-h-0">
+              {teams.map(team => (
+                <TabsContent key={team.id} value={team.id} className="h-full mt-0">
+                  <ScrollArea className="h-full">
+                    <TeamSelectionManager 
+                      eventId={eventId}
+                      teamId={team.id}
+                      gameFormat={gameFormat}
+                    />
+                  </ScrollArea>
+                </TabsContent>
+              ))}
+            </div>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
