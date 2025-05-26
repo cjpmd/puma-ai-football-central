@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 import { Trophy, Users, Calendar, TrendingUp, Lock, Crown } from 'lucide-react';
+import { MatchStats } from '@/types';
 
 interface PlayerStats {
   name: string;
@@ -59,13 +60,25 @@ const Analytics = () => {
         .eq('team_id', selectedTeamId);
 
       if (playersData) {
-        const stats: PlayerStats[] = playersData.map(player => ({
-          name: player.name,
-          totalGames: player.match_stats?.totalGames || 0,
-          totalMinutes: player.match_stats?.totalMinutes || 0,
-          captainGames: player.match_stats?.captainGames || 0,
-          playerOfTheMatchCount: player.match_stats?.playerOfTheMatchCount || 0,
-        }));
+        const stats: PlayerStats[] = playersData.map(player => {
+          // Safely cast match_stats from Json to MatchStats
+          const matchStats = (player.match_stats as MatchStats) || {
+            totalGames: 0,
+            captainGames: 0,
+            playerOfTheMatchCount: 0,
+            totalMinutes: 0,
+            minutesByPosition: {},
+            recentGames: []
+          };
+          
+          return {
+            name: player.name,
+            totalGames: matchStats.totalGames || 0,
+            totalMinutes: matchStats.totalMinutes || 0,
+            captainGames: matchStats.captainGames || 0,
+            playerOfTheMatchCount: matchStats.playerOfTheMatchCount || 0,
+          };
+        });
         setPlayerStats(stats);
       }
 
