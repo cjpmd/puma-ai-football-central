@@ -1,8 +1,8 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
@@ -141,67 +141,63 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      <Card className="h-[600px] flex flex-col">
-        <CardHeader className="flex-shrink-0">
-          <CardTitle>Team Selection</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
-          <div className="flex justify-end mb-4 flex-shrink-0">
+    <div className="space-y-3">
+      <Card className="min-h-0">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Team Configuration</CardTitle>
             <Button onClick={addTeam} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Add Team
+              <Plus className="h-3 w-3 mr-1" /> Add Team
             </Button>
           </div>
-          
-          <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mb-4 flex-shrink-0">
+        </CardHeader>
+        <CardContent className="pt-0 pb-3">
+          <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="w-full">
+            <TabsList className="grid w-full mb-3" style={{ gridTemplateColumns: `repeat(${Object.keys(periods).length}, 1fr)` }}>
               {Object.keys(periods).sort().map((teamKey) => (
-                <TabsTrigger key={teamKey} value={teamKey}>Team {teamKey.replace('team-', '')}</TabsTrigger>
+                <TabsTrigger key={teamKey} value={teamKey} className="text-sm">
+                  Team {teamKey.replace('team-', '')}
+                </TabsTrigger>
               ))}
             </TabsList>
             
-            <div className="flex-1 overflow-hidden">
-              {Object.keys(periods).sort().map((teamKey) => (
-                <TabsContent key={teamKey} value={teamKey} className="h-full mt-0 overflow-hidden">
-                  <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab} className="h-full flex flex-col overflow-hidden">
-                    <div className="flex items-center space-x-2 mb-2 flex-shrink-0">
-                      <TabsList>
-                        {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                          <TabsTrigger key={i} value={`period-${i + 1}`}>
-                            Period {i + 1}
-                          </TabsTrigger>
-                        ))}
-                      </TabsList>
-                      
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleAddPeriod(teamKey)}
-                      >
-                        <Plus className="h-4 w-4 mr-1" /> Add Period
-                      </Button>
-                    </div>
-                    
-                    <div className="flex-1 overflow-hidden">
+            {Object.keys(periods).sort().map((teamKey) => (
+              <TabsContent key={teamKey} value={teamKey} className="mt-0">
+                <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab}>
+                  <div className="flex items-center justify-between mb-3">
+                    <TabsList className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${periods[teamKey] || 1}, 1fr)` }}>
                       {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                        <TabsContent key={i} value={`period-${i + 1}`} className="h-full mt-0 overflow-hidden">
-                          <ScrollArea className="h-full">
-                            <PlayerSelectionPanel
-                              eventId={eventId}
-                              teamId={teamId}
-                              gameFormat={gameFormat}
-                              periodNumber={i + 1}
-                              teamNumber={parseInt(teamKey.replace('team-', ''))}
-                              totalTeams={totalTeams}
-                            />
-                          </ScrollArea>
-                        </TabsContent>
+                        <TabsTrigger key={i} value={`period-${i + 1}`} className="text-sm">
+                          Period {i + 1}
+                        </TabsTrigger>
                       ))}
-                    </div>
-                  </Tabs>
-                </TabsContent>
-              ))}
-            </div>
+                    </TabsList>
+                    
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleAddPeriod(teamKey)}
+                      className="ml-2"
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Add Period
+                    </Button>
+                  </div>
+                  
+                  {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
+                    <TabsContent key={i} value={`period-${i + 1}`} className="mt-0">
+                      <PlayerSelectionPanel
+                        eventId={eventId}
+                        teamId={teamId}
+                        gameFormat={gameFormat}
+                        periodNumber={i + 1}
+                        teamNumber={parseInt(teamKey.replace('team-', ''))}
+                        totalTeams={totalTeams}
+                      />
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </TabsContent>
+            ))}
           </Tabs>
         </CardContent>
       </Card>

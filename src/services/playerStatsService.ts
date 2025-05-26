@@ -7,16 +7,23 @@ export const playerStatsService = {
    */
   async updatePlayerStats(playerId: string): Promise<void> {
     try {
-      // Get all completed events for this player
+      console.log('Updating stats for player:', playerId);
+      
+      // Get all event player stats for this player
       const { data: playerStats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
           *,
-          events!inner(id, date, end_time, opponent, player_of_match_id)
+          events!inner(id, date, end_time, opponent, player_of_match_id, title)
         `)
         .eq('player_id', playerId);
 
-      if (statsError) throw statsError;
+      if (statsError) {
+        console.error('Error fetching player stats:', statsError);
+        throw statsError;
+      }
+
+      console.log('Found player stats:', playerStats?.length || 0);
 
       // Filter for completed events only
       const completedStats = playerStats?.filter(stat => {
@@ -24,19 +31,32 @@ export const playerStatsService = {
         const today = new Date();
         const eventDate = new Date(event.date);
         
-        return eventDate < today || 
+        // Event is completed if:
+        // 1. Date is in the past
+        // 2. Date is today and end_time exists and has passed
+        const isCompleted = eventDate < today || 
                (eventDate.toDateString() === today.toDateString() && 
                 event.end_time && 
                 new Date(`${event.date}T${event.end_time}`) < today);
+        
+        console.log(`Event ${event.title || event.id}: ${event.date}, completed: ${isCompleted}`);
+        return isCompleted;
       }) || [];
 
+      console.log('Completed stats:', completedStats.length);
+
       // Calculate stats
-      const totalGames = new Set(completedStats.map(stat => stat.event_id)).size;
+      const uniqueEventIds = new Set(completedStats.map(stat => stat.event_id));
+      const totalGames = uniqueEventIds.size;
       const totalMinutes = completedStats.reduce((sum, stat) => sum + (stat.minutes_played || 0), 0);
-      const captainGames = new Set(
-        completedStats.filter(stat => stat.is_captain).map(stat => stat.event_id)
-      ).size;
       
+      // Captain games - count unique events where player was captain
+      const captainEventIds = new Set(
+        completedStats.filter(stat => stat.is_captain).map(stat => stat.event_id)
+      );
+      const captainGames = captainEventIds.size;
+      
+      // POTM count
       const potmCount = completedStats.filter(stat => 
         stat.events.player_of_match_id === playerId
       ).length;
@@ -44,45 +64,68 @@ export const playerStatsService = {
       // Calculate minutes by position
       const minutesByPosition: Record<string, number> = {};
       completedStats.forEach(stat => {
-        if (stat.position) {
-          minutesByPosition[stat.position] = (minutesByPosition[stat.position] || 0) + stat.minutes_played;
+        if (stat.position && stat.position !== 'SUB') {
+          minutesByPosition[stat.position] = (minutesByPosition[stat.position] || 0) + (stat.minutes_played || 0);
         }
       });
 
       // Get recent games (last 10 unique events)
-      const uniqueEvents = Array.from(
-        new Map(completedStats.map(stat => [stat.event_id, stat])).values()
-      )
-      .sort((a, b) => new Date(b.events.date).getTime() - new Date(a.events.date).getTime())
-      .slice(0, 10)
-      .map(stat => ({
-        id: stat.event_id,
-        date: stat.events.date,
-        opponent: stat.events.opponent,
-        minutes: stat.minutes_played,
-        minutesByPosition: { [stat.position || 'Unknown']: stat.minutes_played },
-        captain: stat.is_captain,
-        playerOfTheMatch: stat.events.player_of_match_id === playerId
-      }));
+      const eventStatsMap = new Map();
+      completedStats.forEach(stat => {
+        const eventId = stat.event_id;
+        if (!eventStatsMap.has(eventId)) {
+          eventStatsMap.set(eventId, {
+            id: eventId,
+            date: stat.events.date,
+            opponent: stat.events.opponent || 'Training',
+            title: stat.events.title,
+            minutes: 0,
+            minutesByPosition: {},
+            captain: false,
+            playerOfTheMatch: stat.events.player_of_match_id === playerId
+          });
+        }
+        
+        const eventStat = eventStatsMap.get(eventId);
+        eventStat.minutes += stat.minutes_played || 0;
+        if (stat.position && stat.position !== 'SUB') {
+          eventStat.minutesByPosition[stat.position] = (eventStat.minutesByPosition[stat.position] || 0) + (stat.minutes_played || 0);
+        }
+        if (stat.is_captain) {
+          eventStat.captain = true;
+        }
+      });
+
+      const recentGames = Array.from(eventStatsMap.values())
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .slice(0, 10);
+
+      const statsUpdate = {
+        totalGames,
+        totalMinutes,
+        captainGames,
+        playerOfTheMatchCount: potmCount,
+        minutesByPosition,
+        recentGames
+      };
+
+      console.log('Updating player with stats:', statsUpdate);
 
       // Update player match stats
       const { error: updateError } = await supabase
         .from('players')
         .update({
-          match_stats: {
-            totalGames,
-            totalMinutes,
-            captainGames,
-            playerOfTheMatchCount: potmCount,
-            minutesByPosition,
-            recentGames: uniqueEvents
-          },
+          match_stats: statsUpdate,
           updated_at: new Date().toISOString()
         })
         .eq('id', playerId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error updating player:', updateError);
+        throw updateError;
+      }
       
+      console.log('Successfully updated player stats');
     } catch (error) {
       console.error('Error updating player stats:', error);
       throw error;
@@ -94,6 +137,8 @@ export const playerStatsService = {
    */
   async updateEventPlayerStats(eventId: string): Promise<void> {
     try {
+      console.log('Updating stats for all players in event:', eventId);
+      
       const { data: playerIds, error } = await supabase
         .from('event_player_stats')
         .select('player_id')
@@ -102,10 +147,13 @@ export const playerStatsService = {
       if (error) throw error;
 
       const uniquePlayerIds = Array.from(new Set(playerIds?.map(p => p.player_id) || []));
+      console.log('Found players to update:', uniquePlayerIds.length);
       
       for (const playerId of uniquePlayerIds) {
         await this.updatePlayerStats(playerId);
       }
+      
+      console.log('Completed updating all player stats for event');
     } catch (error) {
       console.error('Error updating event player stats:', error);
       throw error;
@@ -117,16 +165,30 @@ export const playerStatsService = {
    */
   async updateAllCompletedEventsStats(): Promise<void> {
     try {
+      console.log('Starting bulk update of all completed events');
+      
+      const today = new Date();
+      const todayString = today.toISOString().split('T')[0];
+      const currentTime = today.toTimeString().split(' ')[0];
+
       const { data: events, error } = await supabase
         .from('events')
-        .select('id')
-        .or(`date.lt.${new Date().toISOString().split('T')[0]},and(date.eq.${new Date().toISOString().split('T')[0]},end_time.lt.${new Date().toTimeString().split(' ')[0]})`);
+        .select('id, title, date, end_time')
+        .or(`date.lt.${todayString},and(date.eq.${todayString},end_time.lt.${currentTime})`);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching completed events:', error);
+        throw error;
+      }
+
+      console.log('Found completed events:', events?.length || 0);
 
       for (const event of events || []) {
+        console.log('Processing event:', event.title || event.id);
         await this.updateEventPlayerStats(event.id);
       }
+      
+      console.log('Completed bulk update of all events');
     } catch (error) {
       console.error('Error updating all completed events stats:', error);
       throw error;

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -72,29 +73,31 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   }
 
   return (
-    <div className="h-full flex flex-col">
-      <Card className="flex-1 flex flex-col overflow-hidden">
-        <CardHeader className="flex-shrink-0">
-          <CardTitle>Team Selection</CardTitle>
+    <div className="h-[80vh] max-h-[800px] flex flex-col">
+      <Card className="flex-1 flex flex-col min-h-0">
+        <CardHeader className="flex-shrink-0 pb-4">
+          <CardTitle className="text-lg">Team Selection</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col overflow-hidden p-6">
-          <Tabs value={activeTeam} onValueChange={setActiveTeam} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mb-4 flex-shrink-0">
+        <CardContent className="flex-1 flex flex-col min-h-0 p-4">
+          <Tabs value={activeTeam} onValueChange={setActiveTeam} className="flex-1 flex flex-col min-h-0">
+            <TabsList className="mb-3 flex-shrink-0 grid w-full" style={{ gridTemplateColumns: `repeat(${teams.length}, 1fr)` }}>
               {teams.map(team => (
-                <TabsTrigger key={team.id} value={team.id}>
+                <TabsTrigger key={team.id} value={team.id} className="text-sm">
                   {team.name}
                 </TabsTrigger>
               ))}
             </TabsList>
 
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 min-h-0">
               {teams.map(team => (
-                <TabsContent key={team.id} value={team.id} className="h-full mt-0 overflow-hidden">
-                  <TeamSelectionManager 
-                    eventId={eventId}
-                    teamId={team.id}
-                    gameFormat={gameFormat}
-                  />
+                <TabsContent key={team.id} value={team.id} className="h-full mt-0 data-[state=active]:flex data-[state=active]:flex-col">
+                  <ScrollArea className="flex-1">
+                    <TeamSelectionManager 
+                      eventId={eventId}
+                      teamId={team.id}
+                      gameFormat={gameFormat}
+                    />
+                  </ScrollArea>
                 </TabsContent>
               ))}
             </div>
