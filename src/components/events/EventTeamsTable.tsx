@@ -73,25 +73,25 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   }
 
   return (
-    <div className="h-[80vh] max-h-[800px] flex flex-col">
+    <div className="h-[75vh] max-h-[700px] flex flex-col">
       <Card className="flex-1 flex flex-col min-h-0">
-        <CardHeader className="flex-shrink-0 pb-4">
-          <CardTitle className="text-lg">Team Selection</CardTitle>
+        <CardHeader className="flex-shrink-0 pb-3">
+          <CardTitle className="text-base">Team Selection</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 p-4">
+        <CardContent className="flex-1 flex flex-col min-h-0 p-3">
           <Tabs value={activeTeam} onValueChange={setActiveTeam} className="flex-1 flex flex-col min-h-0">
-            <TabsList className="mb-3 flex-shrink-0 grid w-full" style={{ gridTemplateColumns: `repeat(${teams.length}, 1fr)` }}>
+            <TabsList className="mb-2 flex-shrink-0 grid w-full" style={{ gridTemplateColumns: `repeat(${teams.length}, 1fr)` }}>
               {teams.map(team => (
-                <TabsTrigger key={team.id} value={team.id} className="text-sm">
+                <TabsTrigger key={team.id} value={team.id} className="text-xs py-1">
                   {team.name}
                 </TabsTrigger>
               ))}
             </TabsList>
 
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-0 overflow-hidden">
               {teams.map(team => (
                 <TabsContent key={team.id} value={team.id} className="h-full mt-0 data-[state=active]:flex data-[state=active]:flex-col">
-                  <ScrollArea className="flex-1">
+                  <ScrollArea className="flex-1 pr-2">
                     <TeamSelectionManager 
                       eventId={eventId}
                       teamId={team.id}

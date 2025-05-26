@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
@@ -24,6 +23,7 @@ export const playerStatsService = {
       }
 
       console.log('Found player stats:', playerStats?.length || 0);
+      console.log('Player stats data:', playerStats);
 
       // Filter for completed events only
       const completedStats = playerStats?.filter(stat => {
@@ -39,37 +39,14 @@ export const playerStatsService = {
                 event.end_time && 
                 new Date(`${event.date}T${event.end_time}`) < today);
         
-        console.log(`Event ${event.title || event.id}: ${event.date}, completed: ${isCompleted}`);
+        console.log(`Event ${event.title || event.id}: ${event.date}, completed: ${isCompleted}, title: ${event.title}`);
         return isCompleted;
       }) || [];
 
       console.log('Completed stats:', completedStats.length);
+      console.log('Completed stats details:', completedStats);
 
-      // Calculate stats
-      const uniqueEventIds = new Set(completedStats.map(stat => stat.event_id));
-      const totalGames = uniqueEventIds.size;
-      const totalMinutes = completedStats.reduce((sum, stat) => sum + (stat.minutes_played || 0), 0);
-      
-      // Captain games - count unique events where player was captain
-      const captainEventIds = new Set(
-        completedStats.filter(stat => stat.is_captain).map(stat => stat.event_id)
-      );
-      const captainGames = captainEventIds.size;
-      
-      // POTM count
-      const potmCount = completedStats.filter(stat => 
-        stat.events.player_of_match_id === playerId
-      ).length;
-
-      // Calculate minutes by position
-      const minutesByPosition: Record<string, number> = {};
-      completedStats.forEach(stat => {
-        if (stat.position && stat.position !== 'SUB') {
-          minutesByPosition[stat.position] = (minutesByPosition[stat.position] || 0) + (stat.minutes_played || 0);
-        }
-      });
-
-      // Get recent games (last 10 unique events)
+      // Group stats by event to get unique events and aggregate data
       const eventStatsMap = new Map();
       completedStats.forEach(stat => {
         const eventId = stat.event_id;
@@ -77,28 +54,58 @@ export const playerStatsService = {
           eventStatsMap.set(eventId, {
             id: eventId,
             date: stat.events.date,
-            opponent: stat.events.opponent || 'Training',
             title: stat.events.title,
-            minutes: 0,
-            minutesByPosition: {},
-            captain: false,
-            playerOfTheMatch: stat.events.player_of_match_id === playerId
+            opponent: stat.events.opponent || 'Training',
+            playerOfTheMatch: stat.events.player_of_match_id === playerId,
+            totalMinutes: 0,
+            positions: [],
+            wasCaptain: false,
+            minutesByPosition: {}
           });
         }
         
         const eventStat = eventStatsMap.get(eventId);
-        eventStat.minutes += stat.minutes_played || 0;
+        eventStat.totalMinutes += stat.minutes_played || 0;
+        
         if (stat.position && stat.position !== 'SUB') {
+          eventStat.positions.push(stat.position);
           eventStat.minutesByPosition[stat.position] = (eventStat.minutesByPosition[stat.position] || 0) + (stat.minutes_played || 0);
         }
+        
         if (stat.is_captain) {
-          eventStat.captain = true;
+          eventStat.wasCaptain = true;
         }
       });
 
-      const recentGames = Array.from(eventStatsMap.values())
+      // Calculate totals
+      const uniqueEvents = Array.from(eventStatsMap.values());
+      const totalGames = uniqueEvents.length;
+      const totalMinutes = uniqueEvents.reduce((sum, event) => sum + event.totalMinutes, 0);
+      const captainGames = uniqueEvents.filter(event => event.wasCaptain).length;
+      const potmCount = uniqueEvents.filter(event => event.playerOfTheMatch).length;
+
+      // Calculate minutes by position across all events
+      const minutesByPosition: Record<string, number> = {};
+      uniqueEvents.forEach(event => {
+        Object.entries(event.minutesByPosition).forEach(([position, minutes]) => {
+          minutesByPosition[position] = (minutesByPosition[position] || 0) + (minutes as number);
+        });
+      });
+
+      // Get recent games (last 10)
+      const recentGames = uniqueEvents
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-        .slice(0, 10);
+        .slice(0, 10)
+        .map(event => ({
+          id: event.id,
+          date: event.date,
+          title: event.title,
+          opponent: event.opponent,
+          minutes: event.totalMinutes,
+          minutesByPosition: event.minutesByPosition,
+          captain: event.wasCaptain,
+          playerOfTheMatch: event.playerOfTheMatch
+        }));
 
       const statsUpdate = {
         totalGames,

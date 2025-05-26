@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Calendar, MapPin, Clock, Users } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface UpcomingEvent {
   id: string;
@@ -18,6 +19,7 @@ interface UpcomingEvent {
   opponent?: string;
   is_home?: boolean;
   team_name: string;
+  team_id: string;
   attendee_count: number;
   total_players: number;
 }
@@ -26,6 +28,7 @@ export function UpcomingEvents() {
   const { teams } = useAuth();
   const [events, setEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (teams.length > 0) {
@@ -102,6 +105,20 @@ export function UpcomingEvents() {
     }
   };
 
+  const handleViewDetails = (event: UpcomingEvent) => {
+    // Navigate to calendar with the specific event
+    navigate('/calendar', { state: { selectedEventId: event.id } });
+  };
+
+  const handleManageSquad = (event: UpcomingEvent) => {
+    // Navigate to calendar and open team selection for this event
+    navigate('/calendar', { state: { selectedEventId: event.id, openTeamSelection: true } });
+  };
+
+  const handleViewAll = () => {
+    navigate('/calendar');
+  };
+
   const getEventTypeColor = (type: string) => {
     switch (type) {
       case "fixture":
@@ -155,7 +172,7 @@ export function UpcomingEvents() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
-          <Button size="sm" onClick={() => window.location.href = '/calendar'}>
+          <Button size="sm" onClick={handleViewAll}>
             View All
           </Button>
         </div>
@@ -168,7 +185,7 @@ export function UpcomingEvents() {
             <p className="text-muted-foreground mb-4 max-w-md">
               Create your first event to get started with team management.
             </p>
-            <Button onClick={() => window.location.href = '/calendar'}>
+            <Button onClick={handleViewAll}>
               Create Event
             </Button>
           </CardContent>
@@ -181,7 +198,7 @@ export function UpcomingEvents() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
-        <Button size="sm" onClick={() => window.location.href = '/calendar'}>
+        <Button size="sm" onClick={handleViewAll}>
           View All
         </Button>
       </div>
@@ -254,10 +271,10 @@ export function UpcomingEvents() {
               </div>
             </CardContent>
             <CardFooter className="border-t pt-4 flex justify-between">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => handleManageSquad(event)}>
                 Manage Squad
               </Button>
-              <Button size="sm" onClick={() => window.location.href = '/calendar'}>
+              <Button size="sm" onClick={() => handleViewDetails(event)}>
                 View Details
               </Button>
             </CardFooter>

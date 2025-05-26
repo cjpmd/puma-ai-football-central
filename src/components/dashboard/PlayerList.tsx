@@ -1,139 +1,129 @@
-
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Player } from "@/types";
-import { useQuery } from '@tanstack/react-query';
-import { playersService } from '@/services/playersService';
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 
-interface PlayerListProps {
-  players?: Partial<Player>[];
+interface Player {
+  id: string;
+  name: string;
+  squad_number: number;
+  type: string;
+  availability: string;
+  team_name: string;
 }
 
-export function PlayerList({ players: propPlayers }: PlayerListProps) {
+export function PlayerList() {
   const { teams } = useAuth();
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  
-  // If players are passed as props, use them; otherwise fetch from database
-  const { data: fetchedPlayers = [], isLoading } = useQuery({
-    queryKey: ['dashboard-players', teams.map(t => t.id)],
-    queryFn: async () => {
-      if (teams.length === 0) return [];
+
+  useEffect(() => {
+    if (teams.length > 0) {
+      loadPlayers();
+    }
+  }, [teams]);
+
+  const loadPlayers = async () => {
+    try {
+      const teamIds = teams.map(t => t.id);
       
-      const allPlayers: Player[] = [];
-      for (const team of teams) {
-        try {
-          const teamPlayers = await playersService.getActivePlayersByTeamId(team.id);
-          allPlayers.push(...teamPlayers);
-        } catch (error) {
-          console.error(`Error fetching players for team ${team.id}:`, error);
-        }
+      const { data: playersData, error } = await supabase
+        .from('players')
+        .select('id, name, squad_number, type, availability, team_id')
+        .in('team_id', teamIds)
+        .eq('status', 'active')
+        .order('squad_number', { ascending: true })
+        .limit(10);
+
+      if (error) {
+        console.error('Error loading players:', error);
+        setPlayers([]);
+        return;
       }
-      return allPlayers;
-    },
-    enabled: !propPlayers && teams.length > 0,
-  });
 
-  const players = propPlayers || fetchedPlayers;
-  
-  const handleAddPlayer = () => {
+      const playersWithTeams = (playersData || []).map(player => {
+        const team = teams.find(t => t.id === player.team_id);
+        return {
+          ...player,
+          team_name: team?.name || 'Unknown Team'
+        };
+      });
+
+      setPlayers(playersWithTeams);
+    } catch (error) {
+      console.error('Error in loadPlayers:', error);
+      setPlayers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getAvailabilityColor = (availability: string) => {
+    switch (availability) {
+      case 'green':
+        return 'bg-green-500';
+      case 'amber':
+        return 'bg-yellow-500';
+      case 'red':
+        return 'bg-red-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const handleViewSquad = () => {
     navigate('/players');
   };
-  
-  const handleViewPlayer = (playerId: string) => {
-    navigate('/players');
-  };
 
-  if (isLoading && !propPlayers) {
+  if (loading) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Squad Players</CardTitle>
-          <Button size="sm" onClick={handleAddPlayer}>Add Player</Button>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-4">Loading players...</div>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight">Squad Players</h2>
+        </div>
+        <div className="text-center py-8">Loading players...</div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Squad Players</CardTitle>
-        <Button size="sm" onClick={handleAddPlayer}>Add Player</Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {players.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground">
-              No players found. Add some players to get started.
-            </div>
-          ) : (
-            players.map((player) => (
-              <div 
-                key={player.id} 
-                className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
-                  player.availability === "green" 
-                    ? "bg-green-50" 
-                    : player.availability === "amber" 
-                    ? "bg-amber-50" 
-                    : player.availability === "red" 
-                    ? "bg-red-50" 
-                    : "bg-gray-50"
-                }`}
-              >
-                <div className="flex items-center space-x-4">
-                  <Avatar className={`h-10 w-10 border-2 ${
-                    player.availability === "green" 
-                      ? "border-puma-green-500" 
-                      : player.availability === "amber" 
-                      ? "border-puma-amber" 
-                      : player.availability === "red" 
-                      ? "border-puma-red" 
-                      : "border-gray-200"
-                  }`}>
-                    <AvatarFallback className="text-sm bg-puma-blue-100 text-puma-blue-500">
-                      {player.squadNumber || ""}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <div className="font-medium">{player.name}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {player.type === "goalkeeper" ? "Goalkeeper" : "Outfield"}
-                    </div>
-                  </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold tracking-tight">Squad Players</h2>
+        <Button size="sm" onClick={handleViewSquad}>
+          View Squad
+        </Button>
+      </div>
+      
+      <div className="grid gap-4">
+        {players.map((player) => (
+          <Card key={player.id} className="hover:shadow-md transition-shadow">
+            <CardHeader>
+              <CardTitle className="text-lg">{player.name}</CardTitle>
+              <CardDescription>#{player.squad_number} • {player.team_name}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Type</p>
+                  <p className="text-sm">{player.type}</p>
                 </div>
-                
-                <div className="flex items-center space-x-2">
-                  {player.subscriptionStatus && (
-                    <Badge variant="outline" className={
-                      player.subscriptionStatus === "active" 
-                        ? "bg-green-100 text-green-800 border-green-200" 
-                        : player.subscriptionStatus === "pending" 
-                        ? "bg-amber-100 text-amber-800 border-amber-200" 
-                        : "bg-red-100 text-red-800 border-red-200"
-                    }>
-                      {player.subscriptionStatus.charAt(0).toUpperCase() + player.subscriptionStatus.slice(1)}
-                    </Badge>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => handleViewPlayer(player.id)}
-                  >
-                    View
-                  </Button>
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">Availability</p>
+                  <Badge className={getAvailabilityColor(player.availability)}>
+                    {player.availability.charAt(0).toUpperCase() + player.availability.slice(1)}
+                  </Badge>
                 </div>
               </div>
-            ))
-          )}
-        </div>
-      </CardContent>
-    </Card>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }

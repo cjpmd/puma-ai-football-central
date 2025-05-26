@@ -1,170 +1,141 @@
 
-import React, { useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useAuth } from '@/contexts/AuthContext';
-import {
-  Calendar,
-  Home,
-  Users,
-  Building2,
-  Settings,
-  Menu,
-  UserCheck,
-  Shield,
-  CreditCard,
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/contexts/AuthContext";
+import { 
+  Menu, 
+  Home, 
+  Users, 
+  Calendar, 
+  BarChart3, 
+  Settings, 
   LogOut,
-  User
-} from 'lucide-react';
+  Trophy,
+  Shirt,
+  ClipboardList
+} from "lucide-react";
+import { Logo } from "./Logo";
 
 interface DashboardLayoutProps {
-  children?: React.ReactNode;
+  children: React.ReactNode;
 }
 
-export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
-  const { user, logout } = useAuth();
+export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
 
-  const navigation = [
-    {
-      name: 'Dashboard',
-      href: '/dashboard',
-      icon: Home,
-    },
-    {
-      name: 'Teams',
-      href: '/teams',
-      icon: Users,
-    },
-    {
-      name: 'Players',
-      href: '/players',
-      icon: UserCheck,
-    },
-    {
-      name: 'Staff Management',
-      href: '/staff',
-      icon: User,
-    },
-    {
-      name: 'Calendar & Events',
-      href: '/calendar',
-      icon: Calendar,
-    },
-    {
-      name: 'Clubs',
-      href: '/clubs',
-      icon: Building2,
-    },
-    {
-      name: 'Subscriptions',
-      href: '/subscriptions',
-      icon: CreditCard,
-    },
-    {
-      name: 'User Management',
-      href: '/users',
-      icon: Shield,
-    },
+  const menuItems = [
+    { icon: Home, label: "Dashboard", path: "/dashboard" },
+    { icon: Users, label: "Players", path: "/players" },
+    { icon: Calendar, label: "Calendar & Events", path: "/calendar" },
+    { icon: Trophy, label: "Match Analysis", path: "/match-analysis" },
+    { icon: Shirt, label: "Kit Management", path: "/kit-management" },
+    { icon: ClipboardList, label: "Player Management", path: "/player-management" },
+    { icon: BarChart3, label: "Analytics", path: "/analytics" },
+    { icon: Settings, label: "Settings", path: "/settings" },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    setIsOpen(false);
   };
 
-  const isActive = (href: string) => {
-    return location.pathname === href || location.pathname.startsWith(href + '/');
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
   };
-
-  const SidebarContent = () => (
-    <div className="flex h-full flex-col">
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link to="/dashboard" className="flex items-center gap-2 font-semibold">
-          <span className="text-lg">Team Manager</span>
-        </Link>
-      </div>
-      <ScrollArea className="flex-1">
-        <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
-          {navigation.map((item) => {
-            const isCurrentActive = isActive(item.href);
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                  isCurrentActive && "bg-muted text-primary"
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-4 w-4" />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-      </ScrollArea>
-      <div className="mt-auto p-4">
-        <div className="flex items-center gap-3 px-3 py-2 text-sm">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            {user?.email?.charAt(0).toUpperCase()}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.email}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-      <div className="hidden border-r bg-muted/40 md:block">
-        <SidebarContent />
-      </div>
-      <div className="flex flex-col">
-        <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6">
-          <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                className="shrink-0 md:hidden"
-              >
-                <Menu className="h-5 w-5" />
-                <span className="sr-only">Toggle navigation menu</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="flex flex-col p-0">
-              <SidebarContent />
-            </SheetContent>
-          </Sheet>
-          <div className="w-full flex-1">
-            <h1 className="text-lg font-semibold md:text-2xl">
-              {navigation.find(item => isActive(item.href))?.name || 'Dashboard'}
-            </h1>
+    <div className="min-h-screen bg-gray-50">
+      {/* Desktop Sidebar */}
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
+        <div className="flex flex-col flex-grow pt-5 bg-white overflow-y-auto border-r border-gray-200">
+          <div className="flex items-center flex-shrink-0 px-4">
+            <Logo />
           </div>
-        </header>
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
-          {children || <Outlet />}
+          
+          <div className="mt-8 flex-grow flex flex-col">
+            <nav className="flex-1 px-2 space-y-1">
+              {menuItems.map((item) => (
+                <Button
+                  key={item.path}
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => handleNavigation(item.path)}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  {item.label}
+                </Button>
+              ))}
+            </nav>
+            
+            <div className="px-2 pb-4">
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleSignOut}
+              >
+                <LogOut className="mr-3 h-5 w-5" />
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Navigation */}
+      <div className="md:hidden">
+        <div className="bg-white shadow-sm border-b">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <Logo />
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64">
+                <div className="py-4">
+                  <Logo />
+                </div>
+                <nav className="mt-8 space-y-1">
+                  {menuItems.map((item) => (
+                    <Button
+                      key={item.path}
+                      variant="ghost"
+                      className="w-full justify-start"
+                      onClick={() => handleNavigation(item.path)}
+                    >
+                      <item.icon className="mr-3 h-5 w-5" />
+                      {item.label}
+                    </Button>
+                  ))}
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 mt-8"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="mr-3 h-5 w-5" />
+                    Sign Out
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="md:pl-64">
+        <main className="py-6">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {children}
+          </div>
         </main>
       </div>
     </div>
   );
-};
+}

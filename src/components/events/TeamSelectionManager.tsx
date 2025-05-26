@@ -137,25 +137,25 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   };
 
   if (loading) {
-    return <div className="text-center py-8">Loading team selection...</div>;
+    return <div className="text-center py-4">Loading team selection...</div>;
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Card className="min-h-0">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Team Configuration</CardTitle>
-            <Button onClick={addTeam} variant="outline" size="sm">
+            <CardTitle className="text-sm">Team Configuration</CardTitle>
+            <Button onClick={addTeam} variant="outline" size="sm" className="h-7 text-xs px-2">
               <Plus className="h-3 w-3 mr-1" /> Add Team
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="pt-0 pb-3">
+        <CardContent className="pt-0 pb-2">
           <Tabs value={activeTeamTab} onValueChange={setActiveTeamTab} className="w-full">
-            <TabsList className="grid w-full mb-3" style={{ gridTemplateColumns: `repeat(${Object.keys(periods).length}, 1fr)` }}>
+            <TabsList className="grid w-full mb-2 h-8" style={{ gridTemplateColumns: `repeat(${Object.keys(periods).length}, 1fr)` }}>
               {Object.keys(periods).sort().map((teamKey) => (
-                <TabsTrigger key={teamKey} value={teamKey} className="text-sm">
+                <TabsTrigger key={teamKey} value={teamKey} className="text-xs py-1">
                   Team {teamKey.replace('team-', '')}
                 </TabsTrigger>
               ))}
@@ -164,10 +164,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             {Object.keys(periods).sort().map((teamKey) => (
               <TabsContent key={teamKey} value={teamKey} className="mt-0">
                 <Tabs value={activePeriodTab} onValueChange={setActivePeriodTab}>
-                  <div className="flex items-center justify-between mb-3">
-                    <TabsList className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${periods[teamKey] || 1}, 1fr)` }}>
+                  <div className="flex items-center justify-between mb-2">
+                    <TabsList className="flex-1 grid h-7" style={{ gridTemplateColumns: `repeat(${periods[teamKey] || 1}, 1fr)` }}>
                       {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                        <TabsTrigger key={i} value={`period-${i + 1}`} className="text-sm">
+                        <TabsTrigger key={i} value={`period-${i + 1}`} className="text-xs py-1">
                           Period {i + 1}
                         </TabsTrigger>
                       ))}
@@ -177,7 +177,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       variant="outline" 
                       size="sm" 
                       onClick={() => handleAddPeriod(teamKey)}
-                      className="ml-2"
+                      className="ml-2 h-7 text-xs px-2"
                     >
                       <Plus className="h-3 w-3 mr-1" /> Add Period
                     </Button>
