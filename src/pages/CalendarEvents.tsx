@@ -42,7 +42,7 @@ const CalendarEventsPage = () => {
   const [eventEndTime, setEventEndTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [eventNotes, setEventNotes] = useState('');
-  const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly'>('training');
+  const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly' | 'match'>('training');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
 
@@ -141,7 +141,7 @@ const CalendarEventsPage = () => {
     setEventEndTime(event.end_time || '');
     setEventLocation(event.location || '');
     setEventNotes(event.notes || '');
-    setEventEventType(event.event_type);
+    setEventEventType(event.event_type as any);
     setIsEditModalOpen(true);
   };
 

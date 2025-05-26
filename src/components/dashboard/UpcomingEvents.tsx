@@ -61,7 +61,8 @@ export function UpcomingEvents() {
         const team = teams.find(t => t.id === event.team_id);
         return {
           ...event,
-          team_name: team?.name || 'Unknown Team'
+          team_name: team?.name || 'Unknown Team',
+          scores: event.scores as { home: number; away: number } | null
         };
       });
 
