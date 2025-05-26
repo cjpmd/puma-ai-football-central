@@ -31,11 +31,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: Home, label: "Dashboard", path: "/dashboard" },
     { icon: Users, label: "Players", path: "/players" },
     { icon: Calendar, label: "Calendar & Events", path: "/calendar" },
-    { icon: Trophy, label: "Match Analysis", path: "/match-analysis" },
-    { icon: Shirt, label: "Kit Management", path: "/kit-management" },
-    { icon: ClipboardList, label: "Player Management", path: "/player-management" },
     { icon: BarChart3, label: "Analytics", path: "/analytics" },
-    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: ClipboardList, label: "Player Management", path: "/player-management" },
+    { icon: Trophy, label: "Teams", path: "/teams" },
+    { icon: Shirt, label: "Clubs", path: "/clubs" },
+    { icon: Settings, label: "Subscriptions", path: "/subscriptions" },
   ];
 
   const handleNavigation = (path: string) => {

@@ -9,6 +9,8 @@ import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
 import TeamManagement from './pages/TeamManagement';
 import PlayerManagement from './pages/PlayerManagement';
+import PlayerManagementTab from './pages/PlayerManagementTab';
+import Analytics from './pages/Analytics';
 import ClubManagement from './pages/ClubManagement';
 import CalendarEvents from './pages/CalendarEvents';
 import StaffManagement from './pages/StaffManagement';
@@ -40,6 +42,8 @@ function App() {
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
               <Route path="/players" element={<ProtectedRoute><PlayerManagement /></ProtectedRoute>} />
+              <Route path="/player-management" element={<ProtectedRoute><PlayerManagementTab /></ProtectedRoute>} />
+              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
               <Route path="/clubs" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
               <Route path="/calendar" element={<ProtectedRoute><CalendarEvents /></ProtectedRoute>} />
               <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
