@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
@@ -8,12 +9,22 @@ export const playerStatsService = {
     try {
       console.log('Updating stats for player:', playerId);
       
-      // Get all event player stats for this player
+      // Get all event player stats for this player with event details
       const { data: playerStats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
           *,
-          events!inner(id, date, end_time, opponent, player_of_match_id, title)
+          events!inner(
+            id, 
+            date, 
+            end_time, 
+            opponent, 
+            player_of_match_id, 
+            title,
+            event_type,
+            scores,
+            is_home
+          )
         `)
         .eq('player_id', playerId);
 
@@ -22,11 +33,33 @@ export const playerStatsService = {
         throw statsError;
       }
 
-      console.log('Found player stats:', playerStats?.length || 0);
-      console.log('Player stats data:', playerStats);
+      console.log('Found player stats for player:', playerId, 'Count:', playerStats?.length || 0);
+      
+      if (!playerStats || playerStats.length === 0) {
+        console.log('No stats found for player:', playerId);
+        // Still update the player with empty stats
+        const emptyStats = {
+          totalGames: 0,
+          totalMinutes: 0,
+          captainGames: 0,
+          playerOfTheMatchCount: 0,
+          minutesByPosition: {},
+          recentGames: []
+        };
+        
+        await supabase
+          .from('players')
+          .update({
+            match_stats: emptyStats,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', playerId);
+          
+        return;
+      }
 
       // Filter for completed events only
-      const completedStats = playerStats?.filter(stat => {
+      const completedStats = playerStats.filter(stat => {
         const event = stat.events;
         const today = new Date();
         const eventDate = new Date(event.date);
@@ -39,12 +72,11 @@ export const playerStatsService = {
                 event.end_time && 
                 new Date(`${event.date}T${event.end_time}`) < today);
         
-        console.log(`Event ${event.title || event.id}: ${event.date}, completed: ${isCompleted}, title: ${event.title}`);
+        console.log(`Event "${event.title}" (${event.event_type}): ${event.date}, completed: ${isCompleted}`);
         return isCompleted;
-      }) || [];
+      });
 
-      console.log('Completed stats:', completedStats.length);
-      console.log('Completed stats details:', completedStats);
+      console.log('Completed stats for player:', playerId, 'Count:', completedStats.length);
 
       // Group stats by event to get unique events and aggregate data
       const eventStatsMap = new Map();
@@ -55,12 +87,15 @@ export const playerStatsService = {
             id: eventId,
             date: stat.events.date,
             title: stat.events.title,
+            eventType: stat.events.event_type,
             opponent: stat.events.opponent || 'Training',
             playerOfTheMatch: stat.events.player_of_match_id === playerId,
             totalMinutes: 0,
             positions: [],
             wasCaptain: false,
-            minutesByPosition: {}
+            minutesByPosition: {},
+            scores: stat.events.scores,
+            isHome: stat.events.is_home
           });
         }
         
@@ -68,7 +103,9 @@ export const playerStatsService = {
         eventStat.totalMinutes += stat.minutes_played || 0;
         
         if (stat.position && stat.position !== 'SUB') {
-          eventStat.positions.push(stat.position);
+          if (!eventStat.positions.includes(stat.position)) {
+            eventStat.positions.push(stat.position);
+          }
           eventStat.minutesByPosition[stat.position] = (eventStat.minutesByPosition[stat.position] || 0) + (stat.minutes_played || 0);
         }
         
@@ -100,11 +137,14 @@ export const playerStatsService = {
           id: event.id,
           date: event.date,
           title: event.title,
+          eventType: event.eventType,
           opponent: event.opponent,
           minutes: event.totalMinutes,
           minutesByPosition: event.minutesByPosition,
           captain: event.wasCaptain,
-          playerOfTheMatch: event.playerOfTheMatch
+          playerOfTheMatch: event.playerOfTheMatch,
+          scores: event.scores,
+          isHome: event.isHome
         }));
 
       const statsUpdate = {
@@ -116,7 +156,7 @@ export const playerStatsService = {
         recentGames
       };
 
-      console.log('Updating player with stats:', statsUpdate);
+      console.log('Final stats update for player:', playerId, statsUpdate);
 
       // Update player match stats
       const { error: updateError } = await supabase
@@ -132,7 +172,7 @@ export const playerStatsService = {
         throw updateError;
       }
       
-      console.log('Successfully updated player stats');
+      console.log('Successfully updated player stats for:', playerId);
     } catch (error) {
       console.error('Error updating player stats:', error);
       throw error;

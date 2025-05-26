@@ -16,6 +16,7 @@ import { UserLoginModal } from "../modals/UserLoginModal";
 import { UserSignupModal } from "../modals/UserSignupModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Logo } from "./Logo";
 
 export function Header() {
   const { user, profile, signOut } = useAuth();
@@ -61,23 +62,7 @@ export function Header() {
             to="/" 
             className="flex items-center gap-2 font-bold text-xl text-puma-blue-500"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-6 w-6"
-            >
-              <path d="M12 22c7.5 0 10-8 10-10a3.076 3.076 0 0 0-5.954-1" />
-              <path d="M17.5 11.5a3.5 3.5 0 0 0-7 0" />
-              <path d="M5 10.5 A3.5 3.5 0 0 1 8.5 7" />
-              <path d="M2 12c0 2 2.5 10 10 10s10-8 10-10c0-1.688-1.5-3-3-3 0-1.5-1.5-3-3-3-1.022 0-1.917.548-2.410 1.364" />
-              <path d="M8.5 7c-.99 0-1.898.38-2.575 1" />
-              <path d="M2 12c0-1.688 1.5-3 3-3" />
-            </svg>
+            <Logo className="h-8 w-8" showText={false} />
             <span>Puma-AI</span>
           </Link>
         </div>

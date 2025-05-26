@@ -42,7 +42,7 @@ const CalendarEventsPage = () => {
   const [eventEndTime, setEventEndTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [eventNotes, setEventNotes] = useState('');
-  const [eventEventType, setEventEventType] = useState<'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly'>('training');
+  const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly'>('training');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
 
@@ -120,13 +120,15 @@ const CalendarEventsPage = () => {
       title: eventTitle,
       description: eventDescription,
       date: format(eventDate, 'yyyy-MM-dd'),
-      start_time: eventStartTime,
-      end_time: eventEndTime,
-      location: eventLocation,
-      notes: eventNotes,
+      start_time: eventStartTime || undefined,
+      end_time: eventEndTime || undefined,
+      location: eventLocation || undefined,
+      notes: eventNotes || undefined,
       event_type: eventEventType,
+      game_format: '7-a-side',
     };
 
+    console.log('Creating event with data:', newEvent);
     createEvent(newEvent);
   };
 
@@ -168,7 +170,8 @@ const CalendarEventsPage = () => {
 
     const updatedEvent: UpdateEventData = {
       ...event,
-      scores
+      scores,
+      player_of_match_id: event.player_of_match_id || undefined
     };
 
     updateEvent(updatedEvent);

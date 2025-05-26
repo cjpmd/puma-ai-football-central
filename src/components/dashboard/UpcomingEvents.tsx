@@ -1,33 +1,35 @@
+
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, MapPin, Clock, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { format, isSameDay } from 'date-fns';
+import { Calendar, Users, Trophy } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 
-interface UpcomingEvent {
+interface Event {
   id: string;
   title: string;
-  event_type: string;
   date: string;
-  start_time: string;
-  location: string;
-  game_format?: string;
-  opponent?: string;
-  is_home?: boolean;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  event_type: string;
+  opponent: string | null;
+  scores: { home: number; away: number } | null;
   team_name: string;
-  team_id: string;
-  attendee_count: number;
-  total_players: number;
 }
 
 export function UpcomingEvents() {
   const { teams } = useAuth();
-  const [events, setEvents] = useState<UpcomingEvent[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -41,62 +43,29 @@ export function UpcomingEvents() {
       const teamIds = teams.map(t => t.id);
       const today = new Date().toISOString().split('T')[0];
       
-      const { data: eventsData, error: eventsError } = await supabase
+      const { data: eventsData, error } = await supabase
         .from('events')
-        .select(`
-          id,
-          title,
-          event_type,
-          date,
-          start_time,
-          location,
-          game_format,
-          opponent,
-          is_home,
-          team_id
-        `)
+        .select('id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id')
         .in('team_id', teamIds)
         .gte('date', today)
         .order('date', { ascending: true })
         .limit(5);
 
-      if (eventsError) {
-        console.error('Error loading events:', eventsError);
+      if (error) {
+        console.error('Error loading upcoming events:', error);
         setEvents([]);
         return;
       }
 
-      // Get attendee counts for each event and team names
-      const eventsWithCounts = await Promise.all(
-        (eventsData || []).map(async (event) => {
-          // Get confirmed attendees count
-          const { count: attendeeCount } = await supabase
-            .from('event_attendees')
-            .select('*', { count: 'exact', head: true })
-            .eq('event_id', event.id)
-            .eq('status', 'accepted');
+      const eventsWithTeams = (eventsData || []).map(event => {
+        const team = teams.find(t => t.id === event.team_id);
+        return {
+          ...event,
+          team_name: team?.name || 'Unknown Team'
+        };
+      });
 
-          // Get total team players count
-          const { count: totalPlayers } = await supabase
-            .from('players')
-            .select('*', { count: 'exact', head: true })
-            .eq('team_id', event.team_id)
-            .eq('status', 'active');
-
-          // Get team name
-          const team = teams.find(t => t.id === event.team_id);
-          const teamName = team?.name || 'Unknown Team';
-
-          return {
-            ...event,
-            team_name: teamName,
-            attendee_count: attendeeCount || 0,
-            total_players: totalPlayers || 0
-          };
-        })
-      );
-
-      setEvents(eventsWithCounts);
+      setEvents(eventsWithTeams);
     } catch (error) {
       console.error('Error in loadUpcomingEvents:', error);
       setEvents([]);
@@ -105,56 +74,25 @@ export function UpcomingEvents() {
     }
   };
 
-  const handleViewDetails = (event: UpcomingEvent) => {
-    // Navigate to calendar with the specific event
-    navigate('/calendar', { state: { selectedEventId: event.id } });
-  };
-
-  const handleManageSquad = (event: UpcomingEvent) => {
-    // Navigate to calendar and open team selection for this event
-    navigate('/calendar', { state: { selectedEventId: event.id, openTeamSelection: true } });
-  };
-
-  const handleViewAll = () => {
+  const handleViewCalendar = () => {
     navigate('/calendar');
   };
 
-  const getEventTypeColor = (type: string) => {
-    switch (type) {
-      case "fixture":
-        return "bg-red-500 text-white";
-      case "friendly":
-        return "bg-blue-500 text-white";
-      case "tournament":
-        return "bg-purple-500 text-white";
-      case "festival":
-        return "bg-yellow-500 text-white";
-      case "training":
-        return "bg-green-500 text-white";
-      case "social":
-        return "bg-pink-500 text-white";
-      default:
-        return "bg-gray-500 text-white";
-    }
+  const handleEventDetails = (event: Event) => {
+    // Navigate to calendar with the event pre-selected
+    navigate('/calendar', { state: { selectedEventId: event.id } });
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-    });
+  const handleManageSquad = (event: Event) => {
+    setSelectedEvent(event);
+    setIsTeamSelectionOpen(true);
   };
 
-  const formatTime = (timeStr: string) => {
-    if (!timeStr) return '';
-    return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+  const getNextEvent = () => {
+    return events.length > 0 ? events[0] : null;
   };
+
+  const nextEvent = getNextEvent();
 
   if (loading) {
     return (
@@ -167,120 +105,143 @@ export function UpcomingEvents() {
     );
   }
 
-  if (events.length === 0) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
-          <Button size="sm" onClick={handleViewAll}>
-            View All
-          </Button>
-        </div>
-        <Card className="border-dashed border-2 border-muted">
-          <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-            <div className="rounded-full bg-muted p-3 mb-4">
-              <Calendar className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-1">No Upcoming Events</h3>
-            <p className="text-muted-foreground mb-4 max-w-md">
-              Create your first event to get started with team management.
-            </p>
-            <Button onClick={handleViewAll}>
-              Create Event
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold tracking-tight">Upcoming Events</h2>
-        <Button size="sm" onClick={handleViewAll}>
+        <Button size="sm" onClick={handleViewCalendar}>
+          <Calendar className="h-4 w-4 mr-2" />
           View All
         </Button>
       </div>
-      
-      <div className="grid gap-4">
-        {events.map((event) => (
-          <Card key={event.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">{event.title}</CardTitle>
-                  <CardDescription className="flex items-center gap-2">
-                    <Clock className="h-3 w-3" />
-                    {formatDate(event.date)} • {formatTime(event.start_time)}
-                  </CardDescription>
-                </div>
-                <Badge className={getEventTypeColor(event.event_type)}>
-                  {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
-                </Badge>
+
+      {nextEvent && (
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Next Event</CardTitle>
+                <CardDescription>{nextEvent.team_name}</CardDescription>
               </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Team</p>
-                  <p className="text-sm">{event.team_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Location</p>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3 text-muted-foreground" />
-                    <p className="text-sm">{event.location}</p>
-                  </div>
-                </div>
-                {event.game_format && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Format</p>
-                    <p className="text-sm">{event.game_format}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Attendance</p>
-                  <div className="flex items-center mt-1">
-                    <div className="flex -space-x-2">
-                      {Array.from({ length: Math.min(3, event.attendee_count) }).map((_, i) => (
-                        <Avatar key={i} className="h-6 w-6 border-2 border-white">
-                          <AvatarFallback className="text-[10px] bg-puma-blue-100 text-puma-blue-500">
-                            {String.fromCharCode(65 + i)}
-                          </AvatarFallback>
-                        </Avatar>
-                      ))}
-                    </div>
-                    <span className="ml-2 text-xs text-muted-foreground flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      {event.attendee_count}/{event.total_players} confirmed
-                    </span>
-                  </div>
-                </div>
-                {event.opponent && (
-                  <div className="col-span-2">
-                    <p className="text-sm font-medium text-muted-foreground">Opponent</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm">vs {event.opponent}</span>
-                      <Badge variant={event.is_home ? 'default' : 'secondary'}>
-                        {event.is_home ? 'Home' : 'Away'}
-                      </Badge>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-            <CardFooter className="border-t pt-4 flex justify-between">
-              <Button variant="outline" size="sm" onClick={() => handleManageSquad(event)}>
-                Manage Squad
-              </Button>
-              <Button size="sm" onClick={() => handleViewDetails(event)}>
+              <Badge variant="secondary">{nextEvent.event_type}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <h3 className="font-semibold">{nextEvent.title}</h3>
+              <p className="text-sm text-muted-foreground">
+                {format(new Date(nextEvent.date), 'EEEE, MMMM d, yyyy')}
+                {nextEvent.start_time && ` at ${nextEvent.start_time}`}
+              </p>
+              {nextEvent.location && (
+                <p className="text-sm text-muted-foreground">📍 {nextEvent.location}</p>
+              )}
+              {nextEvent.opponent && (
+                <p className="text-sm text-muted-foreground">vs {nextEvent.opponent}</p>
+              )}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button 
+                size="sm" 
+                onClick={() => handleEventDetails(nextEvent)}
+                className="flex-1"
+              >
                 View Details
               </Button>
-            </CardFooter>
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={() => handleManageSquad(nextEvent)}
+              >
+                <Users className="h-4 w-4 mr-1" />
+                Manage Squad
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid gap-3">
+        {events.slice(nextEvent ? 1 : 0).map((event) => (
+          <Card key={event.id} className="hover:shadow-md transition-shadow">
+            <CardContent className="pt-4">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-xs">
+                      {event.event_type}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{event.team_name}</span>
+                  </div>
+                  <h3 className="font-medium">{event.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(event.date), 'MMM d')}
+                    {event.start_time && ` at ${event.start_time}`}
+                  </p>
+                  {event.location && (
+                    <p className="text-xs text-muted-foreground">📍 {event.location}</p>
+                  )}
+                  {event.opponent && (
+                    <p className="text-xs text-muted-foreground">vs {event.opponent}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleEventDetails(event)}
+                    className="h-8 px-2"
+                  >
+                    View Details
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => handleManageSquad(event)}
+                    className="h-8 px-2"
+                  >
+                    <Users className="h-3 w-3 mr-1" />
+                    Manage Squad
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
           </Card>
         ))}
       </div>
+
+      {events.length === 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-medium mb-2">No upcoming events</h3>
+              <p className="text-muted-foreground mb-4">
+                Create your first event to get started with team management.
+              </p>
+              <Button onClick={handleViewCalendar}>
+                Create Event
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Team Selection Modal */}
+      <Dialog open={isTeamSelectionOpen} onOpenChange={setIsTeamSelectionOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedEvent && (
+            <EventTeamsTable
+              eventId={selectedEvent.id}
+              primaryTeamId={teams.find(t => t.name === selectedEvent.team_name)?.id || teams[0]?.id}
+              gameFormat="7-a-side"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
