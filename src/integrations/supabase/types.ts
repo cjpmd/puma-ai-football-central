@@ -836,6 +836,7 @@ export type Database = {
           kit_sizes: Json | null
           leave_comments: string | null
           leave_date: string | null
+          linking_code: string | null
           match_stats: Json | null
           name: string
           objectives: Json | null
@@ -859,6 +860,7 @@ export type Database = {
           kit_sizes?: Json | null
           leave_comments?: string | null
           leave_date?: string | null
+          linking_code?: string | null
           match_stats?: Json | null
           name: string
           objectives?: Json | null
@@ -882,6 +884,7 @@ export type Database = {
           kit_sizes?: Json | null
           leave_comments?: string | null
           leave_date?: string | null
+          linking_code?: string | null
           match_stats?: Json | null
           name?: string
           objectives?: Json | null
@@ -1408,6 +1411,107 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invitation_code: string
+          invited_by: string
+          name: string
+          player_id: string | null
+          role: string
+          status: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invitation_code?: string
+          invited_by: string
+          name: string
+          player_id?: string | null
+          role: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invitation_code?: string
+          invited_by?: string
+          name?: string
+          player_id?: string | null
+          role?: string
+          status?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_invitations_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_players: {
+        Row: {
+          created_at: string
+          id: string
+          player_id: string
+          relationship: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          player_id: string
+          relationship: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          player_id?: string
+          relationship?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id"]
           },
         ]

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { userInvitationService } from '@/services/userInvitationService';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 interface AccountLinkingModalProps {
@@ -20,6 +21,7 @@ export const AccountLinkingModal: React.FC<AccountLinkingModalProps> = ({
   onClose,
   onLinked
 }) => {
+  const { user } = useAuth();
   const [step, setStep] = useState<'role' | 'linking'>('role');
   const [selectedRole, setSelectedRole] = useState<'staff' | 'parent' | 'player'>('staff');
   const [linkingCode, setLinkingCode] = useState('');
@@ -40,11 +42,14 @@ export const AccountLinkingModal: React.FC<AccountLinkingModalProps> = ({
       return;
     }
 
+    if (!user?.id) {
+      toast.error('User not authenticated');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // This would link the user to a player account
-      // Implementation depends on your user system
-      await userInvitationService.linkPlayerAccount(linkingCode, 'current-user-id');
+      await userInvitationService.linkPlayerAccount(linkingCode, user.id);
       toast.success('Account linked successfully!');
       handleComplete();
     } catch (error) {
