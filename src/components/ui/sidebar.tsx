@@ -10,7 +10,8 @@ import {
   Building2, 
   Trophy,
   CreditCard,
-  UserCog
+  UserCog,
+  UserPlus
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -69,21 +70,19 @@ export function Sidebar() {
             <span>Staff</span>
           </Link>
           <Link
+            to="/users"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Users</span>
+          </Link>
+          <Link
             to="/subscriptions"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
           >
             <CreditCard className="h-4 w-4" />
             <span>Subscriptions</span>
           </Link>
-          {isAdmin && (
-            <Link
-              to="/users"
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
-            >
-              <Users className="h-4 w-4" />
-              <span>Users</span>
-            </Link>
-          )}
           <Link
             to="/settings"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"

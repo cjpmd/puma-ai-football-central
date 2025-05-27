@@ -459,6 +459,7 @@ export type Database = {
           is_home: boolean | null
           location: string | null
           meeting_time: string | null
+          notes: string | null
           opponent: string | null
           player_of_match_id: string | null
           scores: Json | null
@@ -484,6 +485,7 @@ export type Database = {
           is_home?: boolean | null
           location?: string | null
           meeting_time?: string | null
+          notes?: string | null
           opponent?: string | null
           player_of_match_id?: string | null
           scores?: Json | null
@@ -509,6 +511,7 @@ export type Database = {
           is_home?: boolean | null
           location?: string | null
           meeting_time?: string | null
+          notes?: string | null
           opponent?: string | null
           player_of_match_id?: string | null
           scores?: Json | null
