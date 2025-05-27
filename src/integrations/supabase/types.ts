@@ -449,6 +449,7 @@ export type Database = {
           coach_notes: string | null
           created_at: string
           date: string
+          description: string | null
           end_time: string | null
           event_type: string
           facility_booking_id: string | null
@@ -473,6 +474,7 @@ export type Database = {
           coach_notes?: string | null
           created_at?: string
           date: string
+          description?: string | null
           end_time?: string | null
           event_type: string
           facility_booking_id?: string | null
@@ -497,6 +499,7 @@ export type Database = {
           coach_notes?: string | null
           created_at?: string
           date?: string
+          description?: string | null
           end_time?: string | null
           event_type?: string
           facility_booking_id?: string | null

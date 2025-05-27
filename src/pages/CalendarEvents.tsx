@@ -118,7 +118,7 @@ const CalendarEventsPage = () => {
     const newEvent: CreateEventData = {
       team_id: selectedTeamId,
       title: eventTitle,
-      description: eventDescription,
+      description: eventDescription || undefined,
       date: format(eventDate, 'yyyy-MM-dd'),
       start_time: eventStartTime || undefined,
       end_time: eventEndTime || undefined,
@@ -152,12 +152,12 @@ const CalendarEventsPage = () => {
       id: selectedEvent.id,
       team_id: selectedTeamId,
       title: eventTitle,
-      description: eventDescription,
+      description: eventDescription || undefined,
       date: format(eventDate, 'yyyy-MM-dd'),
-      start_time: eventStartTime,
-      end_time: eventEndTime,
-      location: eventLocation,
-      notes: eventNotes,
+      start_time: eventStartTime || undefined,
+      end_time: eventEndTime || undefined,
+      location: eventLocation || undefined,
+      notes: eventNotes || undefined,
       event_type: eventEventType,
     };
 
