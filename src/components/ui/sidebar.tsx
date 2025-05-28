@@ -35,13 +35,6 @@ export function Sidebar() {
             <span>Dashboard</span>
           </Link>
           <Link
-            to="/teams"
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
-          >
-            <Trophy className="h-4 w-4" />
-            <span>Teams</span>
-          </Link>
-          <Link
             to="/players"
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
           >
@@ -53,7 +46,14 @@ export function Sidebar() {
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
           >
             <CalendarDays className="h-4 w-4" />
-            <span>Calendar</span>
+            <span>Calendar & Events</span>
+          </Link>
+          <Link
+            to="/teams"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
+          >
+            <Trophy className="h-4 w-4" />
+            <span>Teams</span>
           </Link>
           <Link
             to="/clubs"

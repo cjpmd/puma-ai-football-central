@@ -8,6 +8,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, Crown, UserCheck, Filter, Grid3X3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { FormationSelector } from './FormationSelector';
+import { getPositionsForFormation } from '@/utils/formationUtils';
+import { GameFormat } from '@/types';
 
 interface Player {
   id: string;
@@ -28,6 +31,7 @@ interface PlayerSelectionPanelProps {
   showFormationView?: boolean;
   formation?: string;
   onFormationChange?: (formation: string) => void;
+  gameFormat?: GameFormat;
 }
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
@@ -39,13 +43,15 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventType = 'match',
   showFormationView = false,
   formation,
-  onFormationChange
+  onFormationChange,
+  gameFormat = '7-a-side'
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFullSquadOnly, setShowFullSquadOnly] = useState(true);
   const [viewMode, setViewMode] = useState<'list' | 'formation'>('list');
+  const [positionPlayers, setPositionPlayers] = useState<{ [position: string]: string }>({});
 
   useEffect(() => {
     loadPlayers();
@@ -79,7 +85,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     let filtered = players;
 
     if (showFullSquadOnly) {
-      // For matches/fixtures, default to Full Squad subscription only
       if (eventType === 'match' || eventType === 'fixture') {
         filtered = players.filter(player => 
           player.subscription_type === 'full_squad' && 
@@ -109,6 +114,22 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
+  const handlePositionPlayerChange = (position: string, playerId: string) => {
+    const newPositionPlayers = { ...positionPlayers };
+    
+    if (playerId === '') {
+      delete newPositionPlayers[position];
+    } else {
+      newPositionPlayers[position] = playerId;
+    }
+    
+    setPositionPlayers(newPositionPlayers);
+    
+    // Update selected players based on position assignments
+    const positionPlayerIds = Object.values(newPositionPlayers).filter(id => id !== '');
+    onPlayersChange(positionPlayerIds);
+  };
+
   const handleSelectAll = () => {
     const allPlayerIds = filteredPlayers.map(p => p.id);
     onPlayersChange(allPlayerIds);
@@ -117,6 +138,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const handleDeselectAll = () => {
     onPlayersChange([]);
     onCaptainChange('');
+    setPositionPlayers({});
   };
 
   const getSubscriptionBadgeColor = (subscriptionType: string) => {
@@ -142,29 +164,74 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   };
 
   const renderFormationView = () => {
-    const formations = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1'];
+    if (!formation || !onFormationChange) return null;
+    
+    const positions = getPositionsForFormation(formation, gameFormat);
     
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Label>Formation:</Label>
-          <Select value={formation} onValueChange={onFormationChange}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="Select..." />
-            </SelectTrigger>
-            <SelectContent>
-              {formations.map((f) => (
-                <SelectItem key={f} value={f}>{f}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <FormationSelector
+          gameFormat={gameFormat}
+          selectedFormation={formation}
+          onFormationChange={onFormationChange}
+        />
         
-        <div className="grid grid-cols-3 gap-4 p-4 border rounded bg-green-50">
-          {/* This would be a more detailed formation layout */}
-          <div className="text-center text-sm text-muted-foreground">
-            Formation view with position dropdowns will be implemented here.
-            Each position will have a dropdown filtered by {showFullSquadOnly ? 'Full Squad players only' : 'all players'}.
+        <div className="space-y-3">
+          <Label className="text-sm font-medium">Starting XI ({positions.length} positions)</Label>
+          <p className="text-xs text-muted-foreground">
+            Assign players to specific positions for the {formation} formation
+          </p>
+          
+          <div className="grid gap-3">
+            {positions.map((position) => (
+              <div key={position} className="flex items-center gap-3">
+                <div className="w-12 text-sm font-medium">{position}</div>
+                <Select
+                  value={positionPlayers[position] || ''}
+                  onValueChange={(value) => handlePositionPlayerChange(position, value)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="No Player" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Player</SelectItem>
+                    {filteredPlayers.map((player) => (
+                      <SelectItem key={player.id} value={player.id}>
+                        #{player.squad_number} {player.name}
+                        {player.subscription_type !== 'full_squad' && (
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            ({getSubscriptionLabel(player.subscription_type)})
+                          </span>
+                        )}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {captainId === positionPlayers[position] && (
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <div className="mt-4 space-y-2">
+            <Label>Captain</Label>
+            <Select value={captainId || ''} onValueChange={onCaptainChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="No Captain" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">No Captain</SelectItem>
+                {Object.values(positionPlayers).filter(id => id !== '').map((playerId) => {
+                  const player = filteredPlayers.find(p => p.id === playerId);
+                  return player ? (
+                    <SelectItem key={player.id} value={player.id}>
+                      #{player.squad_number} {player.name}
+                    </SelectItem>
+                  ) : null;
+                })}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

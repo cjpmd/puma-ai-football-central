@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,11 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { StaffSelectionSection } from './StaffSelectionSection';
+import { GameFormat } from '@/types';
 
 interface TeamSelectionManagerProps {
   eventId: string;
   teamId: string;
-  gameFormat: string;
+  gameFormat: GameFormat;
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -26,6 +28,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [totalTeams, setTotalTeams] = useState(1);
   const [selectedPlayers, setSelectedPlayers] = useState<{ [key: string]: string[] }>({});
   const [captains, setCaptains] = useState<{ [key: string]: string }>({});
+  const [formations, setFormations] = useState<{ [key: string]: string }>({});
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const { toast } = useToast();
 
@@ -36,7 +39,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const loadEventTeams = async () => {
     try {
-      // Check if this event has multiple teams configured
       const { data: eventTeams, error } = await supabase
         .from('event_teams')
         .select('team_number')
@@ -49,14 +51,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const maxTeamNumber = Math.max(...eventTeams.map(et => et.team_number));
         setTotalTeams(maxTeamNumber);
         
-        // Initialize periods for all teams
         const initialPeriods: { [key: string]: number } = {};
         for (let i = 1; i <= maxTeamNumber; i++) {
           initialPeriods[`team-${i}`] = 1;
         }
         setPeriods(initialPeriods);
       } else {
-        // Default single team
         setTotalTeams(1);
         setPeriods({ 'team-1': 1 });
       }
@@ -92,7 +92,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         
         setPeriods(periodCounts);
         
-        // Update total teams if we found more teams in selections
         const maxTeamFromSelections = Math.max(...Object.keys(periodCounts).map(key => 
           parseInt(key.replace('team-', ''))
         ));
@@ -155,6 +154,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     setCaptains(prev => ({
       ...prev,
       [key]: captainId
+    }));
+  };
+
+  const handleFormationChange = (teamNumber: number, periodNumber: number, formation: string) => {
+    const key = getTeamPeriodKey(teamNumber, periodNumber);
+    setFormations(prev => ({
+      ...prev,
+      [key]: formation
     }));
   };
 
@@ -224,6 +231,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                           onCaptainChange={(captainId) => handleCaptainChange(teamNumber, periodNumber, captainId)}
                           eventType="match"
                           showFormationView={true}
+                          formation={formations[selectionKey] || '3-2-1'}
+                          onFormationChange={(formation) => handleFormationChange(teamNumber, periodNumber, formation)}
+                          gameFormat={gameFormat}
                         />
                         
                         <StaffSelectionSection
