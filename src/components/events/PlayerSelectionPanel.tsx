@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -129,6 +128,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   };
 
+  const handleFullSquadFilterChange = (checked: boolean | "indeterminate") => {
+    setShowFullSquadOnly(checked === true);
+  };
+
   if (loading) {
     return (
       <Card>
@@ -157,7 +160,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             <Checkbox
               id="fullSquadFilter"
               checked={showFullSquadOnly}
-              onCheckedChange={setShowFullSquadOnly}
+              onCheckedChange={handleFullSquadFilterChange}
             />
             <Label htmlFor="fullSquadFilter" className="text-sm">
               Show Full Squad subscribers only

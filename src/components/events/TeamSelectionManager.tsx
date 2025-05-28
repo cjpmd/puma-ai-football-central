@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
-import { GameFormat } from '@/types';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 
 interface TeamSelectionManagerProps {
@@ -25,6 +23,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [activePeriodTab, setActivePeriodTab] = useState('period-1');
   const [periods, setPeriods] = useState<{ [key: string]: number }>({ 'team-1': 1 });
   const [totalTeams, setTotalTeams] = useState(1);
+  const [selectedPlayers, setSelectedPlayers] = useState<{ [key: string]: string[] }>({});
+  const [captains, setCaptains] = useState<{ [key: string]: string }>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -136,6 +136,26 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     setActivePeriodTab('period-1');
   };
 
+  const getTeamPeriodKey = (teamNumber: number, periodNumber: number) => {
+    return `team-${teamNumber}-period-${periodNumber}`;
+  };
+
+  const handlePlayersChange = (teamNumber: number, periodNumber: number, players: string[]) => {
+    const key = getTeamPeriodKey(teamNumber, periodNumber);
+    setSelectedPlayers(prev => ({
+      ...prev,
+      [key]: players
+    }));
+  };
+
+  const handleCaptainChange = (teamNumber: number, periodNumber: number, captainId: string) => {
+    const key = getTeamPeriodKey(teamNumber, periodNumber);
+    setCaptains(prev => ({
+      ...prev,
+      [key]: captainId
+    }));
+  };
+
   if (loading) {
     return <div className="text-center py-4">Loading team selection...</div>;
   }
@@ -183,18 +203,24 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     </Button>
                   </div>
                   
-                  {Array.from({ length: periods[teamKey] || 1 }, (_, i) => (
-                    <TabsContent key={i} value={`period-${i + 1}`} className="mt-0">
-                      <PlayerSelectionPanel
-                        eventId={eventId}
-                        teamId={teamId}
-                        gameFormat={gameFormat}
-                        periodNumber={i + 1}
-                        teamNumber={parseInt(teamKey.replace('team-', ''))}
-                        totalTeams={totalTeams}
-                      />
-                    </TabsContent>
-                  ))}
+                  {Array.from({ length: periods[teamKey] || 1 }, (_, i) => {
+                    const teamNumber = parseInt(teamKey.replace('team-', ''));
+                    const periodNumber = i + 1;
+                    const selectionKey = getTeamPeriodKey(teamNumber, periodNumber);
+                    
+                    return (
+                      <TabsContent key={i} value={`period-${i + 1}`} className="mt-0">
+                        <PlayerSelectionPanel
+                          teamId={teamId}
+                          selectedPlayers={selectedPlayers[selectionKey] || []}
+                          captainId={captains[selectionKey] || ''}
+                          onPlayersChange={(players) => handlePlayersChange(teamNumber, periodNumber, players)}
+                          onCaptainChange={(captainId) => handleCaptainChange(teamNumber, periodNumber, captainId)}
+                          eventType="match"
+                        />
+                      </TabsContent>
+                    );
+                  })}
                 </Tabs>
               </TabsContent>
             ))}
