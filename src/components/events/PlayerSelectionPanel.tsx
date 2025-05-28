@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Position, Formation, Player } from '@/types';
 import { FormationSelector } from './FormationSelector';
+import { StaffSelectionSection } from './StaffSelectionSection';
 import { getPositionsForFormation } from '@/utils/formationUtils';
 import { AlertTriangle, UserPlus } from 'lucide-react';
 
@@ -56,6 +56,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     captainId: '',
     playerPositions: [] as { playerId: string; position: Position }[],
     substitutes: [] as string[],
+    staffSelection: [] as string[],
     duration: 90,
     performanceCategoryId: ''
   });
@@ -229,6 +230,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             })) : [],
           substitutes: Array.isArray(selectionData.substitutes) ? 
             (selectionData.substitutes as any[]).filter(sub => typeof sub === 'string') : [],
+          staffSelection: Array.isArray(selectionData.staff_selection) ? 
+            (selectionData.staff_selection as any[]).filter(staff => typeof staff === 'string') : [],
           duration: selectionData.duration_minutes || 90,
           performanceCategoryId: selectionData.performance_category_id || ''
         });
@@ -273,6 +276,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           })) : [],
         substitutes: Array.isArray(previousSelection.substitutes) ? 
           (previousSelection.substitutes as any[]).filter(sub => typeof sub === 'string') : [],
+        staffSelection: Array.isArray(previousSelection.staff_selection) ? 
+          (previousSelection.staff_selection as any[]).filter(staff => typeof staff === 'string') : [],
         duration: previousSelection.duration_minutes || 90,
         performanceCategoryId: previousSelection.performance_category_id || ''
       });
@@ -301,6 +306,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         captain_id: selection.captainId === 'none' ? null : selection.captainId || null,
         player_positions: validPlayerPositions,
         substitutes: selection.substitutes,
+        staff_selection: selection.staffSelection,
         duration_minutes: selection.duration,
         performance_category_id: selection.performanceCategoryId === 'none' ? null : selection.performanceCategoryId || null,
         updated_at: new Date().toISOString()
@@ -363,6 +369,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         ? prev.substitutes.filter(id => id !== playerId)
         : [...prev.substitutes, playerId]
     }));
+  };
+
+  const handleStaffSelectionChange = (staffIds: string[]) => {
+    setSelection(prev => ({ ...prev, staffSelection: staffIds }));
   };
 
   const getPlayerConflict = (playerId: string): PlayerConflict | undefined => {
@@ -630,6 +640,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           </Button>
         </CardContent>
       </Card>
+
+      {/* Staff Selection */}
+      <StaffSelectionSection
+        teamId={teamId}
+        selectedStaff={selection.staffSelection}
+        onStaffChange={handleStaffSelectionChange}
+      />
     </div>
   );
 };
