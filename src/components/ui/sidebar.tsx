@@ -67,7 +67,7 @@ export function Sidebar() {
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
           >
             <UserCog className="h-4 w-4" />
-            <span>Staff</span>
+            <span>Staff Management</span>
           </Link>
           <Link
             to="/users"

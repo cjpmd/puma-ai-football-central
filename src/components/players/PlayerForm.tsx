@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Player } from '@/types';
-import { PlayerKitSizes } from './PlayerKitSizes';
+import { PlayerKitDetails } from './PlayerKitDetails';
 import { PlayerKitTracking } from './PlayerKitTracking';
 
 interface PlayerFormProps {
@@ -23,26 +23,37 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   onCancel
 }) => {
   const [formData, setFormData] = useState({
-    name: player?.name || '',
+    firstName: player?.name?.split(' ')[0] || '',
+    surname: player?.name?.split(' ').slice(1).join(' ') || '',
     dateOfBirth: player?.dateOfBirth || '',
     squadNumber: player?.squadNumber || 0,
     type: player?.type || 'outfield' as 'outfield' | 'goalkeeper',
     availability: player?.availability || 'green' as 'amber' | 'green' | 'red',
     subscriptionType: player?.subscriptionType || 'full_squad' as 'full_squad' | 'training',
-    kit_sizes: player?.kit_sizes || {}
+    kit_sizes: player?.kit_sizes || {},
+    nameOnShirt: player?.kit_sizes?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const fullName = `${formData.firstName} ${formData.surname}`.trim();
     onSubmit({
-      ...formData,
+      name: fullName,
+      dateOfBirth: formData.dateOfBirth,
+      squadNumber: formData.squadNumber,
+      type: formData.type,
+      availability: formData.availability,
+      subscriptionType: formData.subscriptionType,
       teamId,
-      kit_sizes: formData.kit_sizes
+      kit_sizes: {
+        ...formData.kit_sizes,
+        nameOnShirt: formData.nameOnShirt
+      }
     });
   };
 
-  const handleKitSizesUpdate = (kitSizes: Record<string, string>) => {
-    setFormData(prev => ({ ...prev, kit_sizes: kitSizes }));
+  const handleKitDetailsUpdate = (kitDetails: Record<string, string>) => {
+    setFormData(prev => ({ ...prev, kit_sizes: kitDetails }));
   };
 
   return (
@@ -50,11 +61,28 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Player Name *</Label>
+            <Label htmlFor="firstName">First Name *</Label>
             <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              id="firstName"
+              value={formData.firstName}
+              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="surname">Surname *</Label>
+            <Input
+              id="surname"
+              value={formData.surname}
+              onChange={(e) => {
+                const surname = e.target.value;
+                setFormData({ 
+                  ...formData, 
+                  surname, 
+                  nameOnShirt: surname // Auto-update name on shirt to surname
+                });
+              }}
               required
             />
           </div>
@@ -126,6 +154,16 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
               </SelectContent>
             </Select>
           </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="nameOnShirt">Name on Shirt</Label>
+            <Input
+              id="nameOnShirt"
+              value={formData.nameOnShirt}
+              onChange={(e) => setFormData({ ...formData, nameOnShirt: e.target.value })}
+              placeholder="Name to appear on shirt"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
@@ -138,14 +176,14 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         </div>
       </form>
 
-      {/* Kit Sizes Section - shown for both new and existing players */}
-      <PlayerKitSizes 
+      {/* Kit Details Section - shown for both new and existing players */}
+      <PlayerKitDetails 
         player={{ 
           id: player?.id || 'temp', 
           team_id: teamId, 
-          kit_sizes: formData.kit_sizes 
+          kit_sizes: { ...formData.kit_sizes, nameOnShirt: formData.nameOnShirt }
         }} 
-        onUpdate={handleKitSizesUpdate} 
+        onUpdate={handleKitDetailsUpdate} 
       />
 
       {/* Kit Tracking - only shown for existing players */}

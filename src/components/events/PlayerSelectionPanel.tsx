@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -5,13 +6,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Position, Formation, Player } from '@/types';
 import { FormationSelector } from './FormationSelector';
 import { getPositionsForFormation } from '@/utils/formationUtils';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, UserPlus } from 'lucide-react';
 
 interface PlayerSelectionPanelProps {
   eventId: string;
@@ -20,6 +22,7 @@ interface PlayerSelectionPanelProps {
   periodNumber: number;
   teamNumber: number;
   totalTeams?: number;
+  eventType?: string;
 }
 
 interface PerformanceCategory {
@@ -40,11 +43,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   gameFormat,
   periodNumber,
   teamNumber,
-  totalTeams = 1
+  totalTeams = 1,
+  eventType = 'training'
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [trainingOnlyPlayers, setTrainingOnlyPlayers] = useState<Player[]>([]);
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
   const [playerConflicts, setPlayerConflicts] = useState<PlayerConflict[]>([]);
+  const [includeTrainingOnly, setIncludeTrainingOnly] = useState(false);
   const [selection, setSelection] = useState({
     formation: '3-2-1' as Formation,
     captainId: '',
@@ -60,7 +66,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   useEffect(() => {
     loadPlayersAndSelection();
     loadPerformanceCategories();
-  }, [eventId, teamId, periodNumber, teamNumber]);
+  }, [eventId, teamId, periodNumber, teamNumber, includeTrainingOnly]);
 
   useEffect(() => {
     if (totalTeams > 1) {
@@ -179,8 +185,21 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         createdAt: player.created_at,
         updatedAt: player.updated_at
       }));
+
+      // Filter players based on event type and subscription
+      const isFixture = eventType === 'fixture';
+      const fullSquadPlayers = transformedPlayers.filter(p => p.subscriptionType === 'full_squad');
+      const trainingOnlyPlayersData = transformedPlayers.filter(p => p.subscriptionType === 'training');
       
-      setPlayers(transformedPlayers);
+      setTrainingOnlyPlayers(trainingOnlyPlayersData);
+      
+      if (isFixture) {
+        // For fixtures, start with only full squad players
+        setPlayers(includeTrainingOnly ? transformedPlayers : fullSquadPlayers);
+      } else {
+        // For friendlies, tournaments, festivals, training - all players available
+        setPlayers(transformedPlayers);
+      }
 
       // Load existing selection
       const { data: selectionData, error: selectionError } = await supabase
@@ -367,6 +386,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     );
   }
 
+  const isFixture = eventType === 'fixture';
+
   return (
     <div className="space-y-6">
       <Card>
@@ -377,6 +398,21 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Show training-only toggle for fixtures */}
+          {isFixture && trainingOnlyPlayers.length > 0 && (
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 rounded-lg">
+              <Switch
+                id="includeTrainingOnly"
+                checked={includeTrainingOnly}
+                onCheckedChange={setIncludeTrainingOnly}
+              />
+              <Label htmlFor="includeTrainingOnly" className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Include Training-Only Players ({trainingOnlyPlayers.length} available)
+              </Label>
+            </div>
+          )}
+
           {/* Formation Selection */}
           <div className="space-y-2">
             <Label>Formation</Label>
@@ -451,6 +487,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 {players.map((player) => (
                   <SelectItem key={player.id} value={player.id}>
                     {player.name} (#{player.squadNumber})
+                    {player.subscriptionType === 'training' && isFixture && (
+                      <Badge variant="secondary" className="ml-2 text-xs">Training Only</Badge>
+                    )}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -507,6 +546,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                           .map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name} (#{p.squadNumber})
+                              {p.subscriptionType === 'training' && isFixture && (
+                                <Badge variant="secondary" className="ml-2 text-xs">Training Only</Badge>
+                              )}
                             </SelectItem>
                           ))}
                       </SelectContent>
@@ -516,6 +558,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                         <Badge variant="outline" className="text-xs">
                           #{player.squadNumber}
                         </Badge>
+                        {player.subscriptionType === 'training' && isFixture && (
+                          <Badge variant="secondary" className="text-xs">
+                            Training Only
+                          </Badge>
+                        )}
                         {conflict && (
                           <Badge variant="destructive" className="text-xs flex items-center gap-1">
                             <AlertTriangle className="h-3 w-3" />
@@ -546,6 +593,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                         <div className="font-medium">{player.name}</div>
                         <div className="text-sm text-muted-foreground">#{player.squadNumber}</div>
                       </div>
+                      
+                      {player.subscriptionType === 'training' && isFixture && (
+                        <Badge variant="secondary" className="text-xs">
+                          Training Only
+                        </Badge>
+                      )}
                       
                       {conflict && (
                         <Badge variant="destructive" className="text-xs flex items-center gap-1">
