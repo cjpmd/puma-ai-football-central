@@ -28,7 +28,7 @@ export const userInvitationService = {
     console.log('Inviting user:', inviteData);
     
     const { data, error } = await supabase
-      .from('user_invitations' as any)
+      .from('user_invitations')
       .insert([{
         email: inviteData.email,
         name: inviteData.name,
@@ -46,9 +46,9 @@ export const userInvitationService = {
     }
 
     // Send invitation email
-    await this.sendInvitationEmail(data as UserInvitation);
+    await this.sendInvitationEmail(data as unknown as UserInvitation);
     
-    return data as UserInvitation;
+    return data as unknown as UserInvitation;
   },
 
   async sendInvitationEmail(invitation: UserInvitation): Promise<void> {
@@ -74,17 +74,17 @@ export const userInvitationService = {
 
   async getInvitations(): Promise<UserInvitation[]> {
     const { data, error } = await supabase
-      .from('user_invitations' as any)
+      .from('user_invitations')
       .select('*')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return (data || []) as UserInvitation[];
+    return (data || []) as unknown as UserInvitation[];
   },
 
   async acceptInvitation(invitationCode: string, userId: string): Promise<void> {
     const { error } = await supabase
-      .from('user_invitations' as any)
+      .from('user_invitations')
       .update({ 
         status: 'accepted',
         accepted_by: userId,
@@ -113,7 +113,7 @@ export const userInvitationService = {
 
     // Create the user-player relationship
     const { error: linkError } = await supabase
-      .from('user_players' as any)
+      .from('user_players')
       .insert([{
         user_id: userId,
         player_id: player.id,
