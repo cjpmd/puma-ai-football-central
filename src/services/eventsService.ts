@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
 
@@ -52,7 +53,7 @@ export const eventsService = {
       throw new Error(error.message);
     }
 
-    return data;
+    return data as DatabaseEvent;
   },
 
   async createEvent(eventData: CreateEventData): Promise<DatabaseEvent> {
