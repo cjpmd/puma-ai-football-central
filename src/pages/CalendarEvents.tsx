@@ -164,7 +164,7 @@ const CalendarEventsPage = () => {
     updateEvent(updatedEvent);
   };
 
-  const handleScoreUpdate = (eventId: string, scores: { home: number; away: number }) => {
+  const handleScoreUpdate = (eventId: string, scores: any) => {
     const event = events.find(e => e.id === eventId);
     if (!event) return;
 
@@ -172,6 +172,18 @@ const CalendarEventsPage = () => {
       ...event,
       scores,
       player_of_match_id: event.player_of_match_id || undefined
+    };
+
+    updateEvent(updatedEvent);
+  };
+
+  const handlePOTMUpdate = (eventId: string, potmData: any) => {
+    const event = events.find(e => e.id === eventId);
+    if (!event) return;
+
+    const updatedEvent: UpdateEventData = {
+      ...event,
+      ...potmData
     };
 
     updateEvent(updatedEvent);
@@ -723,6 +735,7 @@ const CalendarEventsPage = () => {
               <ScoreInput
                 event={selectedEvent}
                 onScoreUpdate={handleScoreUpdate}
+                onPOTMUpdate={handlePOTMUpdate}
               />
             )}
           </DialogContent>

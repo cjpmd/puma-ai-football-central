@@ -6,25 +6,61 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DatabaseEvent } from '@/types/event';
 import { ScoreInput } from './ScoreInput';
 import { eventsService } from '@/services/eventsService';
 
 interface PostGameEditorProps {
-  event: DatabaseEvent;
-  onEventUpdate: (updatedEvent: DatabaseEvent) => void;
+  eventId: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 export const PostGameEditor: React.FC<PostGameEditorProps> = ({
-  event,
-  onEventUpdate
+  eventId,
+  isOpen,
+  onClose
 }) => {
-  const [coachNotes, setCoachNotes] = useState(event.coach_notes || '');
-  const [staffNotes, setStaffNotes] = useState(event.staff_notes || '');
+  const [event, setEvent] = useState<DatabaseEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [coachNotes, setCoachNotes] = useState('');
+  const [staffNotes, setStaffNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (isOpen && eventId) {
+      loadEvent();
+    }
+  }, [isOpen, eventId]);
+
+  const loadEvent = async () => {
+    try {
+      setLoading(true);
+      const eventData = await eventsService.getEventById(eventId);
+      setEvent(eventData);
+      setCoachNotes(eventData.coach_notes || '');
+      setStaffNotes(eventData.staff_notes || '');
+    } catch (error) {
+      console.error('Error loading event:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load event data',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEventUpdate = (updatedEvent: DatabaseEvent) => {
+    setEvent(updatedEvent);
+  };
+
   const handleSaveNotes = async () => {
+    if (!event) return;
+
     try {
       setSaving(true);
       const updatedEvent = await eventsService.updateEvent({
@@ -32,7 +68,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         coach_notes: coachNotes,
         staff_notes: staffNotes
       });
-      onEventUpdate(updatedEvent);
+      handleEventUpdate(updatedEvent);
       toast({
         title: 'Success',
         description: 'Notes updated successfully',
@@ -49,12 +85,14 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
   };
 
   const handleScoreUpdate = async (eventId: string, scores: any) => {
+    if (!event) return;
+
     try {
       const updatedEvent = await eventsService.updateEvent({
         ...event,
         scores
       });
-      onEventUpdate(updatedEvent);
+      handleEventUpdate(updatedEvent);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -65,12 +103,14 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
   };
 
   const handlePOTMUpdate = async (eventId: string, potmData: any) => {
+    if (!event) return;
+
     try {
       const updatedEvent = await eventsService.updateEvent({
         ...event,
         ...potmData
       });
-      onEventUpdate(updatedEvent);
+      handleEventUpdate(updatedEvent);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -81,65 +121,69 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Post-Game Editor</CardTitle>
-          <CardDescription>
-            Record match results and add notes for {event.title}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="results" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="results">Results & POTM</TabsTrigger>
-              <TabsTrigger value="notes">Notes</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="results" className="space-y-4">
-              <ScoreInput 
-                event={event} 
-                onScoreUpdate={handleScoreUpdate}
-                onPOTMUpdate={handlePOTMUpdate}
-              />
-            </TabsContent>
-            
-            <TabsContent value="notes" className="space-y-4">
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="coachNotes">Coach Notes</Label>
-                  <Textarea
-                    id="coachNotes"
-                    placeholder="Add your coaching observations and feedback..."
-                    value={coachNotes}
-                    onChange={(e) => setCoachNotes(e.target.value)}
-                    className="min-h-[120px]"
-                  />
-                </div>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Post-Game Editor - {event?.title}</DialogTitle>
+        </DialogHeader>
+        
+        {loading ? (
+          <div className="text-center py-4">Loading event data...</div>
+        ) : !event ? (
+          <div className="text-center py-4">Event not found</div>
+        ) : (
+          <div className="space-y-6">
+            <Tabs defaultValue="results" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="results">Results & POTM</TabsTrigger>
+                <TabsTrigger value="notes">Notes</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="results" className="space-y-4">
+                <ScoreInput 
+                  event={event} 
+                  onScoreUpdate={handleScoreUpdate}
+                  onPOTMUpdate={handlePOTMUpdate}
+                />
+              </TabsContent>
+              
+              <TabsContent value="notes" className="space-y-4">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="coachNotes">Coach Notes</Label>
+                    <Textarea
+                      id="coachNotes"
+                      placeholder="Add your coaching observations and feedback..."
+                      value={coachNotes}
+                      onChange={(e) => setCoachNotes(e.target.value)}
+                      className="min-h-[120px]"
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="staffNotes">Staff Notes</Label>
-                  <Textarea
-                    id="staffNotes"
-                    placeholder="Add staff observations and notes..."
-                    value={staffNotes}
-                    onChange={(e) => setStaffNotes(e.target.value)}
-                    className="min-h-[120px]"
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="staffNotes">Staff Notes</Label>
+                    <Textarea
+                      id="staffNotes"
+                      placeholder="Add staff observations and notes..."
+                      value={staffNotes}
+                      onChange={(e) => setStaffNotes(e.target.value)}
+                      className="min-h-[120px]"
+                    />
+                  </div>
 
-                <Button 
-                  onClick={handleSaveNotes} 
-                  disabled={saving}
-                  className="w-full"
-                >
-                  {saving ? 'Saving...' : 'Save Notes'}
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
+                  <Button 
+                    onClick={handleSaveNotes} 
+                    disabled={saving}
+                    className="w-full"
+                  >
+                    {saving ? 'Saving...' : 'Save Notes'}
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
