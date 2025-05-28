@@ -1,10 +1,12 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
-import { Users, Crown, UserCheck, Filter } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Crown, UserCheck, Filter, Grid3X3 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Player {
@@ -23,6 +25,9 @@ interface PlayerSelectionPanelProps {
   onPlayersChange: (players: string[]) => void;
   onCaptainChange: (captainId: string) => void;
   eventType?: string;
+  showFormationView?: boolean;
+  formation?: string;
+  onFormationChange?: (formation: string) => void;
 }
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
@@ -31,12 +36,16 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   captainId,
   onPlayersChange,
   onCaptainChange,
-  eventType = 'match'
+  eventType = 'match',
+  showFormationView = false,
+  formation,
+  onFormationChange
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
   const [showFullSquadOnly, setShowFullSquadOnly] = useState(true);
+  const [viewMode, setViewMode] = useState<'list' | 'formation'>('list');
 
   useEffect(() => {
     loadPlayers();
@@ -132,6 +141,36 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     setShowFullSquadOnly(checked === true);
   };
 
+  const renderFormationView = () => {
+    const formations = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1'];
+    
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <Label>Formation:</Label>
+          <Select value={formation} onValueChange={onFormationChange}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Select..." />
+            </SelectTrigger>
+            <SelectContent>
+              {formations.map((f) => (
+                <SelectItem key={f} value={f}>{f}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="grid grid-cols-3 gap-4 p-4 border rounded bg-green-50">
+          {/* This would be a more detailed formation layout */}
+          <div className="text-center text-sm text-muted-foreground">
+            Formation view with position dropdowns will be implemented here.
+            Each position will have a dropdown filtered by {showFullSquadOnly ? 'Full Squad players only' : 'all players'}.
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <Card>
@@ -175,6 +214,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             <Filter className="h-4 w-4" />
             {showFullSquadOnly ? 'Show All Players' : 'Filter Full Squad'}
           </Button>
+          {showFormationView && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setViewMode(viewMode === 'list' ? 'formation' : 'list')}
+              className="flex items-center gap-2"
+            >
+              <Grid3X3 className="h-4 w-4" />
+              {viewMode === 'list' ? 'Formation View' : 'List View'}
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -187,48 +237,54 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           </div>
         ) : (
           <>
-            <div className="flex gap-2 mb-4">
-              <Button variant="outline" size="sm" onClick={handleSelectAll}>
-                Select All
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleDeselectAll}>
-                Deselect All
-              </Button>
-              <div className="ml-auto text-sm text-muted-foreground">
-                {selectedPlayers.length} of {filteredPlayers.length} selected
-              </div>
-            </div>
-
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {filteredPlayers.map((player) => (
-                <div key={player.id} className="flex items-center space-x-3 p-3 border rounded">
-                  <Checkbox
-                    id={`player-${player.id}`}
-                    checked={selectedPlayers.includes(player.id)}
-                    onCheckedChange={() => handlePlayerToggle(player.id)}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`player-${player.id}`} className="font-medium cursor-pointer">
-                        #{player.squad_number} {player.name}
-                      </Label>
-                      <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
-                        {getSubscriptionLabel(player.subscription_type)}
-                      </Badge>
-                    </div>
-                  </div>
-                  <Button
-                    variant={captainId === player.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleCaptainSelect(player.id)}
-                    className="flex items-center gap-1"
-                  >
-                    <Crown className="h-3 w-3" />
-                    {captainId === player.id ? 'Captain' : 'Make Captain'}
+            {viewMode === 'formation' && showFormationView ? (
+              renderFormationView()
+            ) : (
+              <>
+                <div className="flex gap-2 mb-4">
+                  <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                    Select All
                   </Button>
+                  <Button variant="outline" size="sm" onClick={handleDeselectAll}>
+                    Deselect All
+                  </Button>
+                  <div className="ml-auto text-sm text-muted-foreground">
+                    {selectedPlayers.length} of {filteredPlayers.length} selected
+                  </div>
                 </div>
-              ))}
-            </div>
+
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {filteredPlayers.map((player) => (
+                    <div key={player.id} className="flex items-center space-x-3 p-3 border rounded">
+                      <Checkbox
+                        id={`player-${player.id}`}
+                        checked={selectedPlayers.includes(player.id)}
+                        onCheckedChange={() => handlePlayerToggle(player.id)}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor={`player-${player.id}`} className="font-medium cursor-pointer">
+                            #{player.squad_number} {player.name}
+                          </Label>
+                          <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
+                            {getSubscriptionLabel(player.subscription_type)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Button
+                        variant={captainId === player.id ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handleCaptainSelect(player.id)}
+                        className="flex items-center gap-1"
+                      >
+                        <Crown className="h-3 w-3" />
+                        {captainId === player.id ? 'Captain' : 'Make Captain'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </CardContent>

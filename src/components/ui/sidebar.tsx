@@ -74,7 +74,7 @@ export function Sidebar() {
             className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground hover:text-foreground transition-all hover:bg-accent"
           >
             <UserPlus className="h-4 w-4" />
-            <span>Users</span>
+            <span>User Management</span>
           </Link>
           <Link
             to="/subscriptions"

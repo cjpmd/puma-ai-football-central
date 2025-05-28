@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
+import { StaffSelectionSection } from './StaffSelectionSection';
 
 interface TeamSelectionManagerProps {
   eventId: string;
@@ -25,6 +26,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [totalTeams, setTotalTeams] = useState(1);
   const [selectedPlayers, setSelectedPlayers] = useState<{ [key: string]: string[] }>({});
   const [captains, setCaptains] = useState<{ [key: string]: string }>({});
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -156,12 +158,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }));
   };
 
+  const handleStaffChange = (staffIds: string[]) => {
+    setSelectedStaff(staffIds);
+  };
+
   if (loading) {
     return <div className="text-center py-4">Loading team selection...</div>;
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       <Card className="min-h-0">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
@@ -209,7 +215,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     const selectionKey = getTeamPeriodKey(teamNumber, periodNumber);
                     
                     return (
-                      <TabsContent key={i} value={`period-${i + 1}`} className="mt-0">
+                      <TabsContent key={i} value={`period-${i + 1}`} className="mt-0 space-y-4">
                         <PlayerSelectionPanel
                           teamId={teamId}
                           selectedPlayers={selectedPlayers[selectionKey] || []}
@@ -217,6 +223,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                           onPlayersChange={(players) => handlePlayersChange(teamNumber, periodNumber, players)}
                           onCaptainChange={(captainId) => handleCaptainChange(teamNumber, periodNumber, captainId)}
                           eventType="match"
+                          showFormationView={true}
+                        />
+                        
+                        <StaffSelectionSection
+                          teamId={teamId}
+                          selectedStaff={selectedStaff}
+                          onStaffChange={handleStaffChange}
                         />
                       </TabsContent>
                     );
