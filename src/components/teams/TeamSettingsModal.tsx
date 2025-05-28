@@ -34,7 +34,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   const settingsTabs = [
     {
       id: 'basic',
-      label: 'Basic Settings',
+      label: 'Basic',
       icon: <Settings className="h-4 w-4" />,
       component: <TeamBasicSettings team={team} onUpdate={onUpdate} />
     },
@@ -46,25 +46,25 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
     },
     {
       id: 'performance',
-      label: 'Performance Categories',
+      label: 'Performance',
       icon: <Target className="h-4 w-4" />,
       component: <TeamPerformanceSettings teamId={team.id} />
     },
     {
       id: 'attributes',
-      label: 'Player Attributes',
+      label: 'Attributes',
       icon: <Star className="h-4 w-4" />,
       component: <TeamAttributeSettings team={team as any} onUpdate={onUpdate} />
     },
     {
       id: 'fa-connection',
-      label: 'FA Connection',
+      label: 'FA',
       icon: <Wifi className="h-4 w-4" />,
       component: <TeamFAConnection team={team as any} onUpdate={onUpdate} />
     },
     {
       id: 'kit-management',
-      label: 'Kit Management',
+      label: 'Kit',
       icon: <Wrench className="h-4 w-4" />,
       component: <TeamKitManagementSettings team={team} onUpdate={onUpdate} />
     },
@@ -76,7 +76,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
     },
     {
       id: 'privacy',
-      label: 'Privacy Settings',
+      label: 'Privacy',
       icon: <Shield className="h-4 w-4" />,
       component: <TeamPrivacySettings team={team} onUpdate={onUpdate} />
     }
@@ -95,7 +95,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
           <TabsList className="grid w-full grid-cols-8 flex-shrink-0 mb-4">
             {settingsTabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2 text-xs">
+              <TabsTrigger key={tab.id} value={tab.id} className="flex flex-col items-center gap-1 text-xs p-2">
                 {tab.icon}
                 <span className="hidden sm:inline">{tab.label}</span>
               </TabsTrigger>
