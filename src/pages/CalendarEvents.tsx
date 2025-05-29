@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, Users, Trash2, Edit, Trophy, Settings, Calendar as CalendarGridIcon, List, Grid } from 'lucide-react';
+import { CalendarIcon, Users, Trash2, Edit, Trophy, Calendar as CalendarGridIcon, List, Grid } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -21,7 +22,6 @@ import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 import { CalendarGridView } from '@/components/events/CalendarGridView';
 import { EventsGridView } from '@/components/events/EventsGridView';
-import { ScoreInput } from '@/components/events/ScoreInput';
 import { Calendar } from '@/components/ui/calendar';
 
 const CalendarEventsPage = () => {
@@ -32,7 +32,6 @@ const CalendarEventsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
-  const [isScoreModalOpen, setIsScoreModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'grid'>('grid');
   
   const [eventTitle, setEventTitle] = useState('');
@@ -231,9 +230,30 @@ const CalendarEventsPage = () => {
     setPostGameEventId(event.id);
   };
 
-  const handleScoreEdit = (event: DatabaseEvent) => {
-    setSelectedEvent(event);
-    setIsScoreModalOpen(true);
+  const getEventOutcomes = (event: DatabaseEvent) => {
+    if (!event.scores || typeof event.scores !== 'object') return [];
+    
+    const outcomes = [];
+    const scores = event.scores as any;
+    
+    // Look for team-specific outcomes
+    for (let i = 1; i <= 4; i++) {
+      const outcomeKey = `outcome_${i}`;
+      if (scores[outcomeKey]) {
+        outcomes.push(scores[outcomeKey]);
+      }
+    }
+    
+    return outcomes;
+  };
+
+  const getOutcomeIcon = (outcome: string) => {
+    switch (outcome) {
+      case 'win': return '🏆';
+      case 'draw': return '🤝';
+      case 'loss': return '❌';
+      default: return '';
+    }
   };
 
   const filteredEvents = events.filter((event) => {
@@ -256,7 +276,7 @@ const CalendarEventsPage = () => {
           <div className="flex items-center space-x-4">
             {teams.length > 1 && (
               <div className="min-w-[250px]">
-                <Select value={selectedTeamId} onValueChange={handleTeamChange}>
+                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
@@ -323,14 +343,14 @@ const CalendarEventsPage = () => {
                     mode="range"
                     defaultMonth={date?.from}
                     selected={date}
-                    onSelect={handleDateSelect}
+                    onSelect={setDate}
                     numberOfMonths={2}
                   />
                 </PopoverContent>
               </Popover>
             )}
 
-            <Button onClick={openCreateModal}>
+            <Button onClick={() => setIsCreateModalOpen(true)}>
               Create Event
             </Button>
           </div>
@@ -340,19 +360,19 @@ const CalendarEventsPage = () => {
         {viewMode === 'grid' ? (
           <EventsGridView
             events={events}
-            onEditEvent={handleEditEvent}
-            onTeamSelection={handleTeamSelection}
+            onEditEvent={(event) => setSelectedEvent(event) || setIsEditModalOpen(true)}
+            onTeamSelection={(event) => setSelectedEvent(event) || setIsTeamSelectionOpen(true)}
             onPostGameEdit={handlePostGameEdit}
-            onDeleteEvent={handleDeleteEvent}
-            onScoreEdit={handleScoreEdit}
+            onDeleteEvent={(eventId) => eventsService.deleteEvent(eventId)}
+            onScoreEdit={() => {}} // Remove this - functionality moved to PostGameEditor
           />
         ) : viewMode === 'calendar' ? (
           <CalendarGridView
             events={events}
-            onEditEvent={handleEditEvent}
-            onTeamSelection={handleTeamSelection}
+            onEditEvent={(event) => setSelectedEvent(event) || setIsEditModalOpen(true)}
+            onTeamSelection={(event) => setSelectedEvent(event) || setIsTeamSelectionOpen(true)}
             onPostGameEdit={handlePostGameEdit}
-            onDeleteEvent={handleDeleteEvent}
+            onDeleteEvent={(eventId) => eventsService.deleteEvent(eventId)}
           />
         ) : (
           <div className="space-y-3">
@@ -367,18 +387,7 @@ const CalendarEventsPage = () => {
                    event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
                 
                 const isMatchType = event.event_type === "match" || event.event_type === "fixture" || event.event_type === "friendly";
-                
-                const getMatchOutcomeIcon = () => {
-                  if (!event.scores || !isMatchType) return null;
-                  
-                  const { home, away } = event.scores;
-                  const ourScore = event.is_home ? home : away;
-                  const theirScore = event.is_home ? away : home;
-                  
-                  if (ourScore > theirScore) return '🏆';
-                  if (ourScore < theirScore) return '❌';
-                  return '🤝';
-                };
+                const outcomes = getEventOutcomes(event);
                 
                 return (
                   <div key={event.id} className="space-y-3">
@@ -393,8 +402,12 @@ const CalendarEventsPage = () => {
                         >
                           {event.event_type}
                         </Badge>
-                        {isCompleted && isMatchType && getMatchOutcomeIcon() && (
-                          <span className="text-lg">{getMatchOutcomeIcon()}</span>
+                        {isCompleted && isMatchType && outcomes.length > 0 && (
+                          <div className="flex gap-1">
+                            {outcomes.map((outcome, index) => (
+                              <span key={index} className="text-lg">{getOutcomeIcon(outcome)}</span>
+                            ))}
+                          </div>
                         )}
                       </div>
                       <div className="flex items-center gap-2">
@@ -402,7 +415,18 @@ const CalendarEventsPage = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEditEvent(event)}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setEventTitle(event.title);
+                              setEventDescription(event.description || '');
+                              setEventDate(new Date(event.date));
+                              setEventStartTime(event.start_time || '');
+                              setEventEndTime(event.end_time || '');
+                              setEventLocation(event.location || '');
+                              setEventNotes(event.notes || '');
+                              setEventEventType(event.event_type as any);
+                              setIsEditModalOpen(true);
+                            }}
                             title="Edit Event"
                           >
                             <Edit className="h-4 w-4" />
@@ -411,24 +435,16 @@ const CalendarEventsPage = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleTeamSelection(event)}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setIsTeamSelectionOpen(true);
+                            }}
                             title="Team Selection"
                           >
                             <Users className="h-4 w-4" />
                           </Button>
                           
                           {isMatchType && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleScoreEdit(event)}
-                              title="Edit Score"
-                            >
-                              <Settings className="h-4 w-4" />
-                            </Button>
-                          )}
-                          
-                          {isCompleted && isMatchType && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -443,7 +459,7 @@ const CalendarEventsPage = () => {
                             variant="ghost"
                             size="sm"
                             className="text-red-600 hover:text-red-700"
-                            onClick={() => handleDeleteEvent(event.id)}
+                            onClick={() => eventsService.deleteEvent(event.id)}
                             title="Delete Event"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -467,10 +483,18 @@ const CalendarEventsPage = () => {
                           <p className="text-sm text-muted-foreground">Location: {event.location}</p>
                         )}
                         {event.scores && isMatchType && (
-                          <p className="text-sm text-muted-foreground">
-                            Score: {event.scores.home} - {event.scores.away}
-                            {event.opponent && ` vs ${event.opponent}`}
-                          </p>
+                          <div className="text-sm text-muted-foreground">
+                            {outcomes.length > 0 && (
+                              <div className="flex items-center gap-2 mt-1">
+                                <span>Outcomes:</span>
+                                {outcomes.map((outcome, index) => (
+                                  <span key={index} className="flex items-center gap-1">
+                                    {getOutcomeIcon(outcome)} {outcome}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         )}
                         {event.description && (
                           <p className="text-sm mt-2">{event.description}</p>
@@ -720,22 +744,6 @@ const CalendarEventsPage = () => {
                 eventId={selectedEvent.id}
                 primaryTeamId={selectedTeamId}
                 gameFormat={selectedEvent.game_format || '7-a-side'}
-              />
-            )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Score Input Modal */}
-        <Dialog open={isScoreModalOpen} onOpenChange={setIsScoreModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>Edit Match Score</DialogTitle>
-            </DialogHeader>
-            {selectedEvent && (
-              <ScoreInput
-                event={selectedEvent}
-                onScoreUpdate={handleScoreUpdate}
-                onPOTMUpdate={handlePOTMUpdate}
               />
             )}
           </DialogContent>

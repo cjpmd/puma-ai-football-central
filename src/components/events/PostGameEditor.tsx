@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { DatabaseEvent } from '@/types/event';
 import { ScoreInput } from './ScoreInput';
 import { eventsService } from '@/services/eventsService';
@@ -93,6 +94,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         scores
       });
       handleEventUpdate(updatedEvent);
+      toast({
+        title: 'Success',
+        description: 'Scores updated successfully',
+      });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -111,6 +116,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         ...potmData
       });
       handleEventUpdate(updatedEvent);
+      toast({
+        title: 'Success',
+        description: 'Player of the Match updated successfully',
+      });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -122,7 +131,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Post-Game Editor - {event?.title}</DialogTitle>
         </DialogHeader>
@@ -132,56 +141,58 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         ) : !event ? (
           <div className="text-center py-4">Event not found</div>
         ) : (
-          <div className="space-y-6">
-            <Tabs defaultValue="results" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="results">Results & POTM</TabsTrigger>
-                <TabsTrigger value="notes">Notes</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="results" className="space-y-4">
-                <ScoreInput 
-                  event={event} 
-                  onScoreUpdate={handleScoreUpdate}
-                  onPOTMUpdate={handlePOTMUpdate}
-                />
-              </TabsContent>
-              
-              <TabsContent value="notes" className="space-y-4">
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="coachNotes">Coach Notes</Label>
-                    <Textarea
-                      id="coachNotes"
-                      placeholder="Add your coaching observations and feedback..."
-                      value={coachNotes}
-                      onChange={(e) => setCoachNotes(e.target.value)}
-                      className="min-h-[120px]"
-                    />
-                  </div>
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-6">
+              <Tabs defaultValue="results" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="results">Results & POTM</TabsTrigger>
+                  <TabsTrigger value="notes">Notes</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="results" className="space-y-4">
+                  <ScoreInput 
+                    event={event} 
+                    onScoreUpdate={handleScoreUpdate}
+                    onPOTMUpdate={handlePOTMUpdate}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="notes" className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="coachNotes">Coach Notes</Label>
+                      <Textarea
+                        id="coachNotes"
+                        placeholder="Add your coaching observations and feedback..."
+                        value={coachNotes}
+                        onChange={(e) => setCoachNotes(e.target.value)}
+                        className="min-h-[120px]"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="staffNotes">Staff Notes</Label>
-                    <Textarea
-                      id="staffNotes"
-                      placeholder="Add staff observations and notes..."
-                      value={staffNotes}
-                      onChange={(e) => setStaffNotes(e.target.value)}
-                      className="min-h-[120px]"
-                    />
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="staffNotes">Staff Notes</Label>
+                      <Textarea
+                        id="staffNotes"
+                        placeholder="Add staff observations and notes..."
+                        value={staffNotes}
+                        onChange={(e) => setStaffNotes(e.target.value)}
+                        className="min-h-[120px]"
+                      />
+                    </div>
 
-                  <Button 
-                    onClick={handleSaveNotes} 
-                    disabled={saving}
-                    className="w-full"
-                  >
-                    {saving ? 'Saving...' : 'Save Notes'}
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </div>
+                    <Button 
+                      onClick={handleSaveNotes} 
+                      disabled={saving}
+                      className="w-full"
+                    >
+                      {saving ? 'Saving...' : 'Save Notes'}
+                    </Button>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </ScrollArea>
         )}
       </DialogContent>
     </Dialog>
