@@ -131,18 +131,18 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Post-Game Editor - {event?.title}</DialogTitle>
         </DialogHeader>
         
-        {loading ? (
-          <div className="text-center py-4">Loading event data...</div>
-        ) : !event ? (
-          <div className="text-center py-4">Event not found</div>
-        ) : (
-          <ScrollArea className="flex-1 pr-4">
-            <div className="space-y-6">
+        <ScrollArea className="flex-1 px-1">
+          <div className="space-y-6 pr-4">
+            {loading ? (
+              <div className="text-center py-4">Loading event data...</div>
+            ) : !event ? (
+              <div className="text-center py-4">Event not found</div>
+            ) : (
               <Tabs defaultValue="results" className="w-full">
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="results">Results & POTM</TabsTrigger>
@@ -191,9 +191,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
                   </div>
                 </TabsContent>
               </Tabs>
-            </div>
-          </ScrollArea>
-        )}
+            )}
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );

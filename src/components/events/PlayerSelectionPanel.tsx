@@ -74,6 +74,23 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   }, [selectedPlayers, eventId, teamNumber, periodNumber]);
 
+  // Sync positionPlayers with selectedPlayers when switching to formation view
+  useEffect(() => {
+    if (viewMode === 'formation' && formation) {
+      const positions = getPositionsForFormation(formation, gameFormat);
+      const newPositionPlayers: { [position: string]: string } = {};
+      
+      // Map selected players to positions (first come, first served)
+      selectedPlayers.forEach((playerId, index) => {
+        if (index < positions.length) {
+          newPositionPlayers[positions[index]] = playerId;
+        }
+      });
+      
+      setPositionPlayers(newPositionPlayers);
+    }
+  }, [viewMode, formation, selectedPlayers, gameFormat]);
+
   const checkPlayerConflicts = async () => {
     if (!eventId || teamNumber === undefined || periodNumber === undefined) return;
     
@@ -261,7 +278,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                               <div className="flex items-center gap-1">
                                 <AlertTriangle className="h-3 w-3 text-orange-500" />
                                 <span className="text-xs text-orange-600">
-                                  {hasConflict.join(', ')}
+                                  Conflict: {hasConflict.join(', ')}
                                 </span>
                               </div>
                             )}
@@ -404,12 +421,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                             </Badge>
                             {hasConflict && (
                               <div className="flex items-center gap-1">
-                                <Badge variant="destructive" className="text-xs">
-                                  <AlertTriangle className="h-3 w-3 mr-1" />
-                                  Conflict
-                                </Badge>
+                                <AlertTriangle className="h-3 w-3 text-orange-500" />
                                 <span className="text-xs text-orange-600">
-                                  {hasConflict.join(', ')}
+                                  Conflict: {hasConflict.join(', ')}
                                 </span>
                               </div>
                             )}
