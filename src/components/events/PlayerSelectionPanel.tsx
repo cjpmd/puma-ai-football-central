@@ -117,7 +117,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const handlePositionPlayerChange = (position: string, playerId: string) => {
     const newPositionPlayers = { ...positionPlayers };
     
-    if (playerId === '') {
+    if (playerId === 'none') {
       delete newPositionPlayers[position];
     } else {
       newPositionPlayers[position] = playerId;
@@ -187,14 +187,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               <div key={position} className="flex items-center gap-3">
                 <div className="w-12 text-sm font-medium">{position}</div>
                 <Select
-                  value={positionPlayers[position] || ''}
+                  value={positionPlayers[position] || 'none'}
                   onValueChange={(value) => handlePositionPlayerChange(position, value)}
                 >
                   <SelectTrigger className="flex-1">
                     <SelectValue placeholder="No Player" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Player</SelectItem>
+                    <SelectItem value="none">No Player</SelectItem>
                     {filteredPlayers.map((player) => (
                       <SelectItem key={player.id} value={player.id}>
                         #{player.squad_number} {player.name}
@@ -216,12 +216,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           
           <div className="mt-4 space-y-2">
             <Label>Captain</Label>
-            <Select value={captainId || ''} onValueChange={onCaptainChange}>
+            <Select value={captainId || 'none'} onValueChange={(value) => onCaptainChange(value === 'none' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="No Captain" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No Captain</SelectItem>
+                <SelectItem value="none">No Captain</SelectItem>
                 {Object.values(positionPlayers).filter(id => id !== '').map((playerId) => {
                   const player = filteredPlayers.find(p => p.id === playerId);
                   return player ? (
