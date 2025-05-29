@@ -42,6 +42,7 @@ const CalendarEventsPage = () => {
   const [eventLocation, setEventLocation] = useState('');
   const [eventNotes, setEventNotes] = useState('');
   const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly' | 'match'>('training');
+  const [eventOpponent, setEventOpponent] = useState('');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
 
@@ -80,7 +81,6 @@ const CalendarEventsPage = () => {
       queryClient.invalidateQueries({ queryKey: ['events', selectedTeamId] });
       toast.success('Event updated successfully!');
       closeEditModal();
-      setIsScoreModalOpen(false);
     },
     onError: (error) => {
       console.error("Error updating event:", error);
@@ -114,6 +114,8 @@ const CalendarEventsPage = () => {
       return;
     }
 
+    const isMatchType = eventEventType === 'match' || eventEventType === 'fixture' || eventEventType === 'friendly';
+
     const newEvent: CreateEventData = {
       team_id: selectedTeamId,
       title: eventTitle,
@@ -125,6 +127,7 @@ const CalendarEventsPage = () => {
       notes: eventNotes || undefined,
       event_type: eventEventType,
       game_format: '7-a-side',
+      opponent: isMatchType ? eventOpponent || undefined : undefined,
     };
 
     console.log('Creating event with data:', newEvent);
@@ -141,11 +144,14 @@ const CalendarEventsPage = () => {
     setEventLocation(event.location || '');
     setEventNotes(event.notes || '');
     setEventEventType(event.event_type as any);
+    setEventOpponent(event.opponent || '');
     setIsEditModalOpen(true);
   };
 
   const handleUpdateEvent = () => {
     if (!selectedEvent || !eventDate) return;
+
+    const isMatchType = eventEventType === 'match' || eventEventType === 'fixture' || eventEventType === 'friendly';
 
     const updatedEvent: UpdateEventData = {
       id: selectedEvent.id,
@@ -158,6 +164,7 @@ const CalendarEventsPage = () => {
       location: eventLocation || undefined,
       notes: eventNotes || undefined,
       event_type: eventEventType,
+      opponent: isMatchType ? eventOpponent || undefined : undefined,
     };
 
     updateEvent(updatedEvent);
@@ -206,6 +213,7 @@ const CalendarEventsPage = () => {
     setEventLocation('');
     setEventNotes('');
     setEventEventType('training');
+    setEventOpponent('');
   };
 
   const closeEditModal = () => {
@@ -219,6 +227,7 @@ const CalendarEventsPage = () => {
     setEventLocation('');
     setEventNotes('');
     setEventEventType('training');
+    setEventOpponent('');
   };
 
   const handleTeamSelection = (event: DatabaseEvent) => {
@@ -261,6 +270,9 @@ const CalendarEventsPage = () => {
     const eventDateObj = new Date(event.date);
     return eventDateObj >= date.from && eventDateObj <= date.to;
   });
+
+  const isMatchType = (eventType: string) => 
+    eventType === "match" || eventType === "fixture" || eventType === "friendly";
 
   return (
     <DashboardLayout>
@@ -360,8 +372,12 @@ const CalendarEventsPage = () => {
         {viewMode === 'grid' ? (
           <EventsGridView
             events={events}
-            onEditEvent={(event) => setSelectedEvent(event) || setIsEditModalOpen(true)}
-            onTeamSelection={(event) => setSelectedEvent(event) || setIsTeamSelectionOpen(true)}
+            onEditEvent={(event) => {
+              handleEditEvent(event);
+            }}
+            onTeamSelection={(event) => {
+              handleTeamSelection(event);
+            }}
             onPostGameEdit={handlePostGameEdit}
             onDeleteEvent={(eventId) => eventsService.deleteEvent(eventId)}
             onScoreEdit={() => {}} // Remove this - functionality moved to PostGameEditor
@@ -369,8 +385,12 @@ const CalendarEventsPage = () => {
         ) : viewMode === 'calendar' ? (
           <CalendarGridView
             events={events}
-            onEditEvent={(event) => setSelectedEvent(event) || setIsEditModalOpen(true)}
-            onTeamSelection={(event) => setSelectedEvent(event) || setIsTeamSelectionOpen(true)}
+            onEditEvent={(event) => {
+              handleEditEvent(event);
+            }}
+            onTeamSelection={(event) => {
+              handleTeamSelection(event);
+            }}
             onPostGameEdit={handlePostGameEdit}
             onDeleteEvent={(eventId) => eventsService.deleteEvent(eventId)}
           />
@@ -386,7 +406,7 @@ const CalendarEventsPage = () => {
                   (new Date(event.date).toDateString() === new Date().toDateString() && 
                    event.end_time && new Date(`2024-01-01 ${event.end_time}`) < new Date(`2024-01-01 ${new Date().toTimeString().slice(0, 8)}`));
                 
-                const isMatchType = event.event_type === "match" || event.event_type === "fixture" || event.event_type === "friendly";
+                const eventIsMatchType = isMatchType(event.event_type);
                 const outcomes = getEventOutcomes(event);
                 
                 return (
@@ -395,14 +415,14 @@ const CalendarEventsPage = () => {
                       <div className="flex items-center gap-2">
                         <Badge 
                           className={
-                            isMatchType 
+                            eventIsMatchType 
                               ? "bg-red-500" 
                               : "bg-blue-500"
                           }
                         >
                           {event.event_type}
                         </Badge>
-                        {isCompleted && isMatchType && outcomes.length > 0 && (
+                        {isCompleted && eventIsMatchType && outcomes.length > 0 && (
                           <div className="flex gap-1">
                             {outcomes.map((outcome, index) => (
                               <span key={index} className="text-lg">{getOutcomeIcon(outcome)}</span>
@@ -416,16 +436,7 @@ const CalendarEventsPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedEvent(event);
-                              setEventTitle(event.title);
-                              setEventDescription(event.description || '');
-                              setEventDate(new Date(event.date));
-                              setEventStartTime(event.start_time || '');
-                              setEventEndTime(event.end_time || '');
-                              setEventLocation(event.location || '');
-                              setEventNotes(event.notes || '');
-                              setEventEventType(event.event_type as any);
-                              setIsEditModalOpen(true);
+                              handleEditEvent(event);
                             }}
                             title="Edit Event"
                           >
@@ -436,15 +447,14 @@ const CalendarEventsPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => {
-                              setSelectedEvent(event);
-                              setIsTeamSelectionOpen(true);
+                              handleTeamSelection(event);
                             }}
                             title="Team Selection"
                           >
                             <Users className="h-4 w-4" />
                           </Button>
                           
-                          {isMatchType && (
+                          {eventIsMatchType && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -482,7 +492,10 @@ const CalendarEventsPage = () => {
                         {event.location && (
                           <p className="text-sm text-muted-foreground">Location: {event.location}</p>
                         )}
-                        {event.scores && isMatchType && (
+                        {event.opponent && (
+                          <p className="text-sm text-muted-foreground">Opponent: {event.opponent}</p>
+                        )}
+                        {event.scores && eventIsMatchType && (
                           <div className="text-sm text-muted-foreground">
                             {outcomes.length > 0 && (
                               <div className="flex items-center gap-2 mt-1">
@@ -549,6 +562,22 @@ const CalendarEventsPage = () => {
                 </Label>
                 <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
               </div>
+
+              {/* Opponent field for match types */}
+              {isMatchType(eventEventType) && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="opponent" className="text-right">
+                    Opponent
+                  </Label>
+                  <Input 
+                    id="opponent" 
+                    value={eventOpponent} 
+                    onChange={(e) => setEventOpponent(e.target.value)} 
+                    className="col-span-3" 
+                    placeholder="Enter opponent name"
+                  />
+                </div>
+              )}
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="date" className="text-right">
@@ -660,6 +689,22 @@ const CalendarEventsPage = () => {
                 </Label>
                 <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
               </div>
+
+              {/* Opponent field for match types */}
+              {isMatchType(eventEventType) && (
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="opponent" className="text-right">
+                    Opponent
+                  </Label>
+                  <Input 
+                    id="opponent" 
+                    value={eventOpponent} 
+                    onChange={(e) => setEventOpponent(e.target.value)} 
+                    className="col-span-3" 
+                    placeholder="Enter opponent name"
+                  />
+                </div>
+              )}
               
               <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="date" className="text-right">
