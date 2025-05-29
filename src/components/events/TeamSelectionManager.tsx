@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -143,7 +142,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           
           // Load staff selection (only once as it's shared)
           if (selection.staff_selection && Array.isArray(selection.staff_selection)) {
-            setSelectedStaff(selection.staff_selection);
+            // Ensure all values are strings
+            const staffIds = selection.staff_selection
+              .map((id: any) => String(id))
+              .filter((id: string) => id && id !== 'null' && id !== 'undefined');
+            setSelectedStaff(staffIds);
           }
         });
         
