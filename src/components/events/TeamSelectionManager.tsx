@@ -1,7 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Save } from 'lucide-react';
@@ -13,6 +17,11 @@ interface TeamSelectionManagerProps {
   eventId: string;
   teamId: string;
   gameFormat: GameFormat;
+}
+
+interface PerformanceCategory {
+  id: string;
+  name: string;
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -29,13 +38,32 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [selectedPlayers, setSelectedPlayers] = useState<{ [key: string]: string[] }>({});
   const [captains, setCaptains] = useState<{ [key: string]: string }>({});
   const [formations, setFormations] = useState<{ [key: string]: string }>({});
+  const [durations, setDurations] = useState<{ [key: string]: number }>({});
+  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
+  const [teamPerformanceCategories, setTeamPerformanceCategories] = useState<{ [key: string]: string }>({});
   const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     loadEventTeams();
+    loadPerformanceCategories();
     loadExistingTeamSelections();
   }, [eventId, teamId]);
+
+  const loadPerformanceCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('performance_categories')
+        .select('id, name')
+        .eq('team_id', teamId)
+        .order('name');
+
+      if (error) throw error;
+      setPerformanceCategories(data || []);
+    } catch (error) {
+      console.error('Error loading performance categories:', error);
+    }
+  };
 
   const loadEventTeams = async () => {
     try {
@@ -52,18 +80,23 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         setTotalTeams(maxTeamNumber);
         
         const initialPeriods: { [key: string]: number } = {};
+        const initialDurations: { [key: string]: number } = {};
         for (let i = 1; i <= maxTeamNumber; i++) {
           initialPeriods[`team-${i}`] = 1;
+          initialDurations[getTeamPeriodKey(i, 1)] = 90; // Default 90 minutes
         }
         setPeriods(initialPeriods);
+        setDurations(initialDurations);
       } else {
         setTotalTeams(1);
         setPeriods({ 'team-1': 1 });
+        setDurations({ [getTeamPeriodKey(1, 1)]: 90 });
       }
     } catch (error) {
       console.error('Error loading event teams:', error);
       setTotalTeams(1);
       setPeriods({ 'team-1': 1 });
+      setDurations({ [getTeamPeriodKey(1, 1)]: 90 });
     }
   };
 
@@ -71,7 +104,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     try {
       const { data, error } = await supabase
         .from('event_selections')
-        .select('team_number, period_number')
+        .select('*')
         .eq('event_id', eventId)
         .eq('team_id', teamId);
 
@@ -79,18 +112,47 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
       if (data && data.length > 0) {
         const periodCounts: { [key: string]: number } = {};
+        const loadedPlayers: { [key: string]: string[] } = {};
+        const loadedCaptains: { [key: string]: string } = {};
+        const loadedFormations: { [key: string]: string } = {};
+        const loadedDurations: { [key: string]: number } = {};
+        const loadedCategories: { [key: string]: string } = {};
         
         data.forEach(selection => {
           const teamNumber = selection.team_number || 1;
+          const periodNumber = selection.period_number || 1;
           const teamKey = `team-${teamNumber}`;
-          const periodNumber = selection.period_number;
+          const selectionKey = getTeamPeriodKey(teamNumber, periodNumber);
           
+          // Track max periods per team
           if (!periodCounts[teamKey] || periodNumber > periodCounts[teamKey]) {
             periodCounts[teamKey] = periodNumber;
+          }
+          
+          // Load player positions
+          if (selection.player_positions && Array.isArray(selection.player_positions)) {
+            const playerIds = selection.player_positions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean);
+            loadedPlayers[selectionKey] = playerIds;
+          }
+          
+          // Load other data
+          if (selection.captain_id) loadedCaptains[selectionKey] = selection.captain_id;
+          if (selection.formation) loadedFormations[selectionKey] = selection.formation;
+          if (selection.duration_minutes) loadedDurations[selectionKey] = selection.duration_minutes;
+          if (selection.performance_category_id) loadedCategories[selectionKey] = selection.performance_category_id;
+          
+          // Load staff selection (only once as it's shared)
+          if (selection.staff_selection && Array.isArray(selection.staff_selection)) {
+            setSelectedStaff(selection.staff_selection);
           }
         });
         
         setPeriods(periodCounts);
+        setSelectedPlayers(loadedPlayers);
+        setCaptains(loadedCaptains);
+        setFormations(loadedFormations);
+        setDurations(loadedDurations);
+        setTeamPerformanceCategories(loadedCategories);
         
         const maxTeamFromSelections = Math.max(...Object.keys(periodCounts).map(key => 
           parseInt(key.replace('team-', ''))
@@ -130,27 +192,28 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           const playersForPeriod = selectedPlayers[selectionKey] || [];
           const captainForPeriod = captains[selectionKey] || '';
           const formationForPeriod = formations[selectionKey] || '3-2-1';
+          const durationForPeriod = durations[selectionKey] || 90;
+          const performanceCategoryForPeriod = teamPerformanceCategories[selectionKey] || null;
           
-          if (playersForPeriod.length > 0) {
-            const playerPositions = playersForPeriod.map((playerId, index) => ({
-              playerId,
-              position: `P${index + 1}`,
-              isSubstitute: false
-            }));
+          const playerPositions = playersForPeriod.map((playerId, index) => ({
+            playerId,
+            position: `P${index + 1}`,
+            isSubstitute: false
+          }));
 
-            selectionsToInsert.push({
-              event_id: eventId,
-              team_id: teamId,
-              team_number: teamNumber,
-              period_number: periodNumber,
-              formation: formationForPeriod,
-              captain_id: captainForPeriod || null,
-              player_positions: playerPositions,
-              substitutes: [],
-              staff_selection: selectedStaff,
-              duration_minutes: 90
-            });
-          }
+          selectionsToInsert.push({
+            event_id: eventId,
+            team_id: teamId,
+            team_number: teamNumber,
+            period_number: periodNumber,
+            formation: formationForPeriod,
+            captain_id: captainForPeriod || null,
+            player_positions: playerPositions,
+            substitutes: [],
+            staff_selection: selectedStaff,
+            duration_minutes: durationForPeriod,
+            performance_category_id: performanceCategoryForPeriod
+          });
         }
       });
 
@@ -187,6 +250,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       [teamNumber]: newPeriodNumber
     });
     
+    // Set default duration for new period
+    const newPeriodKey = getTeamPeriodKey(parseInt(teamNumber.replace('team-', '')), newPeriodNumber);
+    setDurations(prev => ({
+      ...prev,
+      [newPeriodKey]: 90
+    }));
+    
     setActivePeriodTab(`period-${newPeriodNumber}`);
   };
 
@@ -202,6 +272,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       ...periods,
       [newTeamKey]: 1
     });
+    
+    // Set default duration for new team
+    const newTeamPeriodKey = getTeamPeriodKey(nextTeamNumber, 1);
+    setDurations(prev => ({
+      ...prev,
+      [newTeamPeriodKey]: 90
+    }));
     
     setTotalTeams(nextTeamNumber);
     setActiveTeamTab(newTeamKey);
@@ -233,6 +310,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     setFormations(prev => ({
       ...prev,
       [key]: formation
+    }));
+  };
+
+  const handleDurationChange = (teamNumber: number, periodNumber: number, duration: number) => {
+    const key = getTeamPeriodKey(teamNumber, periodNumber);
+    setDurations(prev => ({
+      ...prev,
+      [key]: duration
+    }));
+  };
+
+  const handlePerformanceCategoryChange = (teamNumber: number, periodNumber: number, categoryId: string) => {
+    const key = getTeamPeriodKey(teamNumber, periodNumber);
+    setTeamPerformanceCategories(prev => ({
+      ...prev,
+      [key]: categoryId === 'none' ? '' : categoryId
     }));
   };
 
@@ -305,6 +398,40 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     
                     return (
                       <TabsContent key={i} value={`period-${i + 1}`} className="mt-0 space-y-4">
+                        {/* Performance Category and Duration */}
+                        <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+                          <div className="space-y-2">
+                            <Label>Performance Category</Label>
+                            <Select
+                              value={teamPerformanceCategories[selectionKey] || 'none'}
+                              onValueChange={(value) => handlePerformanceCategoryChange(teamNumber, periodNumber, value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Category</SelectItem>
+                                {performanceCategories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Duration (minutes)</Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="180"
+                              value={durations[selectionKey] || 90}
+                              onChange={(e) => handleDurationChange(teamNumber, periodNumber, parseInt(e.target.value) || 90)}
+                            />
+                          </div>
+                        </div>
+                        
                         <PlayerSelectionPanel
                           teamId={teamId}
                           selectedPlayers={selectedPlayers[selectionKey] || []}
@@ -316,6 +443,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                           formation={formations[selectionKey] || '3-2-1'}
                           onFormationChange={(formation) => handleFormationChange(teamNumber, periodNumber, formation)}
                           gameFormat={gameFormat}
+                          eventId={eventId}
+                          teamNumber={teamNumber}
+                          periodNumber={periodNumber}
                         />
                         
                         <StaffSelectionSection

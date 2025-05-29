@@ -27,7 +27,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
   onPOTMUpdate 
 }) => {
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
-  const [ourScore, setOurScore] = useState<number>(0);
+  const [teamScores, setTeamScores] = useState<{ [teamNumber: number]: number }>({});
   const [opponentScore, setOpponentScore] = useState<number>(0);
   const [potmSelections, setPotmSelections] = useState<Record<number, string>>({});
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,14 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
       }
 
       setTeamSelections(teamData.sort((a, b) => a.teamNumber - b.teamNumber));
+      
+      // Initialize team scores
+      const initialScores: { [teamNumber: number]: number } = {};
+      teamData.forEach(team => {
+        initialScores[team.teamNumber] = 0;
+      });
+      setTeamScores(initialScores);
+      
     } catch (error) {
       console.error('Error loading team selections:', error);
     } finally {
@@ -112,23 +120,29 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
     if (event.scores && typeof event.scores === 'object') {
       const eventScores = event.scores as any;
       
-      // Handle both old format (home/away) and new format with our/opponent scores
+      // Load team-specific scores
+      const loadedTeamScores: { [teamNumber: number]: number } = {};
+      Object.keys(eventScores).forEach(key => {
+        const teamNumber = parseInt(key);
+        if (!isNaN(teamNumber)) {
+          loadedTeamScores[teamNumber] = eventScores[key] || 0;
+        }
+      });
+      
+      // Handle legacy formats
       if ('ourScore' in eventScores && 'opponentScore' in eventScores) {
-        setOurScore(eventScores.ourScore || 0);
+        if (Object.keys(loadedTeamScores).length === 0) {
+          loadedTeamScores[1] = eventScores.ourScore || 0;
+        }
         setOpponentScore(eventScores.opponentScore || 0);
       } else if ('home' in eventScores && 'away' in eventScores) {
-        // Convert old format assuming home is our team
-        setOurScore(eventScores.home || 0);
+        if (Object.keys(loadedTeamScores).length === 0) {
+          loadedTeamScores[1] = eventScores.home || 0;
+        }
         setOpponentScore(eventScores.away || 0);
-      } else {
-        // Handle team number format
-        const scores = Object.keys(eventScores)
-          .filter(key => !isNaN(parseInt(key)))
-          .map(key => eventScores[key] || 0);
-        
-        setOurScore(scores[0] || 0);
-        setOpponentScore(scores[1] || 0);
       }
+      
+      setTeamScores(loadedTeamScores);
     }
   };
 
@@ -161,6 +175,13 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
     }
   };
 
+  const handleTeamScoreChange = (teamNumber: number, score: number) => {
+    setTeamScores(prev => ({
+      ...prev,
+      [teamNumber]: score
+    }));
+  };
+
   const handlePOTMChange = (teamNumber: number, playerId: string) => {
     setPotmSelections(prev => ({
       ...prev,
@@ -170,14 +191,18 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
 
   const handleSave = async () => {
     try {
-      // Prepare scores data with our new format
-      const scoresData = {
-        ourScore: ourScore,
-        opponentScore: opponentScore,
-        // Keep team-based scoring for backwards compatibility
-        1: ourScore,
-        2: opponentScore
+      // Prepare scores data
+      const scoresData: any = {
+        ...teamScores,
+        opponentScore: opponentScore
       };
+      
+      // For backwards compatibility
+      if (teamScores[1] !== undefined) {
+        scoresData.ourScore = teamScores[1];
+        scoresData.home = teamScores[1];
+        scoresData.away = opponentScore;
+      }
       
       // Add POTM data to scores object
       Object.entries(potmSelections).forEach(([teamNum, playerId]) => {
@@ -246,19 +271,31 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
         <div className="space-y-4 p-4 border rounded-lg">
           <h3 className="font-semibold text-lg">Final Score</h3>
           
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label htmlFor="ourScore">Our Team Score</Label>
-              <Input
-                id="ourScore"
-                type="number"
-                min="0"
-                value={ourScore}
-                onChange={(e) => setOurScore(parseInt(e.target.value) || 0)}
-                className="text-center text-lg font-bold"
-              />
-            </div>
+          <div className="grid gap-4">
+            {/* Team Scores */}
+            {teamSelections.map((team) => (
+              <div key={team.teamNumber} className="grid grid-cols-2 gap-4 items-center">
+                <div className="space-y-2">
+                  <Label htmlFor={`team-${team.teamNumber}-score`}>
+                    {team.performanceCategoryName} Score
+                  </Label>
+                  <Input
+                    id={`team-${team.teamNumber}-score`}
+                    type="number"
+                    min="0"
+                    value={teamScores[team.teamNumber] || 0}
+                    onChange={(e) => handleTeamScoreChange(team.teamNumber, parseInt(e.target.value) || 0)}
+                    className="text-center text-lg font-bold"
+                  />
+                </div>
+                
+                <div className="text-center text-xl font-bold">
+                  vs {opponentName}
+                </div>
+              </div>
+            ))}
             
+            {/* Opponent Score */}
             <div className="space-y-2">
               <Label htmlFor="opponentScore">{opponentName} Score</Label>
               <Input
@@ -272,8 +309,13 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
             </div>
           </div>
 
-          <div className="text-center text-2xl font-bold border-t pt-4">
-            Our Team {ourScore} - {opponentScore} {opponentName}
+          {/* Score Summary */}
+          <div className="text-center text-xl font-bold border-t pt-4 space-y-2">
+            {teamSelections.map((team) => (
+              <div key={team.teamNumber}>
+                {team.performanceCategoryName}: {teamScores[team.teamNumber] || 0} - {opponentScore} {opponentName}
+              </div>
+            ))}
           </div>
         </div>
 

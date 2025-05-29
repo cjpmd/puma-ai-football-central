@@ -46,13 +46,14 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const [teamTimeSlots, setTeamTimeSlots] = useState<TeamTimeSlot[]>([
     { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
   ]);
+  const [teamDefaultGameFormat, setTeamDefaultGameFormat] = useState<GameFormat>('7-a-side');
   
   const [formData, setFormData] = useState({
     type: event?.type || 'training' as const,
     title: event?.title || '',
     date: event?.date || new Date().toISOString().split('T')[0],
     location: event?.location || '',
-    gameFormat: event?.gameFormat || '7-a-side' as GameFormat,
+    gameFormat: event?.gameFormat || teamDefaultGameFormat,
     opponent: event?.opponent || '',
     isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
@@ -65,6 +66,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   useEffect(() => {
     loadFacilities();
     loadPlayers();
+    loadTeamGameFormat();
     if (event) {
       setNumberOfTeams(event.teams?.length || 1);
       const initialSlots = event.teams?.map((_, index) => ({
@@ -75,7 +77,28 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       })) || [{ teamNumber: 1, meetingTime: event.meetingTime || '09:00', startTime: event.startTime || '10:00', endTime: event.endTime || '11:30' }];
       setTeamTimeSlots(initialSlots);
     }
-  }, [event]);
+  }, [event, teamId]);
+
+  const loadTeamGameFormat = async () => {
+    try {
+      const { data: team, error } = await supabase
+        .from('teams')
+        .select('game_format')
+        .eq('id', teamId)
+        .single();
+
+      if (error) throw error;
+      
+      if (team?.game_format) {
+        setTeamDefaultGameFormat(team.game_format as GameFormat);
+        if (!event) {
+          setFormData(prev => ({ ...prev, gameFormat: team.game_format as GameFormat }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading team game format:', error);
+    }
+  };
 
   const loadFacilities = async () => {
     try {
@@ -235,7 +258,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               <SelectContent>
                 {gameFormats.map((format) => (
                   <SelectItem key={format} value={format}>
-                    {format}
+                    {format} {format === teamDefaultGameFormat && '(Team Default)'}
                   </SelectItem>
                 ))}
               </SelectContent>
