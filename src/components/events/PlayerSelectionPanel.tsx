@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Users, Crown, UserCheck, Filter, Grid3X3, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FormationSelector } from './FormationSelector';
@@ -246,16 +246,29 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">No Player</SelectItem>
-                    {filteredPlayers.map((player) => (
-                      <SelectItem key={player.id} value={player.id}>
-                        #{player.squad_number} {player.name}
-                        {player.subscription_type !== 'full_squad' && (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            ({getSubscriptionLabel(player.subscription_type)})
-                          </span>
-                        )}
-                      </SelectItem>
-                    ))}
+                    {filteredPlayers.map((player) => {
+                      const hasConflict = playerConflicts[player.id];
+                      return (
+                        <SelectItem key={player.id} value={player.id}>
+                          <div className="flex items-center gap-2">
+                            #{player.squad_number} {player.name}
+                            {player.subscription_type !== 'full_squad' && (
+                              <span className="text-xs text-muted-foreground">
+                                ({getSubscriptionLabel(player.subscription_type)})
+                              </span>
+                            )}
+                            {hasConflict && (
+                              <div className="flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3 text-orange-500" />
+                                <span className="text-xs text-orange-600">
+                                  {hasConflict.join(', ')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 {captainId === positionPlayers[position] && (
@@ -305,8 +318,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     );
   }
 
-  const hasConflicts = Object.keys(playerConflicts).length > 0;
-
   return (
     <Card>
       <CardHeader>
@@ -348,25 +359,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {hasConflicts && (
-          <Alert>
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Some players are selected for multiple teams:
-              <ul className="mt-2 space-y-1">
-                {Object.entries(playerConflicts).map(([playerId, conflicts]) => {
-                  const player = players.find(p => p.id === playerId);
-                  return (
-                    <li key={playerId} className="text-sm">
-                      <strong>{player?.name}</strong> is also in: {conflicts.join(', ')}
-                    </li>
-                  );
-                })}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {filteredPlayers.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             {showFullSquadOnly 
@@ -403,7 +395,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                           onCheckedChange={() => handlePlayerToggle(player.id)}
                         />
                         <div className="flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Label htmlFor={`player-${player.id}`} className="font-medium cursor-pointer">
                               #{player.squad_number} {player.name}
                             </Label>
@@ -411,17 +403,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                               {getSubscriptionLabel(player.subscription_type)}
                             </Badge>
                             {hasConflict && (
-                              <Badge variant="destructive" className="text-xs">
-                                <AlertTriangle className="h-3 w-3 mr-1" />
-                                Conflict
-                              </Badge>
+                              <div className="flex items-center gap-1">
+                                <Badge variant="destructive" className="text-xs">
+                                  <AlertTriangle className="h-3 w-3 mr-1" />
+                                  Conflict
+                                </Badge>
+                                <span className="text-xs text-orange-600">
+                                  {hasConflict.join(', ')}
+                                </span>
+                              </div>
                             )}
                           </div>
-                          {hasConflict && (
-                            <p className="text-xs text-orange-600 mt-1">
-                              Also selected in: {hasConflict.join(', ')}
-                            </p>
-                          )}
                         </div>
                         <Button
                           variant={captainId === player.id ? "default" : "outline"}

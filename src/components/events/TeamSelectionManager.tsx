@@ -11,6 +11,7 @@ import { Plus, Save } from 'lucide-react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { StaffSelectionSection } from './StaffSelectionSection';
 import { GameFormat } from '@/types';
+import { updatePlayerStatsFromEvent } from '@/services/playerStatsUpdateService';
 
 interface TeamSelectionManagerProps {
   eventId: string;
@@ -227,6 +228,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
         if (error) throw error;
       }
+
+      // Update player statistics after saving selections
+      await updatePlayerStatsFromEvent(eventId);
 
       toast({
         title: 'Success',

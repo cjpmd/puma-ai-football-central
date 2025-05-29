@@ -269,14 +269,17 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
         {requiresOpponent && (
           <div className="space-y-2">
-            <Label htmlFor="opponent">Opponent *</Label>
+            <Label htmlFor="opponent">Opponent Name *</Label>
             <Input
               id="opponent"
               value={formData.opponent}
               onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
-              placeholder="Enter opponent name"
+              placeholder="Enter opponent name (e.g., Riverside)"
               required
             />
+            <p className="text-sm text-muted-foreground">
+              This opponent name will be used for all teams in this event
+            </p>
           </div>
         )}
 
