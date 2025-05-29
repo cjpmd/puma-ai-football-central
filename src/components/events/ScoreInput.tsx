@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -233,6 +234,8 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
     );
   }
 
+  const opponentName = event.opponent || 'Opponent';
+
   return (
     <Card>
       <CardHeader>
@@ -257,9 +260,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="opponentScore">
-                {event.opponent ? `${event.opponent} Score` : 'Opponent Score'}
-              </Label>
+              <Label htmlFor="opponentScore">{opponentName} Score</Label>
               <Input
                 id="opponentScore"
                 type="number"
@@ -272,7 +273,7 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
           </div>
 
           <div className="text-center text-2xl font-bold border-t pt-4">
-            {ourScore} - {opponentScore}
+            Our Team {ourScore} - {opponentScore} {opponentName}
           </div>
         </div>
 

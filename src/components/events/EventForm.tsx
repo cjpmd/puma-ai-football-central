@@ -142,8 +142,17 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     ));
   };
 
+  // Check if opponent is required for this event type
+  const requiresOpponent = ['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation for opponent field
+    if (requiresOpponent && !formData.opponent.trim()) {
+      alert('Opponent name is required for this event type');
+      return;
+    }
     
     const primaryTimeSlot = teamTimeSlots[0];
     
@@ -154,6 +163,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       meetingTime: primaryTimeSlot.meetingTime,
       startTime: primaryTimeSlot.startTime,
       endTime: primaryTimeSlot.endTime,
+      opponent: requiresOpponent ? formData.opponent : undefined,
       scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
@@ -233,8 +243,22 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         </div>
 
+        {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
+        {requiresOpponent && (
+          <div className="space-y-2">
+            <Label htmlFor="opponent">Opponent *</Label>
+            <Input
+              id="opponent"
+              value={formData.opponent}
+              onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
+              placeholder="Enter opponent name"
+              required
+            />
+          </div>
+        )}
+
         {/* Number of Teams for fixtures, friendlies, tournaments, and festivals */}
-        {(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
+        {requiresOpponent && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Number of Teams</Label>
@@ -298,7 +322,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         )}
 
         {/* Single team time slots for other event types */}
-        {!(['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type)) && (
+        {!requiresOpponent && (
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="meetingTime">Meeting Time</Label>
@@ -365,84 +389,68 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           )}
         </div>
 
-        {/* Opponent for fixtures and friendlies */}
+        {/* Home/Away toggle for fixtures and friendlies */}
         {(formData.type === 'fixture' || formData.type === 'friendly') && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="isHome"
+              checked={formData.isHome}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+            />
+            <Label htmlFor="isHome">Home game</Label>
+          </div>
+        )}
+
+        {/* Scores Section */}
+        {formData.type === 'fixture' || formData.type === 'friendly' && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="opponent">Opponent</Label>
+              <Label htmlFor="homeScore">
+                {formData.isHome ? 'Our Score' : 'Opponent Score'}
+              </Label>
               <Input
-                id="opponent"
-                value={formData.opponent}
-                onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
-                placeholder="Enter opponent name"
+                id="homeScore"
+                type="number"
+                min="0"
+                value={formData.homeScore}
+                onChange={(e) => setFormData(prev => ({ ...prev, homeScore: parseInt(e.target.value) || 0 }))}
               />
             </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="isHome"
-                checked={formData.isHome}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+            <div className="space-y-2">
+              <Label htmlFor="awayScore">
+                {formData.isHome ? 'Opponent Score' : 'Our Score'}
+              </Label>
+              <Input
+                id="awayScore"
+                type="number"
+                min="0"
+                value={formData.awayScore}
+                onChange={(e) => setFormData(prev => ({ ...prev, awayScore: parseInt(e.target.value) || 0 }))}
               />
-              <Label htmlFor="isHome">Home game</Label>
             </div>
+          </div>
+        )}
 
-            {/* Scores Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Match Result</CardTitle>
-                <CardDescription>Enter the final score if the match has been played</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="homeScore">
-                      {formData.isHome ? 'Our Score' : 'Opponent Score'}
-                    </Label>
-                    <Input
-                      id="homeScore"
-                      type="number"
-                      min="0"
-                      value={formData.homeScore}
-                      onChange={(e) => setFormData(prev => ({ ...prev, homeScore: parseInt(e.target.value) || 0 }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="awayScore">
-                      {formData.isHome ? 'Opponent Score' : 'Our Score'}
-                    </Label>
-                    <Input
-                      id="awayScore"
-                      type="number"
-                      min="0"
-                      value={formData.awayScore}
-                      onChange={(e) => setFormData(prev => ({ ...prev, awayScore: parseInt(e.target.value) || 0 }))}
-                    />
-                  </div>
-                </div>
-
-                {/* Player of the Match */}
-                <div className="space-y-2">
-                  <Label htmlFor="playerOfTheMatch">Player of the Match</Label>
-                  <Select
-                    value={formData.playerOfTheMatchId}
-                    onValueChange={(value) => setFormData(prev => ({ ...prev, playerOfTheMatchId: value === 'none' ? '' : value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select player of the match" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No player selected</SelectItem>
-                      {players.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Player of the Match */}
+        {formData.type === 'fixture' || formData.type === 'friendly' && (
+          <div className="space-y-2">
+            <Label htmlFor="playerOfTheMatch">Player of the Match</Label>
+            <Select
+              value={formData.playerOfTheMatchId}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, playerOfTheMatchId: value === 'none' ? '' : value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select player of the match" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No player selected</SelectItem>
+                {players.map((player) => (
+                  <SelectItem key={player.id} value={player.id}>
+                    {player.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 

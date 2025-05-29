@@ -1,11 +1,10 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus } from 'lucide-react';
+import { Plus, Save } from 'lucide-react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { StaffSelectionSection } from './StaffSelectionSection';
 import { GameFormat } from '@/types';
@@ -22,6 +21,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   gameFormat
 }) => {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [activeTeamTab, setActiveTeamTab] = useState('team-1');
   const [activePeriodTab, setActivePeriodTab] = useState('period-1');
   const [periods, setPeriods] = useState<{ [key: string]: number }>({ 'team-1': 1 });
@@ -107,6 +107,77 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const saveTeamSelections = async () => {
+    try {
+      setSaving(true);
+      
+      // Delete existing selections for this event and team
+      await supabase
+        .from('event_selections')
+        .delete()
+        .eq('event_id', eventId)
+        .eq('team_id', teamId);
+
+      // Prepare new selections
+      const selectionsToInsert = [];
+      
+      Object.keys(periods).forEach(teamKey => {
+        const teamNumber = parseInt(teamKey.replace('team-', ''));
+        const teamPeriods = periods[teamKey] || 1;
+        
+        for (let periodNumber = 1; periodNumber <= teamPeriods; periodNumber++) {
+          const selectionKey = getTeamPeriodKey(teamNumber, periodNumber);
+          const playersForPeriod = selectedPlayers[selectionKey] || [];
+          const captainForPeriod = captains[selectionKey] || '';
+          const formationForPeriod = formations[selectionKey] || '3-2-1';
+          
+          if (playersForPeriod.length > 0) {
+            const playerPositions = playersForPeriod.map((playerId, index) => ({
+              playerId,
+              position: `P${index + 1}`,
+              isSubstitute: false
+            }));
+
+            selectionsToInsert.push({
+              event_id: eventId,
+              team_id: teamId,
+              team_number: teamNumber,
+              period_number: periodNumber,
+              formation: formationForPeriod,
+              captain_id: captainForPeriod || null,
+              player_positions: playerPositions,
+              substitutes: [],
+              staff_selection: selectedStaff,
+              duration_minutes: 90
+            });
+          }
+        }
+      });
+
+      if (selectionsToInsert.length > 0) {
+        const { error } = await supabase
+          .from('event_selections')
+          .insert(selectionsToInsert);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Team selections saved successfully',
+      });
+    } catch (error: any) {
+      console.error('Error saving team selections:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save team selections',
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleAddPeriod = (teamNumber: string) => {
     const currentPeriods = periods[teamNumber] || 0;
     const newPeriodNumber = currentPeriods + 1;
@@ -179,9 +250,20 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm">Team Configuration</CardTitle>
-            <Button onClick={addTeam} variant="outline" size="sm" className="h-7 text-xs px-2">
-              <Plus className="h-3 w-3 mr-1" /> Add Team
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={addTeam} variant="outline" size="sm" className="h-7 text-xs px-2">
+                <Plus className="h-3 w-3 mr-1" /> Add Team
+              </Button>
+              <Button 
+                onClick={saveTeamSelections} 
+                disabled={saving}
+                size="sm" 
+                className="h-7 text-xs px-2"
+              >
+                <Save className="h-3 w-3 mr-1" />
+                {saving ? 'Saving...' : 'Save Selections'}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0 pb-2">
