@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TeamSelectionManager } from './TeamSelectionManager';
+import { GameFormat } from '@/types';
 
 interface EventTeamsTableProps {
   eventId: string;
@@ -95,7 +96,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
                     <TeamSelectionManager 
                       eventId={eventId}
                       teamId={team.id}
-                      gameFormat={gameFormat}
+                      gameFormat={gameFormat as GameFormat}
                     />
                   </ScrollArea>
                 </TabsContent>
