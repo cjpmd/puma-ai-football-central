@@ -58,17 +58,19 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         .eq('event_id', eventId)
         .eq('team_id', eventData.team_id);
 
-      // Create unique teams array based on performance categories (not periods)
+      // Create unique teams array based on performance categories only (not periods)
       const uniqueTeams = new Map();
       eventSelections?.forEach(selection => {
-        const teamKey = `${selection.team_number}-${selection.performance_category_id}`;
-        if (!uniqueTeams.has(teamKey)) {
-          const performanceCategory = selection.performance_categories as any;
-          uniqueTeams.set(teamKey, {
-            teamNumber: selection.team_number,
-            name: performanceCategory?.name || `Team ${selection.team_number}`,
-            performanceCategoryId: selection.performance_category_id
-          });
+        if (selection.performance_category_id) {
+          const teamKey = selection.performance_category_id;
+          if (!uniqueTeams.has(teamKey)) {
+            const performanceCategory = selection.performance_categories as any;
+            uniqueTeams.set(teamKey, {
+              teamNumber: selection.team_number,
+              name: performanceCategory?.name || `Team ${selection.team_number}`,
+              performanceCategoryId: selection.performance_category_id
+            });
+          }
         }
       });
 
@@ -142,6 +144,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     if (!event) return;
 
     try {
+      console.log('Saving scores to database:', scores);
+      
       const updatedEvent = await eventsService.updateEvent({
         id: event.id,
         team_id: event.team_id,
@@ -159,12 +163,16 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         coach_notes: event.coach_notes,
         staff_notes: event.staff_notes
       });
+      
+      console.log('Updated event with scores:', updatedEvent);
       handleEventUpdate(updatedEvent);
+      
       toast({
         title: 'Success',
         description: 'Scores updated successfully',
       });
     } catch (error: any) {
+      console.error('Error saving scores:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update scores',
