@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -18,6 +17,8 @@ import { playerStatsService } from '@/services/playerStatsService';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
+import { eventPlayerStatsService } from '@/services/eventPlayerStatsService';
 
 interface PlayerStatsModalProps {
   player: Player;
@@ -55,6 +56,25 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const handleRefreshStats = async () => {
     setIsRefreshing(true);
     try {
+      // First sync any missing event player stats for this player
+      const { data: playerEvents, error: eventsError } = await supabase
+        .from('event_selections')
+        .select('event_id')
+        .eq('team_id', player.team_id)
+        .eq('player_positions', `[{"playerId": "${player.id}"}]`);
+
+      if (!eventsError && playerEvents) {
+        // Sync player stats for all events this player participated in
+        for (const eventData of playerEvents) {
+          try {
+            await eventPlayerStatsService.syncEventPlayerStats(eventData.event_id);
+          } catch (error) {
+            console.error('Error syncing event stats:', error);
+          }
+        }
+      }
+
+      // Then update player match stats
       await playerStatsService.updatePlayerStats(player.id);
       
       // Invalidate and refetch player data

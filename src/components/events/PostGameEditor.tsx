@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,6 +12,7 @@ import { ScoreInput } from './ScoreInput';
 import { eventsService } from '@/services/eventsService';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { eventPlayerStatsService } from '@/services/eventPlayerStatsService';
 
 interface PostGameEditorProps {
   eventId: string;
@@ -176,6 +176,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       
       // Force a reload to ensure we have the latest data
       await loadEvent();
+
+      // Check if event is completed and update player stats
+      await eventPlayerStatsService.checkAndUpdateCompletedEventStats(eventId);
       
     } catch (error: any) {
       console.error('Error saving scores:', error);
@@ -211,6 +214,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       
       // Force a reload to ensure we have the latest data
       await loadEvent();
+
+      // Check if event is completed and update player stats
+      await eventPlayerStatsService.checkAndUpdateCompletedEventStats(eventId);
       
     } catch (error: any) {
       console.error('Error saving POTM:', error);
