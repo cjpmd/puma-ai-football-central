@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -205,9 +204,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
     const newPeriodNumber = teamConfig.numberOfPeriods + 1;
     
-    // Get the captain from existing periods for this team
-    const existingTeamSelection = teamSelections.find(s => s.teamNumber === teamNumber);
-    const teamCaptainId = existingTeamSelection?.captainId || '';
+    // Get the captain and previous period's selections for this team
+    const existingTeamSelections = teamSelections.filter(s => s.teamNumber === teamNumber);
+    const teamCaptainId = existingTeamSelections[0]?.captainId || '';
+    
+    // Get the last period's selection to copy from
+    const lastPeriodSelection = existingTeamSelections
+      .sort((a, b) => b.periodNumber - a.periodNumber)[0];
     
     // Update team config
     setTeamConfigs(prev => prev.map(tc => 
@@ -216,15 +219,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         : tc
     ));
     
-    // Add selection for the new period with team captain
+    // Add selection for the new period with copied selections from previous period
     const newSelection: TeamSelection = {
       teamNumber,
       periodNumber: newPeriodNumber,
-      selectedPlayers: [],
-      substitutePlayers: [],
-      captainId: teamCaptainId, // Use existing team captain
-      formation: getDefaultFormation(gameFormat),
-      durationMinutes: 45,
+      selectedPlayers: lastPeriodSelection?.selectedPlayers || [],
+      substitutePlayers: lastPeriodSelection?.substitutePlayers || [],
+      captainId: teamCaptainId,
+      formation: lastPeriodSelection?.formation || getDefaultFormation(gameFormat),
+      durationMinutes: lastPeriodSelection?.durationMinutes || 45,
       performanceCategoryId: teamConfig.performanceCategoryId
     };
     setTeamSelections(prev => [...prev, newSelection]);

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -107,29 +106,35 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
     try {
       setSaving(true);
-      const updatedEvent = await eventsService.updateEvent({
-        id: event.id,
-        team_id: event.team_id,
-        title: event.title,
-        date: event.date,
-        event_type: event.event_type,
+      
+      // Update the event in the database
+      const { data: updatedEventData, error } = await supabase
+        .from('events')
+        .update({
+          coach_notes: coachNotes,
+          staff_notes: staffNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', event.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedEvent = {
+        ...event,
         coach_notes: coachNotes,
-        staff_notes: staffNotes,
-        game_format: event.game_format,
-        opponent: event.opponent,
-        location: event.location,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        description: event.description,
-        is_home: event.is_home,
-        scores: event.scores
-      });
+        staff_notes: staffNotes
+      };
+
       handleEventUpdate(updatedEvent);
+      
       toast({
         title: 'Success',
         description: 'Notes updated successfully',
       });
     } catch (error: any) {
+      console.error('Error updating notes:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update notes',
@@ -146,38 +151,30 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     try {
       console.log('Saving scores to database:', scores);
       
-      const updatedEvent = await eventsService.updateEvent({
-        id: event.id,
-        team_id: event.team_id,
-        title: event.title,
-        date: event.date,
-        event_type: event.event_type,
-        scores,
-        game_format: event.game_format,
-        opponent: event.opponent,
-        location: event.location,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        description: event.description,
-        is_home: event.is_home,
-        coach_notes: event.coach_notes,
-        staff_notes: event.staff_notes
-      });
+      // Update the event in the database
+      const { data: updatedEventData, error } = await supabase
+        .from('events')
+        .update({
+          scores,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', eventId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedEvent = {
+        ...event,
+        scores
+      };
       
       console.log('Updated event with scores:', updatedEvent);
       handleEventUpdate(updatedEvent);
       
-      toast({
-        title: 'Success',
-        description: 'Scores updated successfully',
-      });
     } catch (error: any) {
       console.error('Error saving scores:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update scores',
-        variant: 'destructive',
-      });
+      throw error; // Re-throw to let ScoreInput handle the error toast
     }
   };
 
@@ -185,35 +182,31 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     if (!event) return;
 
     try {
-      const updatedEvent = await eventsService.updateEvent({
-        id: event.id,
-        team_id: event.team_id,
-        title: event.title,
-        date: event.date,
-        event_type: event.event_type,
-        game_format: event.game_format,
-        opponent: event.opponent,
-        location: event.location,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        description: event.description,
-        is_home: event.is_home,
-        scores: event.scores,
-        coach_notes: event.coach_notes,
-        staff_notes: event.staff_notes,
-        ...potmData
-      });
+      console.log('Saving POTM to database:', potmData);
+      
+      // Update the event in the database
+      const { data: updatedEventData, error } = await supabase
+        .from('events')
+        .update({
+          player_of_match_id: potmData.player_of_match_id,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', eventId)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      const updatedEvent = {
+        ...event,
+        player_of_match_id: potmData.player_of_match_id
+      };
+      
       handleEventUpdate(updatedEvent);
-      toast({
-        title: 'Success',
-        description: 'Player of the Match updated successfully',
-      });
+      
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to update Player of the Match',
-        variant: 'destructive',
-      });
+      console.error('Error saving POTM:', error);
+      throw error; // Re-throw to let ScoreInput handle the error toast
     }
   };
 
