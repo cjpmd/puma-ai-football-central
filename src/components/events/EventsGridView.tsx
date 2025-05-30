@@ -43,16 +43,55 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     return ['match', 'fixture', 'friendly'].includes(eventType);
   };
 
-  const getMatchOutcomeIcon = (event: DatabaseEvent) => {
-    if (!event.scores || !isMatchType(event.event_type)) return null;
+  const getTeamScores = (event: DatabaseEvent) => {
+    if (!event.scores || !isMatchType(event.event_type)) return [];
     
-    const { home, away } = event.scores;
-    const ourScore = event.is_home ? home : away;
-    const theirScore = event.is_home ? away : home;
+    const scores = [];
+    const scoresData = event.scores as any;
     
-    if (ourScore > theirScore) return '🏆'; // Win
-    if (ourScore < theirScore) return '❌'; // Loss
-    return '🤝'; // Draw
+    // Check for team_1, team_2, etc.
+    let teamNumber = 1;
+    while (scoresData[`team_${teamNumber}`] !== undefined) {
+      const ourScore = scoresData[`team_${teamNumber}`];
+      const opponentScore = scoresData[`opponent_${teamNumber}`];
+      const outcome = scoresData[`outcome_${teamNumber}`];
+      
+      let outcomeIcon = '';
+      if (outcome === 'win') outcomeIcon = '🏆';
+      else if (outcome === 'loss') outcomeIcon = '❌';
+      else if (outcome === 'draw') outcomeIcon = '🤝';
+      
+      scores.push({
+        teamNumber,
+        ourScore,
+        opponentScore,
+        outcome,
+        outcomeIcon
+      });
+      
+      teamNumber++;
+    }
+    
+    // Fallback to home/away scores if no team scores found
+    if (scores.length === 0 && scoresData.home !== undefined && scoresData.away !== undefined) {
+      const ourScore = event.is_home ? scoresData.home : scoresData.away;
+      const opponentScore = event.is_home ? scoresData.away : scoresData.home;
+      
+      let outcomeIcon = '';
+      if (ourScore > opponentScore) outcomeIcon = '🏆';
+      else if (ourScore < opponentScore) outcomeIcon = '❌';
+      else outcomeIcon = '🤝';
+      
+      scores.push({
+        teamNumber: 1,
+        ourScore,
+        opponentScore,
+        outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',
+        outcomeIcon
+      });
+    }
+    
+    return scores;
   };
 
   // Sort events by date
@@ -65,7 +104,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       {sortedEvents.map((event) => {
         const completed = isEventCompleted(event);
         const matchType = isMatchType(event.event_type);
-        const outcomeIcon = getMatchOutcomeIcon(event);
+        const teamScores = getTeamScores(event);
         
         return (
           <Card key={event.id} className="flex flex-col">
@@ -77,8 +116,14 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                 >
                   {event.event_type}
                 </Badge>
-                {completed && matchType && outcomeIcon && (
-                  <span className="text-lg">{outcomeIcon}</span>
+                {completed && matchType && teamScores.length > 0 && (
+                  <div className="flex gap-1">
+                    {teamScores.map((score) => (
+                      <span key={score.teamNumber} className="text-lg">
+                        {score.outcomeIcon}
+                      </span>
+                    ))}
+                  </div>
                 )}
               </div>
               <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
@@ -103,10 +148,16 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   </p>
                 )}
                 
-                {event.scores && matchType && (
-                  <p className="text-sm font-medium">
-                    Score: {event.scores.home} - {event.scores.away}
-                  </p>
+                {teamScores.length > 0 && matchType && (
+                  <div className="space-y-1">
+                    {teamScores.map((score) => (
+                      <p key={score.teamNumber} className="text-sm font-medium">
+                        {teamScores.length > 1 ? `Team ${score.teamNumber}: ` : 'Score: '}
+                        {score.ourScore} - {score.opponentScore}
+                        {score.outcomeIcon && ` ${score.outcomeIcon}`}
+                      </p>
+                    ))}
+                  </div>
                 )}
                 
                 {event.opponent && matchType && (

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -338,183 +337,187 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-[85vh]">
-      {loading ? (
-        <div className="flex items-center justify-center h-full">
-          <div className="text-center">Loading team selections...</div>
-        </div>
-      ) : (
-        <div className="flex flex-col h-full">
-          {/* Enhanced Controls Section with Save Button */}
-          <div className="flex-shrink-0 p-4 border-b bg-white">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex flex-wrap items-center gap-4">
-                {/* Performance Categories */}
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium">Performance Categories:</Label>
-                  <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
-                  <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-                
-                {/* Performance Category Selection */}
-                {performanceCategories.length > 0 && currentTeamConfig && (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <Card className="w-[95vw] h-[90vh] max-w-7xl flex flex-col">
+        <CardHeader className="flex-shrink-0 pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-xl font-semibold">Team Selection Manager</CardTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={onClose} size="sm">
+                Close
+              </Button>
+              <Button onClick={saveTeamSelections} disabled={saving} size="sm">
+                {saving ? 'Saving...' : 'Save Selections'}
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 min-h-0 p-0">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">Loading team selections...</div>
+            </div>
+          ) : (
+            <div className="h-full flex flex-col">
+              {/* Enhanced Controls Section */}
+              <div className="flex-shrink-0 p-4 border-b bg-white">
+                <div className="flex flex-wrap items-center gap-4 mb-4">
+                  {/* Performance Categories */}
                   <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium">Category:</Label>
-                    <Select 
-                      value={currentTeamConfig.performanceCategoryId || 'no-category'} 
-                      onValueChange={(value) => updateTeamPerformanceCategory(
-                        activeTeamPeriod.team, 
-                        value === 'no-category' ? undefined : value
-                      )}
-                    >
-                      <SelectTrigger className="w-40 h-7">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="no-category">None</SelectItem>
-                        {performanceCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label className="text-sm font-medium">Performance Categories:</Label>
+                    <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
+                    <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  
+                  {/* Performance Category Selection */}
+                  {performanceCategories.length > 0 && currentTeamConfig && (
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm font-medium">Category:</Label>
+                      <Select 
+                        value={currentTeamConfig.performanceCategoryId || 'no-category'} 
+                        onValueChange={(value) => updateTeamPerformanceCategory(
+                          activeTeamPeriod.team, 
+                          value === 'no-category' ? undefined : value
+                        )}
+                      >
+                        <SelectTrigger className="w-40 h-7">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="no-category">None</SelectItem>
+                          {performanceCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                {/* Performance Category Badge */}
+                {currentPerformanceCategory && (
+                  <div className="mb-2">
+                    <Badge variant="secondary" className="text-sm">
+                      {currentPerformanceCategory.name}
+                    </Badge>
                   </div>
                 )}
               </div>
 
-              {/* Save Button in Header */}
-              <div className="flex items-center gap-2">
-                <Button variant="outline" onClick={onClose} size="sm">
-                  Close
-                </Button>
-                <Button onClick={saveTeamSelections} disabled={saving} size="sm">
-                  {saving ? 'Saving...' : 'Save Selections'}
-                </Button>
+              {/* Performance Category and Period Tabs */}
+              <div className="flex-1 min-h-0">
+                <Tabs 
+                  value={activeTeamPeriod.team.toString()} 
+                  onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, team: parseInt(value) }))}
+                  className="h-full flex flex-col"
+                >
+                  <TabsList className="flex-shrink-0 mx-2 mt-2">
+                    {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => (
+                      <TabsTrigger key={teamNum} value={teamNum.toString()} className="text-xs">
+                        {getPerformanceCategoryName(teamNum)}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+
+                  {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => {
+                    const teamConfig = teamConfigs.find(tc => tc.teamNumber === teamNum);
+                    const teamPeriods = teamConfig?.numberOfPeriods || 1;
+                    
+                    return (
+                      <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 min-h-0 mt-2">
+                        <Tabs 
+                          value={activeTeamPeriod.period.toString()} 
+                          onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
+                          className="h-full flex flex-col"
+                        >
+                          <div className="flex-shrink-0 mx-2 mb-2">
+                            {/* Period tabs and controls row */}
+                            <div className="flex items-center justify-between gap-4 mb-2">
+                              <div className="flex items-center gap-2">
+                                <TabsList>
+                                  {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
+                                    <TabsTrigger key={periodNum} value={periodNum.toString()} className="text-xs">
+                                      Period {periodNum}
+                                    </TabsTrigger>
+                                  ))}
+                                </TabsList>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  onClick={() => addPeriodToTeam(teamNum)}
+                                  className="h-6 w-6 p-0"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+
+                              {/* Duration for current period */}
+                              {currentSelection && (
+                                <div className="flex items-center gap-2">
+                                  <Label className="text-sm font-medium whitespace-nowrap">Duration:</Label>
+                                  <div className="flex items-center gap-1">
+                                    <Input
+                                      type="number"
+                                      min="1"
+                                      max="120"
+                                      value={currentSelection.durationMinutes}
+                                      onChange={(e) => handleDurationChange(
+                                        activeTeamPeriod.team, 
+                                        activeTeamPeriod.period, 
+                                        parseInt(e.target.value) || 45
+                                      )}
+                                      className="w-16 h-7 text-sm"
+                                    />
+                                    <span className="text-sm text-muted-foreground whitespace-nowrap">min</span>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
+                            <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0">
+                              <div className="h-full px-2">
+                                <div className="h-full max-h-[calc(90vh-300px)]">
+                                  {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
+                                    <PlayerSelectionPanel
+                                      teamId={event.team_id}
+                                      selectedPlayers={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.selectedPlayers || []}
+                                      substitutePlayers={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.substitutePlayers || []}
+                                      captainId={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.captainId || ''}
+                                      onPlayersChange={(players) => handlePlayersChange(teamNum, periodNum, players)}
+                                      onSubstitutesChange={(substitutes) => handleSubstitutesChange(teamNum, periodNum, substitutes)}
+                                      onCaptainChange={(captainId) => handleCaptainChange(teamNum, periodNum, captainId)}
+                                      eventType={event.event_type}
+                                      showFormationView={true}
+                                      formation={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.formation || getDefaultFormation(gameFormat)}
+                                      onFormationChange={(formation) => handleFormationChange(teamNum, periodNum, formation)}
+                                      gameFormat={gameFormat}
+                                      eventId={event.id}
+                                      teamNumber={teamNum}
+                                      periodNumber={periodNum}
+                                      showSubstitutesInFormation={true}
+                                    />
+                                  )}
+                                </div>
+                              </div>
+                            </TabsContent>
+                          ))}
+                        </Tabs>
+                      </TabsContent>
+                    );
+                  })}
+                </Tabs>
               </div>
             </div>
-
-            {/* Performance Category Badge */}
-            {currentPerformanceCategory && (
-              <div className="mb-2">
-                <Badge variant="secondary" className="text-sm">
-                  {currentPerformanceCategory.name}
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          {/* Performance Category and Period Tabs */}
-          <div className="flex-1 min-h-0">
-            <Tabs 
-              value={activeTeamPeriod.team.toString()} 
-              onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, team: parseInt(value) }))}
-              className="h-full flex flex-col"
-            >
-              <TabsList className="flex-shrink-0 mx-2 mt-2">
-                {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => (
-                  <TabsTrigger key={teamNum} value={teamNum.toString()} className="text-xs">
-                    {getPerformanceCategoryName(teamNum)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => {
-                const teamConfig = teamConfigs.find(tc => tc.teamNumber === teamNum);
-                const teamPeriods = teamConfig?.numberOfPeriods || 1;
-                
-                return (
-                  <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 min-h-0 mt-2">
-                    <Tabs 
-                      value={activeTeamPeriod.period.toString()} 
-                      onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
-                      className="h-full flex flex-col"
-                    >
-                      <div className="flex-shrink-0 mx-2 mb-2">
-                        {/* Period tabs and controls row */}
-                        <div className="flex items-center justify-between gap-4 mb-2">
-                          <div className="flex items-center gap-2">
-                            <TabsList>
-                              {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                                <TabsTrigger key={periodNum} value={periodNum.toString()} className="text-xs">
-                                  Period {periodNum}
-                                </TabsTrigger>
-                              ))}
-                            </TabsList>
-                            <Button 
-                              size="sm" 
-                              variant="outline" 
-                              onClick={() => addPeriodToTeam(teamNum)}
-                              className="h-6 w-6 p-0"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
-                          </div>
-
-                          {/* Duration for current period */}
-                          {currentSelection && (
-                            <div className="flex items-center gap-2">
-                              <Label className="text-sm font-medium whitespace-nowrap">Duration:</Label>
-                              <div className="flex items-center gap-1">
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  max="120"
-                                  value={currentSelection.durationMinutes}
-                                  onChange={(e) => handleDurationChange(
-                                    activeTeamPeriod.team, 
-                                    activeTeamPeriod.period, 
-                                    parseInt(e.target.value) || 45
-                                  )}
-                                  className="w-16 h-7 text-sm"
-                                />
-                                <span className="text-sm text-muted-foreground whitespace-nowrap">min</span>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                        <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0">
-                          <div className="h-full px-2 pb-4">
-                            <ScrollArea className="h-full">
-                              <div className="pr-2">
-                                {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
-                                  <PlayerSelectionPanel
-                                    teamId={event.team_id}
-                                    selectedPlayers={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.selectedPlayers || []}
-                                    substitutePlayers={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.substitutePlayers || []}
-                                    captainId={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.captainId || ''}
-                                    onPlayersChange={(players) => handlePlayersChange(teamNum, periodNum, players)}
-                                    onSubstitutesChange={(substitutes) => handleSubstitutesChange(teamNum, periodNum, substitutes)}
-                                    onCaptainChange={(captainId) => handleCaptainChange(teamNum, periodNum, captainId)}
-                                    eventType={event.event_type}
-                                    showFormationView={true}
-                                    formation={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.formation || getDefaultFormation(gameFormat)}
-                                    onFormationChange={(formation) => handleFormationChange(teamNum, periodNum, formation)}
-                                    gameFormat={gameFormat}
-                                    eventId={event.id}
-                                    teamNumber={teamNum}
-                                    periodNumber={periodNum}
-                                    showSubstitutesInFormation={true}
-                                  />
-                                )}
-                              </div>
-                            </ScrollArea>
-                          </div>
-                        </TabsContent>
-                      ))}
-                    </Tabs>
-                  </TabsContent>
-                );
-              })}
-            </Tabs>
-          </div>
-        </div>
-      )}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
