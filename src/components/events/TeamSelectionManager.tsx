@@ -329,29 +329,27 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full max-h-[75vh]">
+    <div className="flex flex-col h-[75vh]">
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">Loading team selections...</div>
         </div>
       ) : (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full">
           {/* Condensed Controls */}
-          <div className="flex-shrink-0 p-3 border-b bg-white space-y-3">
-            {/* Teams and Add Team */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Label className="text-sm">Teams:</Label>
-                <Badge variant="outline">{numberOfTeams}</Badge>
-                <Button size="sm" variant="outline" onClick={addTeam}>
+          <div className="flex-shrink-0 p-2 border-b bg-white">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <Label className="text-xs">Teams:</Label>
+                <Badge variant="outline" className="text-xs h-5">{numberOfTeams}</Badge>
+                <Button size="sm" variant="outline" onClick={addTeam} className="h-6 w-6 p-0">
                   <Plus className="h-3 w-3" />
                 </Button>
               </div>
               
-              {/* Current Team Performance Category */}
               {performanceCategories.length > 0 && currentTeamConfig && (
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Team {activeTeamPeriod.team} Category:</Label>
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Team {activeTeamPeriod.team}:</Label>
                   <Select 
                     value={currentTeamConfig.performanceCategoryId || 'no-category'} 
                     onValueChange={(value) => updateTeamPerformanceCategory(
@@ -359,11 +357,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       value === 'no-category' ? undefined : value
                     )}
                   >
-                    <SelectTrigger className="w-36 h-8">
-                      <SelectValue placeholder="Select" />
+                    <SelectTrigger className="w-24 h-6 text-xs">
+                      <SelectValue placeholder="Category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="no-category">No category</SelectItem>
+                      <SelectItem value="no-category">None</SelectItem>
                       {performanceCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id}>
                           {category.name}
@@ -373,13 +371,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   </Select>
                 </div>
               )}
-            </div>
 
-            {/* Period Duration for Current Selection */}
-            {currentSelection && (
-              <div className="flex items-center gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm">Duration (mins):</Label>
+              {currentSelection && (
+                <div className="flex items-center gap-1">
+                  <Label className="text-xs">Duration:</Label>
                   <Input
                     type="number"
                     min="1"
@@ -390,27 +385,28 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       activeTeamPeriod.period, 
                       parseInt(e.target.value) || 45
                     )}
-                    className="w-16 h-8"
+                    className="w-12 h-6 text-xs"
                   />
+                  <span className="text-xs text-muted-foreground">min</span>
                 </div>
-                
-                {currentPerformanceCategory && (
-                  <Badge variant="secondary" className="text-xs">
-                    {currentPerformanceCategory.name}
-                  </Badge>
-                )}
-              </div>
-            )}
+              )}
+
+              {currentPerformanceCategory && (
+                <Badge variant="secondary" className="text-xs h-5">
+                  {currentPerformanceCategory.name}
+                </Badge>
+              )}
+            </div>
           </div>
 
           {/* Team and Period Tabs */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0">
             <Tabs 
               value={activeTeamPeriod.team.toString()} 
               onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, team: parseInt(value) }))}
               className="h-full flex flex-col"
             >
-              <TabsList className="flex-shrink-0 mx-3 mt-3">
+              <TabsList className="flex-shrink-0 mx-2 mt-2">
                 {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => (
                   <TabsTrigger key={teamNum} value={teamNum.toString()} className="text-xs">
                     Team {teamNum}
@@ -423,13 +419,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 const teamPeriods = teamConfig?.numberOfPeriods || 1;
                 
                 return (
-                  <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 overflow-hidden mt-0">
+                  <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 min-h-0 mt-2">
                     <Tabs 
                       value={activeTeamPeriod.period.toString()} 
                       onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
                       className="h-full flex flex-col"
                     >
-                      <div className="flex-shrink-0 mx-3 mt-2 flex items-center gap-2">
+                      <div className="flex-shrink-0 mx-2 flex items-center gap-2">
                         <TabsList>
                           {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
                             <TabsTrigger key={periodNum} value={periodNum.toString()} className="text-xs">
@@ -441,16 +437,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                           size="sm" 
                           variant="outline" 
                           onClick={() => addPeriodToTeam(teamNum)}
-                          className="h-8 px-2"
+                          className="h-6 w-6 p-0"
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </div>
 
                       {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                        <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 overflow-hidden mt-2">
+                        <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-1">
                           <ScrollArea className="h-full">
-                            <div className="p-3">
+                            <div className="p-2">
                               {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
                                 <PlayerSelectionPanel
                                   teamId={event.team_id}
@@ -482,11 +478,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </Tabs>
           </div>
 
-          <div className="flex-shrink-0 p-3 border-t bg-white flex justify-between">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex-shrink-0 p-2 border-t bg-white flex justify-between">
+            <Button variant="outline" onClick={onClose} size="sm">
               Close
             </Button>
-            <Button onClick={saveTeamSelections} disabled={saving}>
+            <Button onClick={saveTeamSelections} disabled={saving} size="sm">
               {saving ? 'Saving...' : 'Save Selections'}
             </Button>
           </div>
