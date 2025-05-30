@@ -55,6 +55,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
       const outcome = scoresData[`outcome_${teamNumber}`];
+      const teamName = scoresData[`team_${teamNumber}_name`] || `Team ${teamNumber}`;
       
       let outcomeIcon = '';
       if (outcome === 'win') outcomeIcon = '🏆';
@@ -63,6 +64,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       
       scores.push({
         teamNumber,
+        teamName,
         ourScore,
         opponentScore,
         outcome,
@@ -84,6 +86,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       
       scores.push({
         teamNumber: 1,
+        teamName: 'Team 1',
         ourScore,
         opponentScore,
         outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',
@@ -152,8 +155,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   <div className="space-y-1">
                     {teamScores.map((score) => (
                       <p key={score.teamNumber} className="text-sm font-medium">
-                        {teamScores.length > 1 ? `Team ${score.teamNumber}: ` : 'Score: '}
-                        {score.ourScore} - {score.opponentScore}
+                        {score.teamName}: {score.ourScore} - {score.opponentScore}
                         {score.outcomeIcon && ` ${score.outcomeIcon}`}
                       </p>
                     ))}

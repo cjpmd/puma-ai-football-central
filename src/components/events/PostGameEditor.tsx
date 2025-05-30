@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -57,10 +58,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         .eq('event_id', eventId)
         .eq('team_id', eventData.team_id);
 
-      // Create unique teams array based on performance categories
+      // Create unique teams array based on performance categories (not periods)
       const uniqueTeams = new Map();
       eventSelections?.forEach(selection => {
-        const teamKey = selection.team_number;
+        const teamKey = `${selection.team_number}-${selection.performance_category_id}`;
         if (!uniqueTeams.has(teamKey)) {
           const performanceCategory = selection.performance_categories as any;
           uniqueTeams.set(teamKey, {
@@ -112,7 +113,14 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         event_type: event.event_type,
         coach_notes: coachNotes,
         staff_notes: staffNotes,
-        game_format: event.game_format
+        game_format: event.game_format,
+        opponent: event.opponent,
+        location: event.location,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        description: event.description,
+        is_home: event.is_home,
+        scores: event.scores
       });
       handleEventUpdate(updatedEvent);
       toast({
@@ -141,7 +149,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         date: event.date,
         event_type: event.event_type,
         scores,
-        game_format: event.game_format
+        game_format: event.game_format,
+        opponent: event.opponent,
+        location: event.location,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        description: event.description,
+        is_home: event.is_home,
+        coach_notes: event.coach_notes,
+        staff_notes: event.staff_notes
       });
       handleEventUpdate(updatedEvent);
       toast({
@@ -168,6 +184,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         date: event.date,
         event_type: event.event_type,
         game_format: event.game_format,
+        opponent: event.opponent,
+        location: event.location,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        description: event.description,
+        is_home: event.is_home,
+        scores: event.scores,
+        coach_notes: event.coach_notes,
+        staff_notes: event.staff_notes,
         ...potmData
       });
       handleEventUpdate(updatedEvent);

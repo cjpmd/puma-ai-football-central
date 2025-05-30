@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -102,7 +103,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const maxPeriods = Math.max(1, ...teamSelections.map(s => s.period_number || 1));
         const performanceCategoryId = teamSelections[0]?.performance_category_id || undefined;
         
-        // Find captain from any period for this team
+        // Find captain from any period for this team - captain is consistent across all periods
         const teamCaptainId = teamSelections.find(s => s.captain_id)?.captain_id || '';
         
         initialConfigs.push({
@@ -123,7 +124,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               periodNumber: periodNum,
               selectedPlayers: playerPositions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean),
               substitutePlayers: substitutePlayersList,
-              captainId: existingSelection.captain_id || teamCaptainId, // Use team captain if no period captain
+              captainId: teamCaptainId, // Always use team captain across all periods
               formation: existingSelection.formation || getDefaultFormation(gameFormat),
               durationMinutes: existingSelection.duration_minutes || 45,
               performanceCategoryId: existingSelection.performance_category_id || undefined
@@ -134,7 +135,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               periodNumber: periodNum,
               selectedPlayers: [],
               substitutePlayers: [],
-              captainId: teamCaptainId, // Use team captain for new periods
+              captainId: teamCaptainId, // Always use team captain for new periods
               formation: getDefaultFormation(gameFormat),
               durationMinutes: 45,
               performanceCategoryId
@@ -204,6 +205,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
     const newPeriodNumber = teamConfig.numberOfPeriods + 1;
     
+    // Get the captain from existing periods for this team
+    const existingTeamSelection = teamSelections.find(s => s.teamNumber === teamNumber);
+    const teamCaptainId = existingTeamSelection?.captainId || '';
+    
     // Update team config
     setTeamConfigs(prev => prev.map(tc => 
       tc.teamNumber === teamNumber 
@@ -211,13 +216,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         : tc
     ));
     
-    // Add selection for the new period
+    // Add selection for the new period with team captain
     const newSelection: TeamSelection = {
       teamNumber,
       periodNumber: newPeriodNumber,
       selectedPlayers: [],
       substitutePlayers: [],
-      captainId: '',
+      captainId: teamCaptainId, // Use existing team captain
       formation: getDefaultFormation(gameFormat),
       durationMinutes: 45,
       performanceCategoryId: teamConfig.performanceCategoryId
@@ -260,7 +265,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   };
 
   const handleCaptainChange = (teamNumber: number, periodNumber: number, captainId: string) => {
-    // Update captain for ALL periods of this team to maintain consistency
+    // Update captain for ALL periods of this team to maintain consistency (captain is at team level)
     setTeamSelections(prev => prev.map(selection => 
       selection.teamNumber === teamNumber
         ? { ...selection, captainId }

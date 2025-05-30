@@ -64,6 +64,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
       const outcome = scoresData[`outcome_${teamNumber}`];
+      const teamName = scoresData[`team_${teamNumber}_name`] || `T${teamNumber}`;
       
       let outcomeIcon = '';
       if (outcome === 'win') outcomeIcon = '🏆';
@@ -72,6 +73,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       
       scores.push({
         teamNumber,
+        teamName,
         ourScore,
         opponentScore,
         outcome,
@@ -93,6 +95,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       
       scores.push({
         teamNumber: 1,
+        teamName: 'T1',
         ourScore,
         opponentScore,
         outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',
@@ -188,8 +191,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             <div className="space-y-1">
                               {teamScores.map((score) => (
                                 <div key={score.teamNumber} className="text-xs text-muted-foreground">
-                                  {teamScores.length > 1 ? `T${score.teamNumber}: ` : ''}
-                                  {score.ourScore} - {score.opponentScore}
+                                  {score.teamName}: {score.ourScore} - {score.opponentScore}
                                 </div>
                               ))}
                             </div>
