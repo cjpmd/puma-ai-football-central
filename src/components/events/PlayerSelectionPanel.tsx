@@ -271,7 +271,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         />
         
         <div className="space-y-3">
-          <Label className="text-sm font-medium">Starting XI ({positions.length} positions)</Label>
+          <Label className="text-sm font-medium">Starting Team ({positions.length} positions)</Label>
           <p className="text-xs text-muted-foreground">
             Assign players to specific positions for the {formation} formation
           </p>
