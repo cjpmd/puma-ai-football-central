@@ -114,7 +114,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               captainId: existingSelection.captain_id || '',
               formation: existingSelection.formation || getDefaultFormation(gameFormat),
               durationMinutes: existingSelection.duration_minutes || 45,
-              performanceCategoryId: existingSelection.performance_category_id || ''
+              performanceCategoryId: existingSelection.performance_category_id || undefined
             });
           } else {
             initialSelections.push({
@@ -125,7 +125,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               captainId: '',
               formation: getDefaultFormation(gameFormat),
               durationMinutes: 45,
-              performanceCategoryId: ''
+              performanceCategoryId: undefined
             });
           }
         }
@@ -172,7 +172,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         captainId: '',
         formation: getDefaultFormation(gameFormat),
         durationMinutes: 45,
-        performanceCategoryId: ''
+        performanceCategoryId: undefined
       });
     }
     setTeamSelections(newSelections);
@@ -193,7 +193,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         captainId: '',
         formation: getDefaultFormation(gameFormat),
         durationMinutes: 45,
-        performanceCategoryId: ''
+        performanceCategoryId: undefined
       });
     }
     setTeamSelections(newSelections);
@@ -228,7 +228,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   };
 
   const handlePerformanceCategoryChange = (teamNumber: number, periodNumber: number, categoryId: string) => {
-    updateTeamSelection(teamNumber, periodNumber, { performanceCategoryId: categoryId });
+    updateTeamSelection(teamNumber, periodNumber, { 
+      performanceCategoryId: categoryId === 'no-category' ? undefined : categoryId 
+    });
   };
 
   const saveTeamSelections = async () => {
@@ -377,7 +379,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     <div className="flex items-center gap-2">
                       <Label>Performance Category:</Label>
                       <Select 
-                        value={currentSelection.performanceCategoryId || ''} 
+                        value={currentSelection.performanceCategoryId || 'no-category'} 
                         onValueChange={(value) => handlePerformanceCategoryChange(
                           activeTeamPeriod.team, 
                           activeTeamPeriod.period, 
@@ -388,7 +390,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                           <SelectValue placeholder="Select category" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No category</SelectItem>
+                          <SelectItem value="no-category">No category</SelectItem>
                           {performanceCategories.map((category) => (
                             <SelectItem key={category.id} value={category.id}>
                               {category.name}
