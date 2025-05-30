@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Trophy, Trash2, Settings } from 'lucide-react';
+import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay } from 'date-fns';
 
@@ -142,18 +142,6 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                 >
                   <Users className="h-3 w-3" />
                 </Button>
-                
-                {matchType && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={() => onScoreEdit(event)}
-                    title="Edit Score"
-                  >
-                    <Settings className="h-3 w-3" />
-                  </Button>
-                )}
                 
                 {completed && matchType && (
                   <Button

@@ -14,7 +14,9 @@ import {
   LogOut,
   Trophy,
   Shirt,
-  ClipboardList
+  ClipboardList,
+  UserCog,
+  UserPlus
 } from "lucide-react";
 import { Logo } from "./Logo";
 
@@ -35,6 +37,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     { icon: ClipboardList, label: "Player Management", path: "/player-management" },
     { icon: Trophy, label: "Teams", path: "/teams" },
     { icon: Shirt, label: "Clubs", path: "/clubs" },
+    { icon: UserCog, label: "Staff Management", path: "/staff" },
+    { icon: UserPlus, label: "User Management", path: "/users" },
     { icon: Settings, label: "Subscriptions", path: "/subscriptions" },
   ];
 
