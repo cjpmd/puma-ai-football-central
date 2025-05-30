@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -98,8 +99,9 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0">
           <TeamSelectionManager
-            event={event}
-            isOpen={true}
+            eventId={eventId}
+            primaryTeamId={primaryTeamId}
+            gameFormat={gameFormat as GameFormat}
             onClose={onClose || (() => {})}
           />
         </CardContent>

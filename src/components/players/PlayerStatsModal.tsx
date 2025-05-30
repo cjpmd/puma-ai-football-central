@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -17,7 +18,7 @@ import { playerStatsService } from '@/services/playerStatsService';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 import { eventPlayerStatsService } from '@/services/eventPlayerStatsService';
 
 interface PlayerStatsModalProps {
@@ -60,7 +61,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       const { data: playerEvents, error: eventsError } = await supabase
         .from('event_selections')
         .select('event_id')
-        .eq('team_id', player.team_id)
+        .eq('team_id', player.teamId)
         .eq('player_positions', `[{"playerId": "${player.id}"}]`);
 
       if (!eventsError && playerEvents) {
