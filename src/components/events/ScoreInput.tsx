@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -68,30 +67,33 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
 
       if (error) throw error;
 
-      // Create unique teams map to avoid duplicates
+      // Create unique teams map to avoid duplicates based on performance category
       const uniqueTeamsMap = new Map();
       
       for (const selection of selections || []) {
-        const teamKey = selection.performance_category_id || selection.team_number;
+        // Use performance_category_id as the key for uniqueness
+        const teamKey = selection.performance_category_id;
         
-        if (!uniqueTeamsMap.has(teamKey)) {
+        if (teamKey && !uniqueTeamsMap.has(teamKey)) {
           let performanceCategoryName = `Team ${selection.team_number}`;
 
           // Get performance category name if set
-          if (selection.performance_category_id && selection.performance_categories) {
+          if (selection.performance_categories) {
             const category = selection.performance_categories as any;
             performanceCategoryName = category.name;
           }
 
-          // Get all players for this team across all periods
-          const allPlayerIds = new Set();
+          // Get all players for this performance category across all periods
+          const allPlayerIds = new Set<string>();
           selections
-            .filter(s => (s.performance_category_id || s.team_number) === teamKey)
+            .filter(s => s.performance_category_id === teamKey)
             .forEach(s => {
               const playerPositions = (s.player_positions as any[] || []);
               playerPositions.forEach(pp => {
                 const playerId = pp.playerId || pp.player_id;
-                if (playerId) allPlayerIds.add(playerId);
+                if (playerId && typeof playerId === 'string') {
+                  allPlayerIds.add(playerId);
+                }
               });
             });
 
@@ -260,6 +262,11 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
       // Update POTM (for backwards compatibility, set the first team's POTM as the main POTM)
       const firstTeamPOTM = firstTeamResult?.potm || null;
       await onPOTMUpdate(event.id, { player_of_match_id: firstTeamPOTM });
+
+      toast({
+        title: 'Success',
+        description: 'Match results saved successfully',
+      });
 
     } catch (error: any) {
       console.error('Error in handleSave:', error);
