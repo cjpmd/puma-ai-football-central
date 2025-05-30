@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +11,7 @@ import { DatabaseEvent } from '@/types/event';
 import { ScoreInput } from './ScoreInput';
 import { eventsService } from '@/services/eventsService';
 import { useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PostGameEditorProps {
   eventId: string;
