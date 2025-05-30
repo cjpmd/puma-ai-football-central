@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,8 +44,11 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
 
   useEffect(() => {
     loadTeamSelections();
-    loadExistingResults();
   }, [event.id]);
+
+  useEffect(() => {
+    loadExistingResults();
+  }, [event.scores, teamSelections]);
 
   const loadTeamSelections = async () => {
     try {
@@ -125,20 +129,6 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
       const teamData = Array.from(uniqueTeamsMap.values()).sort((a, b) => a.teamNumber - b.teamNumber);
       setTeamSelections(teamData);
       
-      // Initialize team results
-      const initialResults: { [teamNumber: number]: TeamResult } = {};
-      teamData.forEach(team => {
-        initialResults[team.teamNumber] = {
-          teamNumber: team.teamNumber,
-          teamName: team.performanceCategoryName,
-          score: 0,
-          opponentScore: 0,
-          potm: '',
-          outcome: ''
-        };
-      });
-      setTeamResults(initialResults);
-      
     } catch (error) {
       console.error('Error loading team selections:', error);
     } finally {
@@ -147,45 +137,58 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
   };
 
   const loadExistingResults = () => {
+    if (!teamSelections.length) return;
+
+    // Initialize team results first
+    const initialResults: { [teamNumber: number]: TeamResult } = {};
+    teamSelections.forEach(team => {
+      initialResults[team.teamNumber] = {
+        teamNumber: team.teamNumber,
+        teamName: team.performanceCategoryName,
+        score: 0,
+        opponentScore: 0,
+        potm: '',
+        outcome: ''
+      };
+    });
+
     if (event.scores && typeof event.scores === 'object') {
       const eventScores = event.scores as any;
       
-      setTeamResults(prev => {
-        const updated = { ...prev };
+      Object.keys(initialResults).forEach(teamNumStr => {
+        const teamNum = parseInt(teamNumStr);
+        const teamKey = `team_${teamNum}`;
+        const opponentKey = `opponent_${teamNum}`;
+        const potmKey = `potm_team_${teamNum}`;
         
-        Object.keys(updated).forEach(teamNumStr => {
-          const teamNum = parseInt(teamNumStr);
-          const teamKey = `team_${teamNum}`;
-          const opponentKey = `opponent_${teamNum}`;
-          const potmKey = `potm_team_${teamNum}`;
-          
-          if (eventScores[teamKey] !== undefined) {
-            updated[teamNum].score = eventScores[teamKey] || 0;
-          }
-          if (eventScores[opponentKey] !== undefined) {
-            updated[teamNum].opponentScore = eventScores[opponentKey] || 0;
-          }
-          if (eventScores[potmKey]) {
-            updated[teamNum].potm = eventScores[potmKey];
-          }
-          
-          // Calculate outcome
-          const ourScore = updated[teamNum].score;
-          const oppScore = updated[teamNum].opponentScore;
-          if (ourScore > oppScore) {
-            updated[teamNum].outcome = 'win';
-          } else if (ourScore < oppScore) {
-            updated[teamNum].outcome = 'loss';
-          } else if (ourScore === oppScore && (ourScore > 0 || oppScore > 0)) {
-            updated[teamNum].outcome = 'draw';
-          } else {
-            updated[teamNum].outcome = '';
-          }
-        });
+        if (eventScores[teamKey] !== undefined) {
+          initialResults[teamNum].score = eventScores[teamKey] || 0;
+        }
+        if (eventScores[opponentKey] !== undefined) {
+          initialResults[teamNum].opponentScore = eventScores[opponentKey] || 0;
+        }
+        if (eventScores[potmKey]) {
+          initialResults[teamNum].potm = eventScores[potmKey];
+        }
         
-        return updated;
+        // Calculate outcome - Updated to properly handle 0-0 scores
+        const ourScore = initialResults[teamNum].score;
+        const oppScore = initialResults[teamNum].opponentScore;
+        
+        if (ourScore > oppScore) {
+          initialResults[teamNum].outcome = 'win';
+        } else if (ourScore < oppScore) {
+          initialResults[teamNum].outcome = 'loss';
+        } else if (ourScore === oppScore && (eventScores[teamKey] !== undefined && eventScores[opponentKey] !== undefined)) {
+          // Only set as draw if both scores are explicitly set (including 0-0)
+          initialResults[teamNum].outcome = 'draw';
+        } else {
+          initialResults[teamNum].outcome = '';
+        }
       });
     }
+    
+    setTeamResults(initialResults);
   };
 
   const handleTeamResultChange = (teamNumber: number, field: keyof TeamResult, value: any) => {
@@ -198,14 +201,14 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
         const ourScore = field === 'score' ? value : updated[teamNumber].score;
         const oppScore = field === 'opponentScore' ? value : updated[teamNumber].opponentScore;
         
+        // Updated logic to properly handle 0-0 as a draw
         if (ourScore > oppScore) {
           updated[teamNumber].outcome = 'win';
         } else if (ourScore < oppScore) {
           updated[teamNumber].outcome = 'loss';
-        } else if (ourScore === oppScore && (ourScore > 0 || oppScore > 0)) {
-          updated[teamNumber].outcome = 'draw';
         } else {
-          updated[teamNumber].outcome = '';
+          // Equal scores are always a draw (including 0-0)
+          updated[teamNumber].outcome = 'draw';
         }
       }
       

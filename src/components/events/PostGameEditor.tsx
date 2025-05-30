@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -151,7 +152,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     try {
       console.log('Saving scores to database:', scores);
       
-      // Update the event in the database
+      // Update the event in the database with the new scores
       const { data: updatedEventData, error } = await supabase
         .from('events')
         .update({
@@ -164,6 +165,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
       if (error) throw error;
 
+      // Update the local event state with the new scores
       const updatedEvent = {
         ...event,
         scores
@@ -171,6 +173,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       
       console.log('Updated event with scores:', updatedEvent);
       handleEventUpdate(updatedEvent);
+      
+      // Force a reload to ensure we have the latest data
+      await loadEvent();
       
     } catch (error: any) {
       console.error('Error saving scores:', error);
@@ -204,6 +209,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       
       handleEventUpdate(updatedEvent);
       
+      // Force a reload to ensure we have the latest data
+      await loadEvent();
+      
     } catch (error: any) {
       console.error('Error saving POTM:', error);
       throw error; // Re-throw to let ScoreInput handle the error toast
@@ -233,6 +241,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
                   
                   <TabsContent value="results" className="space-y-4">
                     <ScoreInput 
+                      key={`${event.id}-${JSON.stringify(event.scores)}`} // Force re-render when scores change
                       event={event} 
                       onScoreUpdate={handleScoreUpdate}
                       onPOTMUpdate={handlePOTMUpdate}
