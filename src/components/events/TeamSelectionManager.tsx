@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -337,50 +338,62 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-[75vh]">
+    <div className="flex flex-col h-[85vh]">
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">Loading team selections...</div>
         </div>
       ) : (
         <div className="flex flex-col h-full">
-          {/* Enhanced Controls Section */}
+          {/* Enhanced Controls Section with Save Button */}
           <div className="flex-shrink-0 p-4 border-b bg-white">
-            <div className="flex flex-wrap items-center gap-4 mb-2">
-              {/* Performance Categories */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-wrap items-center gap-4">
+                {/* Performance Categories */}
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm font-medium">Performance Categories:</Label>
+                  <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
+                  <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+                
+                {/* Performance Category Selection */}
+                {performanceCategories.length > 0 && currentTeamConfig && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium">Category:</Label>
+                    <Select 
+                      value={currentTeamConfig.performanceCategoryId || 'no-category'} 
+                      onValueChange={(value) => updateTeamPerformanceCategory(
+                        activeTeamPeriod.team, 
+                        value === 'no-category' ? undefined : value
+                      )}
+                    >
+                      <SelectTrigger className="w-40 h-7">
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no-category">None</SelectItem>
+                        {performanceCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {/* Save Button in Header */}
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Performance Categories:</Label>
-                <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
-                <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
-                  <Plus className="h-3 w-3" />
+                <Button variant="outline" onClick={onClose} size="sm">
+                  Close
+                </Button>
+                <Button onClick={saveTeamSelections} disabled={saving} size="sm">
+                  {saving ? 'Saving...' : 'Save Selections'}
                 </Button>
               </div>
-              
-              {/* Performance Category Selection */}
-              {performanceCategories.length > 0 && currentTeamConfig && (
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium">Category:</Label>
-                  <Select 
-                    value={currentTeamConfig.performanceCategoryId || 'no-category'} 
-                    onValueChange={(value) => updateTeamPerformanceCategory(
-                      activeTeamPeriod.team, 
-                      value === 'no-category' ? undefined : value
-                    )}
-                  >
-                    <SelectTrigger className="w-40 h-7">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-category">None</SelectItem>
-                      {performanceCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
             </div>
 
             {/* Performance Category Badge */}
@@ -466,7 +479,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
                       {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
                         <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0">
-                          <div className="h-full px-2 pb-16">
+                          <div className="h-full px-2 pb-4">
                             <ScrollArea className="h-full">
                               <div className="pr-2">
                                 {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
@@ -499,16 +512,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 );
               })}
             </Tabs>
-          </div>
-
-          {/* Footer with Save Button - Fixed at bottom */}
-          <div className="flex-shrink-0 p-4 border-t bg-white flex justify-between items-center">
-            <Button variant="outline" onClick={onClose} size="sm">
-              Close
-            </Button>
-            <Button onClick={saveTeamSelections} disabled={saving} size="sm">
-              {saving ? 'Saving...' : 'Save Selections'}
-            </Button>
           </div>
         </div>
       )}
