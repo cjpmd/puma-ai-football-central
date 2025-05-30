@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -166,6 +165,7 @@ const CalendarEventsPage = () => {
       location: eventLocation || undefined,
       notes: eventNotes || undefined,
       event_type: eventEventType,
+      game_format: eventGameFormat,
       opponent: isMatchType ? eventOpponent || undefined : undefined,
     };
 
@@ -237,6 +237,11 @@ const CalendarEventsPage = () => {
   const handleTeamSelection = (event: DatabaseEvent) => {
     setSelectedEvent(event);
     setIsTeamSelectionOpen(true);
+  };
+
+  const handleTeamSelectionClose = () => {
+    setIsTeamSelectionOpen(false);
+    setSelectedEvent(null);
   };
 
   const handlePostGameEdit = (event: DatabaseEvent) => {
@@ -821,7 +826,7 @@ const CalendarEventsPage = () => {
         </Dialog>
 
         {/* Team Selection Modal */}
-        <Dialog open={isTeamSelectionOpen} onOpenChange={setIsTeamSelectionOpen}>
+        <Dialog open={isTeamSelectionOpen} onOpenChange={handleTeamSelectionClose}>
           <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
             <DialogHeader>
               <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
@@ -831,6 +836,7 @@ const CalendarEventsPage = () => {
                 eventId={selectedEvent.id}
                 primaryTeamId={selectedTeamId}
                 gameFormat={selectedEvent.game_format || '7-a-side'}
+                onClose={handleTeamSelectionClose}
               />
             )}
           </DialogContent>

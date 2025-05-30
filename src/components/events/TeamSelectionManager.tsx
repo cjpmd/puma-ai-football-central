@@ -10,19 +10,21 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatabaseEvent } from '@/types/event';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { FormationSelector } from './FormationSelector';
 import { supabase } from '@/integrations/supabase/client';
-import { Clock, Users, Trophy, MapPin, Calendar } from 'lucide-react';
+import { Clock, Users, Trophy, MapPin, Calendar, Plus, Minus } from 'lucide-react';
 
 interface TeamSelection {
   teamNumber: number;
+  periodNumber: number;
   selectedPlayers: string[];
   substitutePlayers: string[];
   captainId: string;
   formation: string;
-  minutesPlayed: { [playerId: string]: number };
+  durationMinutes: number;
 }
 
 interface TeamSelectionManagerProps {
@@ -37,13 +39,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   onClose
 }) => {
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
-  const [activeTeam, setActiveTeam] = useState(1);
+  const [activeTeamPeriod, setActiveTeamPeriod] = useState({ team: 1, period: 1 });
+  const [numberOfTeams, setNumberOfTeams] = useState(1);
+  const [numberOfPeriods, setNumberOfPeriods] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
   const eventTeams = (event as any).teams || [event.team_id];
-  const numTeams = eventTeams.length || 1;
   const gameFormat = (event.game_format || '7-a-side') as any;
 
   useEffect(() => {
@@ -58,17 +61,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       
       // Initialize team selections array
       const initialSelections: TeamSelection[] = [];
-      for (let i = 1; i <= numTeams; i++) {
-        initialSelections.push({
-          teamNumber: i,
-          selectedPlayers: [],
-          substitutePlayers: [],
-          captainId: '',
-          formation: getDefaultFormation(gameFormat),
-          minutesPlayed: {}
-        });
-      }
-
+      
       // Load existing selections from database
       const { data: selections, error } = await supabase
         .from('event_selections')
@@ -78,24 +71,46 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
       if (error) throw error;
 
-      // Update selections with database data
-      selections?.forEach(selection => {
-        const teamIndex = selection.team_number - 1;
-        if (teamIndex >= 0 && teamIndex < initialSelections.length) {
-          const playerPositions = selection.player_positions as any[] || [];
-          const substitutePlayersList = (selection.substitute_players as string[]) || [];
-          const minutesPlayedData = (selection.minutes_played as { [playerId: string]: number }) || {};
-          
-          initialSelections[teamIndex] = {
-            teamNumber: selection.team_number,
-            selectedPlayers: playerPositions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean),
-            substitutePlayers: substitutePlayersList,
-            captainId: selection.captain_id || '',
-            formation: selection.formation || getDefaultFormation(gameFormat),
-            minutesPlayed: minutesPlayedData
-          };
+      // Determine max teams and periods from existing data
+      const maxTeams = Math.max(1, ...selections.map(s => s.team_number || 1));
+      const maxPeriods = Math.max(1, ...selections.map(s => s.period_number || 1));
+      
+      setNumberOfTeams(maxTeams);
+      setNumberOfPeriods(maxPeriods);
+
+      // Create selection for each team/period combination
+      for (let teamNum = 1; teamNum <= maxTeams; teamNum++) {
+        for (let periodNum = 1; periodNum <= maxPeriods; periodNum++) {
+          const existingSelection = selections.find(s => 
+            s.team_number === teamNum && s.period_number === periodNum
+          );
+
+          if (existingSelection) {
+            const playerPositions = existingSelection.player_positions as any[] || [];
+            const substitutePlayersList = (existingSelection.substitute_players as string[]) || [];
+            
+            initialSelections.push({
+              teamNumber: teamNum,
+              periodNumber: periodNum,
+              selectedPlayers: playerPositions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean),
+              substitutePlayers: substitutePlayersList,
+              captainId: existingSelection.captain_id || '',
+              formation: existingSelection.formation || getDefaultFormation(gameFormat),
+              durationMinutes: existingSelection.duration_minutes || 45
+            });
+          } else {
+            initialSelections.push({
+              teamNumber: teamNum,
+              periodNumber: periodNum,
+              selectedPlayers: [],
+              substitutePlayers: [],
+              captainId: '',
+              formation: getDefaultFormation(gameFormat),
+              durationMinutes: 45
+            });
+          }
         }
-      });
+      }
 
       setTeamSelections(initialSelections);
     } catch (error) {
@@ -123,36 +138,72 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  const updateTeamSelection = (teamNumber: number, updates: Partial<TeamSelection>) => {
+  const addTeam = () => {
+    const newTeamNumber = numberOfTeams + 1;
+    setNumberOfTeams(newTeamNumber);
+    
+    // Add selections for all periods for the new team
+    const newSelections = [...teamSelections];
+    for (let periodNum = 1; periodNum <= numberOfPeriods; periodNum++) {
+      newSelections.push({
+        teamNumber: newTeamNumber,
+        periodNumber: periodNum,
+        selectedPlayers: [],
+        substitutePlayers: [],
+        captainId: '',
+        formation: getDefaultFormation(gameFormat),
+        durationMinutes: 45
+      });
+    }
+    setTeamSelections(newSelections);
+  };
+
+  const addPeriod = () => {
+    const newPeriodNumber = numberOfPeriods + 1;
+    setNumberOfPeriods(newPeriodNumber);
+    
+    // Add selections for all teams for the new period
+    const newSelections = [...teamSelections];
+    for (let teamNum = 1; teamNum <= numberOfTeams; teamNum++) {
+      newSelections.push({
+        teamNumber: teamNum,
+        periodNumber: newPeriodNumber,
+        selectedPlayers: [],
+        substitutePlayers: [],
+        captainId: '',
+        formation: getDefaultFormation(gameFormat),
+        durationMinutes: 45
+      });
+    }
+    setTeamSelections(newSelections);
+  };
+
+  const updateTeamSelection = (teamNumber: number, periodNumber: number, updates: Partial<TeamSelection>) => {
     setTeamSelections(prev => prev.map(selection => 
-      selection.teamNumber === teamNumber 
+      selection.teamNumber === teamNumber && selection.periodNumber === periodNumber
         ? { ...selection, ...updates }
         : selection
     ));
   };
 
-  const handlePlayersChange = (teamNumber: number, players: string[]) => {
-    updateTeamSelection(teamNumber, { selectedPlayers: players });
+  const handlePlayersChange = (teamNumber: number, periodNumber: number, players: string[]) => {
+    updateTeamSelection(teamNumber, periodNumber, { selectedPlayers: players });
   };
 
-  const handleSubstitutesChange = (teamNumber: number, substitutes: string[]) => {
-    updateTeamSelection(teamNumber, { substitutePlayers: substitutes });
+  const handleSubstitutesChange = (teamNumber: number, periodNumber: number, substitutes: string[]) => {
+    updateTeamSelection(teamNumber, periodNumber, { substitutePlayers: substitutes });
   };
 
-  const handleCaptainChange = (teamNumber: number, captainId: string) => {
-    updateTeamSelection(teamNumber, { captainId });
+  const handleCaptainChange = (teamNumber: number, periodNumber: number, captainId: string) => {
+    updateTeamSelection(teamNumber, periodNumber, { captainId });
   };
 
-  const handleFormationChange = (teamNumber: number, formation: string) => {
-    updateTeamSelection(teamNumber, { formation });
+  const handleFormationChange = (teamNumber: number, periodNumber: number, formation: string) => {
+    updateTeamSelection(teamNumber, periodNumber, { formation });
   };
 
-  const handleMinutesChange = (teamNumber: number, playerId: string, minutes: number) => {
-    const currentSelection = teamSelections.find(s => s.teamNumber === teamNumber);
-    if (currentSelection) {
-      const newMinutesPlayed = { ...currentSelection.minutesPlayed, [playerId]: minutes };
-      updateTeamSelection(teamNumber, { minutesPlayed: newMinutesPlayed });
-    }
+  const handleDurationChange = (teamNumber: number, periodNumber: number, duration: number) => {
+    updateTeamSelection(teamNumber, periodNumber, { durationMinutes: duration });
   };
 
   const saveTeamSelections = async () => {
@@ -160,24 +211,24 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       setSaving(true);
 
       for (const selection of teamSelections) {
-        // Create player positions array
+        // Create player positions array with calculated minutes
         const playerPositions = selection.selectedPlayers.map(playerId => ({
           playerId,
           player_id: playerId,
-          position: '', // You can add position logic here if needed
-          minutes: selection.minutesPlayed[playerId] || 0
+          position: '',
+          minutes: selection.durationMinutes // Use period duration for minutes
         }));
 
         const selectionData = {
           event_id: event.id,
           team_id: event.team_id,
           team_number: selection.teamNumber,
-          period_number: 1, // Default to period 1
+          period_number: selection.periodNumber,
           player_positions: playerPositions,
           substitute_players: selection.substitutePlayers,
           captain_id: selection.captainId || null,
           formation: selection.formation,
-          minutes_played: selection.minutesPlayed
+          duration_minutes: selection.durationMinutes
         };
 
         // Upsert the selection
@@ -206,135 +257,130 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  const currentSelection = teamSelections.find(s => s.teamNumber === activeTeam);
+  const currentSelection = teamSelections.find(s => 
+    s.teamNumber === activeTeamPeriod.team && s.periodNumber === activeTeamPeriod.period
+  );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[95vw] h-[95vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Team Selection - {event.title}
-          </DialogTitle>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-            <div className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              {new Date(event.date).toLocaleDateString()}
-            </div>
-            <div className="flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              {event.start_time} - {event.end_time}
-            </div>
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              {event.location}
-            </div>
-            {event.opponent && (
-              <div className="flex items-center gap-1">
-                <Trophy className="h-4 w-4" />
-                vs {event.opponent}
+    <div className="h-full flex flex-col">
+      {loading ? (
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">Loading team selections...</div>
+        </div>
+      ) : (
+        <div className="h-full flex flex-col">
+          {/* Controls */}
+          <div className="flex-shrink-0 mb-4 space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label>Teams:</Label>
+                <Badge variant="outline">{numberOfTeams}</Badge>
+                <Button size="sm" variant="outline" onClick={addTeam}>
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
-            <Badge variant="outline">{gameFormat}</Badge>
-          </div>
-        </DialogHeader>
-
-        <div className="flex-1 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">Loading team selections...</div>
+              <div className="flex items-center gap-2">
+                <Label>Periods:</Label>
+                <Badge variant="outline">{numberOfPeriods}</Badge>
+                <Button size="sm" variant="outline" onClick={addPeriod}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-          ) : (
-            <div className="h-full flex flex-col">
-              {numTeams > 1 && (
-                <div className="flex-shrink-0 mb-4">
-                  <Tabs value={activeTeam.toString()} onValueChange={(value) => setActiveTeam(parseInt(value))}>
-                    <TabsList className="grid w-full" style={{ gridTemplateColumns: `repeat(${numTeams}, 1fr)` }}>
-                      {Array.from({ length: numTeams }, (_, i) => i + 1).map((teamNum) => (
-                        <TabsTrigger key={teamNum} value={teamNum.toString()}>
-                          Team {teamNum}
-                        </TabsTrigger>
-                      ))}
-                    </TabsList>
-                  </Tabs>
+
+            {/* Team/Period Selector */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label>Team:</Label>
+                <Select 
+                  value={activeTeamPeriod.team.toString()} 
+                  onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, team: parseInt(value) }))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => (
+                      <SelectItem key={teamNum} value={teamNum.toString()}>
+                        {teamNum}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>Period:</Label>
+                <Select 
+                  value={activeTeamPeriod.period.toString()} 
+                  onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
+                >
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: numberOfPeriods }, (_, i) => i + 1).map((periodNum) => (
+                      <SelectItem key={periodNum} value={periodNum.toString()}>
+                        {periodNum}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {currentSelection && (
+                <div className="flex items-center gap-2">
+                  <Label>Duration (mins):</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="120"
+                    value={currentSelection.durationMinutes}
+                    onChange={(e) => handleDurationChange(
+                      activeTeamPeriod.team, 
+                      activeTeamPeriod.period, 
+                      parseInt(e.target.value) || 45
+                    )}
+                    className="w-20"
+                  />
                 </div>
               )}
-
-              <ScrollArea className="flex-1">
-                <div className="space-y-6 pr-4">
-                  {currentSelection && (
-                    <>
-                      <PlayerSelectionPanel
-                        teamId={event.team_id}
-                        selectedPlayers={currentSelection.selectedPlayers}
-                        substitutePlayers={currentSelection.substitutePlayers}
-                        captainId={currentSelection.captainId}
-                        onPlayersChange={(players) => handlePlayersChange(activeTeam, players)}
-                        onSubstitutesChange={(substitutes) => handleSubstitutesChange(activeTeam, substitutes)}
-                        onCaptainChange={(captainId) => handleCaptainChange(activeTeam, captainId)}
-                        eventType={event.event_type}
-                        showFormationView={true}
-                        formation={currentSelection.formation}
-                        onFormationChange={(formation) => handleFormationChange(activeTeam, formation)}
-                        gameFormat={gameFormat}
-                        eventId={event.id}
-                        teamNumber={activeTeam}
-                        periodNumber={1}
-                      />
-
-                      <Separator />
-
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <Clock className="h-5 w-5" />
-                            Minutes Played
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="space-y-4">
-                            <div className="grid gap-4">
-                              {currentSelection.selectedPlayers.map((playerId) => {
-                                const minutes = currentSelection.minutesPlayed[playerId] || 0;
-                                return (
-                                  <div key={playerId} className="flex items-center gap-4">
-                                    <Label className="flex-1">
-                                      Player ID: {playerId}
-                                    </Label>
-                                    <Input
-                                      type="number"
-                                      min="0"
-                                      max="120"
-                                      value={minutes}
-                                      onChange={(e) => handleMinutesChange(activeTeam, playerId, parseInt(e.target.value) || 0)}
-                                      className="w-20"
-                                      placeholder="0"
-                                    />
-                                    <span className="text-sm text-muted-foreground">minutes</span>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </>
-                  )}
-                </div>
-              </ScrollArea>
             </div>
-          )}
-        </div>
+          </div>
 
-        <DialogFooter className="flex-shrink-0">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={saveTeamSelections} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Selections'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <ScrollArea className="flex-1">
+            <div className="space-y-6 pr-4">
+              {currentSelection && (
+                <PlayerSelectionPanel
+                  teamId={event.team_id}
+                  selectedPlayers={currentSelection.selectedPlayers}
+                  substitutePlayers={currentSelection.substitutePlayers}
+                  captainId={currentSelection.captainId}
+                  onPlayersChange={(players) => handlePlayersChange(activeTeamPeriod.team, activeTeamPeriod.period, players)}
+                  onSubstitutesChange={(substitutes) => handleSubstitutesChange(activeTeamPeriod.team, activeTeamPeriod.period, substitutes)}
+                  onCaptainChange={(captainId) => handleCaptainChange(activeTeamPeriod.team, activeTeamPeriod.period, captainId)}
+                  eventType={event.event_type}
+                  showFormationView={true}
+                  formation={currentSelection.formation}
+                  onFormationChange={(formation) => handleFormationChange(activeTeamPeriod.team, activeTeamPeriod.period, formation)}
+                  gameFormat={gameFormat}
+                  eventId={event.id}
+                  teamNumber={activeTeamPeriod.team}
+                  periodNumber={activeTeamPeriod.period}
+                  showSubstitutesInFormation={true}
+                />
+              )}
+            </div>
+          </ScrollArea>
+
+          <div className="flex-shrink-0 pt-4 flex justify-between">
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+            <Button onClick={saveTeamSelections} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Selections'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

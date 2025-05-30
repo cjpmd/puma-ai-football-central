@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { DatabaseEvent } from '@/types/event';
 import { ScoreInput } from './ScoreInput';
 import { eventsService } from '@/services/eventsService';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface PostGameEditorProps {
   eventId: string;
@@ -29,6 +30,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
   const [staffNotes, setStaffNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (isOpen && eventId) {
@@ -57,6 +59,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
   const handleEventUpdate = (updatedEvent: DatabaseEvent) => {
     setEvent(updatedEvent);
+    // Invalidate queries to refresh the events list
+    queryClient.invalidateQueries({ queryKey: ['events'] });
   };
 
   const handleSaveNotes = async () => {
@@ -65,7 +69,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     try {
       setSaving(true);
       const updatedEvent = await eventsService.updateEvent({
-        ...event,
+        id: event.id,
+        team_id: event.team_id,
+        title: event.title,
+        date: event.date,
+        event_type: event.event_type,
         coach_notes: coachNotes,
         staff_notes: staffNotes
       });
@@ -90,7 +98,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
     try {
       const updatedEvent = await eventsService.updateEvent({
-        ...event,
+        id: event.id,
+        team_id: event.team_id,
+        title: event.title,
+        date: event.date,
+        event_type: event.event_type,
         scores
       });
       handleEventUpdate(updatedEvent);
@@ -112,7 +124,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
     try {
       const updatedEvent = await eventsService.updateEvent({
-        ...event,
+        id: event.id,
+        team_id: event.team_id,
+        title: event.title,
+        date: event.date,
+        event_type: event.event_type,
         ...potmData
       });
       handleEventUpdate(updatedEvent);

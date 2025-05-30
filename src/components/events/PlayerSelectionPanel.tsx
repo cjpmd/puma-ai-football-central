@@ -37,6 +37,7 @@ interface PlayerSelectionPanelProps {
   eventId?: string;
   teamNumber?: number;
   periodNumber?: number;
+  showSubstitutesInFormation?: boolean;
 }
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
@@ -54,7 +55,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   gameFormat = '7-a-side',
   eventId,
   teamNumber,
-  periodNumber
+  periodNumber,
+  showSubstitutesInFormation = false
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
@@ -338,6 +340,65 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Show substitutes in formation view */}
+          {showSubstitutesInFormation && onSubstitutesChange && (
+            <div className="mt-6 space-y-3">
+              <Label className="text-sm font-medium">Substitutes</Label>
+              <div className="space-y-2">
+                {substitutePlayers.map((playerId) => {
+                  const player = filteredPlayers.find(p => p.id === playerId);
+                  const hasConflict = playerConflicts[playerId];
+                  return player ? (
+                    <div key={playerId} className={`flex items-center gap-2 p-2 border rounded ${hasConflict ? 'border-orange-200 bg-orange-50' : ''}`}>
+                      <span className="text-sm">#{player.squad_number} {player.name}</span>
+                      <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
+                        {getSubscriptionLabel(player.subscription_type)}
+                      </Badge>
+                      {hasConflict && (
+                        <div className="flex items-center gap-1">
+                          <AlertTriangle className="h-3 w-3 text-orange-500" />
+                          <span className="text-xs text-orange-600">
+                            Conflict: {hasConflict.join(', ')}
+                          </span>
+                        </div>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const newSubstitutes = substitutePlayers.filter(id => id !== playerId);
+                          onSubstitutesChange(newSubstitutes);
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ) : null;
+                })}
+                
+                {/* Add substitute selector */}
+                <Select onValueChange={(playerId) => {
+                  if (playerId && !substitutePlayers.includes(playerId)) {
+                    onSubstitutesChange([...substitutePlayers, playerId]);
+                  }
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Add substitute" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredPlayers
+                      .filter(player => !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id))
+                      .map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          #{player.squad_number} {player.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
