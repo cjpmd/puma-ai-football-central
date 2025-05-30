@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -337,16 +338,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         <div className="flex flex-col h-full">
           {/* Enhanced Controls Section */}
           <div className="flex-shrink-0 p-4 border-b bg-white">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {/* Teams and Duration Row */}
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium">Teams:</Label>
-                  <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
-                  <Button size="sm" variant="outline" onClick={addTeam} className="h-8 w-8 p-0">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
+            <div className="flex flex-wrap items-center gap-4">
+              {/* Teams */}
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Teams:</Label>
+                <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
+                <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
+                  <Plus className="h-3 w-3" />
+                </Button>
               </div>
               
               {/* Performance Category */}
@@ -360,7 +359,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       value === 'no-category' ? undefined : value
                     )}
                   >
-                    <SelectTrigger className="w-36 h-8">
+                    <SelectTrigger className="w-32 h-7">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -372,28 +371,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-
-              {/* Duration */}
-              {currentSelection && (
-                <div className="flex items-center gap-2">
-                  <Label className="text-sm font-medium">Duration:</Label>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      min="1"
-                      max="120"
-                      value={currentSelection.durationMinutes}
-                      onChange={(e) => handleDurationChange(
-                        activeTeamPeriod.team, 
-                        activeTeamPeriod.period, 
-                        parseInt(e.target.value) || 45
-                      )}
-                      className="w-16 h-8"
-                    />
-                    <span className="text-sm text-muted-foreground">min</span>
-                  </div>
                 </div>
               )}
             </div>
@@ -434,22 +411,46 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
                       className="h-full flex flex-col"
                     >
-                      <div className="flex-shrink-0 mx-2 flex items-center gap-2">
-                        <TabsList>
-                          {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                            <TabsTrigger key={periodNum} value={periodNum.toString()} className="text-xs">
-                              Period {periodNum}
-                            </TabsTrigger>
-                          ))}
-                        </TabsList>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
-                          onClick={() => addPeriodToTeam(teamNum)}
-                          className="h-6 w-6 p-0"
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
+                      <div className="flex-shrink-0 mx-2 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <TabsList>
+                            {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
+                              <TabsTrigger key={periodNum} value={periodNum.toString()} className="text-xs">
+                                Period {periodNum}
+                              </TabsTrigger>
+                            ))}
+                          </TabsList>
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            onClick={() => addPeriodToTeam(teamNum)}
+                            className="h-6 w-6 p-0"
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        {/* Duration for current period */}
+                        {currentSelection && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-sm font-medium">Duration:</Label>
+                            <div className="flex items-center gap-1">
+                              <Input
+                                type="number"
+                                min="1"
+                                max="120"
+                                value={currentSelection.durationMinutes}
+                                onChange={(e) => handleDurationChange(
+                                  activeTeamPeriod.team, 
+                                  activeTeamPeriod.period, 
+                                  parseInt(e.target.value) || 45
+                                )}
+                                className="w-16 h-7 text-sm"
+                              />
+                              <span className="text-sm text-muted-foreground">min</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
@@ -487,6 +488,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </Tabs>
           </div>
 
+          {/* Footer with Save Button */}
           <div className="flex-shrink-0 p-3 border-t bg-white flex justify-between">
             <Button variant="outline" onClick={onClose} size="sm">
               Close
