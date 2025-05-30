@@ -318,6 +318,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const getPerformanceCategoryName = (teamNumber: number) => {
+    const teamConfig = teamConfigs.find(tc => tc.teamNumber === teamNumber);
+    if (teamConfig?.performanceCategoryId) {
+      const category = performanceCategories.find(pc => pc.id === teamConfig.performanceCategoryId);
+      return category?.name || `Performance Category ${teamNumber}`;
+    }
+    return `Performance Category ${teamNumber}`;
+  };
+
   const currentSelection = teamSelections.find(s => 
     s.teamNumber === activeTeamPeriod.team && s.periodNumber === activeTeamPeriod.period
   );
@@ -338,16 +347,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           {/* Enhanced Controls Section */}
           <div className="flex-shrink-0 p-4 border-b bg-white">
             <div className="flex flex-wrap items-center gap-4 mb-2">
-              {/* Teams */}
+              {/* Performance Categories */}
               <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium">Teams:</Label>
+                <Label className="text-sm font-medium">Performance Categories:</Label>
                 <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
                 <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
                   <Plus className="h-3 w-3" />
                 </Button>
               </div>
               
-              {/* Performance Category */}
+              {/* Performance Category Selection */}
               {performanceCategories.length > 0 && currentTeamConfig && (
                 <div className="flex items-center gap-2">
                   <Label className="text-sm font-medium">Category:</Label>
@@ -358,7 +367,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       value === 'no-category' ? undefined : value
                     )}
                   >
-                    <SelectTrigger className="w-32 h-7">
+                    <SelectTrigger className="w-40 h-7">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
@@ -384,7 +393,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             )}
           </div>
 
-          {/* Team and Period Tabs */}
+          {/* Performance Category and Period Tabs */}
           <div className="flex-1 min-h-0">
             <Tabs 
               value={activeTeamPeriod.team.toString()} 
@@ -394,7 +403,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               <TabsList className="flex-shrink-0 mx-2 mt-2">
                 {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => (
                   <TabsTrigger key={teamNum} value={teamNum.toString()} className="text-xs">
-                    Team {teamNum}
+                    {getPerformanceCategoryName(teamNum)}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -457,7 +466,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
                       {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
                         <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0">
-                          <div className="h-full px-2">
+                          <div className="h-full px-2 pb-16">
                             <ScrollArea className="h-full">
                               <div className="pr-2">
                                 {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
@@ -492,8 +501,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </Tabs>
           </div>
 
-          {/* Footer with Save Button */}
-          <div className="flex-shrink-0 p-3 border-t bg-white flex justify-between">
+          {/* Footer with Save Button - Fixed at bottom */}
+          <div className="flex-shrink-0 p-4 border-t bg-white flex justify-between items-center">
             <Button variant="outline" onClick={onClose} size="sm">
               Close
             </Button>
