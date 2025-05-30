@@ -51,13 +51,17 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const [formData, setFormData] = useState({
     type: event?.type || 'training' as const,
     title: event?.title || '',
+    description: event?.description || '',
     date: event?.date || new Date().toISOString().split('T')[0],
+    startTime: event?.startTime || '10:00',
+    endTime: event?.endTime || '11:00',
     location: event?.location || '',
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
     opponent: event?.opponent || '',
     isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
     trainingNotes: event?.trainingNotes || '',
+    notes: event?.notes || '',
     homeScore: event?.scores?.home || 0,
     awayScore: event?.scores?.away || 0,
     playerOfTheMatchId: event?.playerOfTheMatchId || ''
@@ -76,6 +80,26 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         endTime: event.endTime || '11:30'
       })) || [{ teamNumber: 1, meetingTime: event.meetingTime || '09:00', startTime: event.startTime || '10:00', endTime: event.endTime || '11:30' }];
       setTeamTimeSlots(initialSlots);
+      
+      // Set form data from event
+      setFormData({
+        type: event.type || 'training',
+        title: event.title || '',
+        description: event.description || '',
+        date: event.date || new Date().toISOString().split('T')[0],
+        startTime: event.startTime || '10:00',
+        endTime: event.endTime || '11:00',
+        location: event.location || '',
+        gameFormat: event.gameFormat || teamDefaultGameFormat,
+        opponent: event.opponent || '',
+        isHome: event.isHome ?? true,
+        facilityId: event.facilityId || '',
+        trainingNotes: event.trainingNotes || '',
+        notes: event.notes || '',
+        homeScore: event.scores?.home || 0,
+        awayScore: event.scores?.away || 0,
+        playerOfTheMatchId: event.playerOfTheMatchId || ''
+      });
     }
   }, [event, teamId]);
 
@@ -184,8 +208,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       teamId,
       teams: numberOfTeams > 1 ? Array(numberOfTeams).fill(teamId) : [teamId],
       meetingTime: primaryTimeSlot.meetingTime,
-      startTime: primaryTimeSlot.startTime,
-      endTime: primaryTimeSlot.endTime,
+      startTime: primaryTimeSlot.startTime || formData.startTime,
+      endTime: primaryTimeSlot.endTime || formData.endTime,
       opponent: requiresOpponent ? formData.opponent : undefined,
       scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
         ? { home: formData.homeScore, away: formData.awayScore }
@@ -234,6 +258,34 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="description">Description</Label>
+          <Textarea
+            id="description"
+            value={formData.description}
+            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            placeholder="Add event description..."
+            rows={2}
+          />
+        </div>
+
+        {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
+        {requiresOpponent && (
+          <div className="space-y-2">
+            <Label htmlFor="opponent">Opponent Name *</Label>
+            <Input
+              id="opponent"
+              value={formData.opponent}
+              onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
+              placeholder="Enter opponent name (e.g., Riverside)"
+              required
+            />
+            <p className="text-sm text-muted-foreground">
+              This opponent name will be used for all teams in this event
+            </p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
@@ -258,7 +310,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               <SelectContent>
                 {gameFormats.map((format) => (
                   <SelectItem key={format} value={format}>
-                    {format} {format === teamDefaultGameFormat && '(Team Default)'}
+                    {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -266,20 +318,27 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         </div>
 
-        {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
-        {requiresOpponent && (
-          <div className="space-y-2">
-            <Label htmlFor="opponent">Opponent Name *</Label>
-            <Input
-              id="opponent"
-              value={formData.opponent}
-              onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
-              placeholder="Enter opponent name (e.g., Riverside)"
-              required
-            />
-            <p className="text-sm text-muted-foreground">
-              This opponent name will be used for all teams in this event
-            </p>
+        {/* Time fields for non-opponent events or when not using team slots */}
+        {!requiresOpponent && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start Time</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+              />
+            </div>
           </div>
         )}
 
@@ -347,39 +406,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         )}
 
-        {/* Single team time slots for other event types */}
-        {!requiresOpponent && (
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="meetingTime">Meeting Time</Label>
-              <Input
-                id="meetingTime"
-                type="time"
-                value={teamTimeSlots[0]?.meetingTime || '09:00'}
-                onChange={(e) => updateTeamTimeSlot(1, 'meetingTime', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time</Label>
-              <Input
-                id="startTime"
-                type="time"
-                value={teamTimeSlots[0]?.startTime || '10:00'}
-                onChange={(e) => updateTeamTimeSlot(1, 'startTime', e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End Time</Label>
-              <Input
-                id="endTime"
-                type="time"
-                value={teamTimeSlots[0]?.endTime || '11:30'}
-                onChange={(e) => updateTeamTimeSlot(1, 'endTime', e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Location and Facility */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -428,7 +454,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         )}
 
         {/* Scores Section */}
-        {formData.type === 'fixture' || formData.type === 'friendly' && (
+        {(formData.type === 'fixture' || formData.type === 'friendly') && (
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="homeScore">
@@ -458,7 +484,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         )}
 
         {/* Player of the Match */}
-        {formData.type === 'fixture' || formData.type === 'friendly' && (
+        {(formData.type === 'fixture' || formData.type === 'friendly') && (
           <div className="space-y-2">
             <Label htmlFor="playerOfTheMatch">Player of the Match</Label>
             <Select
@@ -493,6 +519,18 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             />
           </div>
         )}
+
+        {/* General Notes */}
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+            placeholder="Add general notes about this event..."
+            rows={3}
+          />
+        </div>
 
         {/* Form Actions */}
         <div className="flex gap-2 pt-4">

@@ -131,69 +131,71 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Post-Game Editor - {event?.title}</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 px-1">
-          <div className="space-y-6 pr-4">
-            {loading ? (
-              <div className="text-center py-4">Loading event data...</div>
-            ) : !event ? (
-              <div className="text-center py-4">Event not found</div>
-            ) : (
-              <Tabs defaultValue="results" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="results">Results & POTM</TabsTrigger>
-                  <TabsTrigger value="notes">Notes</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="results" className="space-y-4">
-                  <ScoreInput 
-                    event={event} 
-                    onScoreUpdate={handleScoreUpdate}
-                    onPOTMUpdate={handlePOTMUpdate}
-                  />
-                </TabsContent>
-                
-                <TabsContent value="notes" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="coachNotes">Coach Notes</Label>
-                      <Textarea
-                        id="coachNotes"
-                        placeholder="Add your coaching observations and feedback..."
-                        value={coachNotes}
-                        onChange={(e) => setCoachNotes(e.target.value)}
-                        className="min-h-[120px]"
-                      />
-                    </div>
+        <div className="flex-1 overflow-hidden">
+          <ScrollArea className="h-full">
+            <div className="space-y-6 p-1">
+              {loading ? (
+                <div className="text-center py-4">Loading event data...</div>
+              ) : !event ? (
+                <div className="text-center py-4">Event not found</div>
+              ) : (
+                <Tabs defaultValue="results" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="results">Results & POTM</TabsTrigger>
+                    <TabsTrigger value="notes">Notes</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="results" className="space-y-4">
+                    <ScoreInput 
+                      event={event} 
+                      onScoreUpdate={handleScoreUpdate}
+                      onPOTMUpdate={handlePOTMUpdate}
+                    />
+                  </TabsContent>
+                  
+                  <TabsContent value="notes" className="space-y-4">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="coachNotes">Coach Notes</Label>
+                        <Textarea
+                          id="coachNotes"
+                          placeholder="Add your coaching observations and feedback..."
+                          value={coachNotes}
+                          onChange={(e) => setCoachNotes(e.target.value)}
+                          className="min-h-[120px]"
+                        />
+                      </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="staffNotes">Staff Notes</Label>
-                      <Textarea
-                        id="staffNotes"
-                        placeholder="Add staff observations and notes..."
-                        value={staffNotes}
-                        onChange={(e) => setStaffNotes(e.target.value)}
-                        className="min-h-[120px]"
-                      />
-                    </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="staffNotes">Staff Notes</Label>
+                        <Textarea
+                          id="staffNotes"
+                          placeholder="Add staff observations and notes..."
+                          value={staffNotes}
+                          onChange={(e) => setStaffNotes(e.target.value)}
+                          className="min-h-[120px]"
+                        />
+                      </div>
 
-                    <Button 
-                      onClick={handleSaveNotes} 
-                      disabled={saving}
-                      className="w-full"
-                    >
-                      {saving ? 'Saving...' : 'Save Notes'}
-                    </Button>
-                  </div>
-                </TabsContent>
-              </Tabs>
-            )}
-          </div>
-        </ScrollArea>
+                      <Button 
+                        onClick={handleSaveNotes} 
+                        disabled={saving}
+                        className="w-full"
+                      >
+                        {saving ? 'Saving...' : 'Save Notes'}
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

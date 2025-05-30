@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Crown, UserCheck, Filter, Grid3X3, AlertTriangle } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Users, Crown, UserCheck, Filter, Grid3X3, AlertTriangle, UserMinus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FormationSelector } from './FormationSelector';
 import { getPositionsForFormation } from '@/utils/formationUtils';
@@ -24,8 +24,10 @@ interface Player {
 interface PlayerSelectionPanelProps {
   teamId: string;
   selectedPlayers: string[];
+  substitutePlayers?: string[];
   captainId?: string;
   onPlayersChange: (players: string[]) => void;
+  onSubstitutesChange?: (substitutes: string[]) => void;
   onCaptainChange: (captainId: string) => void;
   eventType?: string;
   showFormationView?: boolean;
@@ -40,8 +42,10 @@ interface PlayerSelectionPanelProps {
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   teamId,
   selectedPlayers,
+  substitutePlayers = [],
   captainId,
   onPlayersChange,
+  onSubstitutesChange,
   onCaptainChange,
   eventType = 'match',
   showFormationView = false,
@@ -72,7 +76,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     if (eventId && teamNumber !== undefined && periodNumber !== undefined) {
       checkPlayerConflicts();
     }
-  }, [selectedPlayers, eventId, teamNumber, periodNumber]);
+  }, [selectedPlayers, substitutePlayers, eventId, teamNumber, periodNumber]);
 
   // Sync positionPlayers with selectedPlayers when switching to formation view
   useEffect(() => {
@@ -97,7 +101,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     try {
       const { data: otherSelections, error } = await supabase
         .from('event_selections')
-        .select('team_number, period_number, player_positions')
+        .select('team_number, period_number, player_positions, substitute_players')
         .eq('event_id', eventId)
         .eq('team_id', teamId)
         .neq('team_number', teamNumber);
@@ -106,12 +110,17 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       const conflicts: { [playerId: string]: string[] } = {};
       
-      selectedPlayers.forEach(playerId => {
+      const allSelectedPlayers = [...selectedPlayers, ...substitutePlayers];
+      
+      allSelectedPlayers.forEach(playerId => {
         const conflictTeams: string[] = [];
         
         otherSelections?.forEach(selection => {
           const playerPositions = selection.player_positions as any[] || [];
-          const hasPlayer = playerPositions.some(pp => pp.playerId === playerId || pp.player_id === playerId);
+          const substitutePlayersList = selection.substitute_players as string[] || [];
+          
+          const hasPlayer = playerPositions.some(pp => pp.playerId === playerId || pp.player_id === playerId) ||
+                           substitutePlayersList.includes(playerId);
           
           if (hasPlayer) {
             conflictTeams.push(`Team ${selection.team_number} Period ${selection.period_number}`);
@@ -171,6 +180,15 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     onPlayersChange(newSelectedPlayers);
   };
 
+  const handleSubstituteToggle = (playerId: string) => {
+    if (!onSubstitutesChange) return;
+    
+    const newSubstitutes = substitutePlayers.includes(playerId)
+      ? substitutePlayers.filter(id => id !== playerId)
+      : [...substitutePlayers, playerId];
+    onSubstitutesChange(newSubstitutes);
+  };
+
   const handleCaptainSelect = (playerId: string) => {
     if (captainId === playerId) {
       onCaptainChange('');
@@ -207,6 +225,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     onPlayersChange([]);
     onCaptainChange('');
     setPositionPlayers({});
+    if (onSubstitutesChange) {
+      onSubstitutesChange([]);
+    }
   };
 
   const getSubscriptionBadgeColor = (subscriptionType: string) => {
@@ -319,6 +340,53 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     );
   };
 
+  const renderPlayerList = (playerList: string[], onToggle: (playerId: string) => void, title: string, icon: React.ReactNode) => (
+    <div className="space-y-2 max-h-96 overflow-y-auto">
+      {filteredPlayers.map((player) => {
+        const isSelected = playerList.includes(player.id);
+        const hasConflict = playerConflicts[player.id];
+        return (
+          <div key={player.id} className={`flex items-center space-x-3 p-3 border rounded ${hasConflict ? 'border-orange-200 bg-orange-50' : ''}`}>
+            <Checkbox
+              id={`${title}-${player.id}`}
+              checked={isSelected}
+              onCheckedChange={() => onToggle(player.id)}
+            />
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Label htmlFor={`${title}-${player.id}`} className="font-medium cursor-pointer">
+                  #{player.squad_number} {player.name}
+                </Label>
+                <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
+                  {getSubscriptionLabel(player.subscription_type)}
+                </Badge>
+                {hasConflict && (
+                  <div className="flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-orange-500" />
+                    <span className="text-xs text-orange-600">
+                      Conflict: {hasConflict.join(', ')}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            {title === 'starter' && (
+              <Button
+                variant={captainId === player.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => handleCaptainSelect(player.id)}
+                className="flex items-center gap-1"
+              >
+                <Crown className="h-3 w-3" />
+                {captainId === player.id ? 'Captain' : 'Make Captain'}
+              </Button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+
   if (loading) {
     return (
       <Card>
@@ -397,51 +465,34 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                     Deselect All
                   </Button>
                   <div className="ml-auto text-sm text-muted-foreground">
-                    {selectedPlayers.length} of {filteredPlayers.length} selected
+                    {selectedPlayers.length} starters, {substitutePlayers.length} substitutes
                   </div>
                 </div>
 
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {filteredPlayers.map((player) => {
-                    const hasConflict = playerConflicts[player.id];
-                    return (
-                      <div key={player.id} className={`flex items-center space-x-3 p-3 border rounded ${hasConflict ? 'border-orange-200 bg-orange-50' : ''}`}>
-                        <Checkbox
-                          id={`player-${player.id}`}
-                          checked={selectedPlayers.includes(player.id)}
-                          onCheckedChange={() => handlePlayerToggle(player.id)}
-                        />
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Label htmlFor={`player-${player.id}`} className="font-medium cursor-pointer">
-                              #{player.squad_number} {player.name}
-                            </Label>
-                            <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
-                              {getSubscriptionLabel(player.subscription_type)}
-                            </Badge>
-                            {hasConflict && (
-                              <div className="flex items-center gap-1">
-                                <AlertTriangle className="h-3 w-3 text-orange-500" />
-                                <span className="text-xs text-orange-600">
-                                  Conflict: {hasConflict.join(', ')}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <Button
-                          variant={captainId === player.id ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => handleCaptainSelect(player.id)}
-                          className="flex items-center gap-1"
-                        >
-                          <Crown className="h-3 w-3" />
-                          {captainId === player.id ? 'Captain' : 'Make Captain'}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
+                {onSubstitutesChange ? (
+                  <Tabs defaultValue="starters" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="starters" className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Starters ({selectedPlayers.length})
+                      </TabsTrigger>
+                      <TabsTrigger value="substitutes" className="flex items-center gap-2">
+                        <UserMinus className="h-4 w-4" />
+                        Substitutes ({substitutePlayers.length})
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="starters">
+                      {renderPlayerList(selectedPlayers, handlePlayerToggle, 'starter', <Users className="h-4 w-4" />)}
+                    </TabsContent>
+                    
+                    <TabsContent value="substitutes">
+                      {renderPlayerList(substitutePlayers, handleSubstituteToggle, 'substitute', <UserMinus className="h-4 w-4" />)}
+                    </TabsContent>
+                  </Tabs>
+                ) : (
+                  renderPlayerList(selectedPlayers, handlePlayerToggle, 'starter', <Users className="h-4 w-4" />)
+                )}
               </>
             )}
           </>
