@@ -96,11 +96,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const maxTeams = Math.max(1, ...selections.map(s => s.team_number || 1));
       setNumberOfTeams(maxTeams);
 
-      // Create team configs
+      // Create team configs and find team captain
       for (let teamNum = 1; teamNum <= maxTeams; teamNum++) {
         const teamSelections = selections.filter(s => s.team_number === teamNum);
         const maxPeriods = Math.max(1, ...teamSelections.map(s => s.period_number || 1));
         const performanceCategoryId = teamSelections[0]?.performance_category_id || undefined;
+        
+        // Find captain from any period for this team
+        const teamCaptainId = teamSelections.find(s => s.captain_id)?.captain_id || '';
         
         initialConfigs.push({
           teamNumber: teamNum,
@@ -120,7 +123,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               periodNumber: periodNum,
               selectedPlayers: playerPositions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean),
               substitutePlayers: substitutePlayersList,
-              captainId: existingSelection.captain_id || '',
+              captainId: existingSelection.captain_id || teamCaptainId, // Use team captain if no period captain
               formation: existingSelection.formation || getDefaultFormation(gameFormat),
               durationMinutes: existingSelection.duration_minutes || 45,
               performanceCategoryId: existingSelection.performance_category_id || undefined
@@ -131,7 +134,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               periodNumber: periodNum,
               selectedPlayers: [],
               substitutePlayers: [],
-              captainId: '',
+              captainId: teamCaptainId, // Use team captain for new periods
               formation: getDefaultFormation(gameFormat),
               durationMinutes: 45,
               performanceCategoryId
@@ -257,7 +260,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   };
 
   const handleCaptainChange = (teamNumber: number, periodNumber: number, captainId: string) => {
-    updateTeamSelection(teamNumber, periodNumber, { captainId });
+    // Update captain for ALL periods of this team to maintain consistency
+    setTeamSelections(prev => prev.map(selection => 
+      selection.teamNumber === teamNumber
+        ? { ...selection, captainId }
+        : selection
+    ));
   };
 
   const handleFormationChange = (teamNumber: number, periodNumber: number, formation: string) => {
@@ -338,7 +346,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[95vw] h-[90vh] max-w-7xl flex flex-col">
+      <Card className="w-[95vw] h-[95vh] max-w-7xl flex flex-col">
         <CardHeader className="flex-shrink-0 pb-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold">Team Selection Manager</CardTitle>
@@ -353,7 +361,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 min-h-0 p-0">
+        <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">Loading team selections...</div>
@@ -410,7 +418,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               </div>
 
               {/* Performance Category and Period Tabs */}
-              <div className="flex-1 min-h-0">
+              <div className="flex-1 min-h-0 overflow-hidden">
                 <Tabs 
                   value={activeTeamPeriod.team.toString()} 
                   onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, team: parseInt(value) }))}
@@ -429,7 +437,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     const teamPeriods = teamConfig?.numberOfPeriods || 1;
                     
                     return (
-                      <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 min-h-0 mt-2">
+                      <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 min-h-0 mt-2 overflow-hidden">
                         <Tabs 
                           value={activeTeamPeriod.period.toString()} 
                           onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
@@ -481,9 +489,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                           </div>
 
                           {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                            <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0">
-                              <div className="h-full px-2">
-                                <div className="h-full max-h-[calc(90vh-300px)]">
+                            <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0 overflow-hidden">
+                              <div className="h-full px-2 overflow-hidden">
+                                <div className="h-full">
                                   {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
                                     <PlayerSelectionPanel
                                       teamId={event.team_id}

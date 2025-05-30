@@ -42,7 +42,43 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     try {
       setLoading(true);
       const eventData = await eventsService.getEventById(eventId);
-      setEvent(eventData);
+      
+      // Load unique teams based on performance categories from event selections
+      const { data: eventSelections } = await supabase
+        .from('event_selections')
+        .select(`
+          team_number,
+          performance_category_id,
+          performance_categories (
+            id,
+            name
+          )
+        `)
+        .eq('event_id', eventId)
+        .eq('team_id', eventData.team_id);
+
+      // Create unique teams array based on performance categories
+      const uniqueTeams = new Map();
+      eventSelections?.forEach(selection => {
+        const teamKey = selection.team_number;
+        if (!uniqueTeams.has(teamKey)) {
+          const performanceCategory = selection.performance_categories as any;
+          uniqueTeams.set(teamKey, {
+            teamNumber: selection.team_number,
+            name: performanceCategory?.name || `Team ${selection.team_number}`,
+            performanceCategoryId: selection.performance_category_id
+          });
+        }
+      });
+
+      // Update event with unique teams
+      const teamsArray = Array.from(uniqueTeams.values());
+      const updatedEventData = {
+        ...eventData,
+        teams: teamsArray
+      };
+
+      setEvent(updatedEventData);
       setCoachNotes(eventData.coach_notes || '');
       setStaffNotes(eventData.staff_notes || '');
     } catch (error) {
