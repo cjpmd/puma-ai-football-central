@@ -219,35 +219,30 @@ export type Period = {
   teamSelections: Record<string, TeamSelection>; // key is team ID
 };
 
-export type Event = {
-  id: string;
-  type: EventType;
+export interface Event {
+  id?: string;
   teamId: string;
   title: string;
+  description?: string;
+  type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   date: string;
-  meetingTime: string;
-  startTime: string;
-  endTime: string;
-  location: string;
-  gameFormat: GameFormat;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  notes?: string;
+  gameFormat?: GameFormat;
   opponent?: string;
   isHome?: boolean;
-  teams: string[]; // Team IDs
-  periods: Period[];
   facilityId?: string;
-  performanceCategoryId?: string;
+  trainingNotes?: string;
   scores?: {
     home: number;
     away: number;
   };
   playerOfTheMatchId?: string;
-  coachNotes?: string;
-  staffNotes?: string;
-  trainingNotes?: string;
-  kitSelection?: string; // Added this property to fix the type error
-  createdAt: string;
-  updatedAt: string;
-};
+  meetingTime?: string;
+  teams?: string[];
+}
 
 export type EquipmentItem = {
   id: string;

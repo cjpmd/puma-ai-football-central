@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { TeamSelectionManager } from './TeamSelectionManager';
 import { GameFormat } from '@/types';
+import { DatabaseEvent } from '@/types/event';
 
 interface EventTeamsTableProps {
   eventId: string;
