@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -176,6 +175,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       });
     }
     setTeamSelections(newSelections);
+    
+    // Automatically switch to the new team
+    setActiveTeamPeriod(prev => ({ ...prev, team: newTeamNumber }));
   };
 
   const addPeriod = () => {
@@ -197,6 +199,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       });
     }
     setTeamSelections(newSelections);
+    
+    // Automatically switch to the new period
+    setActiveTeamPeriod(prev => ({ ...prev, period: newPeriodNumber }));
   };
 
   const updateTeamSelection = (teamNumber: number, periodNumber: number, updates: Partial<TeamSelection>) => {
@@ -294,7 +299,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   );
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col max-h-[80vh]">
       {loading ? (
         <div className="flex items-center justify-center h-full">
           <div className="text-center">Loading team selections...</div>
@@ -302,7 +307,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       ) : (
         <div className="h-full flex flex-col">
           {/* Controls */}
-          <div className="flex-shrink-0 mb-4 space-y-4">
+          <div className="flex-shrink-0 mb-4 space-y-4 p-4 border-b">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Label>Teams:</Label>
@@ -411,32 +416,34 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             )}
           </div>
 
-          <ScrollArea className="flex-1">
-            <div className="space-y-6 pr-4">
-              {currentSelection && (
-                <PlayerSelectionPanel
-                  teamId={event.team_id}
-                  selectedPlayers={currentSelection.selectedPlayers}
-                  substitutePlayers={currentSelection.substitutePlayers}
-                  captainId={currentSelection.captainId}
-                  onPlayersChange={(players) => handlePlayersChange(activeTeamPeriod.team, activeTeamPeriod.period, players)}
-                  onSubstitutesChange={(substitutes) => handleSubstitutesChange(activeTeamPeriod.team, activeTeamPeriod.period, substitutes)}
-                  onCaptainChange={(captainId) => handleCaptainChange(activeTeamPeriod.team, activeTeamPeriod.period, captainId)}
-                  eventType={event.event_type}
-                  showFormationView={true}
-                  formation={currentSelection.formation}
-                  onFormationChange={(formation) => handleFormationChange(activeTeamPeriod.team, activeTeamPeriod.period, formation)}
-                  gameFormat={gameFormat}
-                  eventId={event.id}
-                  teamNumber={activeTeamPeriod.team}
-                  periodNumber={activeTeamPeriod.period}
-                  showSubstitutesInFormation={true}
-                />
-              )}
-            </div>
-          </ScrollArea>
+          <div className="flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
+              <div className="p-4">
+                {currentSelection && (
+                  <PlayerSelectionPanel
+                    teamId={event.team_id}
+                    selectedPlayers={currentSelection.selectedPlayers}
+                    substitutePlayers={currentSelection.substitutePlayers}
+                    captainId={currentSelection.captainId}
+                    onPlayersChange={(players) => handlePlayersChange(activeTeamPeriod.team, activeTeamPeriod.period, players)}
+                    onSubstitutesChange={(substitutes) => handleSubstitutesChange(activeTeamPeriod.team, activeTeamPeriod.period, substitutes)}
+                    onCaptainChange={(captainId) => handleCaptainChange(activeTeamPeriod.team, activeTeamPeriod.period, captainId)}
+                    eventType={event.event_type}
+                    showFormationView={true}
+                    formation={currentSelection.formation}
+                    onFormationChange={(formation) => handleFormationChange(activeTeamPeriod.team, activeTeamPeriod.period, formation)}
+                    gameFormat={gameFormat}
+                    eventId={event.id}
+                    teamNumber={activeTeamPeriod.team}
+                    periodNumber={activeTeamPeriod.period}
+                    showSubstitutesInFormation={true}
+                  />
+                )}
+              </div>
+            </ScrollArea>
+          </div>
 
-          <div className="flex-shrink-0 pt-4 flex justify-between">
+          <div className="flex-shrink-0 pt-4 flex justify-between border-t p-4">
             <Button variant="outline" onClick={onClose}>
               Close
             </Button>
