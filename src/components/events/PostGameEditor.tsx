@@ -75,7 +75,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         date: event.date,
         event_type: event.event_type,
         coach_notes: coachNotes,
-        staff_notes: staffNotes
+        staff_notes: staffNotes,
+        game_format: event.game_format
       });
       handleEventUpdate(updatedEvent);
       toast({
@@ -103,7 +104,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         title: event.title,
         date: event.date,
         event_type: event.event_type,
-        scores
+        scores,
+        game_format: event.game_format
       });
       handleEventUpdate(updatedEvent);
       toast({
@@ -129,6 +131,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         title: event.title,
         date: event.date,
         event_type: event.event_type,
+        game_format: event.game_format,
         ...potmData
       });
       handleEventUpdate(updatedEvent);

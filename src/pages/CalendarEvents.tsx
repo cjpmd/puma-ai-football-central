@@ -146,6 +146,7 @@ const CalendarEventsPage = () => {
     setEventNotes(event.notes || '');
     setEventEventType(event.event_type as any);
     setEventOpponent(event.opponent || '');
+    setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
     setIsEditModalOpen(true);
   };
 
@@ -390,7 +391,7 @@ const CalendarEventsPage = () => {
               handleTeamSelection(event);
             }}
             onPostGameEdit={handlePostGameEdit}
-            onDeleteEvent={(eventId) => eventsService.deleteEvent(eventId)}
+            onDeleteEvent={handleDeleteEvent}
             onScoreEdit={() => {}} // Remove this - functionality moved to PostGameEditor
           />
         ) : viewMode === 'calendar' ? (
@@ -403,7 +404,7 @@ const CalendarEventsPage = () => {
               handleTeamSelection(event);
             }}
             onPostGameEdit={handlePostGameEdit}
-            onDeleteEvent={(eventId) => eventsService.deleteEvent(eventId)}
+            onDeleteEvent={handleDeleteEvent}
           />
         ) : (
           <div className="space-y-3">
@@ -480,8 +481,9 @@ const CalendarEventsPage = () => {
                             variant="ghost"
                             size="sm"
                             className="text-red-600 hover:text-red-700"
-                            onClick={() => eventsService.deleteEvent(event.id)}
+                            onClick={() => handleDeleteEvent(event.id)}
                             title="Delete Event"
+                            disabled={isDeleteLoading}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>

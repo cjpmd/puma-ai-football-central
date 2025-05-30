@@ -46,7 +46,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
         .single();
 
       if (eventError) throw eventError;
-      setEvent(eventData);
+      setEvent(eventData as DatabaseEvent);
 
       // Then check if there are multiple teams in the event_teams table
       const { data: eventTeamsData, error: eventTeamsError } = await supabase

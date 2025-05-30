@@ -4,18 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatabaseEvent } from '@/types/event';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
-import { FormationSelector } from './FormationSelector';
 import { supabase } from '@/integrations/supabase/client';
-import { Clock, Users, Trophy, MapPin, Calendar, Plus, Minus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
 interface TeamSelection {
   teamNumber: number;
@@ -25,12 +21,18 @@ interface TeamSelection {
   captainId: string;
   formation: string;
   durationMinutes: number;
+  performanceCategoryId?: string;
 }
 
 interface TeamSelectionManagerProps {
   event: DatabaseEvent;
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface PerformanceCategory {
+  id: string;
+  name: string;
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -42,18 +44,33 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [activeTeamPeriod, setActiveTeamPeriod] = useState({ team: 1, period: 1 });
   const [numberOfTeams, setNumberOfTeams] = useState(1);
   const [numberOfPeriods, setNumberOfPeriods] = useState(1);
+  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const eventTeams = (event as any).teams || [event.team_id];
   const gameFormat = (event.game_format || '7-a-side') as any;
 
   useEffect(() => {
     if (isOpen) {
       loadTeamSelections();
+      loadPerformanceCategories();
     }
   }, [isOpen, event.id]);
+
+  const loadPerformanceCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .eq('team_id', event.team_id);
+
+      if (error) throw error;
+      setPerformanceCategories(data || []);
+    } catch (error) {
+      console.error('Error loading performance categories:', error);
+    }
+  };
 
   const loadTeamSelections = async () => {
     try {
@@ -96,7 +113,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               substitutePlayers: substitutePlayersList,
               captainId: existingSelection.captain_id || '',
               formation: existingSelection.formation || getDefaultFormation(gameFormat),
-              durationMinutes: existingSelection.duration_minutes || 45
+              durationMinutes: existingSelection.duration_minutes || 45,
+              performanceCategoryId: existingSelection.performance_category_id || ''
             });
           } else {
             initialSelections.push({
@@ -106,7 +124,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               substitutePlayers: [],
               captainId: '',
               formation: getDefaultFormation(gameFormat),
-              durationMinutes: 45
+              durationMinutes: 45,
+              performanceCategoryId: ''
             });
           }
         }
@@ -152,7 +171,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         substitutePlayers: [],
         captainId: '',
         formation: getDefaultFormation(gameFormat),
-        durationMinutes: 45
+        durationMinutes: 45,
+        performanceCategoryId: ''
       });
     }
     setTeamSelections(newSelections);
@@ -172,7 +192,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         substitutePlayers: [],
         captainId: '',
         formation: getDefaultFormation(gameFormat),
-        durationMinutes: 45
+        durationMinutes: 45,
+        performanceCategoryId: ''
       });
     }
     setTeamSelections(newSelections);
@@ -206,6 +227,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     updateTeamSelection(teamNumber, periodNumber, { durationMinutes: duration });
   };
 
+  const handlePerformanceCategoryChange = (teamNumber: number, periodNumber: number, categoryId: string) => {
+    updateTeamSelection(teamNumber, periodNumber, { performanceCategoryId: categoryId });
+  };
+
   const saveTeamSelections = async () => {
     try {
       setSaving(true);
@@ -228,7 +253,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           substitute_players: selection.substitutePlayers,
           captain_id: selection.captainId || null,
           formation: selection.formation,
-          duration_minutes: selection.durationMinutes
+          duration_minutes: selection.durationMinutes,
+          performance_category_id: selection.performanceCategoryId || null
         };
 
         // Upsert the selection
@@ -261,6 +287,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     s.teamNumber === activeTeamPeriod.team && s.periodNumber === activeTeamPeriod.period
   );
 
+  const currentPerformanceCategory = performanceCategories.find(pc => 
+    pc.id === currentSelection?.performanceCategoryId
+  );
+
   return (
     <div className="h-full flex flex-col">
       {loading ? (
@@ -289,7 +319,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </div>
 
             {/* Team/Period Selector */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
                 <Label>Team:</Label>
                 <Select 
@@ -327,23 +357,56 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 </Select>
               </div>
               {currentSelection && (
-                <div className="flex items-center gap-2">
-                  <Label>Duration (mins):</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="120"
-                    value={currentSelection.durationMinutes}
-                    onChange={(e) => handleDurationChange(
-                      activeTeamPeriod.team, 
-                      activeTeamPeriod.period, 
-                      parseInt(e.target.value) || 45
-                    )}
-                    className="w-20"
-                  />
-                </div>
+                <>
+                  <div className="flex items-center gap-2">
+                    <Label>Duration (mins):</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="120"
+                      value={currentSelection.durationMinutes}
+                      onChange={(e) => handleDurationChange(
+                        activeTeamPeriod.team, 
+                        activeTeamPeriod.period, 
+                        parseInt(e.target.value) || 45
+                      )}
+                      className="w-20"
+                    />
+                  </div>
+                  {performanceCategories.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Label>Performance Category:</Label>
+                      <Select 
+                        value={currentSelection.performanceCategoryId || ''} 
+                        onValueChange={(value) => handlePerformanceCategoryChange(
+                          activeTeamPeriod.team, 
+                          activeTeamPeriod.period, 
+                          value
+                        )}
+                      >
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No category</SelectItem>
+                          {performanceCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
               )}
             </div>
+            
+            {currentPerformanceCategory && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{currentPerformanceCategory.name}</Badge>
+              </div>
+            )}
           </div>
 
           <ScrollArea className="flex-1">
