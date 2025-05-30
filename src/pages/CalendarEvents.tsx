@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -13,6 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn, formatDate } from '@/lib/utils';
 import { format } from 'date-fns';
 import { DatabaseEvent } from '@/types/event';
+import { GameFormat } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { eventsService, CreateEventData, UpdateEventData } from '@/services/eventsService';
 import { toast } from 'sonner';
