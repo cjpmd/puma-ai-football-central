@@ -332,11 +332,13 @@ export type Database = {
           formation: string
           id: string
           kit_selection: Json | null
+          minutes_played: Json | null
           performance_category: string | null
           performance_category_id: string | null
           period_number: number
           player_positions: Json
           staff_selection: Json | null
+          substitute_players: Json | null
           substitutes: Json
           team_id: string
           team_number: number | null
@@ -350,11 +352,13 @@ export type Database = {
           formation: string
           id?: string
           kit_selection?: Json | null
+          minutes_played?: Json | null
           performance_category?: string | null
           performance_category_id?: string | null
           period_number?: number
           player_positions?: Json
           staff_selection?: Json | null
+          substitute_players?: Json | null
           substitutes?: Json
           team_id: string
           team_number?: number | null
@@ -368,11 +372,13 @@ export type Database = {
           formation?: string
           id?: string
           kit_selection?: Json | null
+          minutes_played?: Json | null
           performance_category?: string | null
           performance_category_id?: string | null
           period_number?: number
           player_positions?: Json
           staff_selection?: Json | null
+          substitute_players?: Json | null
           substitutes?: Json
           team_id?: string
           team_number?: number | null
@@ -466,6 +472,7 @@ export type Database = {
           staff_notes: string | null
           start_time: string | null
           team_id: string
+          teams: Json | null
           title: string
           total_minutes: number | null
           training_notes: string | null
@@ -492,6 +499,7 @@ export type Database = {
           staff_notes?: string | null
           start_time?: string | null
           team_id: string
+          teams?: Json | null
           title: string
           total_minutes?: number | null
           training_notes?: string | null
@@ -518,6 +526,7 @@ export type Database = {
           staff_notes?: string | null
           start_time?: string | null
           team_id?: string
+          teams?: Json | null
           title?: string
           total_minutes?: number | null
           training_notes?: string | null

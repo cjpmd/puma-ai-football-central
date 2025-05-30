@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -94,9 +93,9 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
                 <TabsContent key={team.id} value={team.id} className="h-full mt-0 data-[state=active]:flex data-[state=active]:flex-col">
                   <ScrollArea className="flex-1 pr-2">
                     <TeamSelectionManager 
-                      eventId={eventId}
-                      teamId={team.id}
-                      gameFormat={gameFormat as GameFormat}
+                      event={{ id: eventId, team_id: team.id, game_format: gameFormat } as DatabaseEvent}
+                      isOpen={true}
+                      onClose={() => {}}
                     />
                   </ScrollArea>
                 </TabsContent>

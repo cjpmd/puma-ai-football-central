@@ -72,13 +72,14 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     loadPlayers();
     loadTeamGameFormat();
     if (event) {
-      setNumberOfTeams(event.teams?.length || 1);
-      const initialSlots = event.teams?.map((_, index) => ({
+      const eventTeams = (event as any).teams || [teamId];
+      setNumberOfTeams(eventTeams.length || 1);
+      const initialSlots = eventTeams.map((_, index: number) => ({
         teamNumber: index + 1,
         meetingTime: event.meetingTime || '09:00',
         startTime: event.startTime || '10:00',
         endTime: event.endTime || '11:30'
-      })) || [{ teamNumber: 1, meetingTime: event.meetingTime || '09:00', startTime: event.startTime || '10:00', endTime: event.endTime || '11:30' }];
+      }));
       setTeamTimeSlots(initialSlots);
       
       // Set form data from event

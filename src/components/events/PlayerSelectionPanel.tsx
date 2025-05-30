@@ -106,7 +106,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         .eq('team_id', teamId)
         .neq('team_number', teamNumber);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error checking conflicts:', error);
+        return;
+      }
 
       const conflicts: { [playerId: string]: string[] } = {};
       
@@ -116,10 +119,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         const conflictTeams: string[] = [];
         
         otherSelections?.forEach(selection => {
-          const playerPositions = selection.player_positions as any[] || [];
-          const substitutePlayersList = selection.substitute_players as string[] || [];
+          const playerPositions = (selection.player_positions as any[]) || [];
+          const substitutePlayersList = (selection.substitute_players as string[]) || [];
           
-          const hasPlayer = playerPositions.some(pp => pp.playerId === playerId || pp.player_id === playerId) ||
+          const hasPlayer = playerPositions.some((pp: any) => pp.playerId === playerId || pp.player_id === playerId) ||
                            substitutePlayersList.includes(playerId);
           
           if (hasPlayer) {

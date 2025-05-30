@@ -25,6 +25,7 @@ export interface DatabaseEvent {
   facility_booking_id?: string;
   meeting_time?: string;
   total_minutes?: number;
+  teams?: string[];
   created_at: string;
   updated_at: string;
 }

@@ -42,7 +42,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
-  const numTeams = event.teams?.length || 1;
+  const eventTeams = (event as any).teams || [event.team_id];
+  const numTeams = eventTeams.length || 1;
   const gameFormat = (event.game_format || '7-a-side') as any;
 
   useEffect(() => {
@@ -82,13 +83,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const teamIndex = selection.team_number - 1;
         if (teamIndex >= 0 && teamIndex < initialSelections.length) {
           const playerPositions = selection.player_positions as any[] || [];
+          const substitutePlayersList = (selection.substitute_players as string[]) || [];
+          const minutesPlayedData = (selection.minutes_played as { [playerId: string]: number }) || {};
+          
           initialSelections[teamIndex] = {
             teamNumber: selection.team_number,
             selectedPlayers: playerPositions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean),
-            substitutePlayers: selection.substitute_players as string[] || [],
+            substitutePlayers: substitutePlayersList,
             captainId: selection.captain_id || '',
             formation: selection.formation || getDefaultFormation(gameFormat),
-            minutesPlayed: selection.minutes_played as { [playerId: string]: number } || {}
+            minutesPlayed: minutesPlayedData
           };
         }
       });
