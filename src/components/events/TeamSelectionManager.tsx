@@ -47,7 +47,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     { number: 1, name: '1st Half', duration: 45 },
     { number: 2, name: '2nd Half', duration: 45 },
   ]);
-  const [selections, setSelections] = useState<{ [periodNumber: number]: { [teamNumber: number]: TeamSelection } }>({});
+  const [selections, setSelections] = useState<{ [periodNumber: number]: TeamSelection }>({});
   const [availablePlayers, setAvailablePlayers] = useState<any[]>([]);
   const [availableStaff, setAvailableStaff] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,20 +103,23 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
       if (selectionsError) throw selectionsError;
 
-      // Organize existing selections by period and team number
-      const organizedSelections: { [periodNumber: number]: { [teamNumber: number]: TeamSelection } } = {};
+      // Organize existing selections by period
+      const organizedSelections: { [periodNumber: number]: TeamSelection } = {};
       existingSelections?.forEach((selection) => {
-        if (!organizedSelections[selection.period_number]) {
-          organizedSelections[selection.period_number] = {};
-        }
-        organizedSelections[selection.period_number][selection.team_number] = {
+        organizedSelections[selection.period_number] = {
           formation: selection.formation,
-          players: (selection.player_positions as any[]) || [],
-          substitutes: (selection.substitute_players as any[]) || [],
+          players: Array.isArray(selection.player_positions) 
+            ? selection.player_positions as Array<{ playerId: string; position: string; isSubstitute?: boolean; substitutionTime?: number }>
+            : [],
+          substitutes: Array.isArray(selection.substitute_players) 
+            ? selection.substitute_players as Array<{ playerId: string; position: string; isSubstitute?: boolean; substitutionTime?: number }>
+            : [],
           captain: selection.captain_id || null,
-          staff: (selection.staff_selection as any[]) || [],
+          staff: Array.isArray(selection.staff_selection) 
+            ? selection.staff_selection as Array<{ staffId: string; role: string }>
+            : [],
           performanceCategoryId: selection.performance_category_id || null,
-          kitSelection: (selection.kit_selection as any) || { home: true, away: false }
+          kitSelection: (selection.kit_selection as { home: boolean; away: boolean }) || { home: true, away: false }
         };
       });
 
@@ -135,17 +138,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const handleSelectionChange = (
     periodNumber: number,
-    teamNumber: number,
     newSelection: TeamSelection
   ) => {
-    setSelections((prevSelections) => {
-      const updatedSelections = { ...prevSelections };
-      if (!updatedSelections[periodNumber]) {
-        updatedSelections[periodNumber] = {};
-      }
-      updatedSelections[periodNumber][teamNumber] = newSelection;
-      return updatedSelections;
-    });
+    setSelections((prevSelections) => ({
+      ...prevSelections,
+      [periodNumber]: newSelection
+    }));
   };
 
   const handleSaveSelections = async () => {
@@ -157,56 +155,50 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
       // Save all period selections
       const promises = periods.map(async (period) => {
-        const periodSelections = selections[period.number] || {};
-        
-        // Save each team's selection for this period
-        return Promise.all(
-          Object.entries(periodSelections).map(async ([teamNumber, selection]) => {
-            if (!selection.formation) return;
+        const selection = selections[period.number];
+        if (!selection?.formation) return;
 
-            const selectionData = {
-              event_id: eventId,
-              team_id: primaryTeamId,
-              period_number: period.number,
-              team_number: parseInt(teamNumber),
-              formation: selection.formation,
-              player_positions: selection.players,
-              substitute_players: selection.substitutes,
-              captain_id: selection.captain || null,
-              duration_minutes: period.duration,
-              performance_category_id: selection.performanceCategoryId || null,
-              staff_selection: selection.staff || [],
-              kit_selection: selection.kitSelection || { home: true, away: false }
-            };
+        const selectionData = {
+          event_id: eventId,
+          team_id: primaryTeamId,
+          period_number: period.number,
+          team_number: 1,
+          formation: selection.formation,
+          player_positions: selection.players,
+          substitute_players: selection.substitutes,
+          captain_id: selection.captain || null,
+          duration_minutes: period.duration,
+          performance_category_id: selection.performanceCategoryId || null,
+          staff_selection: selection.staff || [],
+          kit_selection: selection.kitSelection || { home: true, away: false }
+        };
 
-            // Check if selection already exists
-            const { data: existing } = await supabase
-              .from('event_selections')
-              .select('id')
-              .eq('event_id', eventId)
-              .eq('team_id', primaryTeamId)
-              .eq('period_number', period.number)
-              .eq('team_number', parseInt(teamNumber))
-              .single();
+        // Check if selection already exists
+        const { data: existing } = await supabase
+          .from('event_selections')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('team_id', primaryTeamId)
+          .eq('period_number', period.number)
+          .eq('team_number', 1)
+          .single();
 
-            if (existing) {
-              // Update existing selection
-              const { error } = await supabase
-                .from('event_selections')
-                .update(selectionData)
-                .eq('id', existing.id);
-              
-              if (error) throw error;
-            } else {
-              // Create new selection
-              const { error } = await supabase
-                .from('event_selections')
-                .insert([selectionData]);
-              
-              if (error) throw error;
-            }
-          })
-        );
+        if (existing) {
+          // Update existing selection
+          const { error } = await supabase
+            .from('event_selections')
+            .update(selectionData)
+            .eq('id', existing.id);
+          
+          if (error) throw error;
+        } else {
+          // Create new selection
+          const { error } = await supabase
+            .from('event_selections')
+            .insert([selectionData]);
+          
+          if (error) throw error;
+        }
       });
 
       await Promise.all(promises);
@@ -256,61 +248,58 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </TabsList>
             {periods.map((period) => (
               <TabsContent key={period.number} value={period.number.toString()}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {[1, 2, 3, 4].map((teamNumber) => (
-                    <PlayerSelectionPanel
-                      key={`${period.number}-${teamNumber}`}
-                      teamId={primaryTeamId}
-                      selectedPlayers={selections[period.number]?.[teamNumber]?.players?.map(p => p.playerId) || []}
-                      substitutePlayers={selections[period.number]?.[teamNumber]?.substitutes?.map(s => s.playerId) || []}
-                      captainId={selections[period.number]?.[teamNumber]?.captain || ''}
-                      onPlayersChange={(playerIds) => {
-                        const players = playerIds.map(id => ({ playerId: id, position: '', isSubstitute: false }));
-                        handleSelectionChange(period.number, teamNumber, {
-                          ...selections[period.number]?.[teamNumber],
-                          players,
-                        } as TeamSelection);
-                      }}
-                      onSubstitutesChange={(substituteIds) => {
-                        const substitutes = substituteIds.map(id => ({ playerId: id, position: '', isSubstitute: true }));
-                        handleSelectionChange(period.number, teamNumber, {
-                          ...selections[period.number]?.[teamNumber],
-                          substitutes,
-                        } as TeamSelection);
-                      }}
-                      onCaptainChange={(captainId) => {
-                        handleSelectionChange(period.number, teamNumber, {
-                          ...selections[period.number]?.[teamNumber],
-                          captain: captainId,
-                        } as TeamSelection);
-                      }}
-                      eventType="match"
-                      showFormationView={true}
-                      formation={selections[period.number]?.[teamNumber]?.formation || '4-3-3'}
-                      onFormationChange={(formation) => {
-                        handleSelectionChange(period.number, teamNumber, {
-                          ...selections[period.number]?.[teamNumber],
-                          formation,
-                        } as TeamSelection);
-                      }}
-                      gameFormat={gameFormat}
-                      eventId={eventId}
-                      teamNumber={teamNumber}
-                      periodNumber={period.number}
-                      showSubstitutesInFormation={true}
-                    />
-                  ))}
+                <div className="space-y-4">
+                  <PlayerSelectionPanel
+                    teamId={primaryTeamId}
+                    selectedPlayers={selections[period.number]?.players?.map(p => p.playerId) || []}
+                    substitutePlayers={selections[period.number]?.substitutes?.map(s => s.playerId) || []}
+                    captainId={selections[period.number]?.captain || ''}
+                    onPlayersChange={(playerIds) => {
+                      const players = playerIds.map(id => ({ playerId: id, position: '', isSubstitute: false }));
+                      handleSelectionChange(period.number, {
+                        ...selections[period.number],
+                        players,
+                      } as TeamSelection);
+                    }}
+                    onSubstitutesChange={(substituteIds) => {
+                      const substitutes = substituteIds.map(id => ({ playerId: id, position: '', isSubstitute: true }));
+                      handleSelectionChange(period.number, {
+                        ...selections[period.number],
+                        substitutes,
+                      } as TeamSelection);
+                    }}
+                    onCaptainChange={(captainId) => {
+                      handleSelectionChange(period.number, {
+                        ...selections[period.number],
+                        captain: captainId,
+                      } as TeamSelection);
+                    }}
+                    eventType="match"
+                    showFormationView={true}
+                    formation={selections[period.number]?.formation || '4-3-3'}
+                    onFormationChange={(formation) => {
+                      handleSelectionChange(period.number, {
+                        ...selections[period.number],
+                        formation,
+                      } as TeamSelection);
+                    }}
+                    gameFormat={gameFormat}
+                    eventId={eventId}
+                    teamNumber={1}
+                    periodNumber={period.number}
+                    showSubstitutesInFormation={true}
+                  />
+                  <StaffSelectionSection
+                    availableStaff={availableStaff}
+                    existingSelection={selections[period.number]?.staff || []}
+                    onSelectionChange={(newStaff) => {
+                      handleSelectionChange(period.number, {
+                        ...selections[period.number],
+                        staff: newStaff,
+                      } as TeamSelection);
+                    }}
+                  />
                 </div>
-                <StaffSelectionSection
-                  availableStaff={availableStaff}
-                  existingSelection={selections[period.number]?.[1]?.staff}
-                  onSelectionChange={(newStaff) => {
-                    handleSelectionChange(period.number, 1, {
-                      ...selections[period.number]?.[1],
-                      staff: newStaff,
-                    } as TeamSelection);
-                  }}
-                />
               </TabsContent>
             ))}
             <Button onClick={handleSaveSelections} disabled={saving} className="w-full">
