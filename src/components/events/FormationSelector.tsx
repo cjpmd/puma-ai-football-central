@@ -21,32 +21,55 @@ export const FormationSelector: React.FC<FormationSelectorProps> = ({
   const renderMiniPitch = (formation: FormationConfig) => {
     const isSelected = selectedFormation === formation.id;
     
-    // Create a simple visual representation of positions
+    // Create a simple visual representation of positions based on the pitch layout
     const getPositionLayout = (positions: string[]) => {
-      if (gameFormat === '7-a-side') {
-        // Arrange positions in formation layout for 7-a-side
+      const maxPlayers = parseInt(gameFormat.split('-')[0]);
+      
+      if (maxPlayers === 3) {
+        // 3-a-side: 2-1 formation
+        return [
+          positions.filter(p => p === 'MC'), // Forward line
+          positions.filter(p => ['DL', 'DR'].includes(p)) // Defense line
+        ];
+      } else if (maxPlayers === 4) {
+        // 4-a-side: 1-2-1 formation
+        return [
+          positions.filter(p => p === 'AMC'), // Forward
+          positions.filter(p => ['ML', 'MR'].includes(p)), // Midfield
+          positions.filter(p => p === 'DC') // Defense
+        ];
+      } else if (maxPlayers === 5) {
+        // 5-a-side formations
+        return [
+          positions.filter(p => p === 'AMC'), // Forward
+          positions.filter(p => ['ML', 'MR'].includes(p)), // Midfield
+          positions.filter(p => p === 'DC'), // Defense
+          positions.filter(p => p === 'GK') // Goalkeeper
+        ];
+      } else if (maxPlayers === 7) {
+        // 7-a-side formations
         switch (formation.id) {
           case '1-1-3-1':
             return [
-              ['STC'], // Forward
-              ['AML', 'AMC', 'AMR'], // Attacking midfield
-              ['DM'], // Defensive midfield
-              ['DC'], // Defense
-              ['GK'] // Goalkeeper
+              positions.filter(p => p === 'STC'), // Forward
+              positions.filter(p => ['AML', 'AMC', 'AMR'].includes(p)), // Attacking midfield
+              positions.filter(p => p === 'DM'), // Defensive midfield
+              positions.filter(p => p === 'DC'), // Defense
+              positions.filter(p => p === 'GK') // Goalkeeper
             ];
           case '2-3-1':
             return [
-              ['STC'], // Forward
-              ['ML', 'MC', 'MR'], // Midfield
-              ['DL', 'DR'], // Defense
-              ['GK'] // Goalkeeper
+              positions.filter(p => p === 'STC'), // Forward
+              positions.filter(p => ['ML', 'MC', 'MR'].includes(p)), // Midfield
+              positions.filter(p => ['DL', 'DR'].includes(p)), // Defense
+              positions.filter(p => p === 'GK') // Goalkeeper
             ];
           case '3-2-1':
             return [
-              ['STC'], // Forward
-              ['MCL', 'MCR'], // Midfield
-              ['DL', 'DC', 'DR'], // Defense
-              ['GK'] // Goalkeeper
+              positions.filter(p => p === 'STC'), // Forward
+              positions.filter(p => ['MCL', 'MCR'].includes(p)), // Midfield
+              positions.filter(p => ['DL', 'DC', 'DR'].includes(p)), // Defense
+              positions.filter(p => p === 'GK') // Goalkeeper
             ];
           default:
             return [
@@ -56,30 +79,31 @@ export const FormationSelector: React.FC<FormationSelectorProps> = ({
               ['GK'] // Goalkeeper
             ];
         }
-      } else if (gameFormat === '9-a-side') {
+      } else if (maxPlayers === 9) {
+        // 9-a-side formations
         switch (formation.id) {
           case '3-2-3':
             return [
-              ['STL', 'STR'], // Forwards
-              ['AMC'], // Attacking midfield
-              ['MCL', 'MCR'], // Central midfield
-              ['DL', 'DC', 'DR'], // Defense
-              ['GK'] // Goalkeeper
+              positions.filter(p => ['STL', 'STR'].includes(p)), // Forwards
+              positions.filter(p => p === 'AMC'), // Attacking midfield
+              positions.filter(p => ['MCL', 'MCR'].includes(p)), // Central midfield
+              positions.filter(p => ['DL', 'DC', 'DR'].includes(p)), // Defense
+              positions.filter(p => p === 'GK') // Goalkeeper
             ];
           case '2-4-2':
             return [
-              ['STC'], // Forward
-              ['AMC'], // Attacking midfield
-              ['DM', 'ML', 'MR'], // Midfield
-              ['DCL', 'DCR'], // Defense
-              ['GK'] // Goalkeeper
+              positions.filter(p => p === 'STC'), // Forward
+              positions.filter(p => p === 'AMC'), // Attacking midfield
+              positions.filter(p => ['DM', 'ML', 'MR'].includes(p)), // Midfield
+              positions.filter(p => ['DCL', 'DCR'].includes(p)), // Defense
+              positions.filter(p => p === 'GK') // Goalkeeper
             ];
           case '3-3-2':
             return [
-              ['STL', 'STR'], // Forwards
-              ['ML', 'MC', 'MR'], // Midfield
-              ['DL', 'DC', 'DR'], // Defense
-              ['GK'] // Goalkeeper
+              positions.filter(p => ['STL', 'STR'].includes(p)), // Forwards
+              positions.filter(p => ['ML', 'MC', 'MR'].includes(p)), // Midfield
+              positions.filter(p => ['DL', 'DC', 'DR'].includes(p)), // Defense
+              positions.filter(p => p === 'GK') // Goalkeeper
             ];
           default:
             return [
@@ -89,7 +113,16 @@ export const FormationSelector: React.FC<FormationSelectorProps> = ({
               ['GK'] // Goalkeeper
             ];
         }
+      } else if (maxPlayers === 11) {
+        // 11-a-side formations
+        return [
+          positions.slice(9, 11), // Forwards
+          positions.slice(6, 9), // Midfield
+          positions.slice(1, 5), // Defense
+          [positions[0]] // Goalkeeper
+        ];
       }
+      
       // Default layout
       return [
         [positions[1] || ''], 
@@ -143,8 +176,8 @@ export const FormationSelector: React.FC<FormationSelectorProps> = ({
 
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Formation Selection</label>
-      <div className="flex space-x-2 justify-center p-4 bg-gray-50 rounded-lg">
+      <label className="text-sm font-medium">Formation Selection ({gameFormat})</label>
+      <div className="flex space-x-2 justify-center p-4 bg-gray-50 rounded-lg flex-wrap">
         {formations.map(renderMiniPitch)}
       </div>
       {selectedFormation && (
