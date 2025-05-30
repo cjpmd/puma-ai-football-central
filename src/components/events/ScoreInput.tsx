@@ -51,64 +51,77 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
     try {
       setLoading(true);
       
-      // Get team selections with performance categories
+      // Get unique team selections with performance categories
       const { data: selections, error } = await supabase
         .from('event_selections')
         .select(`
           team_number,
           performance_category_id,
-          player_positions
+          player_positions,
+          performance_categories (
+            id,
+            name
+          )
         `)
         .eq('event_id', event.id)
         .eq('team_id', event.team_id);
 
       if (error) throw error;
 
-      const teamData: TeamSelection[] = [];
-
+      // Create unique teams map to avoid duplicates
+      const uniqueTeamsMap = new Map();
+      
       for (const selection of selections || []) {
-        let performanceCategoryName = `Team ${selection.team_number}`;
+        const teamKey = selection.performance_category_id || selection.team_number;
+        
+        if (!uniqueTeamsMap.has(teamKey)) {
+          let performanceCategoryName = `Team ${selection.team_number}`;
 
-        // Get performance category name if set
-        if (selection.performance_category_id) {
-          const { data: category } = await supabase
-            .from('performance_categories')
-            .select('name')
-            .eq('id', selection.performance_category_id)
-            .single();
-          
-          if (category) {
+          // Get performance category name if set
+          if (selection.performance_category_id && selection.performance_categories) {
+            const category = selection.performance_categories as any;
             performanceCategoryName = category.name;
           }
-        }
 
-        // Get players for this team
-        const playerIds = (selection.player_positions as any[] || []).map(pp => pp.playerId || pp.player_id);
-        const players: Array<{ id: string; name: string; squadNumber: number }> = [];
+          // Get all players for this team across all periods
+          const allPlayerIds = new Set();
+          selections
+            .filter(s => (s.performance_category_id || s.team_number) === teamKey)
+            .forEach(s => {
+              const playerPositions = (s.player_positions as any[] || []);
+              playerPositions.forEach(pp => {
+                const playerId = pp.playerId || pp.player_id;
+                if (playerId) allPlayerIds.add(playerId);
+              });
+            });
 
-        if (playerIds.length > 0) {
-          const { data: playersData } = await supabase
-            .from('players')
-            .select('id, name, squad_number')
-            .in('id', playerIds);
+          const players: Array<{ id: string; name: string; squadNumber: number }> = [];
 
-          if (playersData) {
-            players.push(...playersData.map(p => ({
-              id: p.id,
-              name: p.name,
-              squadNumber: p.squad_number
-            })));
+          if (allPlayerIds.size > 0) {
+            const { data: playersData } = await supabase
+              .from('players')
+              .select('id, name, squad_number')
+              .in('id', Array.from(allPlayerIds));
+
+            if (playersData) {
+              players.push(...playersData.map(p => ({
+                id: p.id,
+                name: p.name,
+                squadNumber: p.squad_number
+              })));
+            }
           }
-        }
 
-        teamData.push({
-          teamNumber: selection.team_number,
-          performanceCategoryName,
-          players
-        });
+          uniqueTeamsMap.set(teamKey, {
+            teamNumber: selection.team_number,
+            performanceCategoryName,
+            players
+          });
+        }
       }
 
-      setTeamSelections(teamData.sort((a, b) => a.teamNumber - b.teamNumber));
+      const teamData = Array.from(uniqueTeamsMap.values()).sort((a, b) => a.teamNumber - b.teamNumber);
+      setTeamSelections(teamData);
       
       // Initialize team results
       const initialResults: { [teamNumber: number]: TeamResult } = {};
@@ -239,18 +252,17 @@ export const ScoreInput: React.FC<ScoreInputProps> = ({
         scoresData.away = firstTeamResult.opponentScore;
       }
 
+      console.log('Saving scores data:', scoresData);
+
       // Update event with scores
-      onScoreUpdate(event.id, scoresData);
+      await onScoreUpdate(event.id, scoresData);
 
       // Update POTM (for backwards compatibility, set the first team's POTM as the main POTM)
       const firstTeamPOTM = firstTeamResult?.potm || null;
-      onPOTMUpdate(event.id, { player_of_match_id: firstTeamPOTM });
+      await onPOTMUpdate(event.id, { player_of_match_id: firstTeamPOTM });
 
-      toast({
-        title: 'Success',
-        description: 'Match results saved successfully',
-      });
     } catch (error: any) {
+      console.error('Error in handleSave:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save match results',
