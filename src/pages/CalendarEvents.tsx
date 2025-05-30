@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -43,6 +42,7 @@ const CalendarEventsPage = () => {
   const [eventNotes, setEventNotes] = useState('');
   const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly' | 'match'>('training');
   const [eventOpponent, setEventOpponent] = useState('');
+  const [eventGameFormat, setEventGameFormat] = useState<GameFormat>('7-a-side');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
 
@@ -126,7 +126,7 @@ const CalendarEventsPage = () => {
       location: eventLocation || undefined,
       notes: eventNotes || undefined,
       event_type: eventEventType,
-      game_format: '7-a-side',
+      game_format: eventGameFormat,
       opponent: isMatchType ? eventOpponent || undefined : undefined,
     };
 
@@ -214,6 +214,7 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
+    setEventGameFormat('7-a-side');
   };
 
   const closeEditModal = () => {
@@ -228,6 +229,7 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
+    setEventGameFormat('7-a-side');
   };
 
   const handleTeamSelection = (event: DatabaseEvent) => {
@@ -273,6 +275,8 @@ const CalendarEventsPage = () => {
 
   const isMatchType = (eventType: string) => 
     eventType === "match" || eventType === "fixture" || eventType === "friendly";
+
+  const gameFormats: GameFormat[] = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
 
   return (
     <DashboardLayout>
@@ -526,7 +530,7 @@ const CalendarEventsPage = () => {
 
         {/* Create Event Modal */}
         <Dialog open={isCreateModalOpen} onOpenChange={closeCreateModal}>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create Event</DialogTitle>
             </DialogHeader>
@@ -561,6 +565,24 @@ const CalendarEventsPage = () => {
                   Description
                 </Label>
                 <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="gameFormat" className="text-right">
+                  Game Format
+                </Label>
+                <Select value={eventGameFormat} onValueChange={value => setEventGameFormat(value as GameFormat)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select game format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gameFormats.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {format}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Opponent field for match types */}
@@ -653,7 +675,7 @@ const CalendarEventsPage = () => {
 
         {/* Edit Event Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
-          <DialogContent className="sm:max-w-[525px]">
+          <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Event</DialogTitle>
             </DialogHeader>
@@ -688,6 +710,24 @@ const CalendarEventsPage = () => {
                   Description
                 </Label>
                 <Input id="description" value={eventDescription} onChange={(e) => setEventDescription(e.target.value)} className="col-span-3" />
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="gameFormat" className="text-right">
+                  Game Format
+                </Label>
+                <Select value={eventGameFormat} onValueChange={value => setEventGameFormat(value as GameFormat)}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select game format" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gameFormats.map((format) => (
+                      <SelectItem key={format} value={format}>
+                        {format}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Opponent field for match types */}

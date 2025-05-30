@@ -131,14 +131,14 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Post-Game Editor - {event?.title}</DialogTitle>
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full">
-            <div className="space-y-6 p-1">
+            <div className="space-y-6 p-1 pb-6">
               {loading ? (
                 <div className="text-center py-4">Loading event data...</div>
               ) : !event ? (
