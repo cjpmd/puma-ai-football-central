@@ -31,15 +31,21 @@ interface PerformanceCategory {
   description?: string;
 }
 
-interface TeamPeriodState {
+// Team-level state (shared across all periods)
+interface TeamState {
   teamId: string;
-  periodId: string;
   selectedPlayers: string[];
   substitutePlayers: string[];
   captainId: string;
   selectedStaff: string[];
-  formation: string;
   performanceCategoryId: string;
+}
+
+// Period-specific state
+interface PeriodState {
+  teamId: string;
+  periodId: string;
+  formation: string;
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -55,30 +61,41 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [availabilityRequested, setAvailabilityRequested] = useState(false);
   const [sendingNotifications, setSendingNotifications] = useState(false);
   
-  // Team-period specific state
-  const [teamPeriodStates, setTeamPeriodStates] = useState<Record<string, TeamPeriodState>>({
-    [`${event.team_id}-1`]: {
+  // Team-level states (shared across periods)
+  const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({
+    [event.team_id]: {
       teamId: event.team_id,
-      periodId: '1',
       selectedPlayers: [],
       substitutePlayers: [],
       captainId: '',
       selectedStaff: [],
-      formation: '4-3-3',
       performanceCategoryId: 'none'
     }
   });
 
-  const currentStateKey = `${activeTeam}-${activePeriod}`;
-  const currentState = teamPeriodStates[currentStateKey] || {
+  // Period-specific states
+  const [periodStates, setPeriodStates] = useState<Record<string, PeriodState>>({
+    [`${event.team_id}-1`]: {
+      teamId: event.team_id,
+      periodId: '1',
+      formation: '4-3-3'
+    }
+  });
+
+  const currentTeamState = teamStates[activeTeam] || {
     teamId: activeTeam,
-    periodId: activePeriod.toString(),
     selectedPlayers: [],
     substitutePlayers: [],
     captainId: '',
     selectedStaff: [],
-    formation: '4-3-3',
     performanceCategoryId: 'none'
+  };
+
+  const currentPeriodKey = `${activeTeam}-${activePeriod}`;
+  const currentPeriodState = periodStates[currentPeriodKey] || {
+    teamId: activeTeam,
+    periodId: activePeriod.toString(),
+    formation: '4-3-3'
   };
 
   useEffect(() => {
@@ -112,11 +129,21 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  const updateCurrentState = (updates: Partial<TeamPeriodState>) => {
-    setTeamPeriodStates(prev => ({
+  const updateTeamState = (teamId: string, updates: Partial<TeamState>) => {
+    setTeamStates(prev => ({
       ...prev,
-      [currentStateKey]: {
-        ...currentState,
+      [teamId]: {
+        ...prev[teamId],
+        ...updates
+      }
+    }));
+  };
+
+  const updatePeriodState = (key: string, updates: Partial<PeriodState>) => {
+    setPeriodStates(prev => ({
+      ...prev,
+      [key]: {
+        ...prev[key],
         ...updates
       }
     }));
@@ -127,20 +154,28 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const newTeamId = `team-${teams.length + 1}`;
       setTeams(prev => [...prev, newTeamId]);
       
-      // Initialize states for all periods for this new team
+      // Initialize team state
+      setTeamStates(prev => ({
+        ...prev,
+        [newTeamId]: {
+          teamId: newTeamId,
+          selectedPlayers: [],
+          substitutePlayers: [],
+          captainId: '',
+          selectedStaff: [],
+          performanceCategoryId: 'none'
+        }
+      }));
+
+      // Initialize period states for all existing periods
       periods.forEach(period => {
         const key = `${newTeamId}-${period}`;
-        setTeamPeriodStates(prev => ({
+        setPeriodStates(prev => ({
           ...prev,
           [key]: {
             teamId: newTeamId,
             periodId: period.toString(),
-            selectedPlayers: [],
-            substitutePlayers: [],
-            captainId: '',
-            selectedStaff: [],
-            formation: '4-3-3',
-            performanceCategoryId: 'none'
+            formation: '4-3-3'
           }
         }));
       });
@@ -152,20 +187,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const newPeriod = periods.length + 1;
       setPeriods(prev => [...prev, newPeriod]);
       
-      // Initialize states for all teams for this new period
+      // Initialize period states for all teams (inheriting team settings)
       teams.forEach(teamId => {
         const key = `${teamId}-${newPeriod}`;
-        setTeamPeriodStates(prev => ({
+        setPeriodStates(prev => ({
           ...prev,
           [key]: {
             teamId,
             periodId: newPeriod.toString(),
-            selectedPlayers: [],
-            substitutePlayers: [],
-            captainId: '',
-            selectedStaff: [],
-            formation: '4-3-3',
-            performanceCategoryId: 'none'
+            formation: '4-3-3'
           }
         }));
       });
@@ -178,18 +208,18 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   };
 
   const getTeamDisplayName = () => {
-    if (currentState.performanceCategoryId !== 'none') {
-      const category = performanceCategories.find(c => c.id === currentState.performanceCategoryId);
+    if (currentTeamState.performanceCategoryId !== 'none') {
+      const category = performanceCategories.find(c => c.id === currentTeamState.performanceCategoryId);
       return category?.name || `Team ${teams.indexOf(activeTeam) + 1}`;
     }
     return `Team ${teams.indexOf(activeTeam) + 1}`;
   };
 
   const handleRequestAvailability = async () => {
-    const allSelectedPlayers = Object.values(teamPeriodStates).flatMap(state => 
+    const allSelectedPlayers = Object.values(teamStates).flatMap(state => 
       [...state.selectedPlayers, ...state.substitutePlayers]
     );
-    const allSelectedStaff = Object.values(teamPeriodStates).flatMap(state => 
+    const allSelectedStaff = Object.values(teamStates).flatMap(state => 
       state.selectedStaff
     );
 
@@ -278,8 +308,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               <div className="space-y-2">
                 <Label>Formation</Label>
                 <Select 
-                  value={currentState.formation} 
-                  onValueChange={(value) => updateCurrentState({ formation: value })}
+                  value={currentPeriodState.formation} 
+                  onValueChange={(value) => updatePeriodState(currentPeriodKey, { formation: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select formation" />
@@ -297,8 +327,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               <div className="space-y-2">
                 <Label>Performance Category</Label>
                 <Select 
-                  value={currentState.performanceCategoryId} 
-                  onValueChange={(value) => updateCurrentState({ performanceCategoryId: value })}
+                  value={currentTeamState.performanceCategoryId} 
+                  onValueChange={(value) => updateTeamState(activeTeam, { performanceCategoryId: value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select category" />
@@ -344,16 +374,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 <PlayerSelectionWithAvailability
                   teamId={activeTeam}
                   eventId={event.id}
-                  selectedPlayers={currentState.selectedPlayers}
-                  substitutePlayers={currentState.substitutePlayers}
-                  captainId={currentState.captainId}
-                  onPlayersChange={(players) => updateCurrentState({ selectedPlayers: players })}
-                  onSubstitutesChange={(substitutes) => updateCurrentState({ substitutePlayers: substitutes })}
-                  onCaptainChange={(captainId) => updateCurrentState({ captainId })}
+                  selectedPlayers={currentTeamState.selectedPlayers}
+                  substitutePlayers={currentTeamState.substitutePlayers}
+                  captainId={currentTeamState.captainId}
+                  onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
+                  onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
+                  onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
                   eventType={event.event_type}
                   showFormationView={true}
-                  formation={currentState.formation}
-                  onFormationChange={(formation) => updateCurrentState({ formation })}
+                  formation={currentPeriodState.formation}
+                  onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
                   gameFormat={event.game_format as GameFormat}
                   teamNumber={teams.indexOf(activeTeam) + 1}
                   periodNumber={activePeriod}
@@ -366,7 +396,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <div>
                         <h3 className="font-medium">Selection Summary</h3>
                         <p className="text-sm text-muted-foreground">
-                          {currentState.selectedPlayers.length} players, {currentState.substitutePlayers.length} substitutes selected
+                          {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
                         </p>
                       </div>
                       <Button
@@ -387,8 +417,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               <TabsContent value="staff" className="p-4 md:p-6 mt-0">
                 <StaffSelectionSection
                   teamId={activeTeam}
-                  selectedStaff={currentState.selectedStaff}
-                  onStaffChange={(staff) => updateCurrentState({ selectedStaff: staff })}
+                  selectedStaff={currentTeamState.selectedStaff}
+                  onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
                 />
 
                 <Card className="mt-6">
@@ -397,7 +427,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <div>
                         <h3 className="font-medium">Staff Summary</h3>
                         <p className="text-sm text-muted-foreground">
-                          {currentState.selectedStaff.length} staff members selected
+                          {currentTeamState.selectedStaff.length} staff members selected
                         </p>
                       </div>
                       <Button
