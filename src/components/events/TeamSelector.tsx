@@ -37,13 +37,8 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
 
   const loadAvailableTeams = () => {
     try {
-      // Get the primary team to match game format
-      const primaryTeam = userTeams.find(t => t.id === primaryTeamId);
-      if (!primaryTeam) return;
-
-      // Load teams with the same game format that aren't already selected
+      // Load all teams that aren't already selected
       const filteredTeams = userTeams.filter(team => 
-        team.gameFormat === primaryTeam.gameFormat && 
         !selectedTeams.includes(team.id)
       );
       
@@ -142,7 +137,7 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
 
       {canAddMoreTeams && !hasAvailableTeams && selectedTeams.length > 0 && (
         <p className="text-sm text-muted-foreground">
-          No more teams with the same game format available to add.
+          No more teams available to add.
         </p>
       )}
 
