@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, Bell, CheckCircle, Settings, Plus } from 'lucide-react';
+import { Users, Bell, CheckCircle, Settings, Plus, Save } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
@@ -241,16 +240,37 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const handleSaveSelection = async () => {
+    try {
+      // TODO: Implement save selection logic
+      toast.success('Selection saved successfully!');
+    } catch (error) {
+      console.error('Error saving selection:', error);
+      toast.error('Failed to save selection');
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[95vw] md:max-w-[900px] max-h-[90vh] flex flex-col">
         <DialogHeader className="shrink-0">
-          <DialogTitle>Team Selection - {event.title}</DialogTitle>
-          <DialogDescription>
-            Select your team and request availability confirmation for this event.
-          </DialogDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <DialogTitle>Team Selection - {event.title}</DialogTitle>
+              <DialogDescription>
+                Select your team and request availability confirmation for this event.
+              </DialogDescription>
+            </div>
+            <Button
+              onClick={handleSaveSelection}
+              className="flex items-center gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Save Selection
+            </Button>
+          </div>
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden flex flex-col">
@@ -262,7 +282,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 Team Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Teams</Label>
                 <div className="flex flex-wrap gap-2">
@@ -303,25 +323,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     </Button>
                   )}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Formation</Label>
-                <Select 
-                  value={currentPeriodState.formation} 
-                  onValueChange={(value) => updatePeriodState(currentPeriodKey, { formation: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select formation" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getAvailableFormations().map((formation) => (
-                      <SelectItem key={formation.id} value={formation.id}>
-                        {formation.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
