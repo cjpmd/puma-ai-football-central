@@ -561,8 +561,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                               </SelectTrigger>
                               <SelectContent>
                                 {getFormationsByFormat(event.game_format as GameFormat).map((formation) => (
-                                  <SelectItem key={formation} value={formation}>
-                                    {formation}
+                                  <SelectItem key={formation.id} value={formation.id}>
+                                    {formation.name}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
