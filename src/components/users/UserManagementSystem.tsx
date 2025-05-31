@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,60 +79,116 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Get user-team relationships with explicit column specification
-      const { data: userTeams, error: userTeamsError } = await supabase
+      // Get user-team relationships separately
+      const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
-        .select(`
-          user_id,
-          role,
-          team_id,
-          teams:team_id(id, name)
-        `);
+        .select('user_id, role, team_id');
 
       if (userTeamsError) console.error('Error fetching user teams:', userTeamsError);
 
-      // Get user-club relationships with explicit column specification
-      const { data: userClubs, error: userClubsError } = await supabase
+      // Get teams data separately
+      const { data: teamsData, error: teamsError } = await supabase
+        .from('teams')
+        .select('id, name');
+
+      if (teamsError) console.error('Error fetching teams:', teamsError);
+
+      // Get user-club relationships separately
+      const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
-        .select(`
-          user_id,
-          role,
-          club_id,
-          clubs:club_id(id, name)
-        `);
+        .select('user_id, role, club_id');
 
       if (userClubsError) console.error('Error fetching user clubs:', userClubsError);
 
+      // Get clubs data separately
+      const { data: clubsData, error: clubsError } = await supabase
+        .from('clubs')
+        .select('id, name');
+
+      if (clubsError) console.error('Error fetching clubs:', clubsError);
+
       // Get user-player relationships
-      const { data: userPlayers, error: userPlayersError } = await supabase
+      const { data: userPlayersData, error: userPlayersError } = await supabase
         .from('user_players')
-        .select(`
-          user_id,
-          relationship,
-          player_id,
-          players:player_id(id, name, team_id, teams:team_id(id, name))
-        `);
+        .select('user_id, relationship, player_id');
 
       if (userPlayersError) console.error('Error fetching user players:', userPlayersError);
 
+      // Get players data separately
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select('id, name, team_id');
+
+      if (playersError) console.error('Error fetching players:', playersError);
+
       // Get user-staff relationships
-      const { data: userStaff, error: userStaffError } = await supabase
+      const { data: userStaffData, error: userStaffError } = await supabase
         .from('user_staff')
-        .select(`
-          user_id,
-          relationship,
-          staff_id,
-          team_staff:staff_id(id, name, role, team_id, teams:team_id(id, name))
-        `);
+        .select('user_id, relationship, staff_id');
 
       if (userStaffError) console.error('Error fetching user staff:', userStaffError);
 
+      // Get staff data separately
+      const { data: staffData, error: staffError } = await supabase
+        .from('team_staff')
+        .select('id, name, role, team_id');
+
+      if (staffError) console.error('Error fetching staff:', staffError);
+
       // Process and combine all data
       const processedUsers: UserProfile[] = profiles.map(profile => {
-        const userTeamData = userTeams?.filter(ut => ut.user_id === profile.id) || [];
-        const userClubData = userClubs?.filter(uc => uc.user_id === profile.id) || [];
-        const userPlayerData = userPlayers?.filter(up => up.user_id === profile.id) || [];
-        const userStaffData = userStaff?.filter(us => us.user_id === profile.id) || [];
+        // Map user teams
+        const userTeams = (userTeamsData || [])
+          .filter(ut => ut.user_id === profile.id)
+          .map(ut => {
+            const team = (teamsData || []).find(t => t.id === ut.team_id);
+            return {
+              id: team?.id || '',
+              name: team?.name || 'Unknown Team',
+              role: ut.role
+            };
+          });
+
+        // Map user clubs
+        const userClubs = (userClubsData || [])
+          .filter(uc => uc.user_id === profile.id)
+          .map(uc => {
+            const club = (clubsData || []).find(c => c.id === uc.club_id);
+            return {
+              id: club?.id || '',
+              name: club?.name || 'Unknown Club',
+              role: uc.role
+            };
+          });
+
+        // Map user players
+        const userPlayers = (userPlayersData || [])
+          .filter(up => up.user_id === profile.id)
+          .map(up => {
+            const player = (playersData || []).find(p => p.id === up.player_id);
+            const team = player ? (teamsData || []).find(t => t.id === player.team_id) : null;
+            return {
+              id: player?.id || '',
+              name: player?.name || 'Unknown Player',
+              team: team?.name || 'Unknown Team',
+              relationship: up.relationship
+            };
+          });
+
+        // Map user staff
+        const userStaffMembers = (userStaffData || [])
+          .filter(us => us.user_id === profile.id)
+          .map(us => {
+            const staff = (staffData || []).find(s => s.id === us.staff_id);
+            const team = staff ? (teamsData || []).find(t => t.id === staff.team_id) : null;
+            return {
+              id: staff?.id || '',
+              name: staff?.name || 'Unknown Staff',
+              team: team?.name || 'Unknown Team',
+              role: staff?.role || 'Unknown Role',
+              relationship: us.relationship
+            };
+          });
 
         return {
           id: profile.id,
@@ -142,29 +197,10 @@ export const UserManagementSystem = () => {
           phone: profile.phone || '',
           roles: Array.isArray(profile.roles) ? profile.roles : [],
           created_at: profile.created_at,
-          teams: userTeamData.map(ut => ({
-            id: ut.teams?.id || '',
-            name: ut.teams?.name || 'Unknown Team',
-            role: ut.role
-          })),
-          clubs: userClubData.map(uc => ({
-            id: uc.clubs?.id || '',
-            name: uc.clubs?.name || 'Unknown Club',
-            role: uc.role
-          })),
-          playerLinks: userPlayerData.map(up => ({
-            id: up.players?.id || '',
-            name: up.players?.name || 'Unknown Player',
-            team: up.players?.teams?.name || 'Unknown Team',
-            relationship: up.relationship
-          })),
-          staffLinks: userStaffData.map(us => ({
-            id: us.team_staff?.id || '',
-            name: us.team_staff?.name || 'Unknown Staff',
-            team: us.team_staff?.teams?.name || 'Unknown Team',
-            role: us.team_staff?.role || 'Unknown Role',
-            relationship: us.relationship
-          }))
+          teams: userTeams,
+          clubs: userClubs,
+          playerLinks: userPlayers,
+          staffLinks: userStaffMembers
         };
       });
 
