@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Users, Bell, CheckCircle, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
 import { EventAvailabilityDashboard } from './EventAvailabilityDashboard';
@@ -40,7 +41,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [formation, setFormation] = useState<string>('4-3-3');
   const [teamNumber, setTeamNumber] = useState<number>(1);
   const [periodNumber, setPeriodNumber] = useState<number>(1);
-  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<string>('');
+  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<string>('none');
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
   const [availabilityRequested, setAvailabilityRequested] = useState(false);
   const [sendingNotifications, setSendingNotifications] = useState(false);
@@ -98,35 +99,29 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-7xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="p-4 md:p-6 border-b shrink-0">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg md:text-xl font-semibold">Team Selection - {event.title}</h2>
-              <p className="text-sm text-muted-foreground">
-                Select your team and request availability confirmation
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              {availabilityRequested && (
-                <Badge className="bg-green-500 text-white">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Notifications Sent
-                </Badge>
-              )}
-              <Button variant="outline" onClick={onClose} size="sm">
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Content */}
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+        <DialogHeader>
+          <DialogTitle>Team Selection - {event.title}</DialogTitle>
+          <DialogDescription>
+            Select your team and request availability confirmation for this event.
+          </DialogDescription>
+        </DialogHeader>
+        
         <div className="flex-1 overflow-hidden">
           <Tabs defaultValue="players" className="h-full flex flex-col">
-            <div className="px-4 md:px-6 pt-4 shrink-0">
+            <div className="shrink-0">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  {availabilityRequested && (
+                    <Badge className="bg-green-500 text-white">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Notifications Sent
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="players" className="text-xs sm:text-sm">Players</TabsTrigger>
                 <TabsTrigger value="staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
@@ -194,24 +189,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       </Select>
                     </div>
 
-                    {performanceCategories.length > 0 && (
-                      <div className="space-y-2">
-                        <Label htmlFor="performance-category">Performance Category</Label>
-                        <Select value={selectedPerformanceCategory} onValueChange={setSelectedPerformanceCategory}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">No Category</SelectItem>
-                            {performanceCategories.map((category) => (
-                              <SelectItem key={category.id} value={category.id}>
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="performance-category">Performance Category</Label>
+                      <Select value={selectedPerformanceCategory} onValueChange={setSelectedPerformanceCategory}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Category</SelectItem>
+                          {performanceCategories.map((category) => (
+                            <SelectItem key={category.id} value={category.id}>
+                              {category.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -319,7 +312,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </div>
           </Tabs>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
