@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthorization } from "@/contexts/AuthorizationContext";
 import { 
   Menu, 
   Home, 
@@ -28,19 +29,78 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const { signOut } = useAuth();
+  const { 
+    canManageUsers, 
+    canManageTeams, 
+    canManageClubs, 
+    canViewAnalytics,
+    loading: authLoading 
+  } = useAuthorization();
 
   const menuItems = [
-    { icon: Home, label: "Dashboard", path: "/dashboard" },
-    { icon: Users, label: "Players", path: "/players" },
-    { icon: Calendar, label: "Calendar & Events", path: "/calendar" },
-    { icon: BarChart3, label: "Analytics", path: "/analytics" },
-    { icon: ClipboardList, label: "Player Management", path: "/player-management" },
-    { icon: Trophy, label: "Teams", path: "/teams" },
-    { icon: Shirt, label: "Clubs", path: "/clubs" },
-    { icon: UserCog, label: "Staff Management", path: "/staff" },
-    { icon: UserPlus, label: "User Management", path: "/users" },
-    { icon: Settings, label: "Subscriptions", path: "/subscriptions" },
+    { 
+      icon: Home, 
+      label: "Dashboard", 
+      path: "/dashboard", 
+      show: true 
+    },
+    { 
+      icon: Users, 
+      label: "Players", 
+      path: "/players", 
+      show: true 
+    },
+    { 
+      icon: Calendar, 
+      label: "Calendar & Events", 
+      path: "/calendar", 
+      show: true 
+    },
+    { 
+      icon: BarChart3, 
+      label: "Analytics", 
+      path: "/analytics", 
+      show: canViewAnalytics 
+    },
+    { 
+      icon: ClipboardList, 
+      label: "Player Management", 
+      path: "/player-management", 
+      show: true 
+    },
+    { 
+      icon: Trophy, 
+      label: "Teams", 
+      path: "/teams", 
+      show: canManageTeams 
+    },
+    { 
+      icon: Shirt, 
+      label: "Clubs", 
+      path: "/clubs", 
+      show: canManageClubs 
+    },
+    { 
+      icon: UserCog, 
+      label: "Staff Management", 
+      path: "/staff", 
+      show: true 
+    },
+    { 
+      icon: UserPlus, 
+      label: "User Management", 
+      path: "/users", 
+      show: canManageUsers 
+    },
+    { 
+      icon: Settings, 
+      label: "Subscriptions", 
+      path: "/subscriptions", 
+      show: true 
+    },
   ];
+
+  const visibleMenuItems = authLoading ? menuItems : menuItems.filter(item => item.show);
 
   const handleNavigation = (path: string) => {
     navigate(path);
@@ -63,7 +123,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           
           <div className="mt-8 flex-grow flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
-              {menuItems.map((item) => (
+              {visibleMenuItems.map((item) => (
                 <Button
                   key={item.path}
                   variant="ghost"
@@ -106,7 +166,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   <Logo />
                 </div>
                 <nav className="mt-8 space-y-1">
-                  {menuItems.map((item) => (
+                  {visibleMenuItems.map((item) => (
                     <Button
                       key={item.path}
                       variant="ghost"

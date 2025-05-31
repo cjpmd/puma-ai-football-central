@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './components/theme-provider';
 import { Toaster } from "./components/ui/toaster";
 import { AuthProvider } from './contexts/AuthContext';
+import { AuthorizationProvider } from './contexts/AuthorizationContext';
 import Index from './pages/Index';
 import Dashboard from './pages/Dashboard';
 import Auth from './pages/Auth';
@@ -36,21 +37,23 @@ function App() {
       <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
         <Router>
           <AuthProvider>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
-              <Route path="/players" element={<ProtectedRoute><PlayerManagement /></ProtectedRoute>} />
-              <Route path="/player-management" element={<ProtectedRoute><PlayerManagementTab /></ProtectedRoute>} />
-              <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
-              <Route path="/clubs" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
-              <Route path="/calendar" element={<ProtectedRoute><CalendarEvents /></ProtectedRoute>} />
-              <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
-              <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-              <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionManagement /></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AuthorizationProvider>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/teams" element={<ProtectedRoute><TeamManagement /></ProtectedRoute>} />
+                <Route path="/players" element={<ProtectedRoute><PlayerManagement /></ProtectedRoute>} />
+                <Route path="/player-management" element={<ProtectedRoute><PlayerManagementTab /></ProtectedRoute>} />
+                <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+                <Route path="/clubs" element={<ProtectedRoute><ClubManagement /></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><CalendarEvents /></ProtectedRoute>} />
+                <Route path="/staff" element={<ProtectedRoute><StaffManagement /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+                <Route path="/subscriptions" element={<ProtectedRoute><SubscriptionManagement /></ProtectedRoute>} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AuthorizationProvider>
           </AuthProvider>
         </Router>
         <Toaster />
