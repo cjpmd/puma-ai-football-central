@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { CalendarIcon, Users, Trash2, Edit, Trophy, Calendar as CalendarGridIcon, List, Grid } from 'lucide-react';
+import { CalendarIcon, Users, Trash2, Edit, Trophy, Calendar as CalendarGridIcon, List, Grid, Bell } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
@@ -23,6 +23,7 @@ import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 import { CalendarGridView } from '@/components/events/CalendarGridView';
 import { EventsGridView } from '@/components/events/EventsGridView';
 import { Calendar } from '@/components/ui/calendar';
+import { AvailabilityNotificationService } from '@/components/events/AvailabilityNotificationService';
 
 const CalendarEventsPage = () => {
   const { teams } = useAuth();
@@ -33,6 +34,7 @@ const CalendarEventsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'calendar' | 'grid'>('grid');
+  const [showAvailabilityRequests, setShowAvailabilityRequests] = useState(false);
   
   const [eventTitle, setEventTitle] = useState('');
   const [eventDescription, setEventDescription] = useState('');
@@ -339,6 +341,14 @@ const CalendarEventsPage = () => {
               </Button>
             </div>
 
+            <Button
+              variant={showAvailabilityRequests ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setShowAvailabilityRequests(!showAvailabilityRequests)}
+            >
+              <Bell className="h-4 w-4" />
+            </Button>
+
             {viewMode === 'list' && (
               <Popover>
                 <PopoverTrigger asChild>
@@ -379,6 +389,11 @@ const CalendarEventsPage = () => {
             </Button>
           </div>
         </div>
+
+        {/* Availability Requests Panel */}
+        {showAvailabilityRequests && (
+          <AvailabilityNotificationService />
+        )}
 
         {/* Main Content */}
         {viewMode === 'grid' ? (

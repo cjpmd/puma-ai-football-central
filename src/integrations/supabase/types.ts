@@ -263,6 +263,50 @@ export type Database = {
           },
         ]
       }
+      event_availability: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notification_sent_at: string | null
+          responded_at: string | null
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notification_sent_at?: string | null
+          responded_at?: string | null
+          role: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notification_sent_at?: string | null
+          responded_at?: string | null
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_availability_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_player_stats: {
         Row: {
           created_at: string
@@ -654,6 +698,56 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notification_logs: {
+        Row: {
+          created_at: string
+          delivered_at: string | null
+          event_id: string | null
+          id: string
+          metadata: Json | null
+          method: string
+          notification_type: string
+          opened_at: string | null
+          sent_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          delivered_at?: string | null
+          event_id?: string | null
+          id?: string
+          metadata?: Json | null
+          method: string
+          notification_type: string
+          opened_at?: string | null
+          sent_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          delivered_at?: string | null
+          event_id?: string | null
+          id?: string
+          metadata?: Json | null
+          method?: string
+          notification_type?: string
+          opened_at?: string | null
+          sent_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_logs_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -1653,8 +1747,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      send_availability_notifications: {
+        Args: { p_event_id: string }
+        Returns: undefined
+      }
       update_all_completed_events_stats: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      update_availability_status: {
+        Args: {
+          p_event_id: string
+          p_user_id: string
+          p_role: string
+          p_status: string
+        }
         Returns: undefined
       }
       update_event_player_stats: {

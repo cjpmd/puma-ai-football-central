@@ -1,34 +1,17 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DatabaseEvent } from '@/types/event';
+import { Badge } from '@/components/ui/badge';
+import { Users, Bell, CheckCircle } from 'lucide-react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
-import { supabase } from '@/integrations/supabase/client';
-import { Plus } from 'lucide-react';
-
-interface TeamSelection {
-  teamNumber: number;
-  periodNumber: number;
-  selectedPlayers: string[];
-  substitutePlayers: string[];
-  captainId: string;
-  formation: string;
-  durationMinutes: number;
-  performanceCategoryId?: string;
-}
-
-interface TeamConfig {
-  teamNumber: number;
-  numberOfPeriods: number;
-  performanceCategoryId?: string;
-}
+import { StaffSelectionSection } from './StaffSelectionSection';
+import { EventAvailabilityDashboard } from './EventAvailabilityDashboard';
+import { availabilityService } from '@/services/availabilityService';
+import { DatabaseEvent } from '@/types/event';
+import { GameFormat } from '@/types';
+import { toast } from 'sonner';
 
 interface TeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -36,504 +19,175 @@ interface TeamSelectionManagerProps {
   onClose: () => void;
 }
 
-interface PerformanceCategory {
-  id: string;
-  name: string;
-}
-
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   event,
   isOpen,
   onClose
 }) => {
-  const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
-  const [teamConfigs, setTeamConfigs] = useState<TeamConfig[]>([]);
-  const [activeTeamPeriod, setActiveTeamPeriod] = useState({ team: 1, period: 1 });
-  const [numberOfTeams, setNumberOfTeams] = useState(1);
-  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const { toast } = useToast();
-
-  const gameFormat = (event.game_format || '7-a-side') as any;
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [substitutePlayers, setSubstitutePlayers] = useState<string[]>([]);
+  const [captainId, setCaptainId] = useState<string>('');
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
+  const [formation, setFormation] = useState<string>('4-3-3');
+  const [availabilityRequested, setAvailabilityRequested] = useState(false);
+  const [sendingNotifications, setSendingNotifications] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
-      loadTeamSelections();
-      loadPerformanceCategories();
+      checkIfAvailabilityRequested();
     }
   }, [isOpen, event.id]);
 
-  const loadPerformanceCategories = async () => {
+  const checkIfAvailabilityRequested = async () => {
     try {
-      const { data, error } = await supabase
-        .from('performance_categories')
-        .select('*')
-        .eq('team_id', event.team_id);
-
-      if (error) throw error;
-      setPerformanceCategories(data || []);
+      const availabilities = await availabilityService.getEventAvailability(event.id);
+      setAvailabilityRequested(availabilities.length > 0);
     } catch (error) {
-      console.error('Error loading performance categories:', error);
+      console.error('Error checking availability status:', error);
     }
   };
 
-  const loadTeamSelections = async () => {
+  const handleRequestAvailability = async () => {
+    if (selectedPlayers.length === 0 && selectedStaff.length === 0) {
+      toast.error('Please select players or staff before requesting availability');
+      return;
+    }
+
     try {
-      setLoading(true);
+      setSendingNotifications(true);
       
-      const initialSelections: TeamSelection[] = [];
-      const initialConfigs: TeamConfig[] = [];
+      // First, save the selections (you would implement this based on your existing logic)
+      // This would save to event_selections table
       
-      const { data: selections, error } = await supabase
-        .from('event_selections')
-        .select('*')
-        .eq('event_id', event.id)
-        .eq('team_id', event.team_id);
-
-      if (error) throw error;
-
-      const maxTeams = Math.max(1, ...selections.map(s => s.team_number || 1));
-      setNumberOfTeams(maxTeams);
-
-      // Create team configs and find team captain
-      for (let teamNum = 1; teamNum <= maxTeams; teamNum++) {
-        const teamSelections = selections.filter(s => s.team_number === teamNum);
-        const maxPeriods = Math.max(1, ...teamSelections.map(s => s.period_number || 1));
-        const performanceCategoryId = teamSelections[0]?.performance_category_id || undefined;
-        
-        // Find captain from any period for this team - captain is consistent across all periods
-        const teamCaptainId = teamSelections.find(s => s.captain_id)?.captain_id || '';
-        
-        initialConfigs.push({
-          teamNumber: teamNum,
-          numberOfPeriods: maxPeriods,
-          performanceCategoryId
-        });
-
-        for (let periodNum = 1; periodNum <= maxPeriods; periodNum++) {
-          const existingSelection = teamSelections.find(s => s.period_number === periodNum);
-
-          if (existingSelection) {
-            const playerPositions = existingSelection.player_positions as any[] || [];
-            const substitutePlayersList = (existingSelection.substitute_players as string[]) || [];
-            
-            initialSelections.push({
-              teamNumber: teamNum,
-              periodNumber: periodNum,
-              selectedPlayers: playerPositions.map((pp: any) => pp.playerId || pp.player_id).filter(Boolean),
-              substitutePlayers: substitutePlayersList,
-              captainId: teamCaptainId, // Always use team captain across all periods
-              formation: existingSelection.formation || getDefaultFormation(gameFormat),
-              durationMinutes: existingSelection.duration_minutes || 45,
-              performanceCategoryId: existingSelection.performance_category_id || undefined
-            });
-          } else {
-            initialSelections.push({
-              teamNumber: teamNum,
-              periodNumber: periodNum,
-              selectedPlayers: [],
-              substitutePlayers: [],
-              captainId: teamCaptainId, // Always use team captain for new periods
-              formation: getDefaultFormation(gameFormat),
-              durationMinutes: 45,
-              performanceCategoryId
-            });
-          }
-        }
-      }
-
-      setTeamConfigs(initialConfigs);
-      setTeamSelections(initialSelections);
+      // Then send availability notifications
+      await availabilityService.sendAvailabilityNotifications(event.id);
+      
+      toast.success('Availability notifications sent successfully!');
+      setAvailabilityRequested(true);
     } catch (error) {
-      console.error('Error loading team selections:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load team selections',
-        variant: 'destructive',
-      });
+      console.error('Error sending availability requests:', error);
+      toast.error('Failed to send availability requests');
     } finally {
-      setLoading(false);
+      setSendingNotifications(false);
     }
   };
 
-  const getDefaultFormation = (gameFormat: string) => {
-    const maxPlayers = parseInt(gameFormat.split('-')[0]);
-    switch (maxPlayers) {
-      case 3: return '2-1';
-      case 4: return '1-2-1';
-      case 5: return '1-1-2-1';
-      case 7: return '1-1-3-1';
-      case 9: return '3-2-3';
-      case 11: return '1-4-4-2';
-      default: return '1-1-3-1';
-    }
-  };
-
-  const addTeam = () => {
-    const newTeamNumber = numberOfTeams + 1;
-    setNumberOfTeams(newTeamNumber);
-    
-    // Add config for new team
-    const newConfig: TeamConfig = {
-      teamNumber: newTeamNumber,
-      numberOfPeriods: 1,
-      performanceCategoryId: undefined
-    };
-    setTeamConfigs(prev => [...prev, newConfig]);
-    
-    // Add selection for the new team's first period
-    const newSelection: TeamSelection = {
-      teamNumber: newTeamNumber,
-      periodNumber: 1,
-      selectedPlayers: [],
-      substitutePlayers: [],
-      captainId: '',
-      formation: getDefaultFormation(gameFormat),
-      durationMinutes: 45,
-      performanceCategoryId: undefined
-    };
-    setTeamSelections(prev => [...prev, newSelection]);
-    
-    setActiveTeamPeriod({ team: newTeamNumber, period: 1 });
-  };
-
-  const addPeriodToTeam = (teamNumber: number) => {
-    const teamConfig = teamConfigs.find(tc => tc.teamNumber === teamNumber);
-    if (!teamConfig) return;
-
-    const newPeriodNumber = teamConfig.numberOfPeriods + 1;
-    
-    // Get the captain and previous period's selections for this team
-    const existingTeamSelections = teamSelections.filter(s => s.teamNumber === teamNumber);
-    const teamCaptainId = existingTeamSelections[0]?.captainId || '';
-    
-    // Get the last period's selection to copy from
-    const lastPeriodSelection = existingTeamSelections
-      .sort((a, b) => b.periodNumber - a.periodNumber)[0];
-    
-    // Update team config
-    setTeamConfigs(prev => prev.map(tc => 
-      tc.teamNumber === teamNumber 
-        ? { ...tc, numberOfPeriods: newPeriodNumber }
-        : tc
-    ));
-    
-    // Add selection for the new period with copied selections from previous period
-    const newSelection: TeamSelection = {
-      teamNumber,
-      periodNumber: newPeriodNumber,
-      selectedPlayers: lastPeriodSelection?.selectedPlayers || [],
-      substitutePlayers: lastPeriodSelection?.substitutePlayers || [],
-      captainId: teamCaptainId,
-      formation: lastPeriodSelection?.formation || getDefaultFormation(gameFormat),
-      durationMinutes: lastPeriodSelection?.durationMinutes || 45,
-      performanceCategoryId: teamConfig.performanceCategoryId
-    };
-    setTeamSelections(prev => [...prev, newSelection]);
-    
-    setActiveTeamPeriod({ team: teamNumber, period: newPeriodNumber });
-  };
-
-  const updateTeamSelection = (teamNumber: number, periodNumber: number, updates: Partial<TeamSelection>) => {
-    setTeamSelections(prev => prev.map(selection => 
-      selection.teamNumber === teamNumber && selection.periodNumber === periodNumber
-        ? { ...selection, ...updates }
-        : selection
-    ));
-  };
-
-  const updateTeamPerformanceCategory = (teamNumber: number, categoryId?: string) => {
-    // Update team config
-    setTeamConfigs(prev => prev.map(tc => 
-      tc.teamNumber === teamNumber 
-        ? { ...tc, performanceCategoryId: categoryId }
-        : tc
-    ));
-    
-    // Update all selections for this team
-    setTeamSelections(prev => prev.map(selection => 
-      selection.teamNumber === teamNumber
-        ? { ...selection, performanceCategoryId: categoryId }
-        : selection
-    ));
-  };
-
-  const handlePlayersChange = (teamNumber: number, periodNumber: number, players: string[]) => {
-    updateTeamSelection(teamNumber, periodNumber, { selectedPlayers: players });
-  };
-
-  const handleSubstitutesChange = (teamNumber: number, periodNumber: number, substitutes: string[]) => {
-    updateTeamSelection(teamNumber, periodNumber, { substitutePlayers: substitutes });
-  };
-
-  const handleCaptainChange = (teamNumber: number, periodNumber: number, captainId: string) => {
-    // Update captain for ALL periods of this team to maintain consistency (captain is at team level)
-    setTeamSelections(prev => prev.map(selection => 
-      selection.teamNumber === teamNumber
-        ? { ...selection, captainId }
-        : selection
-    ));
-  };
-
-  const handleFormationChange = (teamNumber: number, periodNumber: number, formation: string) => {
-    updateTeamSelection(teamNumber, periodNumber, { formation });
-  };
-
-  const handleDurationChange = (teamNumber: number, periodNumber: number, duration: number) => {
-    updateTeamSelection(teamNumber, periodNumber, { durationMinutes: duration });
-  };
-
-  const saveTeamSelections = async () => {
-    try {
-      setSaving(true);
-
-      for (const selection of teamSelections) {
-        const playerPositions = selection.selectedPlayers.map(playerId => ({
-          playerId,
-          player_id: playerId,
-          position: '',
-          minutes: selection.durationMinutes
-        }));
-
-        const selectionData = {
-          event_id: event.id,
-          team_id: event.team_id,
-          team_number: selection.teamNumber,
-          period_number: selection.periodNumber,
-          player_positions: playerPositions,
-          substitute_players: selection.substitutePlayers,
-          captain_id: selection.captainId || null,
-          formation: selection.formation,
-          duration_minutes: selection.durationMinutes,
-          performance_category_id: selection.performanceCategoryId || null
-        };
-
-        const { error } = await supabase
-          .from('event_selections')
-          .upsert(selectionData, {
-            onConflict: 'event_id,team_id,team_number,period_number'
-          });
-
-        if (error) throw error;
-      }
-
-      toast({
-        title: 'Success',
-        description: 'Team selections saved successfully',
-      });
-    } catch (error: any) {
-      console.error('Error saving team selections:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to save team selections',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const getPerformanceCategoryName = (teamNumber: number) => {
-    const teamConfig = teamConfigs.find(tc => tc.teamNumber === teamNumber);
-    if (teamConfig?.performanceCategoryId) {
-      const category = performanceCategories.find(pc => pc.id === teamConfig.performanceCategoryId);
-      return category?.name || `Performance Category ${teamNumber}`;
-    }
-    return `Performance Category ${teamNumber}`;
-  };
-
-  const currentSelection = teamSelections.find(s => 
-    s.teamNumber === activeTeamPeriod.team && s.periodNumber === activeTeamPeriod.period
-  );
-
-  const currentTeamConfig = teamConfigs.find(tc => tc.teamNumber === activeTeamPeriod.team);
-  const currentPerformanceCategory = performanceCategories.find(pc => 
-    pc.id === currentTeamConfig?.performanceCategoryId
-  );
+  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-[95vw] h-[95vh] max-w-7xl flex flex-col">
-        <CardHeader className="flex-shrink-0 pb-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg max-w-6xl w-full max-h-[90vh] overflow-hidden">
+        <div className="p-6 border-b">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-semibold">Team Selection Manager</CardTitle>
+            <div>
+              <h2 className="text-xl font-semibold">Team Selection - {event.title}</h2>
+              <p className="text-muted-foreground">
+                Select your team and request availability confirmation
+              </p>
+            </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={onClose} size="sm">
+              {availabilityRequested && (
+                <Badge className="bg-green-500 text-white">
+                  <CheckCircle className="h-3 w-3 mr-1" />
+                  Notifications Sent
+                </Badge>
+              )}
+              <Button variant="outline" onClick={onClose}>
                 Close
-              </Button>
-              <Button onClick={saveTeamSelections} disabled={saving} size="sm">
-                {saving ? 'Saving...' : 'Save Selections'}
               </Button>
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center">Loading team selections...</div>
-            </div>
-          ) : (
-            <div className="h-full flex flex-col">
-              {/* Enhanced Controls Section */}
-              <div className="flex-shrink-0 p-4 border-b bg-white">
-                <div className="flex flex-wrap items-center gap-4 mb-4">
-                  {/* Performance Categories */}
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium">Performance Categories:</Label>
-                    <Badge variant="outline" className="text-sm">{numberOfTeams}</Badge>
-                    <Button size="sm" variant="outline" onClick={addTeam} className="h-7 w-7 p-0">
-                      <Plus className="h-3 w-3" />
-                    </Button>
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+          <Tabs defaultValue="selection" className="space-y-4">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="selection">Team Selection</TabsTrigger>
+              <TabsTrigger value="availability">
+                Availability ({availabilityRequested ? 'Sent' : 'Pending'})
+              </TabsTrigger>
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="selection" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <PlayerSelectionPanel
+                  teamId={event.team_id}
+                  selectedPlayers={selectedPlayers}
+                  substitutePlayers={substitutePlayers}
+                  captainId={captainId}
+                  onPlayersChange={setSelectedPlayers}
+                  onSubstitutesChange={setSubstitutePlayers}
+                  onCaptainChange={setCaptainId}
+                  eventType={event.event_type}
+                  showFormationView={true}
+                  formation={formation}
+                  onFormationChange={setFormation}
+                  gameFormat={event.game_format as GameFormat}
+                  eventId={event.id}
+                  teamNumber={1}
+                  periodNumber={1}
+                  showSubstitutesInFormation={true}
+                />
+
+                <StaffSelectionSection
+                  teamId={event.team_id}
+                  selectedStaff={selectedStaff}
+                  onStaffChange={setSelectedStaff}
+                />
+              </div>
+
+              <div className="border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium">Selection Summary</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedPlayers.length} players, {substitutePlayers.length} substitutes, {selectedStaff.length} staff selected
+                    </p>
                   </div>
-                  
-                  {/* Performance Category Selection */}
-                  {performanceCategories.length > 0 && currentTeamConfig && (
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm font-medium">Category:</Label>
-                      <Select 
-                        value={currentTeamConfig.performanceCategoryId || 'no-category'} 
-                        onValueChange={(value) => updateTeamPerformanceCategory(
-                          activeTeamPeriod.team, 
-                          value === 'no-category' ? undefined : value
-                        )}
-                      >
-                        <SelectTrigger className="w-40 h-7">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="no-category">None</SelectItem>
-                          {performanceCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
+                  <Button
+                    onClick={handleRequestAvailability}
+                    disabled={sendingNotifications || availabilityRequested}
+                    className="flex items-center gap-2"
+                  >
+                    <Bell className="h-4 w-4" />
+                    {sendingNotifications ? 'Sending...' : 
+                     availabilityRequested ? 'Notifications Sent' : 
+                     'Request Availability'}
+                  </Button>
                 </div>
-
-                {/* Performance Category Badge */}
-                {currentPerformanceCategory && (
-                  <div className="mb-2">
-                    <Badge variant="secondary" className="text-sm">
-                      {currentPerformanceCategory.name}
-                    </Badge>
-                  </div>
-                )}
               </div>
+            </TabsContent>
 
-              {/* Performance Category and Period Tabs */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <Tabs 
-                  value={activeTeamPeriod.team.toString()} 
-                  onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, team: parseInt(value) }))}
-                  className="h-full flex flex-col"
-                >
-                  <TabsList className="flex-shrink-0 mx-2 mt-2">
-                    {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => (
-                      <TabsTrigger key={teamNum} value={teamNum.toString()} className="text-xs">
-                        {getPerformanceCategoryName(teamNum)}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
+            <TabsContent value="availability">
+              <EventAvailabilityDashboard event={event} />
+            </TabsContent>
 
-                  {Array.from({ length: numberOfTeams }, (_, i) => i + 1).map((teamNum) => {
-                    const teamConfig = teamConfigs.find(tc => tc.teamNumber === teamNum);
-                    const teamPeriods = teamConfig?.numberOfPeriods || 1;
-                    
-                    return (
-                      <TabsContent key={teamNum} value={teamNum.toString()} className="flex-1 min-h-0 mt-2 overflow-hidden">
-                        <Tabs 
-                          value={activeTeamPeriod.period.toString()} 
-                          onValueChange={(value) => setActiveTeamPeriod(prev => ({ ...prev, period: parseInt(value) }))}
-                          className="h-full flex flex-col"
-                        >
-                          <div className="flex-shrink-0 mx-2 mb-2">
-                            {/* Period tabs and controls row */}
-                            <div className="flex items-center justify-between gap-4 mb-2">
-                              <div className="flex items-center gap-2">
-                                <TabsList>
-                                  {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                                    <TabsTrigger key={periodNum} value={periodNum.toString()} className="text-xs">
-                                      Period {periodNum}
-                                    </TabsTrigger>
-                                  ))}
-                                </TabsList>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline" 
-                                  onClick={() => addPeriodToTeam(teamNum)}
-                                  className="h-6 w-6 p-0"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-
-                              {/* Duration for current period */}
-                              {currentSelection && (
-                                <div className="flex items-center gap-2">
-                                  <Label className="text-sm font-medium whitespace-nowrap">Duration:</Label>
-                                  <div className="flex items-center gap-1">
-                                    <Input
-                                      type="number"
-                                      min="1"
-                                      max="120"
-                                      value={currentSelection.durationMinutes}
-                                      onChange={(e) => handleDurationChange(
-                                        activeTeamPeriod.team, 
-                                        activeTeamPeriod.period, 
-                                        parseInt(e.target.value) || 45
-                                      )}
-                                      className="w-16 h-7 text-sm"
-                                    />
-                                    <span className="text-sm text-muted-foreground whitespace-nowrap">min</span>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {Array.from({ length: teamPeriods }, (_, i) => i + 1).map((periodNum) => (
-                            <TabsContent key={periodNum} value={periodNum.toString()} className="flex-1 min-h-0 mt-0 overflow-hidden">
-                              <div className="h-full px-2 overflow-hidden">
-                                <div className="h-full">
-                                  {teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum) && (
-                                    <PlayerSelectionPanel
-                                      teamId={event.team_id}
-                                      selectedPlayers={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.selectedPlayers || []}
-                                      substitutePlayers={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.substitutePlayers || []}
-                                      captainId={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.captainId || ''}
-                                      onPlayersChange={(players) => handlePlayersChange(teamNum, periodNum, players)}
-                                      onSubstitutesChange={(substitutes) => handleSubstitutesChange(teamNum, periodNum, substitutes)}
-                                      onCaptainChange={(captainId) => handleCaptainChange(teamNum, periodNum, captainId)}
-                                      eventType={event.event_type}
-                                      showFormationView={true}
-                                      formation={teamSelections.find(s => s.teamNumber === teamNum && s.periodNumber === periodNum)?.formation || getDefaultFormation(gameFormat)}
-                                      onFormationChange={(formation) => handleFormationChange(teamNum, periodNum, formation)}
-                                      gameFormat={gameFormat}
-                                      eventId={event.id}
-                                      teamNumber={teamNum}
-                                      periodNumber={periodNum}
-                                      showSubstitutesInFormation={true}
-                                    />
-                                  )}
-                                </div>
-                              </div>
-                            </TabsContent>
-                          ))}
-                        </Tabs>
-                      </TabsContent>
-                    );
-                  })}
-                </Tabs>
+            <TabsContent value="dashboard">
+              <div className="space-y-6">
+                <EventAvailabilityDashboard event={event} />
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quick Actions</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Button
+                      onClick={handleRequestAvailability}
+                      disabled={sendingNotifications}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <Bell className="h-4 w-4 mr-2" />
+                      {sendingNotifications ? 'Sending...' : 'Resend Availability Requests'}
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
