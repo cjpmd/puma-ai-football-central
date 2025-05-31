@@ -6,7 +6,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { X, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 
 interface Team {
   id: string;
@@ -19,7 +18,7 @@ interface TeamSelectorProps {
   selectedTeams: string[];
   onTeamsChange: (teams: string[]) => void;
   primaryTeamId: string;
-  maxTeams?: number; // Made optional and will be ignored if not provided
+  maxTeams?: number;
 }
 
 export const TeamSelector: React.FC<TeamSelectorProps> = ({
@@ -34,9 +33,9 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
 
   useEffect(() => {
     loadAvailableTeams();
-  }, [selectedTeams, primaryTeamId]);
+  }, [selectedTeams, primaryTeamId, userTeams]);
 
-  const loadAvailableTeams = async () => {
+  const loadAvailableTeams = () => {
     try {
       // Get the primary team to match game format
       const primaryTeam = userTeams.find(t => t.id === primaryTeamId);
@@ -78,6 +77,7 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
   };
 
   const canAddMoreTeams = !maxTeams || selectedTeams.length < maxTeams;
+  const hasAvailableTeams = availableTeams.length > 0;
 
   return (
     <div className="space-y-3">
@@ -105,8 +105,8 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
         ))}
       </div>
 
-      {/* Add Team Selector */}
-      {canAddMoreTeams && availableTeams.length > 0 && (
+      {/* Add Team Selector - Always show if teams are available and under limit */}
+      {canAddMoreTeams && hasAvailableTeams && (
         <div className="flex gap-2">
           <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
             <SelectTrigger className="flex-1">
@@ -133,19 +133,23 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
         </div>
       )}
 
-      {/* Show team count info only if maxTeams is provided */}
+      {/* Info messages */}
       {maxTeams && selectedTeams.length >= maxTeams && (
         <p className="text-sm text-muted-foreground">
           Maximum of {maxTeams} teams can participate in this event.
         </p>
       )}
 
-      {/* Show message if no teams available to add */}
-      {canAddMoreTeams && availableTeams.length === 0 && selectedTeams.length > 1 && (
+      {canAddMoreTeams && !hasAvailableTeams && selectedTeams.length > 0 && (
         <p className="text-sm text-muted-foreground">
           No more teams with the same game format available to add.
         </p>
       )}
+
+      {/* Debug info - remove this after testing */}
+      <div className="text-xs text-gray-400">
+        Debug: Available teams: {availableTeams.length}, Can add more: {canAddMoreTeams.toString()}, Selected teams: {selectedTeams.length}
+      </div>
     </div>
   );
 };
