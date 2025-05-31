@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -139,9 +138,21 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
           // Team state
           if (!newTeamStates[teamId]) {
-            const playerIds = selection.player_positions?.map((pos: any) => pos.playerId || pos.player_id).filter(Boolean) || [];
-            const substituteIds = selection.substitutes || selection.substitute_players || [];
-            const staffIds = selection.staff_selection?.map((staff: any) => staff.staffId).filter(Boolean) || [];
+            // Safely handle player_positions JSON
+            const playerPositions = Array.isArray(selection.player_positions) ? selection.player_positions : [];
+            const playerIds = playerPositions
+              .map((pos: any) => pos.playerId || pos.player_id)
+              .filter(Boolean) || [];
+            
+            // Safely handle substitutes arrays
+            const substituteIds = Array.isArray(selection.substitutes) ? selection.substitutes :
+                                 Array.isArray(selection.substitute_players) ? selection.substitute_players : [];
+            
+            // Safely handle staff_selection JSON
+            const staffSelection = Array.isArray(selection.staff_selection) ? selection.staff_selection : [];
+            const staffIds = staffSelection
+              .map((staff: any) => staff.staffId)
+              .filter(Boolean) || [];
             
             newTeamStates[teamId] = {
               teamId,
