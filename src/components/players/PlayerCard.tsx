@@ -13,7 +13,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Player } from '@/types';
 import { calculateAge, formatDate } from '@/lib/utils';
-import { ArrowRightLeft, Edit, Trash, UserPlus, Settings, User, Users, UserMinus } from 'lucide-react';
+import { ArrowRightLeft, Edit, Trash, UserPlus, Settings, User, Users, UserMinus, ArrowUp, ArrowDown } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { calculatePerformanceTrend, getPerformanceIcon, getPerformanceColor, PerformanceTrend } from '@/utils/performanceUtils';
 
 interface PlayerCardProps {
   player: Player;
@@ -46,6 +48,25 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   onViewStats,
   onViewHistory
 }) => {
+  const [performanceTrend, setPerformanceTrend] = useState<PerformanceTrend>('maintaining');
+  const [loadingTrend, setLoadingTrend] = useState(true);
+
+  useEffect(() => {
+    const loadPerformanceTrend = async () => {
+      if (!inactive) {
+        try {
+          const trend = await calculatePerformanceTrend(player.id);
+          setPerformanceTrend(trend);
+        } catch (error) {
+          console.error('Error loading performance trend:', error);
+        }
+      }
+      setLoadingTrend(false);
+    };
+
+    loadPerformanceTrend();
+  }, [player.id, inactive]);
+
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
       case 'green': return 'bg-green-500';
@@ -73,6 +94,25 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   };
 
   const playerAge = player.dateOfBirth ? calculateAge(new Date(player.dateOfBirth)) : null;
+  const performanceIconName = getPerformanceIcon(performanceTrend);
+  const performanceColor = getPerformanceColor(performanceTrend);
+
+  const renderPerformanceIcon = () => {
+    if (loadingTrend || !performanceIconName) return null;
+    
+    const IconComponent = performanceIconName === 'arrow-up' ? ArrowUp : ArrowDown;
+    
+    return (
+      <IconComponent 
+        className={`h-4 w-4 ${performanceColor}`}
+        title={
+          performanceTrend === 'improving' ? 'Performance improving' :
+          performanceTrend === 'needs-work' ? 'Performance needs work' :
+          'Performance maintaining'
+        }
+      />
+    );
+  };
 
   return (
     <Card className={`relative ${inactive ? 'bg-gray-50 border-gray-200' : ''}`}>
@@ -85,7 +125,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-lg">{player.name}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg">{player.name}</CardTitle>
+                {!inactive && renderPerformanceIcon()}
+              </div>
               <CardDescription>
                 {playerAge !== null && `${playerAge} years • `}
                 {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}

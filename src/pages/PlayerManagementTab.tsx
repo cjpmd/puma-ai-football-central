@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player } from '@/types';
-import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target } from 'lucide-react';
+import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target, ArrowUp, ArrowDown } from 'lucide-react';
 import { PlayerParentModal } from '@/components/players/PlayerParentModal';
 import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
 import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModal';
@@ -20,6 +19,7 @@ import { PlayerCommentsModal } from '@/components/players/PlayerCommentsModal';
 import { PlayerStatsModal } from '@/components/players/PlayerStatsModal';
 import { PlayerHistoryModal } from '@/components/players/PlayerHistoryModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { calculatePerformanceTrend, getPerformanceIcon, getPerformanceColor, PerformanceTrend } from '@/utils/performanceUtils';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -29,6 +29,7 @@ const PlayerManagementTab = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [performanceTrends, setPerformanceTrends] = useState<Map<string, PerformanceTrend>>(new Map());
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
@@ -36,6 +37,31 @@ const PlayerManagementTab = () => {
     queryFn: () => selectedTeamId ? playersService.getActivePlayersByTeamId(selectedTeamId) : [],
     enabled: !!selectedTeamId,
   });
+
+  // Load performance trends for all players
+  useEffect(() => {
+    const loadPerformanceTrends = async () => {
+      if (players.length === 0) return;
+      
+      const trends = new Map<string, PerformanceTrend>();
+      
+      await Promise.all(
+        players.map(async (player) => {
+          try {
+            const trend = await calculatePerformanceTrend(player.id);
+            trends.set(player.id, trend);
+          } catch (error) {
+            console.error(`Error loading trend for player ${player.id}:`, error);
+            trends.set(player.id, 'maintaining');
+          }
+        })
+      );
+      
+      setPerformanceTrends(trends);
+    };
+
+    loadPerformanceTrends();
+  }, [players]);
 
   // Update player mutation
   const updatePlayerMutation = useMutation({
@@ -80,6 +106,28 @@ const PlayerManagementTab = () => {
       data: updatedData
     });
     handleModalClose();
+  };
+
+  const renderPerformanceIcon = (playerId: string) => {
+    const trend = performanceTrends.get(playerId);
+    if (!trend) return null;
+    
+    const iconName = getPerformanceIcon(trend);
+    if (!iconName) return null;
+    
+    const IconComponent = iconName === 'arrow-up' ? ArrowUp : ArrowDown;
+    const colorClass = getPerformanceColor(trend);
+    
+    return (
+      <IconComponent 
+        className={`h-4 w-4 ${colorClass}`}
+        title={
+          trend === 'improving' ? 'Performance improving' :
+          trend === 'needs-work' ? 'Performance needs work' :
+          'Performance maintaining'
+        }
+      />
+    );
   };
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
@@ -157,6 +205,7 @@ const PlayerManagementTab = () => {
                       <TableHead>Games</TableHead>
                       <TableHead>Minutes</TableHead>
                       <TableHead>Availability</TableHead>
+                      <TableHead>Performance</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -189,6 +238,11 @@ const PlayerManagementTab = () => {
                             {player.availability === 'green' ? 'Available' : 
                              player.availability === 'amber' ? 'Uncertain' : 'Unavailable'}
                           </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center">
+                            {renderPerformanceIcon(player.id)}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2 flex-wrap">
