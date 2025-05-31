@@ -36,7 +36,7 @@ export const availabilityService = {
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as EventAvailability[];
   },
 
   async updateAvailabilityStatus(
@@ -71,7 +71,7 @@ export const availabilityService = {
       .eq('user_id', userId);
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as EventAvailability[];
   },
 
   async getUserNotifications(userId: string): Promise<NotificationLog[]> {
@@ -83,6 +83,6 @@ export const availabilityService = {
       .limit(50);
 
     if (error) throw error;
-    return data || [];
+    return (data || []) as NotificationLog[];
   }
 };
