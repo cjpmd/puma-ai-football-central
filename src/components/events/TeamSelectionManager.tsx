@@ -6,16 +6,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, Bell, CheckCircle, Settings } from 'lucide-react';
+import { Users, Bell, CheckCircle, Settings, Plus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
 import { EventAvailabilityDashboard } from './EventAvailabilityDashboard';
+import { TeamSelector } from './TeamSelector';
 import { availabilityService } from '@/services/availabilityService';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { getFormationsByFormat } from '@/utils/formationUtils';
 
 interface TeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -29,22 +31,55 @@ interface PerformanceCategory {
   description?: string;
 }
 
+interface TeamPeriodState {
+  teamId: string;
+  periodId: string;
+  selectedPlayers: string[];
+  substitutePlayers: string[];
+  captainId: string;
+  selectedStaff: string[];
+  formation: string;
+  performanceCategoryId: string;
+}
+
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   event,
   isOpen,
   onClose
 }) => {
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-  const [substitutePlayers, setSubstitutePlayers] = useState<string[]>([]);
-  const [captainId, setCaptainId] = useState<string>('');
-  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
-  const [formation, setFormation] = useState<string>('4-3-3');
-  const [teamNumber, setTeamNumber] = useState<number>(1);
-  const [periodNumber, setPeriodNumber] = useState<number>(1);
-  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<string>('none');
+  const [teams, setTeams] = useState<string[]>([event.team_id]);
+  const [periods, setPeriods] = useState<number[]>([1]);
+  const [activeTeam, setActiveTeam] = useState<string>(event.team_id);
+  const [activePeriod, setActivePeriod] = useState<number>(1);
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
   const [availabilityRequested, setAvailabilityRequested] = useState(false);
   const [sendingNotifications, setSendingNotifications] = useState(false);
+  
+  // Team-period specific state
+  const [teamPeriodStates, setTeamPeriodStates] = useState<Record<string, TeamPeriodState>>({
+    [`${event.team_id}-1`]: {
+      teamId: event.team_id,
+      periodId: '1',
+      selectedPlayers: [],
+      substitutePlayers: [],
+      captainId: '',
+      selectedStaff: [],
+      formation: '4-3-3',
+      performanceCategoryId: 'none'
+    }
+  });
+
+  const currentStateKey = `${activeTeam}-${activePeriod}`;
+  const currentState = teamPeriodStates[currentStateKey] || {
+    teamId: activeTeam,
+    periodId: activePeriod.toString(),
+    selectedPlayers: [],
+    substitutePlayers: [],
+    captainId: '',
+    selectedStaff: [],
+    formation: '4-3-3',
+    performanceCategoryId: 'none'
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -58,7 +93,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const { data, error } = await supabase
         .from('performance_categories')
         .select('*')
-        .eq('team_id', event.team_id)
+        .eq('team_id', activeTeam)
         .order('name');
 
       if (error) throw error;
@@ -77,8 +112,88 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const updateCurrentState = (updates: Partial<TeamPeriodState>) => {
+    setTeamPeriodStates(prev => ({
+      ...prev,
+      [currentStateKey]: {
+        ...currentState,
+        ...updates
+      }
+    }));
+  };
+
+  const addTeam = () => {
+    if (teams.length < 4) {
+      const newTeamId = `team-${teams.length + 1}`;
+      setTeams(prev => [...prev, newTeamId]);
+      
+      // Initialize states for all periods for this new team
+      periods.forEach(period => {
+        const key = `${newTeamId}-${period}`;
+        setTeamPeriodStates(prev => ({
+          ...prev,
+          [key]: {
+            teamId: newTeamId,
+            periodId: period.toString(),
+            selectedPlayers: [],
+            substitutePlayers: [],
+            captainId: '',
+            selectedStaff: [],
+            formation: '4-3-3',
+            performanceCategoryId: 'none'
+          }
+        }));
+      });
+    }
+  };
+
+  const addPeriod = () => {
+    if (periods.length < 4) {
+      const newPeriod = periods.length + 1;
+      setPeriods(prev => [...prev, newPeriod]);
+      
+      // Initialize states for all teams for this new period
+      teams.forEach(teamId => {
+        const key = `${teamId}-${newPeriod}`;
+        setTeamPeriodStates(prev => ({
+          ...prev,
+          [key]: {
+            teamId,
+            periodId: newPeriod.toString(),
+            selectedPlayers: [],
+            substitutePlayers: [],
+            captainId: '',
+            selectedStaff: [],
+            formation: '4-3-3',
+            performanceCategoryId: 'none'
+          }
+        }));
+      });
+    }
+  };
+
+  const getAvailableFormations = () => {
+    const gameFormat = event.game_format as GameFormat;
+    return getFormationsByFormat(gameFormat);
+  };
+
+  const getTeamDisplayName = () => {
+    if (currentState.performanceCategoryId !== 'none') {
+      const category = performanceCategories.find(c => c.id === currentState.performanceCategoryId);
+      return category?.name || `Team ${teams.indexOf(activeTeam) + 1}`;
+    }
+    return `Team ${teams.indexOf(activeTeam) + 1}`;
+  };
+
   const handleRequestAvailability = async () => {
-    if (selectedPlayers.length === 0 && selectedStaff.length === 0) {
+    const allSelectedPlayers = Object.values(teamPeriodStates).flatMap(state => 
+      [...state.selectedPlayers, ...state.substitutePlayers]
+    );
+    const allSelectedStaff = Object.values(teamPeriodStates).flatMap(state => 
+      state.selectedStaff
+    );
+
+    if (allSelectedPlayers.length === 0 && allSelectedStaff.length === 0) {
       toast.error('Please select players or staff before requesting availability');
       return;
     }
@@ -100,142 +215,158 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[95vw] md:max-w-[900px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Team Selection - {event.title}</DialogTitle>
           <DialogDescription>
             Select your team and request availability confirmation for this event.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="players" className="h-full flex flex-col">
-            <div className="shrink-0">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  {availabilityRequested && (
-                    <Badge className="bg-green-500 text-white">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Notifications Sent
+        <div className="flex-1 overflow-hidden flex flex-col">
+          {/* Team Configuration Controls */}
+          <Card className="shrink-0 mb-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Settings className="h-4 w-4" />
+                Team Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label>Teams</Label>
+                <div className="flex flex-wrap gap-2">
+                  {teams.map((teamId, index) => (
+                    <Badge 
+                      key={teamId}
+                      variant={teamId === activeTeam ? "default" : "secondary"}
+                      className="cursor-pointer"
+                      onClick={() => setActiveTeam(teamId)}
+                    >
+                      Team {index + 1}
                     </Badge>
+                  ))}
+                  {teams.length < 4 && (
+                    <Button size="sm" variant="outline" onClick={addTeam}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
                   )}
                 </div>
               </div>
-              
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="players" className="text-xs sm:text-sm">Players</TabsTrigger>
-                <TabsTrigger value="staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
-                <TabsTrigger value="availability" className="text-xs sm:text-sm">
-                  Availability
-                </TabsTrigger>
-                <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
-              </TabsList>
+
+              <div className="space-y-2">
+                <Label>Periods</Label>
+                <div className="flex flex-wrap gap-2">
+                  {periods.map((period) => (
+                    <Badge 
+                      key={period}
+                      variant={period === activePeriod ? "default" : "secondary"}
+                      className="cursor-pointer"
+                      onClick={() => setActivePeriod(period)}
+                    >
+                      Period {period}
+                    </Badge>
+                  ))}
+                  {periods.length < 4 && (
+                    <Button size="sm" variant="outline" onClick={addPeriod}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Formation</Label>
+                <Select 
+                  value={currentState.formation} 
+                  onValueChange={(value) => updateCurrentState({ formation: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select formation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {getAvailableFormations().map((formation) => (
+                      <SelectItem key={formation.id} value={formation.id}>
+                        {formation.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Performance Category</Label>
+                <Select 
+                  value={currentState.performanceCategoryId} 
+                  onValueChange={(value) => updateCurrentState({ performanceCategoryId: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Category</SelectItem>
+                    {performanceCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Status Badge */}
+          <div className="shrink-0 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium">{getTeamDisplayName()} - Period {activePeriod}</h3>
+                {availabilityRequested && (
+                  <Badge className="bg-green-500 text-white">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Notifications Sent
+                  </Badge>
+                )}
+              </div>
             </div>
+          </div>
+
+          <Tabs defaultValue="players" className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="shrink-0 grid w-full grid-cols-4">
+              <TabsTrigger value="players" className="text-xs sm:text-sm">Players</TabsTrigger>
+              <TabsTrigger value="staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
+              <TabsTrigger value="availability" className="text-xs sm:text-sm">Availability</TabsTrigger>
+              <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
+            </TabsList>
 
             <div className="flex-1 overflow-y-auto">
               <TabsContent value="players" className="p-4 md:p-6 space-y-6 mt-0">
-                {/* Team Configuration Controls */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <Settings className="h-4 w-4" />
-                      Team Configuration
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="team-number">Team Number</Label>
-                      <Select value={teamNumber.toString()} onValueChange={(value) => setTeamNumber(parseInt(value))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select team" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Team 1</SelectItem>
-                          <SelectItem value="2">Team 2</SelectItem>
-                          <SelectItem value="3">Team 3</SelectItem>
-                          <SelectItem value="4">Team 4</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="period-number">Period</Label>
-                      <Select value={periodNumber.toString()} onValueChange={(value) => setPeriodNumber(parseInt(value))}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="1">Period 1</SelectItem>
-                          <SelectItem value="2">Period 2</SelectItem>
-                          <SelectItem value="3">Period 3</SelectItem>
-                          <SelectItem value="4">Period 4</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="formation">Formation</Label>
-                      <Select value={formation} onValueChange={setFormation}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select formation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="4-3-3">4-3-3</SelectItem>
-                          <SelectItem value="4-4-2">4-4-2</SelectItem>
-                          <SelectItem value="3-5-2">3-5-2</SelectItem>
-                          <SelectItem value="4-2-3-1">4-2-3-1</SelectItem>
-                          <SelectItem value="3-4-3">3-4-3</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="performance-category">Performance Category</Label>
-                      <Select value={selectedPerformanceCategory} onValueChange={setSelectedPerformanceCategory}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No Category</SelectItem>
-                          {performanceCategories.map((category) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Player Selection */}
                 <PlayerSelectionWithAvailability
-                  teamId={event.team_id}
+                  teamId={activeTeam}
                   eventId={event.id}
-                  selectedPlayers={selectedPlayers}
-                  substitutePlayers={substitutePlayers}
-                  captainId={captainId}
-                  onPlayersChange={setSelectedPlayers}
-                  onSubstitutesChange={setSubstitutePlayers}
-                  onCaptainChange={setCaptainId}
+                  selectedPlayers={currentState.selectedPlayers}
+                  substitutePlayers={currentState.substitutePlayers}
+                  captainId={currentState.captainId}
+                  onPlayersChange={(players) => updateCurrentState({ selectedPlayers: players })}
+                  onSubstitutesChange={(substitutes) => updateCurrentState({ substitutePlayers: substitutes })}
+                  onCaptainChange={(captainId) => updateCurrentState({ captainId })}
                   eventType={event.event_type}
                   showFormationView={true}
-                  formation={formation}
-                  onFormationChange={setFormation}
+                  formation={currentState.formation}
+                  onFormationChange={(formation) => updateCurrentState({ formation })}
                   gameFormat={event.game_format as GameFormat}
-                  teamNumber={teamNumber}
-                  periodNumber={periodNumber}
+                  teamNumber={teams.indexOf(activeTeam) + 1}
+                  periodNumber={activePeriod}
                   showSubstitutesInFormation={true}
                 />
 
-                {/* Selection Summary */}
                 <Card>
                   <CardContent className="pt-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <h3 className="font-medium">Selection Summary</h3>
                         <p className="text-sm text-muted-foreground">
-                          {selectedPlayers.length} players, {substitutePlayers.length} substitutes selected
+                          {currentState.selectedPlayers.length} players, {currentState.substitutePlayers.length} substitutes selected
                         </p>
                       </div>
                       <Button
@@ -255,19 +386,18 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
               <TabsContent value="staff" className="p-4 md:p-6 mt-0">
                 <StaffSelectionSection
-                  teamId={event.team_id}
-                  selectedStaff={selectedStaff}
-                  onStaffChange={setSelectedStaff}
+                  teamId={activeTeam}
+                  selectedStaff={currentState.selectedStaff}
+                  onStaffChange={(staff) => updateCurrentState({ selectedStaff: staff })}
                 />
 
-                {/* Staff Summary */}
                 <Card className="mt-6">
                   <CardContent className="pt-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                       <div>
                         <h3 className="font-medium">Staff Summary</h3>
                         <p className="text-sm text-muted-foreground">
-                          {selectedStaff.length} staff members selected
+                          {currentState.selectedStaff.length} staff members selected
                         </p>
                       </div>
                       <Button
