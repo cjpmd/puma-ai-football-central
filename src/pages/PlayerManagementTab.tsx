@@ -121,11 +121,6 @@ const PlayerManagementTab = () => {
     return (
       <IconComponent 
         className={`h-4 w-4 ${colorClass}`}
-        title={
-          trend === 'improving' ? 'Performance improving' :
-          trend === 'needs-work' ? 'Performance needs work' :
-          'Performance maintaining'
-        }
       />
     );
   };

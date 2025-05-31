@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -105,11 +104,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     return (
       <IconComponent 
         className={`h-4 w-4 ${performanceColor}`}
-        title={
-          performanceTrend === 'improving' ? 'Performance improving' :
-          performanceTrend === 'needs-work' ? 'Performance needs work' :
-          'Performance maintaining'
-        }
       />
     );
   };
