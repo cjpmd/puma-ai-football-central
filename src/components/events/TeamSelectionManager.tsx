@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
   const [availabilityRequested, setAvailabilityRequested] = useState(false);
   const [sendingNotifications, setSendingNotifications] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // Team-level states (shared across periods)
   const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({
@@ -81,6 +83,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   });
 
+  // Staff assignment tracking
+  const [staffAssignments, setStaffAssignments] = useState<Record<string, string[]>>({});
+
   const currentTeamState = teamStates[activeTeam] || {
     teamId: activeTeam,
     selectedPlayers: [],
@@ -101,8 +106,82 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     if (isOpen) {
       checkIfAvailabilityRequested();
       loadPerformanceCategories();
+      loadExistingSelections();
     }
   }, [isOpen, event.id]);
+
+  const loadExistingSelections = async () => {
+    try {
+      const { data: selections, error } = await supabase
+        .from('event_selections')
+        .select('*')
+        .eq('event_id', event.id);
+
+      if (error) throw error;
+
+      if (selections && selections.length > 0) {
+        const newTeamStates: Record<string, TeamState> = {};
+        const newPeriodStates: Record<string, PeriodState> = {};
+        const newStaffAssignments: Record<string, string[]> = {};
+        const teamIds: string[] = [];
+        const periodNumbers: number[] = [];
+
+        selections.forEach(selection => {
+          const teamId = selection.team_id;
+          const periodNumber = selection.period_number || 1;
+          
+          if (!teamIds.includes(teamId)) {
+            teamIds.push(teamId);
+          }
+          if (!periodNumbers.includes(periodNumber)) {
+            periodNumbers.push(periodNumber);
+          }
+
+          // Team state
+          if (!newTeamStates[teamId]) {
+            const playerIds = selection.player_positions?.map((pos: any) => pos.playerId || pos.player_id).filter(Boolean) || [];
+            const substituteIds = selection.substitutes || selection.substitute_players || [];
+            const staffIds = selection.staff_selection?.map((staff: any) => staff.staffId).filter(Boolean) || [];
+            
+            newTeamStates[teamId] = {
+              teamId,
+              selectedPlayers: playerIds,
+              substitutePlayers: substituteIds,
+              captainId: selection.captain_id || '',
+              selectedStaff: staffIds,
+              performanceCategoryId: selection.performance_category_id || 'none'
+            };
+
+            // Track staff assignments
+            staffIds.forEach((staffId: string) => {
+              if (!newStaffAssignments[staffId]) {
+                newStaffAssignments[staffId] = [];
+              }
+              if (!newStaffAssignments[staffId].includes(teamId)) {
+                newStaffAssignments[staffId].push(teamId);
+              }
+            });
+          }
+
+          // Period state
+          const periodKey = `${teamId}-${periodNumber}`;
+          newPeriodStates[periodKey] = {
+            teamId,
+            periodId: periodNumber.toString(),
+            formation: selection.formation || '4-3-3'
+          };
+        });
+
+        setTeams(teamIds.length > 0 ? teamIds : [event.team_id]);
+        setPeriods(periodNumbers.length > 0 ? periodNumbers.sort() : [1]);
+        setTeamStates(prev => ({ ...prev, ...newTeamStates }));
+        setPeriodStates(prev => ({ ...prev, ...newPeriodStates }));
+        setStaffAssignments(newStaffAssignments);
+      }
+    } catch (error) {
+      console.error('Error loading existing selections:', error);
+    }
+  };
 
   const loadPerformanceCategories = async () => {
     try {
@@ -136,6 +215,33 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         ...updates
       }
     }));
+
+    // Update staff assignments when staff selection changes
+    if (updates.selectedStaff) {
+      setStaffAssignments(prev => {
+        const newAssignments = { ...prev };
+        
+        // Remove this team from all staff assignments
+        Object.keys(newAssignments).forEach(staffId => {
+          newAssignments[staffId] = newAssignments[staffId].filter(id => id !== teamId);
+          if (newAssignments[staffId].length === 0) {
+            delete newAssignments[staffId];
+          }
+        });
+
+        // Add this team to new staff assignments
+        updates.selectedStaff.forEach(staffId => {
+          if (!newAssignments[staffId]) {
+            newAssignments[staffId] = [];
+          }
+          if (!newAssignments[staffId].includes(teamId)) {
+            newAssignments[staffId].push(teamId);
+          }
+        });
+
+        return newAssignments;
+      });
+    }
   };
 
   const updatePeriodState = (key: string, updates: Partial<PeriodState>) => {
@@ -242,11 +348,67 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const handleSaveSelection = async () => {
     try {
-      // TODO: Implement save selection logic
+      setSaving(true);
+
+      // Delete existing selections for this event
+      await supabase
+        .from('event_selections')
+        .delete()
+        .eq('event_id', event.id);
+
+      // Save new selections
+      const selections = [];
+      
+      for (const teamId of teams) {
+        const teamState = teamStates[teamId];
+        if (!teamState) continue;
+
+        for (const period of periods) {
+          const periodKey = `${teamId}-${period}`;
+          const periodState = periodStates[periodKey];
+          if (!periodState) continue;
+
+          const playerPositions = teamState.selectedPlayers.map(playerId => ({
+            playerId,
+            position: 'TBD', // Will be set in formation view
+            isSubstitute: false
+          }));
+
+          const staffSelection = teamState.selectedStaff.map(staffId => ({
+            staffId
+          }));
+
+          selections.push({
+            event_id: event.id,
+            team_id: teamId,
+            team_number: teams.indexOf(teamId) + 1,
+            period_number: period,
+            formation: periodState.formation,
+            player_positions: playerPositions,
+            substitutes: teamState.substitutePlayers,
+            substitute_players: teamState.substitutePlayers,
+            captain_id: teamState.captainId || null,
+            staff_selection: staffSelection,
+            performance_category_id: teamState.performanceCategoryId !== 'none' ? teamState.performanceCategoryId : null,
+            duration_minutes: 90
+          });
+        }
+      }
+
+      if (selections.length > 0) {
+        const { error } = await supabase
+          .from('event_selections')
+          .insert(selections);
+
+        if (error) throw error;
+      }
+
       toast.success('Selection saved successfully!');
     } catch (error) {
       console.error('Error saving selection:', error);
       toast.error('Failed to save selection');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -265,10 +427,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             </div>
             <Button
               onClick={handleSaveSelection}
+              disabled={saving}
               className="flex items-center gap-2"
             >
               <Save className="h-4 w-4" />
-              Save Selection
+              {saving ? 'Saving...' : 'Save Selection'}
             </Button>
           </div>
         </DialogHeader>
@@ -420,6 +583,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   teamId={activeTeam}
                   selectedStaff={currentTeamState.selectedStaff}
                   onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
+                  staffAssignments={staffAssignments}
                 />
 
                 <Card className="mt-6">

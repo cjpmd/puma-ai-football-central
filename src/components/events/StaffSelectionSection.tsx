@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -17,12 +18,14 @@ interface StaffSelectionSectionProps {
   teamId: string;
   selectedStaff: string[];
   onStaffChange: (staffIds: string[]) => void;
+  staffAssignments?: Record<string, string[]>;
 }
 
 export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
   teamId,
   selectedStaff,
-  onStaffChange
+  onStaffChange,
+  staffAssignments = {}
 }) => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +66,10 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
     onStaffChange(newSelectedStaff);
   };
 
+  const getAssignedTeams = (staffId: string): string[] => {
+    return staffAssignments[staffId] || [];
+  };
+
   if (loading) {
     return (
       <Card>
@@ -94,23 +101,37 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {staff.map((staffMember) => (
-              <div key={staffMember.id} className="flex items-center space-x-3 p-3 border rounded">
-                <Checkbox
-                  id={`staff-${staffMember.id}`}
-                  checked={selectedStaff.includes(staffMember.id)}
-                  onCheckedChange={() => handleStaffToggle(staffMember.id)}
-                />
-                <div className="flex-1">
-                  <Label htmlFor={`staff-${staffMember.id}`} className="font-medium cursor-pointer">
-                    {staffMember.name}
-                  </Label>
-                  <div className="text-sm text-muted-foreground">
-                    {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            {staff.map((staffMember) => {
+              const assignedTeams = getAssignedTeams(staffMember.id);
+              return (
+                <div key={staffMember.id} className="flex items-center space-x-3 p-3 border rounded">
+                  <Checkbox
+                    id={`staff-${staffMember.id}`}
+                    checked={selectedStaff.includes(staffMember.id)}
+                    onCheckedChange={() => handleStaffToggle(staffMember.id)}
+                  />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`staff-${staffMember.id}`} className="font-medium cursor-pointer">
+                        {staffMember.name}
+                      </Label>
+                      {assignedTeams.length > 0 && (
+                        <div className="flex gap-1">
+                          {assignedTeams.map((teamId, index) => (
+                            <Badge key={teamId} variant="outline" className="text-xs">
+                              Team {index + 1}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>
