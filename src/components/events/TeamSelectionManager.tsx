@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -52,7 +53,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   isOpen,
   onClose
 }) => {
-  // Only use the actual team ID from the event, no fake team IDs
+  // Start with the event's primary team, but allow adding more
   const [teams, setTeams] = useState<string[]>([event.team_id]);
   const [periods, setPeriods] = useState<number[]>([1]);
   const [activeTeam, setActiveTeam] = useState<string>(event.team_id);
@@ -62,7 +63,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [sendingNotifications, setSendingNotifications] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // Team-level states (shared across periods) - only use real team ID
+  // Team-level states (shared across periods)
   const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({
     [event.team_id]: {
       teamId: event.team_id,
@@ -74,7 +75,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   });
 
-  // Period-specific states - only use real team ID
+  // Period-specific states
   const [periodStates, setPeriodStates] = useState<Record<string, PeriodState>>({
     [`${event.team_id}-1`]: {
       teamId: event.team_id,
@@ -124,6 +125,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const newPeriodStates: Record<string, PeriodState> = {};
         const newStaffAssignments: Record<string, string[]> = {};
         const periodNumbers: number[] = [];
+        const teamIds: string[] = [];
 
         selections.forEach(selection => {
           const teamId = selection.team_id;
@@ -133,8 +135,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             periodNumbers.push(periodNumber);
           }
 
-          // Team state - only process if it's the actual team
-          if (teamId === event.team_id && !newTeamStates[teamId]) {
+          if (!teamIds.includes(teamId)) {
+            teamIds.push(teamId);
+          }
+
+          // Team state
+          if (!newTeamStates[teamId]) {
             // Safely handle player_positions JSON
             const playerPositions = Array.isArray(selection.player_positions) ? selection.player_positions : [];
             const playerIds = playerPositions
@@ -174,17 +180,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             });
           }
 
-          // Period state - only for the actual team
-          if (teamId === event.team_id) {
-            const periodKey = `${teamId}-${periodNumber}`;
-            newPeriodStates[periodKey] = {
-              teamId,
-              periodId: periodNumber.toString(),
-              formation: selection.formation || '4-3-3'
-            };
-          }
+          // Period state
+          const periodKey = `${teamId}-${periodNumber}`;
+          newPeriodStates[periodKey] = {
+            teamId,
+            periodId: periodNumber.toString(),
+            formation: selection.formation || '4-3-3'
+          };
         });
 
+        setTeams(teamIds.length > 0 ? teamIds : [event.team_id]);
         setPeriods(periodNumbers.length > 0 ? periodNumbers.sort() : [1]);
         setTeamStates(prev => ({ ...prev, ...newTeamStates }));
         setPeriodStates(prev => ({ ...prev, ...newPeriodStates }));
@@ -200,7 +205,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const { data, error } = await supabase
         .from('performance_categories')
         .select('*')
-        .eq('team_id', event.team_id) // Always use the actual team ID
+        .eq('team_id', activeTeam)
         .order('name');
 
       if (error) throw error;
@@ -266,22 +271,57 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }));
   };
 
-  // Remove the addTeam function since we only work with the actual team
+  const addTeam = (teamId: string) => {
+    if (!teams.includes(teamId) && teams.length < 4) {
+      setTeams(prev => [...prev, teamId]);
+      
+      // Initialize team state
+      setTeamStates(prev => ({
+        ...prev,
+        [teamId]: {
+          teamId,
+          selectedPlayers: [],
+          substitutePlayers: [],
+          captainId: '',
+          selectedStaff: [],
+          performanceCategoryId: 'none'
+        }
+      }));
+
+      // Initialize period states for all existing periods
+      periods.forEach(period => {
+        const key = `${teamId}-${period}`;
+        setPeriodStates(prev => ({
+          ...prev,
+          [key]: {
+            teamId,
+            periodId: period.toString(),
+            formation: '4-3-3'
+          }
+        }));
+      });
+
+      setActiveTeam(teamId);
+    }
+  };
+
   const addPeriod = () => {
     if (periods.length < 4) {
       const newPeriod = periods.length + 1;
       setPeriods(prev => [...prev, newPeriod]);
       
-      // Initialize period state for the actual team
-      const key = `${event.team_id}-${newPeriod}`;
-      setPeriodStates(prev => ({
-        ...prev,
-        [key]: {
-          teamId: event.team_id,
-          periodId: newPeriod.toString(),
-          formation: '4-3-3'
-        }
-      }));
+      // Initialize period state for all teams
+      teams.forEach(teamId => {
+        const key = `${teamId}-${newPeriod}`;
+        setPeriodStates(prev => ({
+          ...prev,
+          [key]: {
+            teamId,
+            periodId: newPeriod.toString(),
+            formation: '4-3-3'
+          }
+        }));
+      });
     }
   };
 
@@ -290,12 +330,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     return getFormationsByFormat(gameFormat);
   };
 
-  const getTeamDisplayName = () => {
-    if (currentTeamState.performanceCategoryId !== 'none') {
-      const category = performanceCategories.find(c => c.id === currentTeamState.performanceCategoryId);
-      return category?.name || 'Team 1';
+  const getTeamDisplayName = (teamId: string) => {
+    const teamState = teamStates[teamId];
+    if (teamState?.performanceCategoryId !== 'none') {
+      const category = performanceCategories.find(c => c.id === teamState.performanceCategoryId);
+      return category?.name || `Team ${teams.indexOf(teamId) + 1}`;
     }
-    return 'Team 1';
+    return `Team ${teams.indexOf(teamId) + 1}`;
   };
 
   const handleRequestAvailability = async () => {
@@ -328,22 +369,23 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     try {
       setSaving(true);
 
-      // Delete existing selections for this event and team
+      // Delete existing selections for this event
       await supabase
         .from('event_selections')
         .delete()
-        .eq('event_id', event.id)
-        .eq('team_id', event.team_id);
+        .eq('event_id', event.id);
 
-      // Save new selections - only for the actual team
+      // Save new selections for all teams
       const selections = [];
-      const teamState = teamStates[event.team_id];
       
-      if (teamState) {
-        for (const period of periods) {
-          const periodKey = `${event.team_id}-${period}`;
+      teams.forEach((teamId, teamIndex) => {
+        const teamState = teamStates[teamId];
+        if (!teamState) return;
+
+        periods.forEach(period => {
+          const periodKey = `${teamId}-${period}`;
           const periodState = periodStates[periodKey];
-          if (!periodState) continue;
+          if (!periodState) return;
 
           const playerPositions = teamState.selectedPlayers.map(playerId => ({
             playerId,
@@ -357,8 +399,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
           selections.push({
             event_id: event.id,
-            team_id: event.team_id,
-            team_number: 1, // Always team 1 since we only have one team
+            team_id: teamId,
+            team_number: teamIndex + 1,
             period_number: period,
             formation: periodState.formation,
             player_positions: playerPositions,
@@ -369,8 +411,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             performance_category_id: teamState.performanceCategoryId !== 'none' ? teamState.performanceCategoryId : null,
             duration_minutes: 90
           });
-        }
-      }
+        });
+      });
 
       if (selections.length > 0) {
         const { error } = await supabase
@@ -399,7 +441,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             <div>
               <DialogTitle>Team Selection - {event.title}</DialogTitle>
               <DialogDescription>
-                Select your team and request availability confirmation for this event.
+                Select your teams and request availability confirmation for this event.
               </DialogDescription>
             </div>
             <Button
@@ -414,63 +456,84 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         </DialogHeader>
         
         <div className="flex-1 overflow-hidden flex flex-col">
-          {/* Period Configuration Controls */}
+          {/* Team and Period Configuration Controls */}
           <Card className="shrink-0 mb-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Settings className="h-4 w-4" />
-                Period Configuration
+                Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Periods</Label>
-                <div className="flex flex-wrap gap-2">
-                  {periods.map((period) => (
-                    <Badge 
-                      key={period}
-                      variant={period === activePeriod ? "default" : "secondary"}
-                      className="cursor-pointer"
-                      onClick={() => setActivePeriod(period)}
-                    >
-                      Period {period}
-                    </Badge>
-                  ))}
-                  {periods.length < 4 && (
-                    <Button size="sm" variant="outline" onClick={addPeriod}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+            <CardContent className="space-y-4">
+              <TeamSelector
+                selectedTeams={teams}
+                onTeamsChange={setTeams}
+                primaryTeamId={event.team_id}
+                maxTeams={4}
+              />
 
-              <div className="space-y-2">
-                <Label>Performance Category</Label>
-                <Select 
-                  value={currentTeamState.performanceCategoryId} 
-                  onValueChange={(value) => updateTeamState(event.team_id, { performanceCategoryId: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Category</SelectItem>
-                    {performanceCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Periods</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {periods.map((period) => (
+                      <Badge 
+                        key={period}
+                        variant={period === activePeriod ? "default" : "secondary"}
+                        className="cursor-pointer"
+                        onClick={() => setActivePeriod(period)}
+                      >
+                        Period {period}
+                      </Badge>
                     ))}
-                  </SelectContent>
-                </Select>
+                    {periods.length < 4 && (
+                      <Button size="sm" variant="outline" onClick={addPeriod}>
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Performance Category</Label>
+                  <Select 
+                    value={currentTeamState.performanceCategoryId} 
+                    onValueChange={(value) => updateTeamState(activeTeam, { performanceCategoryId: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Category</SelectItem>
+                      {performanceCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Status Badge */}
+          {/* Team Selection */}
           <div className="shrink-0 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <h3 className="font-medium">{getTeamDisplayName()} - Period {activePeriod}</h3>
+                <Label>Active Team:</Label>
+                <div className="flex flex-wrap gap-2">
+                  {teams.map((teamId) => (
+                    <Badge 
+                      key={teamId}
+                      variant={teamId === activeTeam ? "default" : "secondary"}
+                      className="cursor-pointer"
+                      onClick={() => setActiveTeam(teamId)}
+                    >
+                      {getTeamDisplayName(teamId)} - Period {activePeriod}
+                    </Badge>
+                  ))}
+                </div>
                 {availabilityRequested && (
                   <Badge className="bg-green-500 text-white">
                     <CheckCircle className="h-3 w-3 mr-1" />
@@ -492,20 +555,20 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             <div className="flex-1 overflow-y-auto">
               <TabsContent value="players" className="p-4 md:p-6 space-y-6 mt-0">
                 <PlayerSelectionWithAvailability
-                  teamId={event.team_id}
+                  teamId={activeTeam}
                   eventId={event.id}
                   selectedPlayers={currentTeamState.selectedPlayers}
                   substitutePlayers={currentTeamState.substitutePlayers}
                   captainId={currentTeamState.captainId}
-                  onPlayersChange={(players) => updateTeamState(event.team_id, { selectedPlayers: players })}
-                  onSubstitutesChange={(substitutes) => updateTeamState(event.team_id, { substitutePlayers: substitutes })}
-                  onCaptainChange={(captainId) => updateTeamState(event.team_id, { captainId })}
+                  onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
+                  onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
+                  onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
                   eventType={event.event_type}
                   showFormationView={true}
                   formation={currentPeriodState.formation}
                   onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
                   gameFormat={event.game_format as GameFormat}
-                  teamNumber={1}
+                  teamNumber={teams.indexOf(activeTeam) + 1}
                   periodNumber={activePeriod}
                   showSubstitutesInFormation={true}
                 />
@@ -536,9 +599,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
               <TabsContent value="staff" className="p-4 md:p-6 mt-0">
                 <StaffSelectionSection
-                  teamId={event.team_id}
+                  teamId={activeTeam}
                   selectedStaff={currentTeamState.selectedStaff}
-                  onStaffChange={(staff) => updateTeamState(event.team_id, { selectedStaff: staff })}
+                  onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
                   staffAssignments={staffAssignments}
                 />
 
