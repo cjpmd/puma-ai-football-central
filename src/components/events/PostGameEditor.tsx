@@ -175,8 +175,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       console.log('Updated event with scores:', updatedEvent);
       handleEventUpdate(updatedEvent);
       
-      // Player stats will be updated automatically via database triggers
-      // But we can also manually trigger it to ensure it happens
+      // Update player stats with performance category support
       await playerStatsService.updateEventPlayerStats(eventId);
       
       // Force a reload to ensure we have the latest data
@@ -214,8 +213,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       
       handleEventUpdate(updatedEvent);
       
-      // Player stats will be updated automatically via database triggers
-      // But we can also manually trigger it to ensure it happens
+      // Update player stats with performance category support
       await playerStatsService.updateEventPlayerStats(eventId);
       
       // Force a reload to ensure we have the latest data

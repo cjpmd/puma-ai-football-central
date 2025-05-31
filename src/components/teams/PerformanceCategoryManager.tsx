@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { playerStatsService } from '@/services/playerStatsService';
 
 interface PerformanceCategory {
   id: string;
@@ -91,6 +92,10 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
           .eq('id', selectedCategory.id);
 
         if (error) throw error;
+        
+        // Update player stats to reflect category changes
+        await updatePlayerStatsForTeam();
+        
         toast({
           title: 'Success',
           description: 'Performance category updated successfully',
@@ -125,6 +130,26 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
     }
   };
 
+  const updatePlayerStatsForTeam = async () => {
+    try {
+      // Get all players for this team and update their stats
+      const { data: players, error } = await supabase
+        .from('players')
+        .select('id')
+        .eq('team_id', teamId)
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      // Update stats for each player
+      for (const player of players || []) {
+        await playerStatsService.updatePlayerStats(player.id);
+      }
+    } catch (error) {
+      console.error('Error updating player stats for team:', error);
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       // Check if this is the last category - don't allow deletion if it is
@@ -143,6 +168,10 @@ export const PerformanceCategoryManager: React.FC<PerformanceCategoryManagerProp
         .eq('id', id);
 
       if (error) throw error;
+      
+      // Update player stats after category deletion
+      await updatePlayerStatsForTeam();
+      
       toast({
         title: 'Success',
         description: 'Performance category deleted successfully',

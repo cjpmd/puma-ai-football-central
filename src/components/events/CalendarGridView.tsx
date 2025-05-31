@@ -58,7 +58,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     const scores = [];
     const scoresData = event.scores as any;
     
-    // Check for team_1, team_2, etc.
+    // Check for team_1, team_2, etc. (performance category teams)
     let teamNumber = 1;
     while (scoresData[`team_${teamNumber}`] !== undefined) {
       const ourScore = scoresData[`team_${teamNumber}`];

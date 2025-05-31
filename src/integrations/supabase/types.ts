@@ -271,6 +271,7 @@ export type Database = {
           is_captain: boolean
           is_substitute: boolean
           minutes_played: number
+          performance_category_id: string | null
           period_number: number
           player_id: string
           position: string | null
@@ -285,6 +286,7 @@ export type Database = {
           is_captain?: boolean
           is_substitute?: boolean
           minutes_played?: number
+          performance_category_id?: string | null
           period_number?: number
           player_id: string
           position?: string | null
@@ -299,6 +301,7 @@ export type Database = {
           is_captain?: boolean
           is_substitute?: boolean
           minutes_played?: number
+          performance_category_id?: string | null
           period_number?: number
           player_id?: string
           position?: string | null
