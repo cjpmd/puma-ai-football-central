@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { X } from 'lucide-react';
+import { X, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -19,14 +19,14 @@ interface TeamSelectorProps {
   selectedTeams: string[];
   onTeamsChange: (teams: string[]) => void;
   primaryTeamId: string;
-  maxTeams?: number;
+  maxTeams?: number; // Made optional and will be ignored if not provided
 }
 
 export const TeamSelector: React.FC<TeamSelectorProps> = ({
   selectedTeams,
   onTeamsChange,
   primaryTeamId,
-  maxTeams = 4
+  maxTeams
 }) => {
   const { teams: userTeams } = useAuth();
   const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
@@ -55,7 +55,12 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
   };
 
   const handleAddTeam = () => {
-    if (selectedTeamId && !selectedTeams.includes(selectedTeamId) && selectedTeams.length < maxTeams) {
+    if (selectedTeamId && !selectedTeams.includes(selectedTeamId)) {
+      // Only check maxTeams if it's provided
+      if (maxTeams && selectedTeams.length >= maxTeams) {
+        return;
+      }
+      
       onTeamsChange([...selectedTeams, selectedTeamId]);
       setSelectedTeamId('');
     }
@@ -71,6 +76,8 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
     const team = userTeams.find(t => t.id === teamId);
     return team?.name || 'Unknown Team';
   };
+
+  const canAddMoreTeams = !maxTeams || selectedTeams.length < maxTeams;
 
   return (
     <div className="space-y-3">
@@ -99,7 +106,7 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
       </div>
 
       {/* Add Team Selector */}
-      {selectedTeams.length < maxTeams && availableTeams.length > 0 && (
+      {canAddMoreTeams && availableTeams.length > 0 && (
         <div className="flex gap-2">
           <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
             <SelectTrigger className="flex-1">
@@ -118,15 +125,25 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
             variant="outline"
             onClick={handleAddTeam}
             disabled={!selectedTeamId}
+            className="flex items-center gap-1"
           >
+            <Plus className="h-4 w-4" />
             Add Team
           </Button>
         </div>
       )}
 
-      {selectedTeams.length >= maxTeams && (
+      {/* Show team count info only if maxTeams is provided */}
+      {maxTeams && selectedTeams.length >= maxTeams && (
         <p className="text-sm text-muted-foreground">
           Maximum of {maxTeams} teams can participate in this event.
+        </p>
+      )}
+
+      {/* Show message if no teams available to add */}
+      {canAddMoreTeams && availableTeams.length === 0 && selectedTeams.length > 1 && (
+        <p className="text-sm text-muted-foreground">
+          No more teams with the same game format available to add.
         </p>
       )}
     </div>

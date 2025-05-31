@@ -148,11 +148,28 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               .filter(Boolean) || [];
             
             // Safely handle substitutes arrays - ensure they're string arrays
-            const substituteIds: string[] = Array.isArray(selection.substitutes) 
-              ? (selection.substitutes as any[]).map(id => String(id)).filter(Boolean)
-              : Array.isArray(selection.substitute_players) 
-                ? (selection.substitute_players as any[]).map(id => String(id)).filter(Boolean)
-                : [];
+            const substituteIds: string[] = [];
+            if (Array.isArray(selection.substitutes)) {
+              selection.substitutes.forEach((id: any) => {
+                if (typeof id === 'string') {
+                  substituteIds.push(id);
+                } else if (typeof id === 'number') {
+                  substituteIds.push(String(id));
+                }
+              });
+            }
+            if (Array.isArray(selection.substitute_players)) {
+              selection.substitute_players.forEach((id: any) => {
+                if (typeof id === 'string' && !substituteIds.includes(id)) {
+                  substituteIds.push(id);
+                } else if (typeof id === 'number') {
+                  const stringId = String(id);
+                  if (!substituteIds.includes(stringId)) {
+                    substituteIds.push(stringId);
+                  }
+                }
+              });
+            }
             
             // Safely handle staff_selection JSON
             const staffSelection = Array.isArray(selection.staff_selection) ? selection.staff_selection : [];
@@ -271,58 +288,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }));
   };
 
-  const addTeam = (teamId: string) => {
-    if (!teams.includes(teamId) && teams.length < 4) {
-      setTeams(prev => [...prev, teamId]);
-      
-      // Initialize team state
-      setTeamStates(prev => ({
+  const addPeriod = () => {
+    const newPeriod = periods.length + 1;
+    setPeriods(prev => [...prev, newPeriod]);
+    
+    // Initialize period state for all teams
+    teams.forEach(teamId => {
+      const key = `${teamId}-${newPeriod}`;
+      setPeriodStates(prev => ({
         ...prev,
-        [teamId]: {
+        [key]: {
           teamId,
-          selectedPlayers: [],
-          substitutePlayers: [],
-          captainId: '',
-          selectedStaff: [],
-          performanceCategoryId: 'none'
+          periodId: newPeriod.toString(),
+          formation: '4-3-3'
         }
       }));
-
-      // Initialize period states for all existing periods
-      periods.forEach(period => {
-        const key = `${teamId}-${period}`;
-        setPeriodStates(prev => ({
-          ...prev,
-          [key]: {
-            teamId,
-            periodId: period.toString(),
-            formation: '4-3-3'
-          }
-        }));
-      });
-
-      setActiveTeam(teamId);
-    }
-  };
-
-  const addPeriod = () => {
-    if (periods.length < 4) {
-      const newPeriod = periods.length + 1;
-      setPeriods(prev => [...prev, newPeriod]);
-      
-      // Initialize period state for all teams
-      teams.forEach(teamId => {
-        const key = `${teamId}-${newPeriod}`;
-        setPeriodStates(prev => ({
-          ...prev,
-          [key]: {
-            teamId,
-            periodId: newPeriod.toString(),
-            formation: '4-3-3'
-          }
-        }));
-      });
-    }
+    });
   };
 
   const getAvailableFormations = () => {
@@ -469,7 +450,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 selectedTeams={teams}
                 onTeamsChange={setTeams}
                 primaryTeamId={event.team_id}
-                maxTeams={4}
+                maxTeams={undefined} // Remove limit
               />
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -486,11 +467,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                         Period {period}
                       </Badge>
                     ))}
-                    {periods.length < 4 && (
-                      <Button size="sm" variant="outline" onClick={addPeriod}>
-                        <Plus className="h-3 w-3" />
-                      </Button>
-                    )}
+                    <Button size="sm" variant="outline" onClick={addPeriod}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
 
