@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Users, Mail, Phone, Award, CheckCircle, Clock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Users, Mail, Phone, Award, CheckCircle, Clock, Copy, Eye, EyeOff, Link } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +23,7 @@ interface ClubStaffMember {
   pvgCheckedAt?: string;
   coachingBadges: string[];
   certificates: any[];
+  linkingCode?: string;
 }
 
 interface ClubStaffManagementProps {
@@ -36,6 +38,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
   const [staff, setStaff] = useState<ClubStaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [showLinkingCodes, setShowLinkingCodes] = useState<{[key: string]: boolean}>({});
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -75,7 +78,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       const teamIds = clubTeams.map(ct => ct.team_id);
       console.log('Team IDs:', teamIds);
 
-      // Get staff for these teams
+      // Get staff for these teams including linking codes
       const { data: teamStaff, error: staffError } = await supabase
         .from('team_staff')
         .select('*')
@@ -105,7 +108,8 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
             coachingBadges: Array.isArray(staff.coaching_badges) 
               ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
               : [],
-            certificates: Array.isArray(staff.certificates) ? staff.certificates : []
+            certificates: Array.isArray(staff.certificates) ? staff.certificates : [],
+            linkingCode: staff.linking_code
           };
         });
 
@@ -167,6 +171,21 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     } finally {
       setUpdating(null);
     }
+  };
+
+  const copyLinkingCode = (linkingCode: string, staffName: string) => {
+    navigator.clipboard.writeText(linkingCode);
+    toast({
+      title: 'Copied!',
+      description: `Linking code for ${staffName} copied to clipboard`,
+    });
+  };
+
+  const toggleLinkingCodeVisibility = (staffId: string) => {
+    setShowLinkingCodes(prev => ({
+      ...prev,
+      [staffId]: !prev[staffId]
+    }));
   };
 
   const getRoleColor = (role: string) => {
@@ -276,7 +295,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* PVG Check Section */}
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
@@ -329,6 +348,49 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
                               No badges recorded
                             </div>
                           )}
+                        </div>
+
+                        {/* Linking Code Section */}
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Link className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm font-medium">Account Linking</span>
+                          </div>
+                          {staffMember.linkingCode && (
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1">
+                                <Input
+                                  type={showLinkingCodes[staffMember.id] ? 'text' : 'password'}
+                                  value={staffMember.linkingCode}
+                                  readOnly
+                                  className="text-xs font-mono h-8"
+                                />
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0"
+                                onClick={() => toggleLinkingCodeVisibility(staffMember.id)}
+                              >
+                                {showLinkingCodes[staffMember.id] ? (
+                                  <EyeOff className="h-3 w-3" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 w-8 p-0"
+                                onClick={() => copyLinkingCode(staffMember.linkingCode!, staffMember.name)}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            Share this code for account linking
+                          </div>
                         </div>
                       </div>
                     </div>

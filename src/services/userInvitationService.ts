@@ -7,6 +7,7 @@ export interface InviteUserData {
   role: 'staff' | 'parent' | 'player';
   teamId?: string;
   playerId?: string; // For parent linking
+  staffId?: string; // For staff linking
 }
 
 export interface UserInvitation {
@@ -16,6 +17,7 @@ export interface UserInvitation {
   role: string;
   team_id?: string;
   player_id?: string;
+  staff_id?: string;
   invitation_code: string;
   expires_at: string;
   status: 'pending' | 'accepted' | 'expired';
@@ -35,6 +37,7 @@ export const userInvitationService = {
         role: inviteData.role,
         team_id: inviteData.teamId,
         player_id: inviteData.playerId,
+        staff_id: inviteData.staffId,
         invited_by: (await supabase.auth.getUser()).data.user?.id
       }])
       .select()
@@ -117,11 +120,38 @@ export const userInvitationService = {
       .insert([{
         user_id: userId,
         player_id: player.id,
-        relationship: 'self' // or 'parent' if it's a parent linking
+        relationship: 'self'
       }]);
 
     if (linkError) {
       console.error('Error linking player account:', linkError);
+      throw linkError;
+    }
+  },
+
+  async linkStaffAccount(linkingCode: string, userId: string): Promise<void> {
+    // Find the staff member with the linking code
+    const { data: staff, error: staffError } = await supabase
+      .from('team_staff')
+      .select('*')
+      .eq('linking_code', linkingCode)
+      .single();
+
+    if (staffError || !staff) {
+      throw new Error('Invalid linking code');
+    }
+
+    // Create the user-staff relationship
+    const { error: linkError } = await supabase
+      .from('user_staff')
+      .insert([{
+        user_id: userId,
+        staff_id: staff.id,
+        relationship: 'self'
+      }]);
+
+    if (linkError) {
+      console.error('Error linking staff account:', linkError);
       throw linkError;
     }
   }

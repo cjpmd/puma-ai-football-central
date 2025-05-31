@@ -1210,6 +1210,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          linking_code: string | null
           name: string
           phone: string | null
           pvg_checked: boolean | null
@@ -1226,6 +1227,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          linking_code?: string | null
           name: string
           phone?: string | null
           pvg_checked?: boolean | null
@@ -1242,6 +1244,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          linking_code?: string | null
           name?: string
           phone?: string | null
           pvg_checked?: boolean | null
@@ -1440,6 +1443,7 @@ export type Database = {
           name: string
           player_id: string | null
           role: string
+          staff_id: string | null
           status: string
           team_id: string | null
           updated_at: string
@@ -1456,6 +1460,7 @@ export type Database = {
           name: string
           player_id?: string | null
           role: string
+          staff_id?: string | null
           status?: string
           team_id?: string | null
           updated_at?: string
@@ -1472,6 +1477,7 @@ export type Database = {
           name?: string
           player_id?: string | null
           role?: string
+          staff_id?: string | null
           status?: string
           team_id?: string | null
           updated_at?: string
@@ -1482,6 +1488,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff"
             referencedColumns: ["id"]
           },
           {
@@ -1524,6 +1537,41 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_staff: {
+        Row: {
+          created_at: string | null
+          id: string
+          relationship: string
+          staff_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          relationship?: string
+          staff_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          relationship?: string
+          staff_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_staff_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff"
             referencedColumns: ["id"]
           },
         ]
