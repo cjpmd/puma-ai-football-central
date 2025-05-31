@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -330,7 +331,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const getTeamDisplayName = (teamId: string) => {
     const teamIndex = teams.indexOf(teamId);
     const teamState = teamStates[teamId];
-    if (teamState?.performanceCategoryId !== 'none') {
+    
+    // Add null checks to prevent crash
+    if (teamState && teamState.performanceCategoryId && teamState.performanceCategoryId !== 'none') {
       const category = performanceCategories.find(c => c.id === teamState.performanceCategoryId);
       return category?.name || `Team ${teamIndex + 1}`;
     }
