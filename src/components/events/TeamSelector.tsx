@@ -29,8 +29,8 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
       return;
     }
     
-    // Add the primary team ID again to create multiple teams for the event
-    const newTeams = [...selectedTeams, primaryTeamId];
+    // Add a new team slot (using the primary team ID as the base, but it will be managed separately)
+    const newTeams = [...selectedTeams, `${primaryTeamId}-team-${selectedTeams.length + 1}`];
     console.log('New teams list:', newTeams);
     onTeamsChange(newTeams);
   };
@@ -106,12 +106,6 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
           Maximum of {maxTeams} teams can participate in this event.
         </p>
       )}
-
-      {/* Debug info - remove this after testing */}
-      <div className="text-xs text-gray-400 space-y-1">
-        <div>Debug: Can add more: {canAddMoreTeams.toString()}, Selected teams: {selectedTeams.length}</div>
-        <div>Teams: {selectedTeams.map((_, i) => `Team ${i + 1}`).join(', ')}</div>
-      </div>
     </div>
   );
 };
