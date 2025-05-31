@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Users, Bell, CheckCircle, Settings, Plus, Save } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
@@ -46,6 +46,7 @@ interface PeriodState {
   teamId: string;
   periodId: string;
   formation: string;
+  durationMinutes: number;
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -96,7 +97,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           newPeriodStates[periodKey] = {
             teamId,
             periodId: period.toString(),
-            formation: '4-3-3'
+            formation: '4-3-3',
+            durationMinutes: 45
           };
         }
       });
@@ -126,7 +128,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const currentPeriodState = periodStates[currentPeriodKey] || {
     teamId: activeTeam,
     periodId: activePeriod.toString(),
-    formation: '4-3-3'
+    formation: '4-3-3',
+    durationMinutes: 45
   };
 
   useEffect(() => {
@@ -228,7 +231,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           newPeriodStates[periodKey] = {
             teamId,
             periodId: periodNumber.toString(),
-            formation: selection.formation || '4-3-3'
+            formation: selection.formation || '4-3-3',
+            durationMinutes: selection.duration_minutes || 45
           };
         });
 
@@ -315,14 +319,19 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     const newPeriod = periods.length + 1;
     setPeriods(prev => [...prev, newPeriod]);
     
+    // Copy player selections from the last period to the new period for persistence
     teams.forEach(teamId => {
       const key = `${teamId}-${newPeriod}`;
+      const lastPeriodKey = `${teamId}-${periods[periods.length - 1]}`;
+      const lastPeriodState = periodStates[lastPeriodKey];
+      
       setPeriodStates(prev => ({
         ...prev,
         [key]: {
           teamId,
           periodId: newPeriod.toString(),
-          formation: '4-3-3'
+          formation: lastPeriodState?.formation || '4-3-3',
+          durationMinutes: lastPeriodState?.durationMinutes || 45
         }
       }));
     });
@@ -408,7 +417,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             captain_id: teamState.captainId || null,
             staff_selection: staffSelection,
             performance_category_id: teamState.performanceCategoryId !== 'none' ? teamState.performanceCategoryId : null,
-            duration_minutes: 90
+            duration_minutes: periodState.durationMinutes
           });
         });
       });
@@ -434,7 +443,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[95vw] md:max-w-[900px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[95vw] md:max-w-[1200px] max-h-[90vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <div className="flex items-center justify-between">
             <div>
@@ -454,200 +463,200 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <Card className="shrink-0 mb-4">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base">
-                <Settings className="h-4 w-4" />
-                Configuration
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <TeamSelector
-                selectedTeams={teams}
-                onTeamsChange={setTeams}
-                primaryTeamId={event.team_id}
-                maxTeams={undefined}
-              />
+        <div className="flex-1 overflow-hidden">
+          <Tabs value={activeTeam} onValueChange={setActiveTeam} className="h-full flex flex-col">
+            <div className="shrink-0 space-y-4">
+              {/* Condensed Configuration */}
+              <Card>
+                <CardContent className="pt-4">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-end">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Teams</Label>
+                      <TeamSelector
+                        selectedTeams={teams}
+                        onTeamsChange={setTeams}
+                        primaryTeamId={event.team_id}
+                        maxTeams={undefined}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Periods</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {periods.map((period) => (
+                          <Badge 
+                            key={period}
+                            variant={period === activePeriod ? "default" : "secondary"}
+                            className="cursor-pointer"
+                            onClick={() => setActivePeriod(period)}
+                          >
+                            Period {period}
+                          </Badge>
+                        ))}
+                        <Button size="sm" variant="outline" onClick={addPeriod}>
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Periods</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {periods.map((period) => (
-                      <Badge 
-                        key={period}
-                        variant={period === activePeriod ? "default" : "secondary"}
-                        className="cursor-pointer"
-                        onClick={() => setActivePeriod(period)}
-                      >
-                        Period {period}
-                      </Badge>
-                    ))}
-                    <Button size="sm" variant="outline" onClick={addPeriod}>
-                      <Plus className="h-3 w-3" />
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      {availabilityRequested && (
+                        <Badge className="bg-green-500 text-white">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Notifications Sent
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
+                </CardContent>
+              </Card>
 
-                <div className="space-y-2">
-                  <Label>Performance Category</Label>
-                  <Select 
-                    value={currentTeamState.performanceCategoryId} 
-                    onValueChange={(value) => updateTeamState(activeTeam, { performanceCategoryId: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Category</SelectItem>
-                      {performanceCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="shrink-0 mb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Label>Active Team:</Label>
-                <div className="flex flex-wrap gap-2">
-                  {teams.map((teamId) => (
-                    <Badge 
-                      key={teamId}
-                      variant={teamId === activeTeam ? "default" : "secondary"}
-                      className="cursor-pointer"
-                      onClick={() => setActiveTeam(teamId)}
-                    >
-                      {getTeamDisplayName(teamId)} - Period {activePeriod}
-                    </Badge>
-                  ))}
-                </div>
-                {availabilityRequested && (
-                  <Badge className="bg-green-500 text-white">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Notifications Sent
-                  </Badge>
-                )}
-              </div>
+              {/* Team Tabs */}
+              <TabsList className="w-full justify-start">
+                {teams.map((teamId) => (
+                  <TabsTrigger key={teamId} value={teamId} className="min-w-[120px]">
+                    {getTeamDisplayName(teamId)}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
             </div>
-          </div>
 
-          <Tabs defaultValue="players" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="shrink-0 grid w-full grid-cols-4">
-              <TabsTrigger value="players" className="text-xs sm:text-sm">Players</TabsTrigger>
-              <TabsTrigger value="staff" className="text-xs sm:text-sm">Staff</TabsTrigger>
-              <TabsTrigger value="availability" className="text-xs sm:text-sm">Availability</TabsTrigger>
-              <TabsTrigger value="dashboard" className="text-xs sm:text-sm">Dashboard</TabsTrigger>
-            </TabsList>
+            {/* Team Content */}
+            <div className="flex-1 overflow-hidden">
+              {teams.map((teamId) => (
+                <TabsContent key={teamId} value={teamId} className="h-full mt-4">
+                  <div className="h-full flex flex-col">
+                    {/* Team Configuration */}
+                    <Card className="shrink-0 mb-4">
+                      <CardContent className="pt-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="space-y-2">
+                            <Label className="text-sm">Performance Category</Label>
+                            <Select 
+                              value={teamStates[teamId]?.performanceCategoryId || 'none'} 
+                              onValueChange={(value) => updateTeamState(teamId, { performanceCategoryId: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">No Category</SelectItem>
+                                {performanceCategories.map((category) => (
+                                  <SelectItem key={category.id} value={category.id}>
+                                    {category.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-            <div className="flex-1 overflow-y-auto">
-              <TabsContent value="players" className="p-4 md:p-6 space-y-6 mt-0">
-                <PlayerSelectionWithAvailability
-                  teamId={activeTeam}
-                  eventId={event.id}
-                  selectedPlayers={currentTeamState.selectedPlayers}
-                  substitutePlayers={currentTeamState.substitutePlayers}
-                  captainId={currentTeamState.captainId}
-                  onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
-                  onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
-                  onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
-                  eventType={event.event_type}
-                  showFormationView={true}
-                  formation={currentPeriodState.formation}
-                  onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
-                  gameFormat={event.game_format as GameFormat}
-                  teamNumber={teams.indexOf(activeTeam) + 1}
-                  periodNumber={activePeriod}
-                  showSubstitutesInFormation={true}
-                />
+                          <div className="space-y-2">
+                            <Label className="text-sm">Formation</Label>
+                            <Select 
+                              value={currentPeriodState.formation} 
+                              onValueChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {getFormationsByFormat(event.game_format as GameFormat).map((formation) => (
+                                  <SelectItem key={formation} value={formation}>
+                                    {formation}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-medium">Selection Summary</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
-                        </p>
+                          <div className="space-y-2">
+                            <Label className="text-sm flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              Duration (minutes)
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="120"
+                              value={currentPeriodState.durationMinutes}
+                              onChange={(e) => updatePeriodState(currentPeriodKey, { durationMinutes: parseInt(e.target.value) || 45 })}
+                              className="w-full"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Team Management Tabs */}
+                    <Tabs defaultValue="players" className="flex-1 flex flex-col overflow-hidden">
+                      <TabsList className="shrink-0 grid w-full grid-cols-3">
+                        <TabsTrigger value="players">Players</TabsTrigger>
+                        <TabsTrigger value="staff">Staff</TabsTrigger>
+                        <TabsTrigger value="availability">Availability</TabsTrigger>
+                      </TabsList>
+
+                      <div className="flex-1 overflow-y-auto">
+                        <TabsContent value="players" className="mt-4 space-y-4">
+                          <PlayerSelectionWithAvailability
+                            teamId={teamId}
+                            eventId={event.id}
+                            selectedPlayers={teamStates[teamId]?.selectedPlayers || []}
+                            substitutePlayers={teamStates[teamId]?.substitutePlayers || []}
+                            captainId={teamStates[teamId]?.captainId || ''}
+                            onPlayersChange={(players) => updateTeamState(teamId, { selectedPlayers: players })}
+                            onSubstitutesChange={(substitutes) => updateTeamState(teamId, { substitutePlayers: substitutes })}
+                            onCaptainChange={(captainId) => updateTeamState(teamId, { captainId })}
+                            eventType={event.event_type}
+                            showFormationView={true}
+                            formation={currentPeriodState.formation}
+                            onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
+                            gameFormat={event.game_format as GameFormat}
+                            teamNumber={teams.indexOf(teamId) + 1}
+                            periodNumber={activePeriod}
+                            showSubstitutesInFormation={true}
+                          />
+
+                          <Card>
+                            <CardContent className="pt-6">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <div>
+                                  <h3 className="font-medium">Selection Summary</h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {teamStates[teamId]?.selectedPlayers?.length || 0} players, {teamStates[teamId]?.substitutePlayers?.length || 0} substitutes selected
+                                  </p>
+                                </div>
+                                <Button
+                                  onClick={handleRequestAvailability}
+                                  disabled={sendingNotifications || availabilityRequested}
+                                  className="flex items-center gap-2 w-full sm:w-auto"
+                                >
+                                  <Bell className="h-4 w-4" />
+                                  {sendingNotifications ? 'Sending...' : 
+                                   availabilityRequested ? 'Notifications Sent' : 
+                                   'Request Availability'}
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </TabsContent>
+
+                        <TabsContent value="staff" className="mt-4">
+                          <StaffSelectionSection
+                            teamId={teamId}
+                            selectedStaff={teamStates[teamId]?.selectedStaff || []}
+                            onStaffChange={(staff) => updateTeamState(teamId, { selectedStaff: staff })}
+                            staffAssignments={staffAssignments}
+                          />
+                        </TabsContent>
+
+                        <TabsContent value="availability" className="mt-4">
+                          <EventAvailabilityDashboard event={event} />
+                        </TabsContent>
                       </div>
-                      <Button
-                        onClick={handleRequestAvailability}
-                        disabled={sendingNotifications || availabilityRequested}
-                        className="flex items-center gap-2 w-full sm:w-auto"
-                      >
-                        <Bell className="h-4 w-4" />
-                        {sendingNotifications ? 'Sending...' : 
-                         availabilityRequested ? 'Notifications Sent' : 
-                         'Request Availability'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="staff" className="p-4 md:p-6 mt-0">
-                <StaffSelectionSection
-                  teamId={activeTeam}
-                  selectedStaff={currentTeamState.selectedStaff}
-                  onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
-                  staffAssignments={staffAssignments}
-                />
-
-                <Card className="mt-6">
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-medium">Staff Summary</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {currentTeamState.selectedStaff.length} staff members selected
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleRequestAvailability}
-                        disabled={sendingNotifications || availabilityRequested}
-                        className="flex items-center gap-2 w-full sm:w-auto"
-                      >
-                        <Bell className="h-4 w-4" />
-                        {sendingNotifications ? 'Sending...' : 
-                         availabilityRequested ? 'Notifications Sent' : 
-                         'Request Availability'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="availability" className="p-4 md:p-6 mt-0">
-                <EventAvailabilityDashboard event={event} />
-              </TabsContent>
-
-              <TabsContent value="dashboard" className="p-4 md:p-6 space-y-6 mt-0">
-                <EventAvailabilityDashboard event={event} />
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Quick Actions</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button
-                      onClick={handleRequestAvailability}
-                      disabled={sendingNotifications}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      <Bell className="h-4 w-4 mr-2" />
-                      {sendingNotifications ? 'Sending...' : 'Resend Availability Requests'}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </TabsContent>
+                    </Tabs>
+                  </div>
+                </TabsContent>
+              ))}
             </div>
           </Tabs>
         </div>
