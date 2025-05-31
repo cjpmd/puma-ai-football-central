@@ -53,7 +53,7 @@ export const UserManagementSystem = () => {
   const [roleFilter, setRoleFilter] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
   const { toast } = useToast();
-  const { user, teams, clubs } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadUsers();
@@ -80,24 +80,26 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Get user-team relationships
+      // Get user-team relationships with explicit column specification
       const { data: userTeams, error: userTeamsError } = await supabase
         .from('user_teams')
         .select(`
           user_id,
           role,
-          teams!inner(id, name)
+          team_id,
+          teams:team_id(id, name)
         `);
 
       if (userTeamsError) console.error('Error fetching user teams:', userTeamsError);
 
-      // Get user-club relationships
+      // Get user-club relationships with explicit column specification
       const { data: userClubs, error: userClubsError } = await supabase
         .from('user_clubs')
         .select(`
           user_id,
           role,
-          clubs!inner(id, name)
+          club_id,
+          clubs:club_id(id, name)
         `);
 
       if (userClubsError) console.error('Error fetching user clubs:', userClubsError);
@@ -108,7 +110,8 @@ export const UserManagementSystem = () => {
         .select(`
           user_id,
           relationship,
-          players!inner(id, name, teams!inner(id, name))
+          player_id,
+          players:player_id(id, name, team_id, teams:team_id(id, name))
         `);
 
       if (userPlayersError) console.error('Error fetching user players:', userPlayersError);
@@ -119,7 +122,8 @@ export const UserManagementSystem = () => {
         .select(`
           user_id,
           relationship,
-          team_staff!inner(id, name, role, teams!inner(id, name))
+          staff_id,
+          team_staff:staff_id(id, name, role, team_id, teams:team_id(id, name))
         `);
 
       if (userStaffError) console.error('Error fetching user staff:', userStaffError);
@@ -139,26 +143,26 @@ export const UserManagementSystem = () => {
           roles: Array.isArray(profile.roles) ? profile.roles : [],
           created_at: profile.created_at,
           teams: userTeamData.map(ut => ({
-            id: ut.teams.id,
-            name: ut.teams.name,
+            id: ut.teams?.id || '',
+            name: ut.teams?.name || 'Unknown Team',
             role: ut.role
           })),
           clubs: userClubData.map(uc => ({
-            id: uc.clubs.id,
-            name: uc.clubs.name,
+            id: uc.clubs?.id || '',
+            name: uc.clubs?.name || 'Unknown Club',
             role: uc.role
           })),
           playerLinks: userPlayerData.map(up => ({
-            id: up.players.id,
-            name: up.players.name,
-            team: up.players.teams?.name || 'Unknown Team',
+            id: up.players?.id || '',
+            name: up.players?.name || 'Unknown Player',
+            team: up.players?.teams?.name || 'Unknown Team',
             relationship: up.relationship
           })),
           staffLinks: userStaffData.map(us => ({
-            id: us.team_staff.id,
-            name: us.team_staff.name,
-            team: us.team_staff.teams?.name || 'Unknown Team',
-            role: us.team_staff.role,
+            id: us.team_staff?.id || '',
+            name: us.team_staff?.name || 'Unknown Staff',
+            team: us.team_staff?.teams?.name || 'Unknown Team',
+            role: us.team_staff?.role || 'Unknown Role',
             relationship: us.relationship
           }))
         };
@@ -497,8 +501,6 @@ export const UserManagementSystem = () => {
       <UserInvitationModal
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
-        teams={teams}
-        clubs={clubs}
         onInviteSent={loadUsers}
       />
     </div>
