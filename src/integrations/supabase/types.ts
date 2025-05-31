@@ -1598,6 +1598,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      regenerate_all_event_player_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       update_all_completed_events_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined

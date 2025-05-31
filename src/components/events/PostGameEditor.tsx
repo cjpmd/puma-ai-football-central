@@ -13,6 +13,7 @@ import { ScoreInput } from './ScoreInput';
 import { eventsService } from '@/services/eventsService';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { playerStatsService } from '@/services/playerStatsService';
 
 interface PostGameEditorProps {
   eventId: string;
@@ -174,6 +175,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       console.log('Updated event with scores:', updatedEvent);
       handleEventUpdate(updatedEvent);
       
+      // Player stats will be updated automatically via database triggers
+      // But we can also manually trigger it to ensure it happens
+      await playerStatsService.updateEventPlayerStats(eventId);
+      
       // Force a reload to ensure we have the latest data
       await loadEvent();
       
@@ -209,6 +214,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
       
       handleEventUpdate(updatedEvent);
       
+      // Player stats will be updated automatically via database triggers
+      // But we can also manually trigger it to ensure it happens
+      await playerStatsService.updateEventPlayerStats(eventId);
+      
       // Force a reload to ensure we have the latest data
       await loadEvent();
       
@@ -241,7 +250,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
                   
                   <TabsContent value="results" className="space-y-4">
                     <ScoreInput 
-                      key={`${event.id}-${JSON.stringify(event.scores)}`} // Force re-render when scores change
+                      key={`${event.id}-${JSON.stringify(event.scores)}`}
                       event={event} 
                       onScoreUpdate={handleScoreUpdate}
                       onPOTMUpdate={handlePOTMUpdate}
