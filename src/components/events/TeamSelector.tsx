@@ -32,16 +32,26 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   useEffect(() => {
+    console.log('TeamSelector - userTeams:', userTeams);
+    console.log('TeamSelector - selectedTeams:', selectedTeams);
+    console.log('TeamSelector - primaryTeamId:', primaryTeamId);
     loadAvailableTeams();
-  }, [selectedTeams, primaryTeamId, userTeams]);
+  }, [userTeams, selectedTeams, primaryTeamId]);
 
   const loadAvailableTeams = () => {
     try {
-      // Load all teams that aren't already selected
-      const filteredTeams = userTeams.filter(team => 
-        !selectedTeams.includes(team.id)
-      );
+      console.log('Loading available teams...');
+      console.log('All user teams:', userTeams);
+      console.log('Currently selected teams:', selectedTeams);
       
+      // Load all teams that aren't already selected
+      const filteredTeams = userTeams.filter(team => {
+        const isNotSelected = !selectedTeams.includes(team.id);
+        console.log(`Team ${team.name} (${team.id}): isNotSelected = ${isNotSelected}`);
+        return isNotSelected;
+      });
+      
+      console.log('Filtered available teams:', filteredTeams);
       setAvailableTeams(filteredTeams);
     } catch (error) {
       console.error('Error in loadAvailableTeams:', error);
@@ -49,20 +59,26 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
   };
 
   const handleAddTeam = () => {
+    console.log('Adding team:', selectedTeamId);
     if (selectedTeamId && !selectedTeams.includes(selectedTeamId)) {
       // Only check maxTeams if it's provided
       if (maxTeams && selectedTeams.length >= maxTeams) {
+        console.log('Maximum teams reached');
         return;
       }
       
-      onTeamsChange([...selectedTeams, selectedTeamId]);
+      const newTeams = [...selectedTeams, selectedTeamId];
+      console.log('New teams list:', newTeams);
+      onTeamsChange(newTeams);
       setSelectedTeamId('');
     }
   };
 
   const handleRemoveTeam = (teamId: string) => {
     if (teamId !== primaryTeamId) { // Don't allow removing the primary team
-      onTeamsChange(selectedTeams.filter(id => id !== teamId));
+      const newTeams = selectedTeams.filter(id => id !== teamId);
+      console.log('Removing team, new list:', newTeams);
+      onTeamsChange(newTeams);
     }
   };
 
@@ -73,6 +89,14 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
 
   const canAddMoreTeams = !maxTeams || selectedTeams.length < maxTeams;
   const hasAvailableTeams = availableTeams.length > 0;
+
+  console.log('Render state:', {
+    canAddMoreTeams,
+    hasAvailableTeams,
+    availableTeamsCount: availableTeams.length,
+    selectedTeamsCount: selectedTeams.length,
+    maxTeams
+  });
 
   return (
     <div className="space-y-3">
@@ -100,50 +124,57 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
         ))}
       </div>
 
-      {/* Add Team Selector - Always show if teams are available and under limit */}
-      {canAddMoreTeams && hasAvailableTeams && (
-        <div className="flex gap-2">
-          <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-            <SelectTrigger className="flex-1">
-              <SelectValue placeholder="Add another team..." />
-            </SelectTrigger>
-            <SelectContent>
-              {availableTeams.map((team) => (
-                <SelectItem key={team.id} value={team.id}>
-                  {team.name} ({team.ageGroup})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleAddTeam}
-            disabled={!selectedTeamId}
-            className="flex items-center gap-1"
-          >
-            <Plus className="h-4 w-4" />
-            Add Team
-          </Button>
+      {/* Add Team Selector - Show if we can add more teams */}
+      {canAddMoreTeams && (
+        <div className="space-y-2">
+          {hasAvailableTeams ? (
+            <div className="flex gap-2">
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Add another team..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTeams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name} ({team.ageGroup})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleAddTeam}
+                disabled={!selectedTeamId}
+                className="flex items-center gap-1"
+              >
+                <Plus className="h-4 w-4" />
+                Add Team
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {selectedTeams.length === 1 ? 
+                "No more teams available to add." : 
+                "All available teams have been added."
+              }
+            </p>
+          )}
         </div>
       )}
 
-      {/* Info messages */}
+      {/* Max teams reached message */}
       {maxTeams && selectedTeams.length >= maxTeams && (
         <p className="text-sm text-muted-foreground">
           Maximum of {maxTeams} teams can participate in this event.
         </p>
       )}
 
-      {canAddMoreTeams && !hasAvailableTeams && selectedTeams.length > 0 && (
-        <p className="text-sm text-muted-foreground">
-          No more teams available to add.
-        </p>
-      )}
-
       {/* Debug info - remove this after testing */}
-      <div className="text-xs text-gray-400">
-        Debug: Available teams: {availableTeams.length}, Can add more: {canAddMoreTeams.toString()}, Selected teams: {selectedTeams.length}
+      <div className="text-xs text-gray-400 space-y-1">
+        <div>Debug: Available teams: {availableTeams.length}, Can add more: {canAddMoreTeams.toString()}, Selected teams: {selectedTeams.length}</div>
+        <div>User teams total: {userTeams.length}</div>
+        <div>Available team names: {availableTeams.map(t => t.name).join(', ')}</div>
       </div>
     </div>
   );
