@@ -42,7 +42,6 @@ interface Player {
 interface TeamState {
   teamId: string;
   selectedPlayers: string[];
-  substitutePlayers: string[];
   captainId: string;
   selectedStaff: string[];
   performanceCategoryId: string;
@@ -54,6 +53,7 @@ interface PeriodState {
   periodId: string;
   formation: string;
   durationMinutes: number;
+  substitutePlayers: string[]; // Move substitutes to period-specific
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -102,7 +102,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         newTeamStates[teamId] = {
           teamId,
           selectedPlayers: [],
-          substitutePlayers: [],
           captainId: '',
           selectedStaff: [],
           performanceCategoryId: 'none'
@@ -122,7 +121,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             teamId,
             periodId: period.toString(),
             formation: '4-3-3',
-            durationMinutes: 45
+            durationMinutes: 45,
+            substitutePlayers: []
           };
         }
       });
@@ -273,30 +273,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 .map((pos: any) => pos.playerId || pos.player_id)
                 .filter(Boolean) || [];
               
-              // Safely handle substitutes arrays
-              const substituteIds: string[] = [];
-              if (Array.isArray(selection.substitutes)) {
-                selection.substitutes.forEach((id: any) => {
-                  if (typeof id === 'string') {
-                    substituteIds.push(id);
-                  } else if (typeof id === 'number') {
-                    substituteIds.push(String(id));
-                  }
-                });
-              }
-              if (Array.isArray(selection.substitute_players)) {
-                selection.substitute_players.forEach((id: any) => {
-                  if (typeof id === 'string' && !substituteIds.includes(id)) {
-                    substituteIds.push(id);
-                  } else if (typeof id === 'number') {
-                    const stringId = String(id);
-                    if (!substituteIds.includes(stringId)) {
-                      substituteIds.push(stringId);
-                    }
-                  }
-                });
-              }
-              
               // Safely handle staff_selection JSON
               const staffSelection = Array.isArray(selection.staff_selection) ? selection.staff_selection : [];
               const staffIds = staffSelection
@@ -306,7 +282,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               newTeamStates[teamId] = {
                 teamId,
                 selectedPlayers: playerIds,
-                substitutePlayers: substituteIds,
                 captainId: selection.captain_id || '',
                 selectedStaff: staffIds,
                 performanceCategoryId: selection.performance_category_id || 'none'
@@ -325,13 +300,39 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               });
             }
 
-            // Period state
+            // Period state - with period-specific substitutes
             const periodKey = `${teamId}-${periodNumber}`;
+            
+            // Safely handle substitutes arrays for this specific period
+            const substituteIds: string[] = [];
+            if (Array.isArray(selection.substitutes)) {
+              selection.substitutes.forEach((id: any) => {
+                if (typeof id === 'string') {
+                  substituteIds.push(id);
+                } else if (typeof id === 'number') {
+                  substituteIds.push(String(id));
+                }
+              });
+            }
+            if (Array.isArray(selection.substitute_players)) {
+              selection.substitute_players.forEach((id: any) => {
+                if (typeof id === 'string' && !substituteIds.includes(id)) {
+                  substituteIds.push(id);
+                } else if (typeof id === 'number') {
+                  const stringId = String(id);
+                  if (!substituteIds.includes(stringId)) {
+                    substituteIds.push(stringId);
+                  }
+                }
+              });
+            }
+            
             newPeriodStates[periodKey] = {
               teamId,
               periodId: periodNumber.toString(),
               formation: selection.formation || '4-3-3',
-              durationMinutes: selection.duration_minutes || 45
+              durationMinutes: selection.duration_minutes || 45,
+              substitutePlayers: substituteIds
             };
           });
         });
@@ -384,7 +385,6 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const currentTeamState = teamStates[activeTeam] || {
     teamId: activeTeam,
     selectedPlayers: [],
-    substitutePlayers: [],
     captainId: '',
     selectedStaff: [],
     performanceCategoryId: 'none'
@@ -395,7 +395,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     teamId: activeTeam,
     periodId: activePeriod.toString(),
     formation: '4-3-3',
-    durationMinutes: 45
+    durationMinutes: 45,
+    substitutePlayers: []
   };
 
   const updateTeamState = (teamId: string, updates: Partial<TeamState>) => {
@@ -462,7 +463,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         teamId: activeTeam,
         periodId: newPeriod.toString(),
         formation: lastPeriodState?.formation || '4-3-3',
-        durationMinutes: lastPeriodState?.durationMinutes || 45
+        durationMinutes: lastPeriodState?.durationMinutes || 45,
+        substitutePlayers: [] // Start with empty substitutes for new period
       }
     }));
   };
@@ -510,6 +512,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       setSaving(true);
       console.log('Saving selections for teams:', teams);
       console.log('Team states:', teamStates);
+      console.log('Period states:', periodStates);
 
       await supabase
         .from('event_selections')
@@ -549,8 +552,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             period_number: period,
             formation: periodState.formation,
             player_positions: playerPositions,
-            substitutes: teamState.substitutePlayers,
-            substitute_players: teamState.substitutePlayers,
+            substitutes: periodState.substitutePlayers, // Use period-specific substitutes
+            substitute_players: periodState.substitutePlayers, // Use period-specific substitutes
             captain_id: teamState.captainId || null,
             staff_selection: staffSelection,
             performance_category_id: teamState.performanceCategoryId !== 'none' ? teamState.performanceCategoryId : null,
@@ -682,7 +685,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   {renderCompactFormationPitch(
                     periodState.formation,
                     teamState.selectedPlayers,
-                    teamState.substitutePlayers,
+                    periodState.substitutePlayers, // Use period-specific substitutes
                     teamState.captainId,
                     periodState.durationMinutes
                   )}
@@ -840,10 +843,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   teamId={getActualTeamId(activeTeam)}
                   eventId={event.id}
                   selectedPlayers={currentTeamState.selectedPlayers}
-                  substitutePlayers={currentTeamState.substitutePlayers}
+                  substitutePlayers={currentPeriodState.substitutePlayers} // Use period-specific substitutes
                   captainId={currentTeamState.captainId}
                   onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
-                  onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
+                  onSubstitutesChange={(substitutes) => updatePeriodState(currentPeriodKey, { substitutePlayers: substitutes })} // Update period-specific substitutes
                   onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
                   eventType={event.event_type}
                   formation={currentPeriodState.formation}
@@ -859,7 +862,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <div>
                         <h3 className="font-medium">Selection Summary</h3>
                         <p className="text-sm text-muted-foreground">
-                          {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
+                          {currentTeamState.selectedPlayers.length} players, {currentPeriodState.substitutePlayers.length} substitutes selected for Period {activePeriod}
                         </p>
                       </div>
                       <Button

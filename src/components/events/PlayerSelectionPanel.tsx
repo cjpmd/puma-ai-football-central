@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -384,7 +385,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           {/* Substitutes section for Formation View */}
           {onSubstitutesChange && (
             <div className="mt-6 space-y-3">
-              <Label className="text-sm font-medium">Substitutes</Label>
+              <Label className="text-sm font-medium">
+                Substitutes for Period {periodNumber || 1}
+              </Label>
               <div className="space-y-2">
                 {substitutePlayers.map((playerId) => {
                   const player = filteredPlayers.find(p => p.id === playerId);
@@ -529,7 +532,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Users className="h-5 w-5" />
-          Player Selection
+          Player Selection {periodNumber && `- Period ${periodNumber}`}
         </CardTitle>
         <div className="flex items-center gap-4 mt-4">
           <div className="flex items-center space-x-2">
@@ -587,6 +590,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   </Button>
                   <div className="ml-auto text-sm text-muted-foreground">
                     {selectedPlayers.length} starters, {substitutePlayers.length} substitutes
+                    {periodNumber && ` (Period ${periodNumber})`}
                   </div>
                 </div>
 
@@ -600,6 +604,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                       <TabsTrigger value="substitutes" className="flex items-center gap-2">
                         <UserMinus className="h-4 w-4" />
                         Substitutes ({substitutePlayers.length})
+                        {periodNumber && ` - P${periodNumber}`}
                       </TabsTrigger>
                     </TabsList>
                     
