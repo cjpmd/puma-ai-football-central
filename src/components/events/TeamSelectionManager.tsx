@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -252,15 +253,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           teamIds.push(teamId);
           console.log('Created team ID:', teamId, 'for category:', categoryId);
 
-          // Track periods for this team
-          if (!newTeamPeriods[teamId]) {
-            newTeamPeriods[teamId] = [];
-          }
+          // Initialize periods array for this team
+          newTeamPeriods[teamId] = [];
 
           // Process all selections for this category/team
           categorySelections.forEach(selection => {
             const periodNumber = selection.period_number || 1;
             
+            // Add period to team periods array if not already present
             if (!newTeamPeriods[teamId].includes(periodNumber)) {
               newTeamPeriods[teamId].push(periodNumber);
             }
@@ -300,7 +300,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               });
             }
 
-            // Period state - with period-specific substitutes
+            // Create period-specific state with period-specific substitutes
             const periodKey = `${teamId}-${periodNumber}`;
             
             // Safely handle substitutes arrays for this specific period
@@ -327,13 +327,18 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               });
             }
             
-            newPeriodStates[periodKey] = {
-              teamId,
-              periodId: periodNumber.toString(),
-              formation: selection.formation || '4-3-3',
-              durationMinutes: selection.duration_minutes || 45,
-              substitutePlayers: substituteIds
-            };
+            // Only create period state if it doesn't already exist to prevent overwriting
+            if (!newPeriodStates[periodKey]) {
+              newPeriodStates[periodKey] = {
+                teamId,
+                periodId: periodNumber.toString(),
+                formation: selection.formation || '4-3-3',
+                durationMinutes: selection.duration_minutes || 45,
+                substitutePlayers: substituteIds
+              };
+              
+              console.log('Created period state for:', periodKey, newPeriodStates[periodKey]);
+            }
           });
         });
 
@@ -345,6 +350,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         console.log('Final team IDs:', teamIds);
         console.log('Final team states:', newTeamStates);
         console.log('Final team periods:', newTeamPeriods);
+        console.log('Final period states:', newPeriodStates);
 
         setTeams(teamIds.length > 0 ? teamIds : [event.team_id]);
         setTeamPeriods(newTeamPeriods);
@@ -520,6 +526,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       console.log('Team states:', teamStates);
       console.log('Period states:', periodStates);
 
+      // Delete existing selections for this event
       await supabase
         .from('event_selections')
         .delete()
@@ -539,7 +546,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         teamPeriodsForThisTeam.forEach(period => {
           const periodKey = `${teamId}-${period}`;
           const periodState = periodStates[periodKey];
-          if (!periodState) return;
+          if (!periodState) {
+            console.warn(`No period state found for ${periodKey}, skipping`);
+            return;
+          }
 
           const playerPositions = teamState.selectedPlayers.map(playerId => ({
             playerId,
@@ -566,7 +576,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             duration_minutes: periodState.durationMinutes
           };
 
-          console.log('Adding selection:', selection);
+          console.log('Adding selection for period:', period, 'with substitutes:', periodState.substitutePlayers);
           selections.push(selection);
         });
       });
