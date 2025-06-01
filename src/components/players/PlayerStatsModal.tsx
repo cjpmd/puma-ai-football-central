@@ -1,4 +1,3 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -31,6 +30,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   onClose
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const queryClient = useQueryClient();
   const { matchStats } = player;
 
@@ -60,6 +60,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       // Invalidate and refetch player data
       queryClient.invalidateQueries({ queryKey: ['players'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
       
       toast.success('Match statistics updated successfully');
     } catch (error) {
@@ -70,29 +71,61 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     }
   };
 
+  const handleRegenerateStats = async () => {
+    setIsRegenerating(true);
+    try {
+      await playerStatsService.regenerateAllPlayerStats();
+      
+      // Invalidate and refetch player data
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+      
+      toast.success('All player statistics regenerated successfully');
+    } catch (error) {
+      console.error('Error regenerating player stats:', error);
+      toast.error('Failed to regenerate statistics');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Match Statistics - {player.name}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRefreshStats}
-              disabled={isRefreshing}
-              className="flex items-center gap-2"
-            >
-              <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              Refresh Stats
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefreshStats}
+                disabled={isRefreshing}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh Stats
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateStats}
+                disabled={isRegenerating}
+                className="flex items-center gap-2"
+              >
+                <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                Regenerate All
+              </Button>
+            </div>
           </DialogTitle>
         </DialogHeader>
         
         <Tabs defaultValue="summary" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="positions">Positions</TabsTrigger>
+            <TabsTrigger value="categories">Performance Categories</TabsTrigger>
             <TabsTrigger value="recent">Match History</TabsTrigger>
           </TabsList>
           
@@ -195,6 +228,67 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </Card>
           </TabsContent>
           
+          <TabsContent value="categories" className="space-y-4 py-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Performance Categories</CardTitle>
+                <CardDescription>
+                  Statistics broken down by performance category
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {matchStats.performanceCategoryStats && Object.keys(matchStats.performanceCategoryStats).length > 0 ? (
+                  <div className="space-y-4">
+                    {Object.entries(matchStats.performanceCategoryStats).map(([categoryName, stats]: [string, any]) => (
+                      <Card key={categoryName} className="border">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">{categoryName}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{stats.totalGames}</div>
+                              <div className="text-xs text-muted-foreground">Games</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{stats.totalMinutes}</div>
+                              <div className="text-xs text-muted-foreground">Minutes</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{stats.captainGames}</div>
+                              <div className="text-xs text-muted-foreground">Captain</div>
+                            </div>
+                            <div className="text-center">
+                              <div className="text-2xl font-bold">{stats.potmCount}</div>
+                              <div className="text-xs text-muted-foreground">POTM</div>
+                            </div>
+                          </div>
+                          
+                          {stats.minutesByPosition && Object.keys(stats.minutesByPosition).length > 0 && (
+                            <div>
+                              <Label className="text-sm font-medium mb-2 block">Positions Played</Label>
+                              <div className="flex flex-wrap gap-2">
+                                {Object.entries(stats.minutesByPosition).map(([position, minutes]: [string, any]) => (
+                                  <Badge key={position} variant="outline" className="text-xs">
+                                    {position}: {minutes}m
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No performance category data available.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
           <TabsContent value="recent" className="space-y-4 py-4">
             {(matchStats.recentGames || []).length > 0 ? (
               <Card>
@@ -210,6 +304,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       <TableRow>
                         <TableHead>Date</TableHead>
                         <TableHead>Opponent</TableHead>
+                        <TableHead>Performance Category</TableHead>
                         <TableHead>Minutes</TableHead>
                         <TableHead>Position(s)</TableHead>
                         <TableHead>Awards</TableHead>
@@ -227,6 +322,15 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <div className="font-medium">
                               {game.opponent || 'Unknown'}
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {game.performanceCategory ? (
+                              <Badge variant="secondary" className="text-xs">
+                                {game.performanceCategory}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">No Category</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">

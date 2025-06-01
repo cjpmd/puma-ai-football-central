@@ -553,11 +553,24 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             return;
           }
 
-          const playerPositions = periodState.selectedPlayers.map(playerId => ({
+          // Create player positions with proper position assignment (not TBD)
+          const playerPositions = periodState.selectedPlayers.map((playerId, index) => ({
             playerId,
-            position: 'TBD',
+            player_id: playerId, // Also include player_id for compatibility
+            position: getPositionForPlayer(periodState.formation, index), // Assign actual position
             isSubstitute: false
           }));
+
+          // Add substitute players to positions array with isSubstitute flag
+          const substitutePositions = periodState.substitutePlayers.map(playerId => ({
+            playerId,
+            player_id: playerId,
+            position: 'SUB',
+            isSubstitute: true
+          }));
+
+          // Combine regular and substitute positions
+          const allPlayerPositions = [...playerPositions, ...substitutePositions];
 
           const staffSelection = teamState.selectedStaff.map(staffId => ({
             staffId
@@ -565,14 +578,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
           const selection = {
             event_id: event.id,
-            team_id: actualTeamId, // Use actual team ID here
+            team_id: actualTeamId,
             team_number: teamIndex + 1,
             period_number: period,
             formation: periodState.formation,
-            player_positions: playerPositions,
-            substitutes: periodState.substitutePlayers, // Use period-specific substitutes
-            substitute_players: periodState.substitutePlayers, // Use period-specific substitutes
-            captain_id: periodState.captainId || null, // Use period-specific captain
+            player_positions: allPlayerPositions,
+            substitutes: periodState.substitutePlayers,
+            substitute_players: periodState.substitutePlayers,
+            captain_id: periodState.captainId || null,
             staff_selection: staffSelection,
             performance_category_id: teamState.performanceCategoryId !== 'none' ? teamState.performanceCategoryId : null,
             duration_minutes: periodState.durationMinutes
@@ -920,4 +933,26 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       </DialogContent>
     </Dialog>
   );
+};
+
+const getPositionForPlayer = (formation: string, playerIndex: number): string => {
+  const positions = getFormationPositions(formation);
+  return positions[playerIndex] || 'TBD';
+};
+
+const getFormationPositions = (formation: string): string[] => {
+  switch (formation) {
+    case '4-3-3':
+      return ['GK', 'RB', 'CB', 'CB', 'LB', 'CM', 'CM', 'CM', 'RW', 'ST', 'LW'];
+    case '4-4-2':
+      return ['GK', 'RB', 'CB', 'CB', 'LB', 'RM', 'CM', 'CM', 'LM', 'ST', 'ST'];
+    case '3-5-2':
+      return ['GK', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CM', 'CM', 'LWB', 'ST', 'ST'];
+    case '4-2-3-1':
+      return ['GK', 'RB', 'CB', 'CB', 'LB', 'CDM', 'CDM', 'CAM', 'RW', 'LW', 'ST'];
+    case '3-4-3':
+      return ['GK', 'CB', 'CB', 'CB', 'RM', 'CM', 'CM', 'LM', 'RW', 'ST', 'LW'];
+    default:
+      return ['GK', 'RB', 'CB', 'CB', 'LB', 'CM', 'CM', 'CM', 'RW', 'ST', 'LW'];
+  }
 };

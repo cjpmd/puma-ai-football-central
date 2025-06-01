@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { availabilityService } from '@/services/availabilityService';
@@ -35,11 +36,23 @@ interface PlayerSelectionWithAvailabilityProps {
 export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvailabilityProps> = (props) => {
   const [playerAvailabilities, setPlayerAvailabilities] = useState<Record<string, string>>({});
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  
+  // Remember filter state using localStorage with event-specific key
+  const filterStorageKey = `showAllPlayers_${props.eventId}_${props.teamNumber}_${props.periodNumber}`;
+  const [showAllPlayers, setShowAllPlayers] = useState(() => {
+    const saved = localStorage.getItem(filterStorageKey);
+    return saved ? JSON.parse(saved) : false;
+  });
 
   useEffect(() => {
     loadPlayerAvailabilities();
     loadTeamPlayers();
   }, [props.eventId, props.teamId]);
+
+  // Save filter state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(filterStorageKey, JSON.stringify(showAllPlayers));
+  }, [showAllPlayers, filterStorageKey]);
 
   const loadPlayerAvailabilities = async () => {
     try {
@@ -102,7 +115,8 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
       props.onSubstitutesChange(newSubstitutes);
     }
 
-    if (props.captainId === playerId) {
+    // Only remove captain if they're not in substitutes
+    if (props.captainId === playerId && !props.substitutePlayers?.includes(playerId)) {
       props.onCaptainChange('');
     }
   };
@@ -125,6 +139,9 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
         onSubstitutesChange={handleSubstitutesChange}
         showFormationView={true}
         showSubstitutesInFormation={true}
+        showAllPlayers={showAllPlayers}
+        onShowAllPlayersChange={setShowAllPlayers}
+        allowCaptainAsSubstitute={true}
       />
     </div>
   );

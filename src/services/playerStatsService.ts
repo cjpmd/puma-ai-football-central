@@ -9,6 +9,22 @@ export const playerStatsService = {
     try {
       console.log('Updating stats for player:', playerId);
       
+      // First, let's check the event_player_stats for this player to debug
+      const { data: playerStats, error: statsError } = await supabase
+        .from('event_player_stats')
+        .select(`
+          *,
+          events!inner(date, opponent, end_time),
+          performance_categories(name)
+        `)
+        .eq('player_id', playerId);
+
+      if (statsError) {
+        console.error('Error fetching player stats for debugging:', statsError);
+      } else {
+        console.log('Current event_player_stats for player:', playerStats);
+      }
+
       const { error } = await supabase.rpc('update_player_match_stats', {
         player_uuid: playerId
       });
@@ -65,6 +81,27 @@ export const playerStatsService = {
       console.log('Completed bulk update of all events');
     } catch (error) {
       console.error('Error updating all completed events stats:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Regenerate all player stats from scratch
+   */
+  async regenerateAllPlayerStats(): Promise<void> {
+    try {
+      console.log('Regenerating all player stats from event_player_stats');
+      
+      const { error } = await supabase.rpc('regenerate_all_event_player_stats');
+
+      if (error) {
+        console.error('Error regenerating player stats:', error);
+        throw error;
+      }
+      
+      console.log('Successfully regenerated all player stats');
+    } catch (error) {
+      console.error('Error regenerating player stats:', error);
       throw error;
     }
   },
