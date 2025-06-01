@@ -75,7 +75,6 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
     }
   };
 
-  // Filter out unavailable players from selection
   const filterUnavailablePlayers = (playerIds: string[]) => {
     return playerIds.filter(playerId => {
       const availability = playerAvailabilities[playerId];
@@ -96,17 +95,14 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
   };
 
   const handlePlayerRemove = (playerId: string) => {
-    // Remove from main selection
     const newPlayers = props.selectedPlayers.filter(id => id !== playerId);
     props.onPlayersChange(newPlayers);
 
-    // Remove from substitutes if present
     if (props.substitutePlayers && props.onSubstitutesChange) {
       const newSubstitutes = props.substitutePlayers.filter(id => id !== playerId);
       props.onSubstitutesChange(newSubstitutes);
     }
 
-    // Remove captain if this player was captain
     if (props.captainId === playerId) {
       props.onCaptainChange('');
     }

@@ -81,13 +81,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
   }, [selectedPlayers, substitutePlayers, eventId, teamNumber, periodNumber]);
 
-  // Sync positionPlayers with selectedPlayers when switching to formation view
   useEffect(() => {
     if (viewMode === 'formation' && formation) {
       const positions = getPositionsForFormation(formation, gameFormat);
       const newPositionPlayers: { [position: string]: string } = {};
       
-      // Map selected players to positions (first come, first served)
       selectedPlayers.forEach((playerId, index) => {
         if (index < positions.length) {
           newPositionPlayers[positions[index]] = playerId;
@@ -217,7 +215,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     
     setPositionPlayers(newPositionPlayers);
     
-    // Update selected players based on position assignments
     const positionPlayerIds = Object.values(newPositionPlayers).filter(id => id !== '');
     onPlayersChange(positionPlayerIds);
   };
@@ -264,8 +261,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     const positions = getPositionsForFormation(formation, gameFormat);
     
     return (
-      <ScrollArea className="h-full">
-        <div className="p-4 space-y-4">
+      <div className="h-full flex flex-col">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           <FormationSelector
             gameFormat={gameFormat}
             selectedFormation={formation}
@@ -343,7 +340,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               </Select>
             </div>
 
-            {/* Show substitutes in formation view */}
             {showSubstitutesInFormation && onSubstitutesChange && (
               <div className="mt-6 space-y-3">
                 <Label className="text-sm font-medium">Substitutes</Label>
@@ -379,7 +375,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                     ) : null;
                   })}
                   
-                  {/* Add substitute selector */}
                   <Select onValueChange={(playerId) => {
                     if (playerId && !substitutePlayers.includes(playerId)) {
                       onSubstitutesChange([...substitutePlayers, playerId]);
@@ -403,12 +398,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             )}
           </div>
         </div>
-      </ScrollArea>
+      </div>
     );
   };
 
   const renderPlayerList = (playerList: string[], onToggle: (playerId: string) => void, title: string, icon: React.ReactNode) => (
-    <div className="space-y-2 p-4">
+    <div className="space-y-2">
       {filteredPlayers.map((player) => {
         const isSelected = playerList.includes(player.id);
         const hasConflict = playerConflicts[player.id];
@@ -524,42 +519,44 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               renderFormationView()
             ) : (
               <ScrollArea className="h-full">
-                <div className="flex gap-2 mb-4 flex-shrink-0 px-4 pt-4">
-                  <Button variant="outline" size="sm" onClick={handleSelectAll}>
-                    Select All
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={handleDeselectAll}>
-                    Deselect All
-                  </Button>
-                  <div className="ml-auto text-sm text-muted-foreground">
-                    {selectedPlayers.length} starters, {substitutePlayers.length} substitutes
+                <div className="p-4">
+                  <div className="flex gap-2 mb-4">
+                    <Button variant="outline" size="sm" onClick={handleSelectAll}>
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={handleDeselectAll}>
+                      Deselect All
+                    </Button>
+                    <div className="ml-auto text-sm text-muted-foreground">
+                      {selectedPlayers.length} starters, {substitutePlayers.length} substitutes
+                    </div>
                   </div>
-                </div>
 
-                {onSubstitutesChange ? (
-                  <Tabs defaultValue="starters" className="px-4">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="starters" className="flex items-center gap-2">
-                        <Users className="h-4 w-4" />
-                        Starters ({selectedPlayers.length})
-                      </TabsTrigger>
-                      <TabsTrigger value="substitutes" className="flex items-center gap-2">
-                        <UserMinus className="h-4 w-4" />
-                        Substitutes ({substitutePlayers.length})
-                      </TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="starters">
-                      {renderPlayerList(selectedPlayers, handlePlayerToggle, 'starter', <Users className="h-4 w-4" />)}
-                    </TabsContent>
-                    
-                    <TabsContent value="substitutes">
-                      {renderPlayerList(substitutePlayers, handleSubstituteToggle, 'substitute', <UserMinus className="h-4 w-4" />)}
-                    </TabsContent>
-                  </Tabs>
-                ) : (
-                  renderPlayerList(selectedPlayers, handlePlayerToggle, 'starter', <Users className="h-4 w-4" />)
-                )}
+                  {onSubstitutesChange ? (
+                    <Tabs defaultValue="starters">
+                      <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="starters" className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          Starters ({selectedPlayers.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="substitutes" className="flex items-center gap-2">
+                          <UserMinus className="h-4 w-4" />
+                          Substitutes ({substitutePlayers.length})
+                        </TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="starters" className="mt-4">
+                        {renderPlayerList(selectedPlayers, handlePlayerToggle, 'starter', <Users className="h-4 w-4" />)}
+                      </TabsContent>
+                      
+                      <TabsContent value="substitutes" className="mt-4">
+                        {renderPlayerList(substitutePlayers, handleSubstituteToggle, 'substitute', <UserMinus className="h-4 w-4" />)}
+                      </TabsContent>
+                    </Tabs>
+                  ) : (
+                    renderPlayerList(selectedPlayers, handlePlayerToggle, 'starter', <Users className="h-4 w-4" />)
+                  )}
+                </div>
               </ScrollArea>
             )}
           </>

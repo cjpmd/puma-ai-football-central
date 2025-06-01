@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
@@ -587,50 +587,52 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     if (!teamState) return null;
 
     return (
-      <div className="space-y-4 h-full overflow-y-auto">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
-          <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
-        </div>
-        
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {teamPeriodsForThisTeam.map(period => {
-            const periodKey = `${activeTeam}-${period}`;
-            const periodState = periodStates[periodKey];
-            if (!periodState) return null;
+      <ScrollArea className="h-full">
+        <div className="space-y-4 p-4">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
+            <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
+          </div>
+          
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {teamPeriodsForThisTeam.map(period => {
+              const periodKey = `${activeTeam}-${period}`;
+              const periodState = periodStates[periodKey];
+              if (!periodState) return null;
 
-            return (
-              <Card key={period} className="border">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Period {period}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-3">
-                  {renderCompactFormationPitch(
-                    periodState.formation,
-                    teamState.selectedPlayers,
-                    teamState.substitutePlayers,
-                    teamState.captainId,
-                    periodState.durationMinutes
-                  )}
-                  
-                  {teamState.selectedStaff.length > 0 && (
-                    <div className="mt-2 pt-2 border-t">
-                      <Label className="text-xs font-medium">Staff ({teamState.selectedStaff.length})</Label>
-                      <div className="mt-1 flex flex-wrap gap-1">
-                        {teamState.selectedStaff.map(staffId => (
-                          <Badge key={staffId} variant="outline" className="text-xs">
-                            Staff {staffId}
-                          </Badge>
-                        ))}
+              return (
+                <Card key={period} className="border">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Period {period}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-3">
+                    {renderCompactFormationPitch(
+                      periodState.formation,
+                      teamState.selectedPlayers,
+                      teamState.substitutePlayers,
+                      teamState.captainId,
+                      periodState.durationMinutes
+                    )}
+                    
+                    {teamState.selectedStaff.length > 0 && (
+                      <div className="mt-2 pt-2 border-t">
+                        <Label className="text-xs font-medium">Staff ({teamState.selectedStaff.length})</Label>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {teamState.selectedStaff.map(staffId => (
+                            <Badge key={staffId} variant="outline" className="text-xs">
+                              Staff {staffId}
+                            </Badge>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      </ScrollArea>
     );
   };
 
@@ -812,20 +814,24 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               </TabsContent>
 
               <TabsContent value="staff" className="mt-4 h-full overflow-hidden">
-                <div className="h-full overflow-y-auto">
-                  <StaffSelectionSection
-                    teamId={activeTeam}
-                    selectedStaff={currentTeamState.selectedStaff}
-                    onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
-                    staffAssignments={staffAssignments}
-                  />
-                </div>
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    <StaffSelectionSection
+                      teamId={activeTeam}
+                      selectedStaff={currentTeamState.selectedStaff}
+                      onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
+                      staffAssignments={staffAssignments}
+                    />
+                  </div>
+                </ScrollArea>
               </TabsContent>
 
               <TabsContent value="availability" className="mt-4 h-full overflow-hidden">
-                <div className="h-full overflow-y-auto">
-                  <EventAvailabilityDashboard event={event} />
-                </div>
+                <ScrollArea className="h-full">
+                  <div className="p-4">
+                    <EventAvailabilityDashboard event={event} />
+                  </div>
+                </ScrollArea>
               </TabsContent>
             </div>
           </Tabs>
