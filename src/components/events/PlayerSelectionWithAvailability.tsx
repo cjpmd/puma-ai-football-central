@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { availabilityService } from '@/services/availabilityService';
@@ -109,9 +108,9 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="space-y-4">
       {/* Availability Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg flex-shrink-0">
+      <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg">
         <span className="font-medium">Availability Status:</span>
         <div className="flex flex-wrap items-center gap-3">
           <AvailabilityStatusBadge status="available" />
@@ -120,14 +119,12 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
         </div>
       </div>
 
-      <div className="flex-1 mt-4 overflow-hidden">
-        <PlayerSelectionPanel
-          {...props}
-          onPlayersChange={handlePlayersChange}
-          onSubstitutesChange={handleSubstitutesChange}
-          showFormationView={true}
-        />
-      </div>
+      <PlayerSelectionPanel
+        {...props}
+        onPlayersChange={handlePlayersChange}
+        onSubstitutesChange={handleSubstitutesChange}
+        showFormationView={true}
+      />
     </div>
   );
 };
