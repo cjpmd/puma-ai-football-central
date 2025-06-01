@@ -148,9 +148,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  const getPlayerName = (playerId: string): string => {
+  const getPlayerSurname = (playerId: string): string => {
     const player = allPlayers.find(p => p.id === playerId);
-    return player ? `${player.name} (#${player.squad_number})` : `Player ${playerId}`;
+    if (!player) return `Player ${playerId}`;
+    
+    // Extract surname (last word in name)
+    const nameParts = player.name.trim().split(' ');
+    const surname = nameParts[nameParts.length - 1];
+    return `${surname} (#${player.squad_number})`;
   };
 
   const loadExistingSelections = async () => {
@@ -469,7 +474,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  const renderFormationPitch = (formation: string, selectedPlayers: string[], substitutes: string[], captainId: string) => {
+  const renderCompactFormationPitch = (formation: string, selectedPlayers: string[], substitutes: string[], captainId: string, durationMinutes: number) => {
     const positions = getPositionsForFormation(formation, event.game_format as GameFormat);
     const assignedPlayers = selectedPlayers.slice(0, positions.length);
     
@@ -486,21 +491,21 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     };
     
     return (
-      <div className="bg-green-100 p-4 rounded-lg border-2 border-green-300 min-h-[300px]">
-        <div className="text-center text-sm font-medium text-green-800 mb-4">
-          Formation: {formation}
+      <div className="bg-green-100 p-3 rounded-lg border-2 border-green-300 min-h-[200px]">
+        <div className="text-center text-xs font-medium text-green-800 mb-2">
+          {formation} ({durationMinutes} min)
         </div>
         
-        <div className="space-y-4">
+        <div className="space-y-2">
           {Object.entries(positionRows).map(([rowName, rowPositions]) => {
             if (rowPositions.length === 0) return null;
             
             return (
               <div key={rowName} className="flex justify-center">
-                <div className="flex gap-2 flex-wrap justify-center">
+                <div className="flex gap-1 flex-wrap justify-center">
                   {rowPositions.map((position) => {
                     const playerId = assignedPlayers[playerIndex];
-                    const playerName = playerId ? getPlayerName(playerId) : 'Empty';
+                    const playerName = playerId ? getPlayerSurname(playerId) : 'Empty';
                     const isCaptain = playerId === captainId;
                     playerIndex++;
                     
@@ -508,12 +513,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <div
                         key={position}
                         className={`
-                          min-w-[120px] p-2 rounded border-2 text-center text-xs
+                          min-w-[80px] p-1 rounded border text-center text-xs
                           ${playerId ? 'bg-white border-blue-300' : 'bg-gray-100 border-gray-300'}
                         `}
                       >
-                        <div className="font-medium text-gray-600">{position}</div>
-                        <div className={`mt-1 ${playerId ? 'text-gray-900' : 'text-gray-500'}`}>
+                        <div className="font-medium text-gray-600 text-xs">{position}</div>
+                        <div className={`text-xs ${playerId ? 'text-gray-900' : 'text-gray-500'}`}>
                           {playerName}
                           {isCaptain && <span className="text-yellow-600"> (C)</span>}
                         </div>
@@ -527,12 +532,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         </div>
         
         {substitutes.length > 0 && (
-          <div className="mt-4 pt-4 border-t border-green-300">
-            <div className="text-center text-sm font-medium text-green-800 mb-2">Substitutes</div>
-            <div className="flex flex-wrap gap-2 justify-center">
+          <div className="mt-2 pt-2 border-t border-green-300">
+            <div className="text-center text-xs font-medium text-green-800 mb-1">Substitutes</div>
+            <div className="flex flex-wrap gap-1 justify-center">
               {substitutes.map(playerId => (
                 <Badge key={playerId} variant="outline" className="text-xs">
-                  {getPlayerName(playerId)}
+                  {getPlayerSurname(playerId)}
                 </Badge>
               ))}
             </div>
@@ -547,54 +552,49 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     if (!teamState) return null;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="text-center">
           <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
           <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
         </div>
         
-        {periods.map(period => {
-          const periodKey = `${activeTeam}-${period}`;
-          const periodState = periodStates[periodKey];
-          if (!periodState) return null;
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {periods.map(period => {
+            const periodKey = `${activeTeam}-${period}`;
+            const periodState = periodStates[periodKey];
+            if (!periodState) return null;
 
-          return (
-            <Card key={period} className="border-2">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Period {period}</CardTitle>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-4 w-4" />
-                      {periodState.durationMinutes} minutes
+            return (
+              <Card key={period} className="border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Period {period}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3">
+                  {renderCompactFormationPitch(
+                    periodState.formation,
+                    teamState.selectedPlayers,
+                    teamState.substitutePlayers,
+                    teamState.captainId,
+                    periodState.durationMinutes
+                  )}
+                  
+                  {teamState.selectedStaff.length > 0 && (
+                    <div className="mt-2 pt-2 border-t">
+                      <Label className="text-xs font-medium">Staff ({teamState.selectedStaff.length})</Label>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {teamState.selectedStaff.map(staffId => (
+                          <Badge key={staffId} variant="outline" className="text-xs">
+                            Staff {staffId}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {renderFormationPitch(
-                  periodState.formation,
-                  teamState.selectedPlayers,
-                  teamState.substitutePlayers,
-                  teamState.captainId
-                )}
-                
-                {teamState.selectedStaff.length > 0 && (
-                  <div className="mt-4 pt-4 border-t">
-                    <Label className="text-sm font-medium">Staff ({teamState.selectedStaff.length})</Label>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {teamState.selectedStaff.map(staffId => (
-                        <Badge key={staffId} variant="outline" className="text-xs">
-                          Staff {staffId}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -603,7 +603,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[95vw] md:max-w-[1200px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[95vw] md:max-w-[1200px] h-[90vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <div className="flex items-center justify-between">
             <div>
@@ -727,51 +727,49 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
             <div className="flex-1 overflow-hidden">
               <TabsContent value="players" className="mt-4 h-full overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="space-y-4 pr-4">
-                    <PlayerSelectionWithAvailability
-                      teamId={activeTeam}
-                      eventId={event.id}
-                      selectedPlayers={currentTeamState.selectedPlayers}
-                      substitutePlayers={currentTeamState.substitutePlayers}
-                      captainId={currentTeamState.captainId}
-                      onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
-                      onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
-                      onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
-                      eventType={event.event_type}
-                      showFormationView={true}
-                      formation={currentPeriodState.formation}
-                      onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
-                      gameFormat={event.game_format as GameFormat}
-                      teamNumber={teams.indexOf(activeTeam) + 1}
-                      periodNumber={activePeriod}
-                      showSubstitutesInFormation={true}
-                    />
+                <div className="h-full">
+                  <PlayerSelectionWithAvailability
+                    teamId={activeTeam}
+                    eventId={event.id}
+                    selectedPlayers={currentTeamState.selectedPlayers}
+                    substitutePlayers={currentTeamState.substitutePlayers}
+                    captainId={currentTeamState.captainId}
+                    onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
+                    onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
+                    onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
+                    eventType={event.event_type}
+                    showFormationView={true}
+                    formation={currentPeriodState.formation}
+                    onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
+                    gameFormat={event.game_format as GameFormat}
+                    teamNumber={teams.indexOf(activeTeam) + 1}
+                    periodNumber={activePeriod}
+                    showSubstitutesInFormation={true}
+                  />
 
-                    <Card>
-                      <CardContent className="pt-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
-                            <h3 className="font-medium">Selection Summary</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
-                            </p>
-                          </div>
-                          <Button
-                            onClick={handleRequestAvailability}
-                            disabled={sendingNotifications || availabilityRequested}
-                            className="flex items-center gap-2 w-full sm:w-auto"
-                          >
-                            <Bell className="h-4 w-4" />
-                            {sendingNotifications ? 'Sending...' : 
-                             availabilityRequested ? 'Notifications Sent' : 
-                             'Request Availability'}
-                          </Button>
+                  <Card className="mt-4">
+                    <CardContent className="pt-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="font-medium">Selection Summary</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
+                          </p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </ScrollArea>
+                        <Button
+                          onClick={handleRequestAvailability}
+                          disabled={sendingNotifications || availabilityRequested}
+                          className="flex items-center gap-2 w-full sm:w-auto"
+                        >
+                          <Bell className="h-4 w-4" />
+                          {sendingNotifications ? 'Sending...' : 
+                           availabilityRequested ? 'Notifications Sent' : 
+                           'Request Availability'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </TabsContent>
 
               <TabsContent value="overview" className="mt-4 h-full overflow-hidden">

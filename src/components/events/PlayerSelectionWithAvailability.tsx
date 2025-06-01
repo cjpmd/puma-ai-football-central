@@ -1,10 +1,8 @@
 
 import { useState, useEffect } from 'react';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
-import { EnhancedFormationView } from './EnhancedFormationView';
 import { availabilityService } from '@/services/availabilityService';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AvailabilityStatusBadge } from './AvailabilityStatusBadge';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -117,7 +115,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full">
       {/* Availability Legend */}
       <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg">
         <span className="font-medium">Availability Status:</span>
@@ -128,42 +126,13 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
         </div>
       </div>
 
-      {props.showFormationView ? (
-        <Tabs defaultValue="selection" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="selection">Player Selection</TabsTrigger>
-            <TabsTrigger value="formation">Formation View</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="selection" className="mt-4">
-            <PlayerSelectionPanel
-              {...props}
-              onPlayersChange={handlePlayersChange}
-              onSubstitutesChange={handleSubstitutesChange}
-            />
-          </TabsContent>
-          
-          <TabsContent value="formation" className="mt-4">
-            <EnhancedFormationView
-              formation={props.formation || '4-3-3'}
-              gameFormat={props.gameFormat}
-              selectedPlayers={props.selectedPlayers}
-              substitutePlayers={props.substitutePlayers || []}
-              captainId={props.captainId || ''}
-              allPlayers={allPlayers}
-              onPositionChange={() => {}} // TODO: Implement position assignment
-              onCaptainChange={props.onCaptainChange}
-              onPlayerRemove={handlePlayerRemove}
-            />
-          </TabsContent>
-        </Tabs>
-      ) : (
+      <div className="flex-1 h-full">
         <PlayerSelectionPanel
           {...props}
           onPlayersChange={handlePlayersChange}
           onSubstitutesChange={handleSubstitutesChange}
         />
-      )}
+      </div>
     </div>
   );
 };
