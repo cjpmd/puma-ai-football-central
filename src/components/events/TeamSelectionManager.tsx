@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock } from 'lucide-react';
+import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
@@ -440,11 +440,99 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const renderFormationOverview = () => {
+    const teamState = teamStates[activeTeam];
+    if (!teamState) return null;
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
+          <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
+        </div>
+        
+        {periods.map(period => {
+          const periodKey = `${activeTeam}-${period}`;
+          const periodState = periodStates[periodKey];
+          if (!periodState) return null;
+
+          return (
+            <Card key={period} className="border-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">Period {period}</CardTitle>
+                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-4 w-4" />
+                      {periodState.durationMinutes} minutes
+                    </div>
+                    <Badge variant="outline">{periodState.formation}</Badge>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Starting Players ({teamState.selectedPlayers.length})</Label>
+                    <div className="mt-2 space-y-1">
+                      {teamState.selectedPlayers.length > 0 ? (
+                        teamState.selectedPlayers.map((playerId, index) => (
+                          <div key={playerId} className="flex items-center gap-2 text-sm">
+                            <span className="w-6 text-center text-muted-foreground">{index + 1}.</span>
+                            <span>Player {playerId}</span>
+                            {teamState.captainId === playerId && (
+                              <Badge variant="secondary" className="text-xs">Captain</Badge>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No players selected</p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <Label className="text-sm font-medium">Substitutes ({teamState.substitutePlayers.length})</Label>
+                    <div className="mt-2 space-y-1">
+                      {teamState.substitutePlayers.length > 0 ? (
+                        teamState.substitutePlayers.map((playerId, index) => (
+                          <div key={playerId} className="flex items-center gap-2 text-sm">
+                            <span className="w-6 text-center text-muted-foreground">{index + 1}.</span>
+                            <span>Player {playerId}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No substitutes selected</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {teamState.selectedStaff.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <Label className="text-sm font-medium">Staff ({teamState.selectedStaff.length})</Label>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {teamState.selectedStaff.map(staffId => (
+                        <Badge key={staffId} variant="outline" className="text-xs">
+                          Staff {staffId}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[95vw] md:max-w-[1200px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[95vw] md:max-w-[1200px] h-[90vh] flex flex-col">
         <DialogHeader className="shrink-0">
           <div className="flex items-center justify-between">
             <div>
@@ -556,13 +644,17 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="players" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="shrink-0 grid w-full grid-cols-2">
+            <TabsList className="shrink-0 grid w-full grid-cols-3">
               <TabsTrigger value="players">Player Selection</TabsTrigger>
+              <TabsTrigger value="overview" className="flex items-center gap-2">
+                <Eye className="h-4 w-4" />
+                Formation Overview
+              </TabsTrigger>
               <TabsTrigger value="staff">Staff</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-hidden">
-              <TabsContent value="players" className="mt-4 h-full">
+              <TabsContent value="players" className="mt-4 h-full overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="space-y-4 pr-4">
                     <PlayerSelectionWithAvailability
@@ -610,7 +702,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="staff" className="mt-4 h-full">
+              <TabsContent value="overview" className="mt-4 h-full overflow-hidden">
+                <ScrollArea className="h-full">
+                  <div className="pr-4">
+                    {renderFormationOverview()}
+                  </div>
+                </ScrollArea>
+              </TabsContent>
+
+              <TabsContent value="staff" className="mt-4 h-full overflow-hidden">
                 <ScrollArea className="h-full">
                   <div className="pr-4">
                     <StaffSelectionSection
@@ -626,7 +726,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           </Tabs>
 
           {/* Availability Section - Moved to bottom */}
-          <div className="border-t pt-4">
+          <div className="border-t pt-4 shrink-0">
             <EventAvailabilityDashboard event={event} />
           </div>
         </div>
