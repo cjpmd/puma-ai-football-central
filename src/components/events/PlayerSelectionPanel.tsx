@@ -41,6 +41,7 @@ interface PlayerSelectionPanelProps {
   showSubstitutesInFormation?: boolean;
   showAllPlayers?: boolean;
   onShowAllPlayersChange?: (show: boolean) => void;
+  allowCaptainAsSubstitute?: boolean;
 }
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
@@ -61,7 +62,8 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   periodNumber,
   showSubstitutesInFormation = false,
   showAllPlayers = false,
-  onShowAllPlayersChange
+  onShowAllPlayersChange,
+  allowCaptainAsSubstitute = false
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
@@ -377,7 +379,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No Captain</SelectItem>
-                {[...Object.values(positionPlayers).filter(id => id !== ''), ...substitutePlayers].map((playerId) => {
+                {[
+                  ...Object.values(positionPlayers).filter(id => id !== ''),
+                  ...(allowCaptainAsSubstitute ? substitutePlayers : [])
+                ].map((playerId) => {
                   const player = filteredPlayers.find(p => p.id === playerId);
                   return player ? (
                     <SelectItem key={player.id} value={player.id}>
@@ -389,7 +394,6 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             </Select>
           </div>
 
-          {/* Substitutes section for Formation View */}
           {onSubstitutesChange && (
             <div className="mt-6 space-y-3">
               <Label className="text-sm font-medium">
