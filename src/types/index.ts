@@ -1,3 +1,4 @@
+
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -134,6 +135,7 @@ export type MatchStats = {
     minutes: number;
     minutesByPosition: Record<Position, number>;
     performanceCategory?: string;
+    wasSubstitute?: boolean;
   }[];
 };
 
