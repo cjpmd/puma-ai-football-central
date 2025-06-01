@@ -26,13 +26,11 @@ interface PlayerSelectionWithAvailabilityProps {
   onSubstitutesChange?: (substitutes: string[]) => void;
   onCaptainChange: (captainId: string) => void;
   eventType?: string;
-  showFormationView?: boolean;
   formation?: string;
   onFormationChange?: (formation: string) => void;
   gameFormat?: any;
   teamNumber?: number;
   periodNumber?: number;
-  showSubstitutesInFormation?: boolean;
 }
 
 export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvailabilityProps> = (props) => {
@@ -115,9 +113,9 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
   };
 
   return (
-    <div className="space-y-4 h-full">
+    <div className="space-y-4 h-full flex flex-col">
       {/* Availability Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg">
+      <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg shrink-0">
         <span className="font-medium">Availability Status:</span>
         <div className="flex flex-wrap items-center gap-3">
           <AvailabilityStatusBadge status="available" />
@@ -126,7 +124,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
         </div>
       </div>
 
-      <div className="flex-1 h-full">
+      <div className="flex-1 overflow-hidden">
         <PlayerSelectionPanel
           {...props}
           onPlayersChange={handlePlayersChange}

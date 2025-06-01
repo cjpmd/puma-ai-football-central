@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
@@ -63,7 +63,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 }) => {
   // Start with the event's primary team, but allow adding more
   const [teams, setTeams] = useState<string[]>([event.team_id]);
-  const [periods, setPeriods] = useState<number[]>([1]);
+  // Make periods team-specific
+  const [teamPeriods, setTeamPeriods] = useState<Record<string, number[]>>({});
   const [activeTeam, setActiveTeam] = useState<string>(event.team_id);
   const [activePeriod, setActivePeriod] = useState<number>(1);
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
@@ -81,10 +82,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   // Staff assignment tracking
   const [staffAssignments, setStaffAssignments] = useState<Record<string, string[]>>({});
 
+  // Get current team's periods
+  const currentTeamPeriods = teamPeriods[activeTeam] || [1];
+
   // Initialize team states when teams change
   useEffect(() => {
     const newTeamStates: Record<string, TeamState> = { ...teamStates };
     const newPeriodStates: Record<string, PeriodState> = { ...periodStates };
+    const newTeamPeriods: Record<string, number[]> = { ...teamPeriods };
     
     teams.forEach((teamId, index) => {
       if (!newTeamStates[teamId]) {
@@ -98,8 +103,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         };
       }
       
-      // Initialize period states for all periods
-      periods.forEach(period => {
+      // Initialize periods for this team if not already set
+      if (!newTeamPeriods[teamId]) {
+        newTeamPeriods[teamId] = [1];
+      }
+      
+      // Initialize period states for all periods of this team
+      newTeamPeriods[teamId].forEach(period => {
         const periodKey = `${teamId}-${period}`;
         if (!newPeriodStates[periodKey]) {
           newPeriodStates[periodKey] = {
@@ -114,7 +124,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     
     setTeamStates(newTeamStates);
     setPeriodStates(newPeriodStates);
-  }, [teams, periods]);
+    setTeamPeriods(newTeamPeriods);
+  }, [teams]);
 
   // Ensure active team is valid
   useEffect(() => {
@@ -122,6 +133,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       setActiveTeam(teams[0] || event.team_id);
     }
   }, [teams, activeTeam, event.team_id]);
+
+  // Ensure active period is valid for current team
+  useEffect(() => {
+    const currentPeriods = teamPeriods[activeTeam] || [1];
+    if (!currentPeriods.includes(activePeriod)) {
+      setActivePeriod(currentPeriods[0] || 1);
+    }
+  }, [activeTeam, teamPeriods, activePeriod]);
 
   useEffect(() => {
     if (isOpen) {
@@ -171,19 +190,23 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const newTeamStates: Record<string, TeamState> = {};
         const newPeriodStates: Record<string, PeriodState> = {};
         const newStaffAssignments: Record<string, string[]> = {};
-        const periodNumbers: number[] = [];
+        const newTeamPeriods: Record<string, number[]> = {};
         const teamIds: string[] = [];
 
         selections.forEach(selection => {
           const teamId = selection.team_id;
           const periodNumber = selection.period_number || 1;
           
-          if (!periodNumbers.includes(periodNumber)) {
-            periodNumbers.push(periodNumber);
-          }
-
           if (!teamIds.includes(teamId)) {
             teamIds.push(teamId);
+          }
+
+          // Track periods per team
+          if (!newTeamPeriods[teamId]) {
+            newTeamPeriods[teamId] = [];
+          }
+          if (!newTeamPeriods[teamId].includes(periodNumber)) {
+            newTeamPeriods[teamId].push(periodNumber);
           }
 
           // Team state
@@ -254,8 +277,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           };
         });
 
+        // Sort periods for each team
+        Object.keys(newTeamPeriods).forEach(teamId => {
+          newTeamPeriods[teamId].sort((a, b) => a - b);
+        });
+
         setTeams(teamIds.length > 0 ? teamIds : [event.team_id]);
-        setPeriods(periodNumbers.length > 0 ? periodNumbers.sort() : [1]);
+        setTeamPeriods(newTeamPeriods);
         setTeamStates(prev => ({ ...prev, ...newTeamStates }));
         setPeriodStates(prev => ({ ...prev, ...newPeriodStates }));
         setStaffAssignments(newStaffAssignments);
@@ -351,25 +379,28 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   };
 
   const addPeriod = () => {
-    const newPeriod = periods.length + 1;
-    setPeriods(prev => [...prev, newPeriod]);
+    const currentPeriods = teamPeriods[activeTeam] || [1];
+    const newPeriod = Math.max(...currentPeriods) + 1;
     
-    // Copy player selections from the last period to the new period for persistence
-    teams.forEach(teamId => {
-      const key = `${teamId}-${newPeriod}`;
-      const lastPeriodKey = `${teamId}-${periods[periods.length - 1]}`;
-      const lastPeriodState = periodStates[lastPeriodKey];
-      
-      setPeriodStates(prev => ({
-        ...prev,
-        [key]: {
-          teamId,
-          periodId: newPeriod.toString(),
-          formation: lastPeriodState?.formation || '4-3-3',
-          durationMinutes: lastPeriodState?.durationMinutes || 45
-        }
-      }));
-    });
+    setTeamPeriods(prev => ({
+      ...prev,
+      [activeTeam]: [...currentPeriods, newPeriod]
+    }));
+    
+    // Create period state for the new period
+    const key = `${activeTeam}-${newPeriod}`;
+    const lastPeriodKey = `${activeTeam}-${currentPeriods[currentPeriods.length - 1]}`;
+    const lastPeriodState = periodStates[lastPeriodKey];
+    
+    setPeriodStates(prev => ({
+      ...prev,
+      [key]: {
+        teamId: activeTeam,
+        periodId: newPeriod.toString(),
+        formation: lastPeriodState?.formation || '4-3-3',
+        durationMinutes: lastPeriodState?.durationMinutes || 45
+      }
+    }));
   };
 
   const getTeamDisplayName = (teamId: string) => {
@@ -423,9 +454,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       
       teams.forEach((teamId, teamIndex) => {
         const teamState = teamStates[teamId];
+        const teamPeriodsForThisTeam = teamPeriods[teamId] || [1];
+        
         if (!teamState) return;
 
-        periods.forEach(period => {
+        teamPeriodsForThisTeam.forEach(period => {
           const periodKey = `${teamId}-${period}`;
           const periodState = periodStates[periodKey];
           if (!periodState) return;
@@ -549,17 +582,19 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const renderFormationOverview = () => {
     const teamState = teamStates[activeTeam];
+    const teamPeriodsForThisTeam = teamPeriods[activeTeam] || [1];
+    
     if (!teamState) return null;
 
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 h-full overflow-y-auto">
         <div className="text-center">
           <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
           <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {periods.map(period => {
+          {teamPeriodsForThisTeam.map(period => {
             const periodKey = `${activeTeam}-${period}`;
             const periodState = periodStates[periodKey];
             if (!periodState) return null;
@@ -684,7 +719,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           {/* Period Selection and Duration */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              {periods.map((period) => (
+              {currentTeamPeriods.map((period) => (
                 <Button
                   key={period}
                   variant={period === activePeriod ? "default" : "outline"}
@@ -727,27 +762,27 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
             <div className="flex-1 overflow-hidden">
               <TabsContent value="players" className="mt-4 h-full overflow-hidden">
-                <div className="h-full">
-                  <PlayerSelectionWithAvailability
-                    teamId={activeTeam}
-                    eventId={event.id}
-                    selectedPlayers={currentTeamState.selectedPlayers}
-                    substitutePlayers={currentTeamState.substitutePlayers}
-                    captainId={currentTeamState.captainId}
-                    onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
-                    onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
-                    onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
-                    eventType={event.event_type}
-                    showFormationView={true}
-                    formation={currentPeriodState.formation}
-                    onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
-                    gameFormat={event.game_format as GameFormat}
-                    teamNumber={teams.indexOf(activeTeam) + 1}
-                    periodNumber={activePeriod}
-                    showSubstitutesInFormation={true}
-                  />
+                <div className="h-full flex flex-col">
+                  <div className="flex-1 overflow-hidden">
+                    <PlayerSelectionWithAvailability
+                      teamId={activeTeam}
+                      eventId={event.id}
+                      selectedPlayers={currentTeamState.selectedPlayers}
+                      substitutePlayers={currentTeamState.substitutePlayers}
+                      captainId={currentTeamState.captainId}
+                      onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
+                      onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
+                      onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
+                      eventType={event.event_type}
+                      formation={currentPeriodState.formation}
+                      onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
+                      gameFormat={event.game_format as GameFormat}
+                      teamNumber={teams.indexOf(activeTeam) + 1}
+                      periodNumber={activePeriod}
+                    />
+                  </div>
 
-                  <Card className="mt-4">
+                  <Card className="mt-4 shrink-0">
                     <CardContent className="pt-6">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
@@ -773,32 +808,24 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               </TabsContent>
 
               <TabsContent value="overview" className="mt-4 h-full overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="pr-4">
-                    {renderFormationOverview()}
-                  </div>
-                </ScrollArea>
+                {renderFormationOverview()}
               </TabsContent>
 
               <TabsContent value="staff" className="mt-4 h-full overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="pr-4">
-                    <StaffSelectionSection
-                      teamId={activeTeam}
-                      selectedStaff={currentTeamState.selectedStaff}
-                      onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
-                      staffAssignments={staffAssignments}
-                    />
-                  </div>
-                </ScrollArea>
+                <div className="h-full overflow-y-auto">
+                  <StaffSelectionSection
+                    teamId={activeTeam}
+                    selectedStaff={currentTeamState.selectedStaff}
+                    onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
+                    staffAssignments={staffAssignments}
+                  />
+                </div>
               </TabsContent>
 
               <TabsContent value="availability" className="mt-4 h-full overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="pr-4">
-                    <EventAvailabilityDashboard event={event} />
-                  </div>
-                </ScrollArea>
+                <div className="h-full overflow-y-auto">
+                  <EventAvailabilityDashboard event={event} />
+                </div>
               </TabsContent>
             </div>
           </Tabs>
