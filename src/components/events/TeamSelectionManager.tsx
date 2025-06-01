@@ -483,13 +483,19 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const handleRequestAvailability = async () => {
     const allSelectedPlayers = Object.values(teamStates).flatMap(state => 
-      [...state.selectedPlayers, ...state.substitutePlayers]
+      state.selectedPlayers
     );
+    
+    // Get all substitutes from all periods across all teams
+    const allSubstitutePlayers = Object.values(periodStates).flatMap(periodState => 
+      periodState.substitutePlayers
+    );
+    
     const allSelectedStaff = Object.values(teamStates).flatMap(state => 
       state.selectedStaff
     );
 
-    if (allSelectedPlayers.length === 0 && allSelectedStaff.length === 0) {
+    if (allSelectedPlayers.length === 0 && allSubstitutePlayers.length === 0 && allSelectedStaff.length === 0) {
       toast.error('Please select players or staff before requesting availability');
       return;
     }
