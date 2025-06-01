@@ -85,6 +85,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   // Get current team's periods
   const currentTeamPeriods = teamPeriods[activeTeam] || [1];
 
+  // Function to get the actual team ID (removing any suffix)
+  const getActualTeamId = (teamIdentifier: string): string => {
+    return teamIdentifier.split('-team-')[0];
+  };
+
   // Initialize team states when teams change
   useEffect(() => {
     const newTeamStates: Record<string, TeamState> = { ...teamStates };
@@ -153,10 +158,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const loadTeamPlayers = async () => {
     try {
+      const actualTeamId = getActualTeamId(event.team_id);
       const { data, error } = await supabase
         .from('players')
         .select('id, name, squad_number')
-        .eq('team_id', event.team_id)
+        .eq('team_id', actualTeamId)
         .eq('status', 'active')
         .order('squad_number');
 
@@ -295,10 +301,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const loadPerformanceCategories = async () => {
     try {
+      const actualTeamId = getActualTeamId(event.team_id);
       const { data, error } = await supabase
         .from('performance_categories')
         .select('*')
-        .eq('team_id', event.team_id)
+        .eq('team_id', actualTeamId)
         .order('name');
 
       if (error) throw error;
@@ -458,6 +465,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         
         if (!teamState) return;
 
+        // Use the actual team ID for database operations
+        const actualTeamId = getActualTeamId(teamId);
+
         teamPeriodsForThisTeam.forEach(period => {
           const periodKey = `${teamId}-${period}`;
           const periodState = periodStates[periodKey];
@@ -475,7 +485,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
           selections.push({
             event_id: event.id,
-            team_id: teamId,
+            team_id: actualTeamId, // Use actual team ID here
             team_number: teamIndex + 1,
             period_number: period,
             formation: periodState.formation,
@@ -587,52 +597,50 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     if (!teamState) return null;
 
     return (
-      <ScrollArea className="h-full">
-        <div className="space-y-4 p-4">
-          <div className="text-center">
-            <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
-            <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {teamPeriodsForThisTeam.map(period => {
-              const periodKey = `${activeTeam}-${period}`;
-              const periodState = periodStates[periodKey];
-              if (!periodState) return null;
-
-              return (
-                <Card key={period} className="border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Period {period}</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-3">
-                    {renderCompactFormationPitch(
-                      periodState.formation,
-                      teamState.selectedPlayers,
-                      teamState.substitutePlayers,
-                      teamState.captainId,
-                      periodState.durationMinutes
-                    )}
-                    
-                    {teamState.selectedStaff.length > 0 && (
-                      <div className="mt-2 pt-2 border-t">
-                        <Label className="text-xs font-medium">Staff ({teamState.selectedStaff.length})</Label>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {teamState.selectedStaff.map(staffId => (
-                            <Badge key={staffId} variant="outline" className="text-xs">
-                              Staff {staffId}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+      <div className="space-y-4 p-4">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">{getTeamDisplayName(activeTeam)} - Formation Overview</h3>
+          <p className="text-sm text-muted-foreground">Complete lineup and formation details for all periods</p>
         </div>
-      </ScrollArea>
+        
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {teamPeriodsForThisTeam.map(period => {
+            const periodKey = `${activeTeam}-${period}`;
+            const periodState = periodStates[periodKey];
+            if (!periodState) return null;
+
+            return (
+              <Card key={period} className="border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Period {period}</CardTitle>
+                </CardHeader>
+                <CardContent className="p-3">
+                  {renderCompactFormationPitch(
+                    periodState.formation,
+                    teamState.selectedPlayers,
+                    teamState.substitutePlayers,
+                    teamState.captainId,
+                    periodState.durationMinutes
+                  )}
+                  
+                  {teamState.selectedStaff.length > 0 && (
+                    <div className="mt-2 pt-2 border-t">
+                      <Label className="text-xs font-medium">Staff ({teamState.selectedStaff.length})</Label>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {teamState.selectedStaff.map(staffId => (
+                          <Badge key={staffId} variant="outline" className="text-xs">
+                            Staff {staffId}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      </div>
     );
   };
 
@@ -660,7 +668,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           </div>
         </DialogHeader>
         
-        <ScrollArea className="flex-1">
+        <div className="flex-1 overflow-y-auto">
           <div className="space-y-4 p-6">
             {/* Compact Top Configuration Row */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -765,7 +773,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
               <TabsContent value="players" className="space-y-4">
                 <PlayerSelectionWithAvailability
-                  teamId={activeTeam}
+                  teamId={getActualTeamId(activeTeam)}
                   eventId={event.id}
                   selectedPlayers={currentTeamState.selectedPlayers}
                   substitutePlayers={currentTeamState.substitutePlayers}
@@ -811,7 +819,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
               <TabsContent value="staff">
                 <StaffSelectionSection
-                  teamId={activeTeam}
+                  teamId={getActualTeamId(activeTeam)}
                   selectedStaff={currentTeamState.selectedStaff}
                   onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
                   staffAssignments={staffAssignments}
@@ -823,7 +831,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               </TabsContent>
             </Tabs>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
