@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -265,153 +266,155 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     
     return (
       <div className="h-full">
-        <ScrollArea className="h-full">
-          <div className="p-4 space-y-4">
-            <FormationSelector
-              gameFormat={gameFormat}
-              selectedFormation={formation}
-              onFormationChange={onFormationChange}
-            />
-            
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Starting Team ({positions.length} positions)</Label>
-              <p className="text-xs text-muted-foreground">
-                Assign players to specific positions for the {formation} formation
-              </p>
-            </div>
-            
-            <div className="space-y-3">
-              {positions.map((position) => (
-                <div key={position} className="flex items-center gap-3">
-                  <div className="w-12 text-sm font-medium">{position}</div>
-                  <Select
-                    value={positionPlayers[position] || 'none'}
-                    onValueChange={(value) => handlePositionPlayerChange(position, value)}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="No Player" />
+        <div className="p-4 space-y-4 h-full">
+          <FormationSelector
+            gameFormat={gameFormat}
+            selectedFormation={formation}
+            onFormationChange={onFormationChange}
+          />
+          
+          <div className="space-y-3">
+            <Label className="text-sm font-medium">Starting Team ({positions.length} positions)</Label>
+            <p className="text-xs text-muted-foreground">
+              Assign players to specific positions for the {formation} formation
+            </p>
+          </div>
+          
+          <div className="flex-1">
+            <ScrollArea className="h-[400px]">
+              <div className="space-y-3">
+                {positions.map((position) => (
+                  <div key={position} className="flex items-center gap-3">
+                    <div className="w-12 text-sm font-medium">{position}</div>
+                    <Select
+                      value={positionPlayers[position] || 'none'}
+                      onValueChange={(value) => handlePositionPlayerChange(position, value)}
+                    >
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="No Player" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Player</SelectItem>
+                        {filteredPlayers.map((player) => {
+                          const hasConflict = playerConflicts[player.id];
+                          return (
+                            <SelectItem key={player.id} value={player.id}>
+                              <div className="flex items-center gap-2">
+                                #{player.squad_number} {player.name}
+                                {player.subscription_type !== 'full_squad' && (
+                                  <span className="text-xs text-muted-foreground">
+                                    ({getSubscriptionLabel(player.subscription_type)})
+                                  </span>
+                                )}
+                                {hasConflict && (
+                                  <div className="flex items-center gap-1">
+                                    <AlertTriangle className="h-3 w-3 text-orange-500" />
+                                    <span className="text-xs text-orange-600">
+                                      Conflict: {hasConflict.join(', ')}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    {captainId === positionPlayers[position] && (
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                    )}
+                  </div>
+                ))}
+                
+                <div className="mt-4 space-y-2">
+                  <Label>Captain</Label>
+                  <Select value={captainId || 'none'} onValueChange={(value) => onCaptainChange(value === 'none' ? '' : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="No Captain" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">No Player</SelectItem>
-                      {filteredPlayers.map((player) => {
-                        const hasConflict = playerConflicts[player.id];
-                        return (
+                      <SelectItem value="none">No Captain</SelectItem>
+                      {Object.values(positionPlayers).filter(id => id !== '').map((playerId) => {
+                        const player = filteredPlayers.find(p => p.id === playerId);
+                        return player ? (
                           <SelectItem key={player.id} value={player.id}>
-                            <div className="flex items-center gap-2">
-                              #{player.squad_number} {player.name}
-                              {player.subscription_type !== 'full_squad' && (
-                                <span className="text-xs text-muted-foreground">
-                                  ({getSubscriptionLabel(player.subscription_type)})
-                                </span>
-                              )}
-                              {hasConflict && (
-                                <div className="flex items-center gap-1">
-                                  <AlertTriangle className="h-3 w-3 text-orange-500" />
-                                  <span className="text-xs text-orange-600">
-                                    Conflict: {hasConflict.join(', ')}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                            #{player.squad_number} {player.name}
                           </SelectItem>
-                        );
+                        ) : null;
                       })}
                     </SelectContent>
                   </Select>
-                  {captainId === positionPlayers[position] && (
-                    <Crown className="h-4 w-4 text-yellow-500" />
-                  )}
                 </div>
-              ))}
-              
-              <div className="mt-4 space-y-2">
-                <Label>Captain</Label>
-                <Select value={captainId || 'none'} onValueChange={(value) => onCaptainChange(value === 'none' ? '' : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No Captain" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Captain</SelectItem>
-                    {Object.values(positionPlayers).filter(id => id !== '').map((playerId) => {
-                      const player = filteredPlayers.find(p => p.id === playerId);
-                      return player ? (
-                        <SelectItem key={player.id} value={player.id}>
-                          #{player.squad_number} {player.name}
-                        </SelectItem>
-                      ) : null;
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {/* Show substitutes in formation view */}
-              {showSubstitutesInFormation && onSubstitutesChange && (
-                <div className="mt-6 space-y-3">
-                  <Label className="text-sm font-medium">Substitutes</Label>
-                  <div className="space-y-2">
-                    {substitutePlayers.map((playerId) => {
-                      const player = filteredPlayers.find(p => p.id === playerId);
-                      const hasConflict = playerConflicts[playerId];
-                      return player ? (
-                        <div key={playerId} className={`flex items-center gap-2 p-2 border rounded ${hasConflict ? 'border-orange-200 bg-orange-50' : ''}`}>
-                          <span className="text-sm">#{player.squad_number} {player.name}</span>
-                          <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
-                            {getSubscriptionLabel(player.subscription_type)}
-                          </Badge>
-                          {hasConflict && (
-                            <div className="flex items-center gap-1">
-                              <AlertTriangle className="h-3 w-3 text-orange-500" />
-                              <span className="text-xs text-orange-600">
-                                Conflict: {hasConflict.join(', ')}
-                              </span>
-                            </div>
-                          )}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              const newSubstitutes = substitutePlayers.filter(id => id !== playerId);
-                              onSubstitutesChange(newSubstitutes);
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                      ) : null;
-                    })}
-                    
-                    {/* Add substitute selector */}
-                    <Select onValueChange={(playerId) => {
-                      if (playerId && !substitutePlayers.includes(playerId)) {
-                        onSubstitutesChange([...substitutePlayers, playerId]);
-                      }
-                    }}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Add substitute" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredPlayers
-                          .filter(player => !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id))
-                          .map((player) => (
-                            <SelectItem key={player.id} value={player.id}>
-                              #{player.squad_number} {player.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                {/* Show substitutes in formation view */}
+                {showSubstitutesInFormation && onSubstitutesChange && (
+                  <div className="mt-6 space-y-3">
+                    <Label className="text-sm font-medium">Substitutes</Label>
+                    <div className="space-y-2">
+                      {substitutePlayers.map((playerId) => {
+                        const player = filteredPlayers.find(p => p.id === playerId);
+                        const hasConflict = playerConflicts[playerId];
+                        return player ? (
+                          <div key={playerId} className={`flex items-center gap-2 p-2 border rounded ${hasConflict ? 'border-orange-200 bg-orange-50' : ''}`}>
+                            <span className="text-sm">#{player.squad_number} {player.name}</span>
+                            <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
+                              {getSubscriptionLabel(player.subscription_type)}
+                            </Badge>
+                            {hasConflict && (
+                              <div className="flex items-center gap-1">
+                                <AlertTriangle className="h-3 w-3 text-orange-500" />
+                                <span className="text-xs text-orange-600">
+                                  Conflict: {hasConflict.join(', ')}
+                                </span>
+                              </div>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const newSubstitutes = substitutePlayers.filter(id => id !== playerId);
+                                onSubstitutesChange(newSubstitutes);
+                              }}
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        ) : null;
+                      })}
+                      
+                      {/* Add substitute selector */}
+                      <Select onValueChange={(playerId) => {
+                        if (playerId && !substitutePlayers.includes(playerId)) {
+                          onSubstitutesChange([...substitutePlayers, playerId]);
+                        }
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Add substitute" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {filteredPlayers
+                            .filter(player => !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id))
+                            .map((player) => (
+                              <SelectItem key={player.id} value={player.id}>
+                                #{player.squad_number} {player.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            </ScrollArea>
           </div>
-        </ScrollArea>
+        </div>
       </div>
     );
   };
 
   const renderPlayerList = (playerList: string[], onToggle: (playerId: string) => void, title: string, icon: React.ReactNode) => (
     <div className="h-full">
-      <ScrollArea className="h-full">
+      <ScrollArea className="h-[400px]">
         <div className="space-y-2 p-4">
           {filteredPlayers.map((player) => {
             const isSelected = playerList.includes(player.id);
@@ -462,7 +465,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
   if (loading) {
     return (
-      <Card>
+      <Card className="h-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
