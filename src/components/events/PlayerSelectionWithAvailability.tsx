@@ -113,7 +113,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Availability Legend */}
       <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg flex-shrink-0">
         <span className="font-medium">Availability Status:</span>
@@ -124,7 +124,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
         </div>
       </div>
 
-      <div className="flex-1 mt-4 min-h-0">
+      <div className="flex-1 mt-4 overflow-hidden">
         <PlayerSelectionPanel
           {...props}
           onPlayersChange={handlePlayersChange}
