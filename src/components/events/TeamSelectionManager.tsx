@@ -185,12 +185,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
   const loadExistingSelections = async () => {
     try {
+      console.log('Loading existing selections for event:', event.id);
       const { data: selections, error } = await supabase
         .from('event_selections')
         .select('*')
         .eq('event_id', event.id);
 
       if (error) throw error;
+      console.log('Found selections:', selections);
 
       if (selections && selections.length > 0) {
         const newTeamStates: Record<string, TeamState> = {};
@@ -198,95 +200,128 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const newStaffAssignments: Record<string, string[]> = {};
         const newTeamPeriods: Record<string, number[]> = {};
         const teamIds: string[] = [];
-
+        
+        // Group selections by performance category to reconstruct teams
+        const performanceCategoryGroups: Record<string, any[]> = {};
+        
         selections.forEach(selection => {
-          const teamId = selection.team_id;
-          const periodNumber = selection.period_number || 1;
-          
-          if (!teamIds.includes(teamId)) {
-            teamIds.push(teamId);
+          const categoryId = selection.performance_category_id || 'none';
+          if (!performanceCategoryGroups[categoryId]) {
+            performanceCategoryGroups[categoryId] = [];
           }
+          performanceCategoryGroups[categoryId].push(selection);
+        });
 
-          // Track periods per team
+        console.log('Performance category groups:', performanceCategoryGroups);
+
+        // Create team identifiers for each performance category
+        Object.keys(performanceCategoryGroups).forEach((categoryId, index) => {
+          const categorySelections = performanceCategoryGroups[categoryId];
+          let teamId: string;
+          
+          if (index === 0) {
+            // First team uses the primary team ID
+            teamId = event.team_id;
+          } else {
+            // Additional teams get suffixed identifiers
+            teamId = `${event.team_id}-team-${index + 1}`;
+          }
+          
+          teamIds.push(teamId);
+          console.log('Created team ID:', teamId, 'for category:', categoryId);
+
+          // Track periods for this team
           if (!newTeamPeriods[teamId]) {
             newTeamPeriods[teamId] = [];
           }
-          if (!newTeamPeriods[teamId].includes(periodNumber)) {
-            newTeamPeriods[teamId].push(periodNumber);
-          }
 
-          // Team state
-          if (!newTeamStates[teamId]) {
-            // Safely handle player_positions JSON
-            const playerPositions = Array.isArray(selection.player_positions) ? selection.player_positions : [];
-            const playerIds = playerPositions
-              .map((pos: any) => pos.playerId || pos.player_id)
-              .filter(Boolean) || [];
+          // Process all selections for this category/team
+          categorySelections.forEach(selection => {
+            const periodNumber = selection.period_number || 1;
             
-            // Safely handle substitutes arrays - ensure they're string arrays
-            const substituteIds: string[] = [];
-            if (Array.isArray(selection.substitutes)) {
-              selection.substitutes.forEach((id: any) => {
-                if (typeof id === 'string') {
-                  substituteIds.push(id);
-                } else if (typeof id === 'number') {
-                  substituteIds.push(String(id));
-                }
-              });
+            if (!newTeamPeriods[teamId].includes(periodNumber)) {
+              newTeamPeriods[teamId].push(periodNumber);
             }
-            if (Array.isArray(selection.substitute_players)) {
-              selection.substitute_players.forEach((id: any) => {
-                if (typeof id === 'string' && !substituteIds.includes(id)) {
-                  substituteIds.push(id);
-                } else if (typeof id === 'number') {
-                  const stringId = String(id);
-                  if (!substituteIds.includes(stringId)) {
-                    substituteIds.push(stringId);
+
+            // Create team state (use first selection's data for team-level info)
+            if (!newTeamStates[teamId]) {
+              // Safely handle player_positions JSON
+              const playerPositions = Array.isArray(selection.player_positions) ? selection.player_positions : [];
+              const playerIds = playerPositions
+                .map((pos: any) => pos.playerId || pos.player_id)
+                .filter(Boolean) || [];
+              
+              // Safely handle substitutes arrays
+              const substituteIds: string[] = [];
+              if (Array.isArray(selection.substitutes)) {
+                selection.substitutes.forEach((id: any) => {
+                  if (typeof id === 'string') {
+                    substituteIds.push(id);
+                  } else if (typeof id === 'number') {
+                    substituteIds.push(String(id));
                   }
+                });
+              }
+              if (Array.isArray(selection.substitute_players)) {
+                selection.substitute_players.forEach((id: any) => {
+                  if (typeof id === 'string' && !substituteIds.includes(id)) {
+                    substituteIds.push(id);
+                  } else if (typeof id === 'number') {
+                    const stringId = String(id);
+                    if (!substituteIds.includes(stringId)) {
+                      substituteIds.push(stringId);
+                    }
+                  }
+                });
+              }
+              
+              // Safely handle staff_selection JSON
+              const staffSelection = Array.isArray(selection.staff_selection) ? selection.staff_selection : [];
+              const staffIds = staffSelection
+                .map((staff: any) => staff.staffId)
+                .filter(Boolean) || [];
+              
+              newTeamStates[teamId] = {
+                teamId,
+                selectedPlayers: playerIds,
+                substitutePlayers: substituteIds,
+                captainId: selection.captain_id || '',
+                selectedStaff: staffIds,
+                performanceCategoryId: selection.performance_category_id || 'none'
+              };
+
+              console.log('Created team state for:', teamId, newTeamStates[teamId]);
+
+              // Track staff assignments
+              staffIds.forEach((staffId: string) => {
+                if (!newStaffAssignments[staffId]) {
+                  newStaffAssignments[staffId] = [];
+                }
+                if (!newStaffAssignments[staffId].includes(teamId)) {
+                  newStaffAssignments[staffId].push(teamId);
                 }
               });
             }
-            
-            // Safely handle staff_selection JSON
-            const staffSelection = Array.isArray(selection.staff_selection) ? selection.staff_selection : [];
-            const staffIds = staffSelection
-              .map((staff: any) => staff.staffId)
-              .filter(Boolean) || [];
-            
-            newTeamStates[teamId] = {
+
+            // Period state
+            const periodKey = `${teamId}-${periodNumber}`;
+            newPeriodStates[periodKey] = {
               teamId,
-              selectedPlayers: playerIds,
-              substitutePlayers: substituteIds,
-              captainId: selection.captain_id || '',
-              selectedStaff: staffIds,
-              performanceCategoryId: selection.performance_category_id || 'none'
+              periodId: periodNumber.toString(),
+              formation: selection.formation || '4-3-3',
+              durationMinutes: selection.duration_minutes || 45
             };
-
-            // Track staff assignments
-            staffIds.forEach((staffId: string) => {
-              if (!newStaffAssignments[staffId]) {
-                newStaffAssignments[staffId] = [];
-              }
-              if (!newStaffAssignments[staffId].includes(teamId)) {
-                newStaffAssignments[staffId].push(teamId);
-              }
-            });
-          }
-
-          // Period state
-          const periodKey = `${teamId}-${periodNumber}`;
-          newPeriodStates[periodKey] = {
-            teamId,
-            periodId: periodNumber.toString(),
-            formation: selection.formation || '4-3-3',
-            durationMinutes: selection.duration_minutes || 45
-          };
+          });
         });
 
         // Sort periods for each team
         Object.keys(newTeamPeriods).forEach(teamId => {
           newTeamPeriods[teamId].sort((a, b) => a - b);
         });
+
+        console.log('Final team IDs:', teamIds);
+        console.log('Final team states:', newTeamStates);
+        console.log('Final team periods:', newTeamPeriods);
 
         setTeams(teamIds.length > 0 ? teamIds : [event.team_id]);
         setTeamPeriods(newTeamPeriods);
@@ -451,6 +486,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const handleSaveSelection = async () => {
     try {
       setSaving(true);
+      console.log('Saving selections for teams:', teams);
+      console.log('Team states:', teamStates);
 
       await supabase
         .from('event_selections')
@@ -483,7 +520,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             staffId
           }));
 
-          selections.push({
+          const selection = {
             event_id: event.id,
             team_id: actualTeamId, // Use actual team ID here
             team_number: teamIndex + 1,
@@ -496,9 +533,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             staff_selection: staffSelection,
             performance_category_id: teamState.performanceCategoryId !== 'none' ? teamState.performanceCategoryId : null,
             duration_minutes: periodState.durationMinutes
-          });
+          };
+
+          console.log('Adding selection:', selection);
+          selections.push(selection);
         });
       });
+
+      console.log('Final selections to save:', selections);
 
       if (selections.length > 0) {
         const { error } = await supabase
@@ -668,8 +710,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           </div>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto">
-          <div className="space-y-4 p-6">
+        <ScrollArea className="flex-1 px-6">
+          <div className="space-y-4 pb-6">
             {/* Compact Top Configuration Row */}
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-4">
@@ -831,7 +873,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               </TabsContent>
             </Tabs>
           </div>
-        </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
