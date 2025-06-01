@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -13,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Trophy, Clock, MapPin, RotateCcw } from 'lucide-react';
+import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown } from 'lucide-react';
 import { playerStatsService } from '@/services/playerStatsService';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -337,6 +338,12 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <div className="flex items-center gap-1">
                               <Clock className="h-4 w-4 text-muted-foreground" />
                               {game.minutes} mins
+                              {game.wasSubstitute && (
+                                <Badge variant="outline" className="ml-1 text-xs">
+                                  <ArrowUpDown className="h-3 w-3 mr-1" />
+                                  Sub
+                                </Badge>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
