@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
@@ -466,7 +466,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         
         <div className="flex-1 overflow-hidden space-y-4">
           {/* Compact Top Configuration Row */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-medium">Performance Categories:</Label>
@@ -515,7 +515,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 variant={teamId === activeTeam ? "default" : "ghost"}
                 size="sm"
                 onClick={() => setActiveTeam(teamId)}
-                className={teamId === activeTeam ? "bg-white shadow-sm" : ""}
+                className={teamId === activeTeam ? "bg-white shadow-sm text-gray-900" : "text-gray-700 hover:text-gray-900"}
               >
                 {getTeamDisplayName(teamId)}
               </Button>
@@ -556,71 +556,79 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
           {/* Main Content Tabs */}
           <Tabs defaultValue="players" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="shrink-0 grid w-full grid-cols-3">
+            <TabsList className="shrink-0 grid w-full grid-cols-2">
               <TabsTrigger value="players">Player Selection</TabsTrigger>
               <TabsTrigger value="staff">Staff</TabsTrigger>
-              <TabsTrigger value="availability">Availability</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto">
-              <TabsContent value="players" className="mt-4 space-y-4">
-                <PlayerSelectionWithAvailability
-                  teamId={activeTeam}
-                  eventId={event.id}
-                  selectedPlayers={currentTeamState.selectedPlayers}
-                  substitutePlayers={currentTeamState.substitutePlayers}
-                  captainId={currentTeamState.captainId}
-                  onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
-                  onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
-                  onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
-                  eventType={event.event_type}
-                  showFormationView={true}
-                  formation={currentPeriodState.formation}
-                  onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
-                  gameFormat={event.game_format as GameFormat}
-                  teamNumber={teams.indexOf(activeTeam) + 1}
-                  periodNumber={activePeriod}
-                  showSubstitutesInFormation={true}
-                />
+            <div className="flex-1 overflow-hidden">
+              <TabsContent value="players" className="mt-4 h-full">
+                <ScrollArea className="h-full">
+                  <div className="space-y-4 pr-4">
+                    <PlayerSelectionWithAvailability
+                      teamId={activeTeam}
+                      eventId={event.id}
+                      selectedPlayers={currentTeamState.selectedPlayers}
+                      substitutePlayers={currentTeamState.substitutePlayers}
+                      captainId={currentTeamState.captainId}
+                      onPlayersChange={(players) => updateTeamState(activeTeam, { selectedPlayers: players })}
+                      onSubstitutesChange={(substitutes) => updateTeamState(activeTeam, { substitutePlayers: substitutes })}
+                      onCaptainChange={(captainId) => updateTeamState(activeTeam, { captainId })}
+                      eventType={event.event_type}
+                      showFormationView={true}
+                      formation={currentPeriodState.formation}
+                      onFormationChange={(formation) => updatePeriodState(currentPeriodKey, { formation })}
+                      gameFormat={event.game_format as GameFormat}
+                      teamNumber={teams.indexOf(activeTeam) + 1}
+                      periodNumber={activePeriod}
+                      showSubstitutesInFormation={true}
+                    />
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div>
-                        <h3 className="font-medium">Selection Summary</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleRequestAvailability}
-                        disabled={sendingNotifications || availabilityRequested}
-                        className="flex items-center gap-2 w-full sm:w-auto"
-                      >
-                        <Bell className="h-4 w-4" />
-                        {sendingNotifications ? 'Sending...' : 
-                         availabilityRequested ? 'Notifications Sent' : 
-                         'Request Availability'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <h3 className="font-medium">Selection Summary</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {currentTeamState.selectedPlayers.length} players, {currentTeamState.substitutePlayers.length} substitutes selected
+                            </p>
+                          </div>
+                          <Button
+                            onClick={handleRequestAvailability}
+                            disabled={sendingNotifications || availabilityRequested}
+                            className="flex items-center gap-2 w-full sm:w-auto"
+                          >
+                            <Bell className="h-4 w-4" />
+                            {sendingNotifications ? 'Sending...' : 
+                             availabilityRequested ? 'Notifications Sent' : 
+                             'Request Availability'}
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="staff" className="mt-4">
-                <StaffSelectionSection
-                  teamId={activeTeam}
-                  selectedStaff={currentTeamState.selectedStaff}
-                  onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
-                  staffAssignments={staffAssignments}
-                />
-              </TabsContent>
-
-              <TabsContent value="availability" className="mt-4">
-                <EventAvailabilityDashboard event={event} />
+              <TabsContent value="staff" className="mt-4 h-full">
+                <ScrollArea className="h-full">
+                  <div className="pr-4">
+                    <StaffSelectionSection
+                      teamId={activeTeam}
+                      selectedStaff={currentTeamState.selectedStaff}
+                      onStaffChange={(staff) => updateTeamState(activeTeam, { selectedStaff: staff })}
+                      staffAssignments={staffAssignments}
+                    />
+                  </div>
+                </ScrollArea>
               </TabsContent>
             </div>
           </Tabs>
+
+          {/* Availability Section - Moved to bottom */}
+          <div className="border-t pt-4">
+            <EventAvailabilityDashboard event={event} />
+          </div>
         </div>
       </DialogContent>
     </Dialog>
