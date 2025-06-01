@@ -66,10 +66,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   const [viewMode, setViewMode] = useState<'list' | 'formation'>('list');
   const [positionPlayers, setPositionPlayers] = useState<{ [position: string]: string }>({});
   const [playerConflicts, setPlayerConflicts] = useState<{ [playerId: string]: string[] }>({});
+  const [playerAvailabilities, setPlayerAvailabilities] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadPlayers();
-  }, [teamId]);
+    if (eventId) {
+      loadPlayerAvailabilities();
+    }
+  }, [teamId, eventId]);
 
   useEffect(() => {
     filterPlayers();
@@ -95,6 +99,29 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       setPositionPlayers(newPositionPlayers);
     }
   }, [viewMode, formation, selectedPlayers, gameFormat]);
+
+  const loadPlayerAvailabilities = async () => {
+    if (!eventId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('event_availability')
+        .select('user_id, status')
+        .eq('event_id', eventId)
+        .eq('role', 'player');
+
+      if (error) throw error;
+
+      const availabilityMap: Record<string, string> = {};
+      (data || []).forEach(availability => {
+        availabilityMap[availability.user_id] = availability.status;
+      });
+      
+      setPlayerAvailabilities(availabilityMap);
+    } catch (error) {
+      console.error('Error loading player availabilities:', error);
+    }
+  };
 
   const checkPlayerConflicts = async () => {
     if (!eventId || teamNumber === undefined || periodNumber === undefined) return;
@@ -175,6 +202,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     }
 
     setFilteredPlayers(filtered);
+  };
+
+  const getAvailablePlayersForFormation = () => {
+    return filteredPlayers.filter(player => {
+      const availability = playerAvailabilities[player.id];
+      return availability !== 'unavailable';
+    });
   };
 
   const handlePlayerToggle = (playerId: string) => {
@@ -259,6 +293,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
     if (!formation || !onFormationChange) return null;
     
     const positions = getPositionsForFormation(formation, gameFormat);
+    const availablePlayersForFormation = getAvailablePlayersForFormation();
     
     return (
       <div className="space-y-4">
@@ -288,8 +323,10 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No Player</SelectItem>
-                  {filteredPlayers.map((player) => {
+                  {availablePlayersForFormation.map((player) => {
                     const hasConflict = playerConflicts[player.id];
+                    const availability = playerAvailabilities[player.id];
+                    
                     return (
                       <SelectItem key={player.id} value={player.id}>
                         <div className="flex items-center gap-2">
@@ -298,6 +335,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                             <span className="text-xs text-muted-foreground">
                               ({getSubscriptionLabel(player.subscription_type)})
                             </span>
+                          )}
+                          {availability === 'pending' && (
+                            <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
+                              Pending
+                            </Badge>
                           )}
                           {hasConflict && (
                             <div className="flex items-center gap-1">
@@ -339,19 +381,27 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
             </Select>
           </div>
 
-          {showSubstitutesInFormation && onSubstitutesChange && (
+          {/* Substitutes section for Formation View */}
+          {onSubstitutesChange && (
             <div className="mt-6 space-y-3">
               <Label className="text-sm font-medium">Substitutes</Label>
               <div className="space-y-2">
                 {substitutePlayers.map((playerId) => {
                   const player = filteredPlayers.find(p => p.id === playerId);
                   const hasConflict = playerConflicts[playerId];
+                  const availability = playerAvailabilities[playerId];
+                  
                   return player ? (
                     <div key={playerId} className={`flex items-center gap-2 p-2 border rounded ${hasConflict ? 'border-orange-200 bg-orange-50' : ''}`}>
                       <span className="text-sm">#{player.squad_number} {player.name}</span>
                       <Badge className={`text-white text-xs ${getSubscriptionBadgeColor(player.subscription_type)}`}>
                         {getSubscriptionLabel(player.subscription_type)}
                       </Badge>
+                      {availability === 'pending' && (
+                        <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
+                          Pending
+                        </Badge>
+                      )}
                       {hasConflict && (
                         <div className="flex items-center gap-1">
                           <AlertTriangle className="h-3 w-3 text-orange-500" />
@@ -383,13 +433,24 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                     <SelectValue placeholder="Add substitute" />
                   </SelectTrigger>
                   <SelectContent>
-                    {filteredPlayers
+                    {availablePlayersForFormation
                       .filter(player => !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id))
-                      .map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          #{player.squad_number} {player.name}
-                        </SelectItem>
-                      ))}
+                      .map((player) => {
+                        const availability = playerAvailabilities[player.id];
+                        
+                        return (
+                          <SelectItem key={player.id} value={player.id}>
+                            <div className="flex items-center gap-2">
+                              #{player.squad_number} {player.name}
+                              {availability === 'pending' && (
+                                <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700">
+                                  Pending
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                   </SelectContent>
                 </Select>
               </div>

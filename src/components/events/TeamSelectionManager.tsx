@@ -72,6 +72,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [sendingNotifications, setSendingNotifications] = useState(false);
   const [saving, setSaving] = useState(false);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
+  const [allStaff, setAllStaff] = useState<any[]>([]);
   
   // Team-level states (shared across periods)
   const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({});
@@ -153,6 +154,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       loadPerformanceCategories();
       loadExistingSelections();
       loadTeamPlayers();
+      loadTeamStaff();
     }
   }, [isOpen, event.id]);
 
@@ -173,6 +175,21 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const loadTeamStaff = async () => {
+    try {
+      const actualTeamId = getActualTeamId(event.team_id);
+      const { data, error } = await supabase
+        .from('team_staff')
+        .select('id, name, role')
+        .eq('team_id', actualTeamId);
+
+      if (error) throw error;
+      setAllStaff(data || []);
+    } catch (error) {
+      console.error('Error loading team staff:', error);
+    }
+  };
+
   const getPlayerSurname = (playerId: string): string => {
     const player = allPlayers.find(p => p.id === playerId);
     if (!player) return `Player ${playerId}`;
@@ -181,6 +198,11 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     const nameParts = player.name.trim().split(' ');
     const surname = nameParts[nameParts.length - 1];
     return `${surname} (#${player.squad_number})`;
+  };
+
+  const getStaffName = (staffId: string): string => {
+    const staff = allStaff.find(s => s.id === staffId);
+    return staff ? staff.name : `Staff ${staffId}`;
   };
 
   const loadExistingSelections = async () => {
@@ -671,7 +693,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <div className="mt-1 flex flex-wrap gap-1">
                         {teamState.selectedStaff.map(staffId => (
                           <Badge key={staffId} variant="outline" className="text-xs">
-                            Staff {staffId}
+                            {getStaffName(staffId)}
                           </Badge>
                         ))}
                       </div>

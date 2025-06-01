@@ -124,6 +124,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvaila
         onPlayersChange={handlePlayersChange}
         onSubstitutesChange={handleSubstitutesChange}
         showFormationView={true}
+        showSubstitutesInFormation={true}
       />
     </div>
   );
