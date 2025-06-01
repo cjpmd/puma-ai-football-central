@@ -676,11 +676,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           <div className="mt-2 pt-2 border-t border-green-300">
             <div className="text-center text-xs font-medium text-green-800 mb-1">Substitutes</div>
             <div className="flex flex-wrap gap-1 justify-center">
-              {substitutes.map(playerId => (
-                <Badge key={playerId} variant="outline" className="text-xs">
-                  {getPlayerSurname(playerId)}
-                </Badge>
-              ))}
+              {substitutes.map(playerId => {
+                const isCaptain = playerId === captainId;
+                return (
+                  <Badge key={playerId} variant="outline" className="text-xs">
+                    {getPlayerSurname(playerId)}
+                    {isCaptain && <span className="text-yellow-600"> (C)</span>}
+                  </Badge>
+                );
+              })}
             </div>
           </div>
         )}

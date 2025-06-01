@@ -92,7 +92,8 @@ export const playerStatsService = {
     try {
       console.log('Regenerating all player stats from event_player_stats');
       
-      const { error } = await supabase.rpc('regenerate_all_event_player_stats');
+      // Try the correct RPC function name
+      const { error } = await supabase.rpc('update_all_completed_events_stats');
 
       if (error) {
         console.error('Error regenerating player stats:', error);
