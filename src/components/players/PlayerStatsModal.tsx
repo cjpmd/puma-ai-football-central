@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Crown, Trophy, Clock, MapPin, RotateCcw } from 'lucide-react';
@@ -239,7 +240,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               <CardContent>
                 {matchStats.performanceCategoryStats && Object.keys(matchStats.performanceCategoryStats).length > 0 ? (
                   <div className="space-y-4">
-                    {Object.entries(matchStats.performanceCategoryStats).map(([categoryName, stats]: [string, any]) => (
+                    {Object.entries(matchStats.performanceCategoryStats).map(([categoryName, stats]) => (
                       <Card key={categoryName} className="border">
                         <CardHeader className="pb-3">
                           <CardTitle className="text-base">{categoryName}</CardTitle>
@@ -268,7 +269,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <div>
                               <Label className="text-sm font-medium mb-2 block">Positions Played</Label>
                               <div className="flex flex-wrap gap-2">
-                                {Object.entries(stats.minutesByPosition).map(([position, minutes]: [string, any]) => (
+                                {Object.entries(stats.minutesByPosition).map(([position, minutes]) => (
                                   <Badge key={position} variant="outline" className="text-xs">
                                     {position}: {minutes}m
                                   </Badge>

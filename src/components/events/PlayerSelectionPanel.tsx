@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +39,8 @@ interface PlayerSelectionPanelProps {
   teamNumber?: number;
   periodNumber?: number;
   showSubstitutesInFormation?: boolean;
+  showAllPlayers?: boolean;
+  onShowAllPlayersChange?: (show: boolean) => void;
 }
 
 export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
@@ -58,12 +59,14 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   eventId,
   teamNumber,
   periodNumber,
-  showSubstitutesInFormation = false
+  showSubstitutesInFormation = false,
+  showAllPlayers = false,
+  onShowAllPlayersChange
 }) => {
   const [players, setPlayers] = useState<Player[]>([]);
   const [filteredPlayers, setFilteredPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showFullSquadOnly, setShowFullSquadOnly] = useState(true);
+  const [showFullSquadOnly, setShowFullSquadOnly] = useState(!showAllPlayers);
   const [viewMode, setViewMode] = useState<'list' | 'formation'>('list');
   const [positionPlayers, setPositionPlayers] = useState<{ [position: string]: string }>({});
   const [playerConflicts, setPlayerConflicts] = useState<{ [playerId: string]: string[] }>({});
@@ -233,7 +236,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       onCaptainChange('');
     } else {
       onCaptainChange(playerId);
-      if (!selectedPlayers.includes(playerId)) {
+      if (!selectedPlayers.includes(playerId) && !substitutePlayers.includes(playerId)) {
         onPlayersChange([...selectedPlayers, playerId]);
       }
     }
@@ -287,7 +290,11 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
   };
 
   const handleFullSquadFilterChange = (checked: boolean | "indeterminate") => {
-    setShowFullSquadOnly(checked === true);
+    const newValue = checked === true;
+    setShowFullSquadOnly(newValue);
+    if (onShowAllPlayersChange) {
+      onShowAllPlayersChange(!newValue);
+    }
   };
 
   const renderFormationView = () => {
@@ -370,7 +377,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No Captain</SelectItem>
-                {Object.values(positionPlayers).filter(id => id !== '').map((playerId) => {
+                {[...Object.values(positionPlayers).filter(id => id !== ''), ...substitutePlayers].map((playerId) => {
                   const player = filteredPlayers.find(p => p.id === playerId);
                   return player ? (
                     <SelectItem key={player.id} value={player.id}>

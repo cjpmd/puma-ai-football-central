@@ -118,6 +118,13 @@ export type MatchStats = {
   playerOfTheMatchCount: number;
   totalMinutes: number;
   minutesByPosition: Record<Position, number>;
+  performanceCategoryStats?: Record<string, {
+    totalMinutes: number;
+    totalGames: number;
+    captainGames: number;
+    potmCount: number;
+    minutesByPosition: Record<string, number>;
+  }>;
   recentGames: {
     id: string;
     date: string;
@@ -126,6 +133,7 @@ export type MatchStats = {
     playerOfTheMatch: boolean;
     minutes: number;
     minutesByPosition: Record<Position, number>;
+    performanceCategory?: string;
   }[];
 };
 
