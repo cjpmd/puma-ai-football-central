@@ -24,11 +24,11 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Teams', href: '/teams', icon: Trophy },
   { name: 'Players', href: '/players', icon: Users },
-  { name: 'Player Management', href: '/player-management', icon: UserCheck },
+  { name: 'Calendar & Events', href: '/calendar', icon: Calendar },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Player Management', href: '/player-management', icon: UserCheck },
+  { name: 'Teams', href: '/teams', icon: Trophy },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
@@ -46,7 +46,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const Sidebar = ({ className }: { className?: string }) => (
     <div className={cn('flex h-full w-64 flex-col', className)}>
       <div className="flex h-16 shrink-0 items-center border-b px-4">
-        <h1 className="text-xl font-bold">PUMA Squad</h1>
+        <h1 className="text-xl font-bold">Team Manager</h1>
       </div>
       <ScrollArea className="flex-1">
         <nav className="flex flex-col gap-1 p-4">

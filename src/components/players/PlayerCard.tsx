@@ -103,47 +103,21 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     }
   };
 
-  const getAvailabilityColor = (availability: string) => {
-    switch (availability) {
-      case 'green':
-        return 'bg-green-500 hover:bg-green-600';
-      case 'amber':
-        return 'bg-yellow-500 hover:bg-yellow-600';
-      case 'red':
-        return 'bg-red-500 hover:bg-red-600';
-      default:
-        return 'bg-gray-500 hover:bg-gray-600';
-    }
-  };
-
-  const getAvailabilityText = (availability: string) => {
-    switch (availability) {
-      case 'green':
-        return 'Available';
-      case 'amber':
-        return 'Uncertain';
-      case 'red':
-        return 'Unavailable';
-      default:
-        return 'Unknown';
-    }
-  };
-
   const age = new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear();
 
   return (
-    <Card className={`h-[440px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
-      <CardHeader className="flex-shrink-0 pb-3">
+    <Card className={`h-[320px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
+      <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <CardTitle className="text-lg">{player.name}</CardTitle>
+              <CardTitle className="text-base">{player.name}</CardTitle>
               <Badge variant="outline" className="text-xs">
                 #{player.squadNumber}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>{player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield'}</span>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span>{player.type === 'goalkeeper' ? 'GK' : 'Outfield'}</span>
               <span>•</span>
               <span>Age {age}</span>
             </div>
@@ -151,8 +125,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <MoreVertical className="h-4 w-4" />
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                <MoreVertical className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -247,50 +221,43 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col">
-        <div className="space-y-3 flex-1">
-          {/* Status Indicators */}
+        <div className="space-y-2 flex-1">
+          {/* Performance and Subscription */}
           <div className="flex items-center justify-between">
             <Badge 
-              className={`text-white ${getAvailabilityColor(player.availability)}`}
+              variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}
+              className="text-xs"
             >
-              {getAvailabilityText(player.availability)}
+              {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
             </Badge>
             {renderPerformanceIndicator()}
           </div>
 
-          {/* Subscription Type */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Subscription:</span>
-            <Badge variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}>
-              {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
-            </Badge>
-          </div>
-
           {/* Match Statistics */}
           <div className="space-y-2">
-            <h4 className="text-sm font-medium">Match Statistics</h4>
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div className="text-center p-2 bg-muted rounded">
+            <h4 className="text-xs font-medium">Match Statistics</h4>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="text-center p-1 bg-muted rounded">
                 <div className="font-medium">{player.matchStats?.totalGames || 0}</div>
                 <div className="text-xs text-muted-foreground">Games</div>
               </div>
-              <div className="text-center p-2 bg-muted rounded">
+              <div className="text-center p-1 bg-muted rounded">
                 <div className="font-medium">{player.matchStats?.totalMinutes || 0}</div>
                 <div className="text-xs text-muted-foreground">Minutes</div>
               </div>
             </div>
             
             {/* Captain and POTM indicators */}
-            <div className="flex gap-2">
+            <div className="flex gap-1">
               {player.matchStats?.captainGames && player.matchStats.captainGames > 0 && (
-                <Badge variant="outline" className="border-yellow-500 text-yellow-600 flex items-center gap-1 text-xs">
-                  <Crown className="h-3 w-3" />
+                <Badge variant="outline" className="border-yellow-500 text-yellow-600 flex items-center gap-1 text-xs px-1 py-0">
+                  <Crown className="h-2 w-2" />
                   {player.matchStats.captainGames}
                 </Badge>
               )}
               {player.matchStats?.playerOfTheMatchCount && player.matchStats.playerOfTheMatchCount > 0 && (
-                <Badge variant="outline" className="border-purple-500 text-purple-600 flex items-center gap-1 text-xs">
-                  <Trophy className="h-3 w-3" />
+                <Badge variant="outline" className="border-purple-500 text-purple-600 flex items-center gap-1 text-xs px-1 py-0">
+                  <Trophy className="h-2 w-2" />
                   {player.matchStats.playerOfTheMatchCount}
                 </Badge>
               )}
@@ -299,7 +266,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
           {/* Leave Information for Inactive Players */}
           {inactive && player.leaveDate && (
-            <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded text-sm">
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
               <div className="font-medium text-red-800">Left Team</div>
               <div className="text-red-600">{formatDate(player.leaveDate, 'dd MMM yyyy')}</div>
               {player.leaveComments && (
@@ -310,16 +277,16 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex gap-2 mt-4 pt-3 border-t">
+        <div className="flex gap-1 mt-2 pt-2 border-t">
           {onViewStats && (
-            <Button size="sm" variant="outline" onClick={onViewStats} className="flex-1">
-              <BarChart3 className="h-3 w-3 mr-1" />
+            <Button size="sm" variant="outline" onClick={onViewStats} className="flex-1 text-xs h-7">
+              <BarChart3 className="h-2 w-2 mr-1" />
               Stats
             </Button>
           )}
           {!inactive && onManageAttributes && (
-            <Button size="sm" variant="outline" onClick={onManageAttributes} className="flex-1">
-              <Settings className="h-3 w-3 mr-1" />
+            <Button size="sm" variant="outline" onClick={onManageAttributes} className="flex-1 text-xs h-7">
+              <Settings className="h-2 w-2 mr-1" />
               Attributes
             </Button>
           )}

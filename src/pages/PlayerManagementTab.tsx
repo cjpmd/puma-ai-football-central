@@ -12,7 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player } from '@/types';
-import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { PlayerParentModal } from '@/components/players/PlayerParentModal';
 import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
 import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModal';
@@ -20,7 +20,7 @@ import { PlayerCommentsModal } from '@/components/players/PlayerCommentsModal';
 import { PlayerStatsModal } from '@/components/players/PlayerStatsModal';
 import { PlayerHistoryModal } from '@/components/players/PlayerHistoryModal';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { calculatePerformanceTrend, getPerformanceIcon, getPerformanceColor, PerformanceTrend } from '@/utils/performanceUtils';
+import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -234,7 +234,6 @@ const PlayerManagementTab = () => {
                       <TableHead>Subscription</TableHead>
                       <TableHead>Games</TableHead>
                       <TableHead>Minutes</TableHead>
-                      <TableHead>Availability</TableHead>
                       <TableHead>Performance</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -265,69 +264,57 @@ const PlayerManagementTab = () => {
                         <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
                         <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
                         <TableCell>
-                          <Badge 
-                            variant={player.availability === 'green' ? 'default' : 'secondary'}
-                            className={
-                              player.availability === 'green' ? 'bg-green-500' : 
-                              player.availability === 'amber' ? 'bg-yellow-500' : 'bg-red-500'
-                            }
-                          >
-                            {player.availability === 'green' ? 'Available' : 
-                             player.availability === 'amber' ? 'Uncertain' : 'Unavailable'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
                           {renderPerformanceIndicator(player.id)}
                         </TableCell>
                         <TableCell>
-                          <div className="flex gap-2 flex-wrap">
+                          <div className="flex gap-1">
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleModalOpen('parents', player)}
+                              className="h-8 w-8 p-0"
                             >
-                              <Users className="h-3 w-3 mr-1" />
-                              Parents
+                              <Users className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleModalOpen('attributes', player)}
+                              className="h-8 w-8 p-0"
                             >
-                              <Settings className="h-3 w-3 mr-1" />
-                              Attributes
+                              <Settings className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleModalOpen('objectives', player)}
+                              className="h-8 w-8 p-0"
                             >
-                              <Target className="h-3 w-3 mr-1" />
-                              Objectives
+                              <Target className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleModalOpen('comments', player)}
+                              className="h-8 w-8 p-0"
                             >
-                              <MessageSquare className="h-3 w-3 mr-1" />
-                              Comments
+                              <MessageSquare className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleModalOpen('stats', player)}
+                              className="h-8 w-8 p-0"
                             >
-                              <BarChart3 className="h-3 w-3 mr-1" />
-                              Stats
+                              <BarChart3 className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              variant="ghost"
                               onClick={() => handleModalOpen('history', player)}
+                              className="h-8 w-8 p-0"
                             >
-                              <Calendar className="h-3 w-3 mr-1" />
-                              History
+                              <Calendar className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
