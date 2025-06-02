@@ -10,7 +10,7 @@ import {
   UserMinus, 
   ArrowRightLeft, 
   Users, 
-  Cog, 
+  Settings, 
   Target, 
   MessageSquare, 
   BarChart3, 
@@ -88,10 +88,41 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     }
   };
 
+  const renderTopPositions = () => {
+    const positions = player.matchStats?.minutesByPosition || {};
+    
+    // Convert positions object to array and ensure values are numbers
+    const positionEntries = Object.entries(positions).map(([position, minutes]) => [
+      position, 
+      typeof minutes === 'number' ? minutes : 0
+    ] as [string, number]);
+    
+    const sortedPositions = positionEntries
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    
+    if (sortedPositions.length === 0) {
+      return <span className="text-muted-foreground text-xs">No data</span>;
+    }
+    
+    return (
+      <div className="space-y-1">
+        {sortedPositions.map(([position, minutes]) => (
+          <div key={position} className="flex justify-between text-xs">
+            <span className="font-medium">{position}</span>
+            <span className="text-muted-foreground">{minutes}m</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const age = new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear();
+  const captainGames = player.matchStats?.captainGames || 0;
+  const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
 
   return (
-    <Card className={`h-[280px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
+    <Card className={`h-[320px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">
@@ -111,7 +142,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <Cog className="h-3 w-3" />
+                <Settings className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -206,7 +237,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col">
-        <div className="space-y-2 flex-1">
+        <div className="space-y-3 flex-1">
           {/* Performance and Subscription */}
           <div className="flex items-center justify-between">
             <Badge 
@@ -232,20 +263,28 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               </div>
             </div>
             
-            {/* Captain and POTM indicators */}
+            {/* Captain and POTM indicators - only show if they have counts */}
             <div className="flex gap-1">
-              {player.matchStats?.captainGames && player.matchStats.captainGames > 0 && (
+              {captainGames > 0 && (
                 <Badge variant="outline" className="border-yellow-500 text-yellow-600 flex items-center gap-1 text-xs px-1 py-0">
                   <Crown className="h-2 w-2" />
-                  {player.matchStats.captainGames}
+                  {captainGames}
                 </Badge>
               )}
-              {player.matchStats?.playerOfTheMatchCount && player.matchStats.playerOfTheMatchCount > 0 && (
+              {potmCount > 0 && (
                 <Badge variant="outline" className="border-purple-500 text-purple-600 flex items-center gap-1 text-xs px-1 py-0">
                   <Trophy className="h-2 w-2" />
-                  {player.matchStats.playerOfTheMatchCount}
+                  {potmCount}
                 </Badge>
               )}
+            </div>
+          </div>
+
+          {/* Top 3 Positions */}
+          <div className="space-y-2">
+            <h4 className="text-xs font-medium">Top Positions</h4>
+            <div className="text-xs">
+              {renderTopPositions()}
             </div>
           </div>
 
