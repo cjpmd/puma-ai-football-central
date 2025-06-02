@@ -7,9 +7,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Teams from "./pages/Teams";
+import TeamManagement from "./pages/TeamManagement";
 import PlayerManagement from "./pages/PlayerManagement";
 import PlayerManagementTab from "./pages/PlayerManagementTab";
 import Analytics from "./pages/Analytics";
@@ -25,7 +25,8 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/login" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} />
             <Route
               path="/dashboard"
               element={
@@ -38,7 +39,7 @@ const App = () => (
               path="/teams"
               element={
                 <ProtectedRoute>
-                  <Teams />
+                  <TeamManagement />
                 </ProtectedRoute>
               }
             />
