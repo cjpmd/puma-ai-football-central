@@ -30,9 +30,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     gameFormat: team.gameFormat || '11v11',
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
-    managerName: team.staff?.find(s => s.role === 'Manager')?.name || '',
-    managerEmail: team.staff?.find(s => s.role === 'Manager')?.email || '',
-    managerPhone: team.staff?.find(s => s.role === 'Manager')?.phone || '',
+    managerName: team.managerName || '',
+    managerEmail: team.managerEmail || '',
+    managerPhone: team.managerPhone || '',
   });
 
   const { toast } = useToast();
@@ -59,6 +59,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           game_format: formData.gameFormat,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
+          manager_name: formData.managerName,
+          manager_email: formData.managerEmail,
+          manager_phone: formData.managerPhone,
           updated_at: new Date().toISOString()
         })
         .eq('id', team.id);
