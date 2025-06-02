@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Team, PlayerAttributeGroup, DEFAULT_PLAYER_ATTRIBUTES } from '@/types/team';
+import { Team, PlayerAttributeGroup, DEFAULT_PLAYER_ATTRIBUTES, PlayerAttribute } from '@/types/team';
 import { Plus, X, Edit, Eye, EyeOff } from 'lucide-react';
 
 interface TeamAttributeSettingsProps {
@@ -18,17 +18,28 @@ export const TeamAttributeSettings: React.FC<TeamAttributeSettingsProps> = ({
   team,
   onUpdate
 }) => {
-  const [attributes, setAttributes] = useState(
-    team.playerAttributes || Object.entries(DEFAULT_PLAYER_ATTRIBUTES).reduce((acc, [group, attrs]) => {
-      acc[group as PlayerAttributeGroup] = attrs.map((name, index) => ({
-        id: `${group}-${index}`,
-        name,
-        group: group as PlayerAttributeGroup,
-        value: 5,
-        enabled: true
-      }));
-      return acc;
-    }, {} as Team['playerAttributes'])
+  const getInitialAttributes = (): Record<PlayerAttributeGroup, PlayerAttribute[]> => {
+    if (team.playerAttributes) {
+      return team.playerAttributes;
+    }
+    
+    // Group default attributes by their group
+    const grouped: Record<PlayerAttributeGroup, PlayerAttribute[]> = {
+      goalkeeping: [],
+      mental: [],
+      physical: [],
+      technical: []
+    };
+    
+    DEFAULT_PLAYER_ATTRIBUTES.forEach(attr => {
+      grouped[attr.group].push(attr);
+    });
+    
+    return grouped;
+  };
+
+  const [attributes, setAttributes] = useState<Record<PlayerAttributeGroup, PlayerAttribute[]>>(
+    getInitialAttributes()
   );
 
   const [newAttribute, setNewAttribute] = useState({ group: 'technical' as PlayerAttributeGroup, name: '' });

@@ -65,7 +65,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     homeScore: event?.scores?.home || 0,
     awayScore: event?.scores?.away || 0,
     playerOfTheMatchId: event?.playerOfTheMatchId || '',
-    kitSelection: event?.kitSelection || 'home'
+    kitSelection: event?.kitSelection || 'home' as 'home' | 'away' | 'training'
   });
 
   useEffect(() => {
@@ -221,7 +221,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
 
   const gameFormats: GameFormat[] = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
   const eventTypes = ['training', 'fixture', 'friendly', 'tournament', 'festival', 'social'];
-  const kitOptions = ['home', 'away', 'training'];
+  const kitOptions: ('home' | 'away' | 'training')[] = ['home', 'away', 'training'];
 
   return (
     <ScrollArea className="max-h-[80vh] pr-4">
@@ -274,7 +274,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           <Label htmlFor="kitSelection">Kit Selection</Label>
           <Select
             value={formData.kitSelection}
-            onValueChange={(value) => setFormData(prev => ({ ...prev, kitSelection: value }))}
+            onValueChange={(value: 'home' | 'away' | 'training') => setFormData(prev => ({ ...prev, kitSelection: value }))}
           >
             <SelectTrigger>
               <SelectValue />
