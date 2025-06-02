@@ -35,7 +35,7 @@ export const ClubManagement = () => {
         .select(`
           club_id,
           role,
-          clubs:club_id (
+          club:clubs!user_clubs_club_id_fkey (
             id,
             name,
             reference_number,
@@ -54,18 +54,19 @@ export const ClubManagement = () => {
       }
 
       const linkedClubsData = userClubs?.map(uc => {
-        if (!uc.clubs) return null;
+        if (!uc.club) return null;
         return {
-          id: uc.clubs.id,
-          name: uc.clubs.name,
-          referenceNumber: uc.clubs.reference_number,
-          subscriptionType: uc.clubs.subscription_type,
-          serialNumber: uc.clubs.serial_number,
-          logoUrl: uc.clubs.logo_url,
-          createdAt: uc.clubs.created_at,
-          updatedAt: uc.clubs.updated_at,
+          id: uc.club.id,
+          name: uc.club.name,
+          referenceNumber: uc.club.reference_number || undefined,
+          subscriptionType: uc.club.subscription_type,
+          serialNumber: uc.club.serial_number,
+          logoUrl: uc.club.logo_url,
+          createdAt: uc.club.created_at,
+          updatedAt: uc.club.updated_at,
           userRole: uc.role,
-          isReadOnly: true
+          isReadOnly: true,
+          teams: []
         };
       }).filter(club => club?.id) || [];
 

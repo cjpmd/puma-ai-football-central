@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Team } from '@/types/team';
+import { SubscriptionType } from '@/types/index';
 import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 
 interface ClubData {
@@ -87,7 +88,7 @@ const TeamManagement = () => {
         seasonEnd: team.season_end,
         clubId: team.club_id,
         gameFormat: team.game_format,
-        subscriptionType: team.subscription_type,
+        subscriptionType: (team.subscription_type as SubscriptionType) || 'free',
         performanceCategories: team.performance_categories || [],
         kitIcons: typeof team.kit_icons === 'object' && team.kit_icons !== null ? 
           team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 

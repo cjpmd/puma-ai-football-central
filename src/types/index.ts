@@ -41,6 +41,7 @@ export type Team = {
     training: string;
     goalkeeper: string;
   };
+  logoUrl?: string | null;
   performanceCategories: string[];
   managerName?: string;
   managerEmail?: string;
@@ -58,10 +59,11 @@ export type Team = {
 export type Club = {
   id: string;
   name: string;
-  referenceNumber: string;
+  referenceNumber?: string;
   serialNumber?: string;
   teams: string[]; // Array of team IDs
   subscriptionType: SubscriptionType;
+  logoUrl?: string | null;
   officials?: ClubOfficial[];
   facilities?: Facility[];
   createdAt: string;
