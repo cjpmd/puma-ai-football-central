@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -93,7 +94,7 @@ const TeamManagement = () => {
           team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
           { home: '', away: '', training: '', goalkeeper: '' },
         logoUrl: team.logo_url,
-        kitDesigns: team.kit_designs,
+        kitDesigns: team.kit_designs || undefined,
         createdAt: team.created_at,
         updatedAt: team.updated_at,
         isReadOnly: true
@@ -275,14 +276,15 @@ const TeamManagement = () => {
                 onError={(e) => {
                   console.log('Logo failed to load:', team.logoUrl);
                   e.currentTarget.style.display = 'none';
+                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (nextElement) nextElement.style.display = 'block';
                 }}
                 onLoad={() => {
                   console.log('Logo loaded successfully:', team.logoUrl);
                 }}
               />
-            ) : (
-              <Users className="h-5 w-5 text-muted-foreground" />
-            )}
+            ) : null}
+            <Users className={`h-5 w-5 text-muted-foreground ${team.logoUrl ? 'hidden' : ''}`} />
           </div>
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2">
