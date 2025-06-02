@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +14,55 @@ import { Badge } from '@/components/ui/badge';
 
 export const ClubManagement = () => {
   const { clubs, refreshUserData } = useAuth();
+  const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsClub, setDetailsClub] = useState<Club | null>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadLinkedClubs();
+  }, []);
+
+  const loadLinkedClubs = async () => {
+    try {
+      console.log('Loading linked clubs...');
+      // Get clubs that user is linked to but doesn't own
+      const { data: userClubs, error } = await supabase
+        .from('user_clubs')
+        .select(`
+          club_id,
+          role,
+          clubs:club_id (
+            id,
+            name,
+            reference_number,
+            subscription_type,
+            serial_number,
+            logo_url,
+            created_at,
+            updated_at
+          )
+        `)
+        .neq('role', 'club_admin'); // Only show clubs where user is not admin
+
+      if (error) {
+        console.error('Error loading linked clubs:', error);
+        return;
+      }
+
+      const linkedClubsData = userClubs?.map(uc => ({
+        ...uc.clubs,
+        userRole: uc.role
+      })).filter(club => club.id) || [];
+
+      console.log('Loaded linked clubs:', linkedClubsData);
+      setLinkedClubs(linkedClubsData);
+    } catch (error) {
+      console.error('Error in loadLinkedClubs:', error);
+    }
+  };
 
   const handleCreateClub = async (clubData: Partial<Club>) => {
     try {
@@ -107,10 +151,104 @@ export const ClubManagement = () => {
     setIsClubDialogOpen(true);
   };
 
-  const openDetailsModal = (club: Club) => {
-    setDetailsClub(club);
+  const openDetailsModal = (club: Club, isReadOnly = false) => {
+    setDetailsClub({ ...club, isReadOnly });
     setIsDetailsModalOpen(true);
   };
+
+  const ClubCard = ({ club, isLinked = false }: { club: Club; isLinked?: boolean }) => (
+    <Card key={club.id} className={`hover:shadow-lg transition-shadow ${isLinked ? 'border-dashed opacity-75' : ''}`}>
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
+              {club.logoUrl ? (
+                <img 
+                  src={club.logoUrl} 
+                  alt={`${club.name} logo`}
+                  className="w-7 h-7 object-contain rounded"
+                />
+              ) : (
+                <Building className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2">
+                {club.name}
+                {club.serialNumber && (
+                  <Badge variant="secondary" className="text-xs">
+                    #{club.serialNumber}
+                  </Badge>
+                )}
+                {isLinked && (
+                  <Badge variant="outline" className="text-xs">
+                    Linked
+                  </Badge>
+                )}
+              </CardTitle>
+              {club.referenceNumber && (
+                <CardDescription>
+                  Ref: {club.referenceNumber}
+                </CardDescription>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Subscription:</span>
+            <Badge variant="outline" className="capitalize">
+              {club.subscriptionType}
+            </Badge>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Teams:</span>
+            <span className="font-medium flex items-center gap-1">
+              <Users className="h-3 w-3" />
+              {club.teams?.length || 0}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Serial Number:</span>
+            <span className="font-mono text-xs">
+              {club.serialNumber || 'Auto-generated'}
+            </span>
+          </div>
+          {isLinked && club.userRole && (
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Your Role:</span>
+              <Badge variant="outline" className="capitalize text-xs">
+                {club.userRole.replace('_', ' ')}
+              </Badge>
+            </div>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between gap-2">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => openDetailsModal(club, isLinked)}
+          className="flex-1"
+        >
+          <Eye className="mr-2 h-4 w-4" />
+          View Details
+        </Button>
+        {!isLinked && (
+          <Button 
+            size="sm" 
+            onClick={() => openEditClubDialog(club)}
+            className="flex-1"
+          >
+            <Settings className="mr-2 h-4 w-4" />
+            Settings
+          </Button>
+        )}
+      </CardFooter>
+    </Card>
+  );
 
   return (
     <DashboardLayout>
@@ -152,7 +290,7 @@ export const ClubManagement = () => {
           </Dialog>
         </div>
 
-        {clubs.length === 0 ? (
+        {clubs.length === 0 && linkedClubs.length === 0 ? (
           <Card className="border-dashed border-2 border-muted">
             <CardContent className="py-8 flex flex-col items-center justify-center text-center">
               <div className="rounded-full bg-muted p-3 mb-4">
@@ -173,72 +311,33 @@ export const ClubManagement = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {clubs.map((club) => (
-              <Card key={club.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {club.name}
-                        {club.serialNumber && (
-                          <Badge variant="secondary" className="text-xs">
-                            #{club.serialNumber}
-                          </Badge>
-                        )}
-                      </CardTitle>
-                      {club.referenceNumber && (
-                        <CardDescription>
-                          Ref: {club.referenceNumber}
-                        </CardDescription>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Subscription:</span>
-                      <Badge variant="outline" className="capitalize">
-                        {club.subscriptionType}
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Teams:</span>
-                      <span className="font-medium flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        {club.teams?.length || 0}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Serial Number:</span>
-                      <span className="font-mono text-xs">
-                        {club.serialNumber || 'Auto-generated'}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => openDetailsModal(club)}
-                    className="flex-1"
-                  >
-                    <Eye className="mr-2 h-4 w-4" />
-                    View Details
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={() => openEditClubDialog(club)}
-                    className="flex-1"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            {/* Owned Clubs */}
+            {clubs.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Your Clubs</h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {clubs.map((club) => (
+                    <ClubCard key={club.id} club={club} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Linked Clubs */}
+            {linkedClubs.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Linked Clubs</h2>
+                <p className="text-muted-foreground mb-4">
+                  Clubs you're associated with (read-only access)
+                </p>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {linkedClubs.map((club) => (
+                    <ClubCard key={club.id} club={club} isLinked={true} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

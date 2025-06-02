@@ -4,91 +4,102 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Club, SubscriptionType } from '@/types';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Club } from '@/types';
+import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface ClubFormProps {
-  club: Club | null;
-  onSubmit: (data: Partial<Club>) => void;
+  club?: Club | null;
+  onSubmit: (clubData: Partial<Club>) => void;
   onCancel: () => void;
 }
 
-export const ClubForm: React.FC<ClubFormProps> = ({
-  club,
-  onSubmit,
-  onCancel
-}) => {
-  const [formData, setFormData] = useState<Partial<Club>>({
+export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) => {
+  const [formData, setFormData] = useState({
     name: club?.name || '',
     referenceNumber: club?.referenceNumber || '',
     subscriptionType: club?.subscriptionType || 'free',
-    teams: club?.teams || []
+    logoUrl: club?.logoUrl || null
   });
-
-  const handleChange = (field: keyof Partial<Club>, value: any) => {
-    setFormData({
-      ...formData,
-      [field]: value
-    });
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
+  const handleLogoChange = (logoUrl: string | null) => {
+    setFormData(prev => ({ ...prev, logoUrl }));
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4">
-      <div className="grid grid-cols-1 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Club Name</Label>
-          <Input
-            id="name"
-            value={formData.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-            placeholder="e.g. Ajax FC"
-            required
-          />
-        </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>{club ? 'Edit Club' : 'Create New Club'}</CardTitle>
+        <CardDescription>
+          {club ? 'Update your club details' : 'Add a new club with automatic serial number generation'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Logo Upload */}
+          {club && (
+            <LogoUpload
+              currentLogoUrl={formData.logoUrl}
+              onLogoChange={handleLogoChange}
+              entityType="club"
+              entityId={club.id}
+              entityName={formData.name || 'Club'}
+            />
+          )}
 
-        <div className="space-y-2">
-          <Label htmlFor="referenceNumber">Reference Number (optional)</Label>
-          <Input
-            id="referenceNumber"
-            value={formData.referenceNumber}
-            onChange={(e) => handleChange('referenceNumber', e.target.value)}
-            placeholder="e.g. FA-12345"
-          />
-          <p className="text-xs text-muted-foreground">
-            Note: A unique serial number will be automatically generated for this club
-          </p>
-        </div>
+          {/* Basic Information */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Club Name</Label>
+            <Input
+              id="name"
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter club name"
+              required
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="subscriptionType">Subscription Type</Label>
-          <Select 
-            value={formData.subscriptionType}
-            onValueChange={(value) => handleChange('subscriptionType', value as SubscriptionType)}
-            required
-          >
-            <SelectTrigger id="subscriptionType">
-              <SelectValue placeholder="Select subscription type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="free">Free</SelectItem>
-              <SelectItem value="analytics_plus">Analytics Plus</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+          <div className="space-y-2">
+            <Label htmlFor="referenceNumber">Reference Number (Optional)</Label>
+            <Input
+              id="referenceNumber"
+              value={formData.referenceNumber}
+              onChange={(e) => setFormData(prev => ({ ...prev, referenceNumber: e.target.value }))}
+              placeholder="Enter reference number"
+            />
+          </div>
 
-      <div className="flex justify-end space-x-2 pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" className="bg-puma-blue-500 hover:bg-puma-blue-600">
-          {club ? 'Update Club' : 'Create Club'}
-        </Button>
-      </div>
-    </form>
+          {/* Subscription Type */}
+          <div className="space-y-2">
+            <Label htmlFor="subscriptionType">Subscription Type</Label>
+            <Select value={formData.subscriptionType} onValueChange={(value) => setFormData(prev => ({ ...prev, subscriptionType: value }))}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select subscription type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="premium">Premium</SelectItem>
+                <SelectItem value="pro">Professional</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-puma-blue-500 hover:bg-puma-blue-600">
+              {club ? 'Update Club' : 'Create Club'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };

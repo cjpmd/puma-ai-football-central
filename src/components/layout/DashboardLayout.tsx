@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
+import { EntityHeader } from '@/components/shared/EntityHeader';
 import { 
   Home, 
   Users, 
@@ -41,7 +42,7 @@ const navigation = [
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, teams, clubs } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -49,6 +50,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     await signOut();
     navigate('/login');
   };
+
+  // Get current team or club for header display
+  const currentTeam = teams?.[0]; // For now, show first team
+  const currentClub = clubs?.[0]; // For now, show first club
 
   const Sidebar = ({ className }: { className?: string }) => (
     <div className={cn('flex h-full w-64 flex-col bg-background', className)}>
@@ -123,6 +128,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Top header with entity logo and name */}
+        <div className="h-16 border-b bg-background flex items-center px-6">
+          <div className="flex-1">
+            {currentClub ? (
+              <EntityHeader 
+                logoUrl={currentClub.logoUrl}
+                entityName={currentClub.name}
+                entityType="club"
+              />
+            ) : currentTeam ? (
+              <EntityHeader 
+                logoUrl={currentTeam.logoUrl}
+                entityName={currentTeam.name}
+                entityType="team"
+              />
+            ) : (
+              <EntityHeader 
+                entityName="Team Manager"
+                entityType="team"
+              />
+            )}
+          </div>
+        </div>
+        
         <main className="flex-1 overflow-auto">
           <div className="container mx-auto p-6">
             {children}

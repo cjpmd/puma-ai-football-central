@@ -95,6 +95,13 @@ export type Database = {
             foreignKeyName: "club_teams_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -104,6 +111,7 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          logo_url: string | null
           name: string
           reference_number: string | null
           serial_number: string | null
@@ -113,6 +121,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          logo_url?: string | null
           name: string
           reference_number?: string | null
           serial_number?: string | null
@@ -122,6 +131,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          logo_url?: string | null
           name?: string
           reference_number?: string | null
           serial_number?: string | null
@@ -457,6 +467,13 @@ export type Database = {
             foreignKeyName: "event_selections_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_selections_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -605,6 +622,13 @@ export type Database = {
             foreignKeyName: "events_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -686,6 +710,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "facility_availability_booked_by_team_id_fkey"
+            columns: ["booked_by_team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "facility_availability_booked_by_team_id_fkey"
             columns: ["booked_by_team_id"]
@@ -912,6 +943,13 @@ export type Database = {
             foreignKeyName: "player_transfers_from_team_id_fkey"
             columns: ["from_team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_transfers_from_team_id_fkey"
+            columns: ["from_team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -920,6 +958,13 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: false
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_transfers_to_team_id_fkey"
+            columns: ["to_team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
             referencedColumns: ["id"]
           },
           {
@@ -1010,6 +1055,13 @@ export type Database = {
             columns: ["performance_category_id"]
             isOneToOne: false
             referencedRelation: "performance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "players_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
             referencedColumns: ["id"]
           },
           {
@@ -1226,6 +1278,13 @@ export type Database = {
             foreignKeyName: "team_kit_issues_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_kit_issues_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -1354,6 +1413,13 @@ export type Database = {
             foreignKeyName: "team_staff_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_staff_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -1401,6 +1467,13 @@ export type Database = {
             foreignKeyName: "team_subscriptions_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_subscriptions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -1414,6 +1487,7 @@ export type Database = {
           game_format: string
           id: string
           kit_icons: Json | null
+          logo_url: string | null
           manager_email: string | null
           manager_name: string | null
           manager_phone: string | null
@@ -1431,6 +1505,7 @@ export type Database = {
           game_format: string
           id?: string
           kit_icons?: Json | null
+          logo_url?: string | null
           manager_email?: string | null
           manager_name?: string | null
           manager_phone?: string | null
@@ -1448,6 +1523,7 @@ export type Database = {
           game_format?: string
           id?: string
           kit_icons?: Json | null
+          logo_url?: string | null
           manager_email?: string | null
           manager_name?: string | null
           manager_phone?: string | null
@@ -1595,6 +1671,13 @@ export type Database = {
             foreignKeyName: "user_invitations_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_invitations_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -1700,6 +1783,13 @@ export type Database = {
             foreignKeyName: "fk_user_teams_team_id"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_user_teams_team_id"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -1714,6 +1804,13 @@ export type Database = {
             foreignKeyName: "user_teams_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
@@ -1721,6 +1818,45 @@ export type Database = {
       }
     }
     Views: {
+      club_teams_detailed: {
+        Row: {
+          age_group: string | null
+          club_id: string | null
+          club_logo_url: string | null
+          club_name: string | null
+          created_at: string | null
+          game_format: string | null
+          id: string | null
+          season_end: string | null
+          season_start: string | null
+          team_id: string | null
+          team_logo_url: string | null
+          team_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_teams_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_teams_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kit_items_with_sizes: {
         Row: {
           available_size_ids: string[] | null
@@ -1732,6 +1868,44 @@ export type Database = {
           team_id: string | null
         }
         Relationships: []
+      }
+      linked_teams: {
+        Row: {
+          age_group: string | null
+          club_id: string | null
+          club_logo_url: string | null
+          club_name: string | null
+          created_at: string | null
+          game_format: string | null
+          id: string | null
+          kit_icons: Json | null
+          logo_url: string | null
+          manager_email: string | null
+          manager_name: string | null
+          manager_phone: string | null
+          name: string | null
+          performance_categories: string[] | null
+          season_end: string | null
+          season_start: string | null
+          subscription_type: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_teams_club_id"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {

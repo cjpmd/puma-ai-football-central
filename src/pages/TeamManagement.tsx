@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ type ClubData = {
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
   const [allClubs, setAllClubs] = useState<ClubData[]>([]);
+  const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -30,7 +30,8 @@ const TeamManagement = () => {
 
   useEffect(() => {
     loadAllClubs();
-  }, []);
+    loadLinkedTeams();
+  }, [clubs]);
 
   const loadAllClubs = async () => {
     try {
@@ -48,6 +49,31 @@ const TeamManagement = () => {
       setAllClubs(data || []);
     } catch (error) {
       console.error('Error in loadAllClubs:', error);
+    }
+  };
+
+  const loadLinkedTeams = async () => {
+    if (!clubs || clubs.length === 0) return;
+
+    try {
+      console.log('Loading linked teams for clubs...');
+      const clubIds = clubs.map(club => club.id);
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .in('club_id', clubIds)
+        .neq('id', teams?.map(t => t.id) || []); // Exclude teams user already manages
+
+      if (error) {
+        console.error('Error loading linked teams:', error);
+        return;
+      }
+
+      console.log('Loaded linked teams:', data);
+      setLinkedTeams(data || []);
+    } catch (error) {
+      console.error('Error in loadLinkedTeams:', error);
     }
   };
 
@@ -169,15 +195,15 @@ const TeamManagement = () => {
     }
   };
 
-  const openTeamSettingsModal = (team: Team) => {
-    console.log('Opening settings for team:', team);
-    setSelectedTeam(team);
+  const openTeamSettingsModal = (team: Team, isReadOnly = false) => {
+    console.log('Opening settings for team:', team, 'Read only:', isReadOnly);
+    setSelectedTeam({ ...team, isReadOnly });
     setIsSettingsModalOpen(true);
   };
 
-  const openStaffModal = (team: Team) => {
-    console.log('Opening staff modal for team:', team);
-    setSelectedTeam(team);
+  const openStaffModal = (team: Team, isReadOnly = false) => {
+    console.log('Opening staff modal for team:', team, 'Read only:', isReadOnly);
+    setSelectedTeam({ ...team, isReadOnly });
     setIsStaffModalOpen(true);
   };
 
@@ -209,7 +235,89 @@ const TeamManagement = () => {
     return 'Independent';
   };
 
-  console.log('TeamManagement render - teams:', teams, 'clubs:', clubs, 'allClubs:', allClubs);
+  const TeamCard = ({ team, isLinked = false }: { team: Team; isLinked?: boolean }) => (
+    <Card key={team.id} className={isLinked ? 'border-dashed opacity-75' : ''}>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
+            {team.logoUrl ? (
+              <img 
+                src={team.logoUrl} 
+                alt={`${team.name} logo`}
+                className="w-7 h-7 object-contain rounded"
+              />
+            ) : (
+              <Users className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2">
+              {team.name}
+              {isLinked && (
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  Linked
+                </span>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {team.ageGroup} • {team.gameFormat}
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Season:</span>
+            <span className="font-medium">
+              {new Date(team.seasonStart).toLocaleDateString()} - {new Date(team.seasonEnd).toLocaleDateString()}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Club:</span>
+            <span className="font-medium">
+              {getClubName(team.clubId)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center text-sm">
+            <span className="text-muted-foreground">Subscription:</span>
+            <span className="font-medium capitalize">
+              {team.subscriptionType}
+            </span>
+          </div>
+          {team.performanceCategories && team.performanceCategories.length > 0 && (
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Categories:</span>
+              <span className="font-medium">
+                {team.performanceCategories.length}
+              </span>
+            </div>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => openStaffModal(team, isLinked)}
+          className={isLinked ? 'opacity-75' : ''}
+        >
+          <UserPlus className="mr-2 h-4 w-4" />
+          Staff {isLinked ? '(View)' : ''}
+        </Button>
+        <Button 
+          size="sm" 
+          onClick={() => openTeamSettingsModal(team, isLinked)}
+          className={isLinked ? 'opacity-75' : ''}
+        >
+          <Settings className="mr-2 h-4 w-4" />
+          Settings {isLinked ? '(View)' : ''}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+
+  console.log('TeamManagement render - teams:', teams, 'clubs:', clubs, 'allClubs:', allClubs, 'linkedTeams:', linkedTeams);
 
   return (
     <DashboardLayout>
@@ -234,25 +342,25 @@ const TeamManagement = () => {
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>
-                  {selectedTeam ? 'Edit Team' : 'Create New Team'}
+                  {selectedTeam && !selectedTeam.isReadOnly ? 'Edit Team' : 'Create New Team'}
                 </DialogTitle>
                 <DialogDescription>
-                  {selectedTeam 
+                  {selectedTeam && !selectedTeam.isReadOnly
                     ? 'Update your team details and settings.' 
                     : 'Add a new team to your account.'}
                 </DialogDescription>
               </DialogHeader>
               <TeamForm 
-                team={selectedTeam} 
+                team={selectedTeam && !selectedTeam.isReadOnly ? selectedTeam : null} 
                 clubs={clubs || []}
-                onSubmit={selectedTeam ? handleUpdateTeam : handleCreateTeam} 
+                onSubmit={selectedTeam && !selectedTeam.isReadOnly ? handleUpdateTeam : handleCreateTeam} 
                 onCancel={() => setIsTeamDialogOpen(false)}
               />
             </DialogContent>
           </Dialog>
         </div>
 
-        {teams.length === 0 ? (
+        {teams.length === 0 && linkedTeams.length === 0 ? (
           <Card className="border-dashed border-2 border-muted">
             <CardContent className="py-8 flex flex-col items-center justify-center text-center">
               <div className="rounded-full bg-muted p-3 mb-4">
@@ -272,57 +380,33 @@ const TeamManagement = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {teams.map((team) => (
-              <Card key={team.id}>
-                <CardHeader>
-                  <CardTitle>{team.name}</CardTitle>
-                  <CardDescription>
-                    {team.ageGroup} • {team.gameFormat}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Season:</span>
-                      <span className="font-medium">
-                        {new Date(team.seasonStart).toLocaleDateString()} - {new Date(team.seasonEnd).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Club:</span>
-                      <span className="font-medium">
-                        {getClubName(team.clubId)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">Subscription:</span>
-                      <span className="font-medium capitalize">
-                        {team.subscriptionType}
-                      </span>
-                    </div>
-                    {team.performanceCategories && team.performanceCategories.length > 0 && (
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">Categories:</span>
-                        <span className="font-medium">
-                          {team.performanceCategories.length}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="outline" size="sm" onClick={() => openStaffModal(team)}>
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Staff
-                  </Button>
-                  <Button size="sm" onClick={() => openTeamSettingsModal(team)}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            {/* Managed Teams */}
+            {teams.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Your Teams</h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {teams.map((team) => (
+                    <TeamCard key={team.id} team={team} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Linked Teams */}
+            {linkedTeams.length > 0 && (
+              <div>
+                <h2 className="text-xl font-semibold mb-4">Linked Teams</h2>
+                <p className="text-muted-foreground mb-4">
+                  Teams linked through your club memberships (read-only access)
+                </p>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {linkedTeams.map((team) => (
+                    <TeamCard key={team.id} team={team} isLinked={true} />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
