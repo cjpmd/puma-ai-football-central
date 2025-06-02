@@ -1486,6 +1486,7 @@ export type Database = {
           created_at: string | null
           game_format: string
           id: string
+          kit_designs: Json | null
           kit_icons: Json | null
           logo_url: string | null
           manager_email: string | null
@@ -1504,6 +1505,7 @@ export type Database = {
           created_at?: string | null
           game_format: string
           id?: string
+          kit_designs?: Json | null
           kit_icons?: Json | null
           logo_url?: string | null
           manager_email?: string | null
@@ -1522,6 +1524,7 @@ export type Database = {
           created_at?: string | null
           game_format?: string
           id?: string
+          kit_designs?: Json | null
           kit_icons?: Json | null
           logo_url?: string | null
           manager_email?: string | null

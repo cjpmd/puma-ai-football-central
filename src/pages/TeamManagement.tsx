@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -94,7 +93,7 @@ const TeamManagement = () => {
           team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
           { home: '', away: '', training: '', goalkeeper: '' },
         logoUrl: team.logo_url,
-        kitDesigns: team.kit_designs || undefined,
+        kitDesigns: team.kit_designs ? team.kit_designs as any : undefined,
         createdAt: team.created_at,
         updatedAt: team.updated_at,
         isReadOnly: true
@@ -121,7 +120,8 @@ const TeamManagement = () => {
         subscription_type: teamData.subscriptionType || 'free',
         performance_categories: teamData.performanceCategories || [],
         kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
-        logo_url: teamData.logoUrl
+        logo_url: teamData.logoUrl,
+        kit_designs: teamData.kitDesigns || null
       }]).select().single();
 
       if (error) throw error;
@@ -176,21 +176,27 @@ const TeamManagement = () => {
     try {
       console.log('Updating team with data:', teamData);
       
+      const updateData: any = {
+        name: teamData.name,
+        age_group: teamData.ageGroup,
+        season_start: teamData.seasonStart,
+        season_end: teamData.seasonEnd,
+        club_id: teamData.clubId || null,
+        game_format: teamData.gameFormat,
+        subscription_type: teamData.subscriptionType,
+        performance_categories: teamData.performanceCategories,
+        kit_icons: teamData.kitIcons,
+        logo_url: teamData.logoUrl
+      };
+
+      // Only include kit_designs if it's provided
+      if (teamData.kitDesigns !== undefined) {
+        updateData.kit_designs = teamData.kitDesigns;
+      }
+
       const { error } = await supabase
         .from('teams')
-        .update({
-          name: teamData.name,
-          age_group: teamData.ageGroup,
-          season_start: teamData.seasonStart,
-          season_end: teamData.seasonEnd,
-          club_id: teamData.clubId || null,
-          game_format: teamData.gameFormat,
-          subscription_type: teamData.subscriptionType,
-          performance_categories: teamData.performanceCategories,
-          kit_icons: teamData.kitIcons,
-          logo_url: teamData.logoUrl,
-          kit_designs: teamData.kitDesigns
-        })
+        .update(updateData)
         .eq('id', selectedTeam.id);
 
       if (error) throw error;
