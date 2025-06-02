@@ -11,7 +11,7 @@ export type UserRole =
   | "club_secretary"
   | "global_admin";
 
-export type SubscriptionType = "free" | "analytics_plus";
+export type SubscriptionType = "free" | "premium" | "pro" | "analytics_plus";
 export type PlayerSubscriptionType = "full_squad" | "training";
 export type SubscriptionStatus = "active" | "inactive" | "pending" | "paused";
 
@@ -51,6 +51,7 @@ export type Team = {
     showPlayerStatsToParents: boolean;
     showPlayerStatsToPlayers: boolean;
   };
+  isReadOnly?: boolean; // For linked teams
   createdAt: string;
   updatedAt: string;
 };
@@ -65,6 +66,8 @@ export type Club = {
   logoUrl?: string | null;
   officials?: ClubOfficial[];
   facilities?: Facility[];
+  userRole?: string; // For linked clubs
+  isReadOnly?: boolean; // For linked clubs
   createdAt: string;
   updatedAt: string;
 };

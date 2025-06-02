@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Club } from '@/types/club';
+import { Club, SubscriptionType } from '@/types/index';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface ClubFormProps {
@@ -18,7 +18,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
   const [formData, setFormData] = useState({
     name: club?.name || '',
     referenceNumber: club?.referenceNumber || '',
-    subscriptionType: club?.subscriptionType || 'free' as const,
+    subscriptionType: club?.subscriptionType || 'free' as SubscriptionType,
     logoUrl: club?.logoUrl || null
   });
 
@@ -79,7 +79,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
             <Label htmlFor="subscriptionType">Subscription Type</Label>
             <Select 
               value={formData.subscriptionType} 
-              onValueChange={(value: 'free' | 'premium' | 'pro') => 
+              onValueChange={(value: SubscriptionType) => 
                 setFormData(prev => ({ ...prev, subscriptionType: value }))
               }
             >

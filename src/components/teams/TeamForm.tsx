@@ -5,8 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Team } from '@/types/team';
-import { Club } from '@/types/club';
+import { Team, Club, GameFormat, SubscriptionType } from '@/types/index';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface TeamFormProps {
@@ -23,8 +22,8 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
     seasonStart: team?.seasonStart || '',
     seasonEnd: team?.seasonEnd || '',
     clubId: team?.clubId || '',
-    gameFormat: team?.gameFormat || '' as const,
-    subscriptionType: team?.subscriptionType || 'free' as const,
+    gameFormat: team?.gameFormat || '11-a-side' as GameFormat,
+    subscriptionType: team?.subscriptionType || 'free' as SubscriptionType,
     logoUrl: team?.logoUrl || null
   });
 
@@ -131,7 +130,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
             <Label htmlFor="gameFormat">Game Format</Label>
             <Select 
               value={formData.gameFormat} 
-              onValueChange={(value: string) => setFormData(prev => ({ ...prev, gameFormat: value }))}
+              onValueChange={(value: GameFormat) => setFormData(prev => ({ ...prev, gameFormat: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select game format" />
@@ -150,7 +149,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
             <Label htmlFor="subscriptionType">Subscription Type</Label>
             <Select 
               value={formData.subscriptionType} 
-              onValueChange={(value: 'free' | 'premium' | 'pro') => 
+              onValueChange={(value: SubscriptionType) => 
                 setFormData(prev => ({ ...prev, subscriptionType: value }))
               }
             >

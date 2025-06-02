@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +11,7 @@ import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Team, SubscriptionType } from '@/types/index';
+import { Team, SubscriptionType, GameFormat } from '@/types/index';
 import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 
 interface ClubData {
@@ -85,7 +86,7 @@ const TeamManagement = () => {
         seasonStart: team.season_start,
         seasonEnd: team.season_end,
         clubId: team.club_id,
-        gameFormat: team.game_format,
+        gameFormat: team.game_format as GameFormat,
         subscriptionType: (team.subscription_type as SubscriptionType) || 'free',
         performanceCategories: team.performance_categories || [],
         kitIcons: typeof team.kit_icons === 'object' && team.kit_icons !== null ? 
