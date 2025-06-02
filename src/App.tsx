@@ -14,6 +14,7 @@ import TeamManagement from "./pages/TeamManagement";
 import PlayerManagement from "./pages/PlayerManagement";
 import PlayerManagementTab from "./pages/PlayerManagementTab";
 import Analytics from "./pages/Analytics";
+import CalendarEvents from "./pages/CalendarEvents";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <PlayerManagementTab />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <ProtectedRoute>
+                    <CalendarEvents />
                   </ProtectedRoute>
                 }
               />

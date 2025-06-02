@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player } from '@/types';
-import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Search, Users, Cog, Calendar, BarChart3, MessageSquare, Target, TrendingUp, TrendingDown, Minus, Brain, Crown, Trophy } from 'lucide-react';
 import { PlayerParentModal } from '@/components/players/PlayerParentModal';
 import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
 import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModal';
@@ -116,34 +115,40 @@ const PlayerManagementTab = () => {
     handleModalClose();
   };
 
-  const renderPerformanceIndicator = (playerId: string) => {
+  const renderPerformanceIcon = (playerId: string) => {
     const trend = performanceTrends.get(playerId);
     if (!trend) return <Minus className="h-4 w-4 text-gray-400" />;
     
     switch (trend) {
       case 'improving':
-        return (
-          <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            Improving
-          </Badge>
-        );
+        return <TrendingUp className="h-4 w-4 text-green-600" />;
       case 'needs-work':
-        return (
-          <Badge variant="outline" className="border-red-500 text-red-600 bg-red-50 flex items-center gap-1">
-            <TrendingDown className="h-3 w-3" />
-            Needs Work
-          </Badge>
-        );
+        return <TrendingDown className="h-4 w-4 text-red-600" />;
       case 'maintaining':
       default:
-        return (
-          <Badge variant="outline" className="border-gray-400 text-gray-600 bg-gray-50 flex items-center gap-1">
-            <Minus className="h-3 w-3" />
-            Maintaining
-          </Badge>
-        );
+        return <Minus className="h-4 w-4 text-gray-600" />;
     }
+  };
+
+  const renderTopPositions = (player: Player) => {
+    const positions = player.matchStats?.minutesByPosition || {};
+    const sortedPositions = Object.entries(positions)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    
+    if (sortedPositions.length === 0) {
+      return <span className="text-muted-foreground text-xs">No data</span>;
+    }
+    
+    return (
+      <div className="flex flex-wrap gap-1">
+        {sortedPositions.map(([position, minutes]) => (
+          <Badge key={position} variant="outline" className="text-xs">
+            {position}: {minutes}m
+          </Badge>
+        ))}
+      </div>
+    );
   };
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
@@ -234,6 +239,7 @@ const PlayerManagementTab = () => {
                       <TableHead>Subscription</TableHead>
                       <TableHead>Games</TableHead>
                       <TableHead>Minutes</TableHead>
+                      <TableHead>Top Positions</TableHead>
                       <TableHead>Performance</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
@@ -264,7 +270,10 @@ const PlayerManagementTab = () => {
                         <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
                         <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
                         <TableCell>
-                          {renderPerformanceIndicator(player.id)}
+                          {renderTopPositions(player)}
+                        </TableCell>
+                        <TableCell>
+                          {renderPerformanceIcon(player.id)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -273,6 +282,7 @@ const PlayerManagementTab = () => {
                               variant="ghost"
                               onClick={() => handleModalOpen('parents', player)}
                               className="h-8 w-8 p-0"
+                              title="Manage Parents"
                             >
                               <Users className="h-4 w-4" />
                             </Button>
@@ -281,14 +291,16 @@ const PlayerManagementTab = () => {
                               variant="ghost"
                               onClick={() => handleModalOpen('attributes', player)}
                               className="h-8 w-8 p-0"
+                              title="Manage Attributes"
                             >
-                              <Settings className="h-4 w-4" />
+                              <Brain className="h-4 w-4" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
                               onClick={() => handleModalOpen('objectives', player)}
                               className="h-8 w-8 p-0"
+                              title="Manage Objectives"
                             >
                               <Target className="h-4 w-4" />
                             </Button>
@@ -297,6 +309,7 @@ const PlayerManagementTab = () => {
                               variant="ghost"
                               onClick={() => handleModalOpen('comments', player)}
                               className="h-8 w-8 p-0"
+                              title="Manage Comments"
                             >
                               <MessageSquare className="h-4 w-4" />
                             </Button>
@@ -305,6 +318,7 @@ const PlayerManagementTab = () => {
                               variant="ghost"
                               onClick={() => handleModalOpen('stats', player)}
                               className="h-8 w-8 p-0"
+                              title="View Statistics"
                             >
                               <BarChart3 className="h-4 w-4" />
                             </Button>
@@ -313,6 +327,7 @@ const PlayerManagementTab = () => {
                               variant="ghost"
                               onClick={() => handleModalOpen('history', player)}
                               className="h-8 w-8 p-0"
+                              title="View History"
                             >
                               <Calendar className="h-4 w-4" />
                             </Button>

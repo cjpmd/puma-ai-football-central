@@ -6,12 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Player } from '@/types';
 import { 
-  MoreVertical, 
   Edit, 
   UserMinus, 
   ArrowRightLeft, 
   Users, 
-  Settings, 
+  Cog, 
   Target, 
   MessageSquare, 
   BarChart3, 
@@ -20,7 +19,8 @@ import {
   TrendingDown,
   Minus,
   Crown,
-  Trophy
+  Trophy,
+  Brain
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
@@ -79,39 +79,24 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
     switch (performanceTrend) {
       case 'improving':
-        return (
-          <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50 flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            Improving
-          </Badge>
-        );
+        return <TrendingUp className="h-4 w-4 text-green-600" />;
       case 'needs-work':
-        return (
-          <Badge variant="outline" className="border-red-500 text-red-600 bg-red-50 flex items-center gap-1">
-            <TrendingDown className="h-3 w-3" />
-            Needs Work
-          </Badge>
-        );
+        return <TrendingDown className="h-4 w-4 text-red-600" />;
       case 'maintaining':
       default:
-        return (
-          <Badge variant="outline" className="border-gray-400 text-gray-600 bg-gray-50 flex items-center gap-1">
-            <Minus className="h-3 w-3" />
-            Maintaining
-          </Badge>
-        );
+        return <Minus className="h-4 w-4 text-gray-600" />;
     }
   };
 
   const age = new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear();
 
   return (
-    <Card className={`h-[320px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
+    <Card className={`h-[280px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <CardTitle className="text-base">{player.name}</CardTitle>
+              <CardTitle className="text-sm">{player.name}</CardTitle>
               <Badge variant="outline" className="text-xs">
                 #{player.squadNumber}
               </Badge>
@@ -126,7 +111,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <MoreVertical className="h-3 w-3" />
+                <Cog className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -146,7 +131,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   )}
                   {onManageAttributes && (
                     <DropdownMenuItem onClick={onManageAttributes}>
-                      <Settings className="mr-2 h-4 w-4" />
+                      <Brain className="mr-2 h-4 w-4" />
                       Manage Attributes
                     </DropdownMenuItem>
                   )}
@@ -286,7 +271,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           )}
           {!inactive && onManageAttributes && (
             <Button size="sm" variant="outline" onClick={onManageAttributes} className="flex-1 text-xs h-7">
-              <Settings className="h-2 w-2 mr-1" />
+              <Brain className="h-2 w-2 mr-1" />
               Attributes
             </Button>
           )}
