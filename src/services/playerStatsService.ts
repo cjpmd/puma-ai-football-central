@@ -117,31 +117,40 @@ export const playerStatsService = {
     try {
       console.log('Cleaning up events with unknown opponents...');
       
-      // Delete event_player_stats for events with "Unknown" opponents
+      // First, get the IDs of events with "Unknown" opponents
+      const { data: unknownEvents, error: fetchError } = await supabase
+        .from('events')
+        .select('id')
+        .ilike('opponent', 'unknown');
+
+      if (fetchError) {
+        console.error('Error fetching unknown opponent events:', fetchError);
+        return;
+      }
+
+      if (!unknownEvents || unknownEvents.length === 0) {
+        console.log('No unknown opponent events found');
+        return;
+      }
+
+      const eventIds = unknownEvents.map(event => event.id);
+      console.log('Found unknown opponent events:', eventIds);
+
+      // Delete event_player_stats for these events
       const { error: deleteStatsError } = await supabase
         .from('event_player_stats')
         .delete()
-        .in('event_id', 
-          supabase
-            .from('events')
-            .select('id')
-            .ilike('opponent', 'unknown')
-        );
+        .in('event_id', eventIds);
 
       if (deleteStatsError) {
         console.error('Error deleting stats for unknown opponents:', deleteStatsError);
       }
 
-      // Delete event_selections for events with "Unknown" opponents
+      // Delete event_selections for these events
       const { error: deleteSelectionsError } = await supabase
         .from('event_selections')
         .delete()
-        .in('event_id', 
-          supabase
-            .from('events')
-            .select('id')
-            .ilike('opponent', 'unknown')
-        );
+        .in('event_id', eventIds);
 
       if (deleteSelectionsError) {
         console.error('Error deleting selections for unknown opponents:', deleteSelectionsError);
@@ -151,7 +160,7 @@ export const playerStatsService = {
       const { error: deleteEventsError } = await supabase
         .from('events')
         .delete()
-        .ilike('opponent', 'unknown');
+        .in('id', eventIds);
 
       if (deleteEventsError) {
         console.error('Error deleting unknown opponent events:', deleteEventsError);
