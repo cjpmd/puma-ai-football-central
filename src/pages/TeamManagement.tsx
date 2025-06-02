@@ -238,8 +238,10 @@ const TeamManagement = () => {
   };
 
   const getClubName = (clubId?: string) => {
+    console.log('Getting club name for ID:', clubId, 'Available clubs:', allClubs);
     if (!clubId) return 'Independent';
     const club = allClubs.find(c => c.id === clubId);
+    console.log('Found club:', club);
     return club?.name || 'Unknown Club';
   };
 
