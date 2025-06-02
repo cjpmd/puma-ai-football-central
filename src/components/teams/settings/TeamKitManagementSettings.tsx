@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Package, Shirt, Settings, Plus, Trash2, Upload, Image, Users } from 'lucide-react';
 import { Team } from '@/types/index';
 import { KitManagementModal } from '../KitManagementModal';
+import { TeamKitSettings } from './TeamKitSettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -312,14 +313,6 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
     }
   };
 
-  const handleKitIconUpdate = (iconType: string, iconData: string) => {
-    const updatedKitIcons = {
-      ...team.kitIcons,
-      [iconType]: iconData
-    };
-    onUpdate({ kitIcons: updatedKitIcons });
-  };
-
   const handleSizeSelectionChange = (sizeId: string, checked: boolean) => {
     if (editingItem) {
       const updatedSizes = checked 
@@ -355,13 +348,14 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       <div>
         <h3 className="text-lg font-semibold">Kit Management</h3>
         <p className="text-sm text-muted-foreground">
-          Manage kit items, sizes, icons, and track kit issued to players
+          Manage kit items, sizes, designs, and track kit issued to players
         </p>
       </div>
 
       <Tabs defaultValue="issue" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="issue">Issue Kit</TabsTrigger>
+          <TabsTrigger value="design">Kit Design</TabsTrigger>
           <TabsTrigger value="items">Kit Items</TabsTrigger>
           <TabsTrigger value="sizes">Sizes</TabsTrigger>
           <TabsTrigger value="overview">Kit Overview</TabsTrigger>
@@ -372,60 +366,26 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Kit Issue Tracking & Icons
+                Kit Issue Management
               </CardTitle>
               <CardDescription>
-                Track which kit items have been issued to players and manage kit icons
+                Track which kit items have been issued to players
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h4 className="font-medium mb-4">Kit Issue Management</h4>
-                <Button 
-                  onClick={() => setIsKitModalOpen(true)}
-                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                >
-                  <Package className="h-4 w-4 mr-2" />
-                  Manage Kit Issues
-                </Button>
-              </div>
-
-              {/* ... keep existing code (kit icons section) */}
-              <div>
-                <h4 className="font-medium mb-4">Kit Icons</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {['home', 'away', 'training', 'goalkeeper'].map((kitType) => (
-                    <div key={kitType} className="space-y-3">
-                      <Label className="capitalize">{kitType} Kit</Label>
-                      <div className="flex items-center gap-3">
-                        {team.kitIcons?.[kitType as keyof typeof team.kitIcons] && (
-                          <img
-                            src={team.kitIcons[kitType as keyof typeof team.kitIcons]}
-                            alt={`${kitType} kit`}
-                            className="w-12 h-12 object-cover rounded border"
-                          />
-                        )}
-                        <Input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const reader = new FileReader();
-                              reader.onload = (event) => {
-                                handleKitIconUpdate(kitType, event.target?.result as string);
-                              };
-                              reader.readAsDataURL(file);
-                            }
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            <CardContent>
+              <Button 
+                onClick={() => setIsKitModalOpen(true)}
+                className="bg-puma-blue-500 hover:bg-puma-blue-600"
+              >
+                <Package className="h-4 w-4 mr-2" />
+                Manage Kit Issues
+              </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="design" className="space-y-4">
+          <TeamKitSettings team={team} onUpdate={onUpdate} />
         </TabsContent>
 
         <TabsContent value="items" className="space-y-4">
@@ -484,7 +444,6 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         </TabsContent>
 
         <TabsContent value="sizes" className="space-y-4">
-          {/* ... keep existing code (sizes tab content) */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
