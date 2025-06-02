@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Team } from '@/types/team';
 import { KitDesigner } from '../KitDesigner';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface KitDesign {
   shirtColor: string;
@@ -31,7 +32,6 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
 }) => {
   const { toast } = useToast();
 
-  // Convert existing kitDesigns to proper format
   const getInitialDesigns = (): Partial<KitDesigns> => {
     console.log('Getting initial designs for team:', team.name, 'kitDesigns:', team.kitDesigns);
     if (team.kitDesigns) {
@@ -43,25 +43,33 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   const handleSaveDesigns = async (designs: KitDesigns) => {
     try {
       console.log('Saving kit designs:', designs);
-      console.log('Current team data:', team);
       
-      // Create the update object with ONLY the kitDesigns field
-      // The parent component should handle preserving other fields
-      const updateData: Partial<Team> = { 
-        kitDesigns: designs
-      };
+      // Save directly to database
+      const { error } = await supabase
+        .from('teams')
+        .update({ 
+          kit_designs: designs,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', team.id);
+
+      if (error) {
+        console.error('Database update error:', error);
+        throw error;
+      }
+
+      // Update parent component
+      onUpdate({ kitDesigns: designs });
       
-      console.log('Update data for kit designs:', updateData);
-      
-      // Call the onUpdate function
-      await onUpdate(updateData);
-      
-      console.log('Kit designs saved successfully');
-    } catch (error) {
+      toast({
+        title: 'Kit designs saved',
+        description: 'Your kit designs have been saved successfully.',
+      });
+    } catch (error: any) {
       console.error('Error saving kit designs:', error);
       toast({
         title: 'Error saving kit designs',
-        description: 'There was a problem saving your kit designs. Please try again.',
+        description: error.message || 'Failed to save kit designs',
         variant: 'destructive',
       });
     }

@@ -135,7 +135,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
             </p>
           </div>
 
-          {/* Game Format */}
+          {/* Game Format - Restored complete list */}
           <div className="space-y-2">
             <Label htmlFor="gameFormat">Game Format</Label>
             <Select 

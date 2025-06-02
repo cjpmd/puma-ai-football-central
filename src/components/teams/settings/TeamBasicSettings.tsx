@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { TeamLogoSettings } from './TeamLogoSettings';
 import { Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';
@@ -27,7 +26,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
-    gameFormat: team.gameFormat || '11v11',
+    gameFormat: team.gameFormat || '11-a-side',
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     managerName: team.managerName || '',
@@ -137,10 +136,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="11v11">11v11</SelectItem>
-                <SelectItem value="9v9">9v9</SelectItem>
-                <SelectItem value="7v7">7v7</SelectItem>
-                <SelectItem value="5v5">5v5</SelectItem>
+                <SelectItem value="11-a-side">11v11</SelectItem>
+                <SelectItem value="9-a-side">9v9</SelectItem>
+                <SelectItem value="7-a-side">7v7</SelectItem>
+                <SelectItem value="5-a-side">5v5</SelectItem>
+                <SelectItem value="4-a-side">4v4</SelectItem>
+                <SelectItem value="3-a-side">3v3</SelectItem>
               </SelectContent>
             </Select>
           </div>

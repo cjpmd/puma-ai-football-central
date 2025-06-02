@@ -86,92 +86,56 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
   const handleSave = () => {
     console.log('Saving kit designs:', designs);
     onSave(designs);
-    toast({
-      title: 'Kit designs saved',
-      description: 'Your kit designs have been saved successfully.',
-    });
   };
 
-  // Better shirt preview with proper color visualization
+  // Very simple shirt preview
   const SimpleShirtPreview = ({ design, size = 'large' }: { design: KitDesign; size?: 'small' | 'large' }) => {
-    const dimensions = size === 'small' ? 'w-16 h-20' : 'w-32 h-40';
-    const shirtSize = size === 'small' ? 'w-12 h-14' : 'w-24 h-28';
-    const shortsSize = size === 'small' ? 'w-8 h-3' : 'w-16 h-6';
-    const socksSize = size === 'small' ? 'w-2 h-4' : 'w-3 h-8';
+    const isSmall = size === 'small';
+    const shirtStyle = {
+      backgroundColor: design.shirtColor,
+      border: design.shirtColor === '#ffffff' ? '2px solid #e5e7eb' : '1px solid #9ca3af'
+    };
     
     return (
-      <div className={`${dimensions} relative flex flex-col items-center justify-center bg-gray-50 rounded-lg p-2 border`}>
-        {/* Shirt body with proper color fill */}
-        <div className={`${shirtSize} relative rounded-t-lg border-2 border-gray-400 mb-1`} 
-             style={{ backgroundColor: design.shirtColor }}>
-          
-          {/* Sleeve indicators */}
-          <div className="absolute -left-2 top-2 w-4 h-8 rounded border border-gray-400" 
-               style={{ backgroundColor: design.sleeveColor }} />
-          <div className="absolute -right-2 top-2 w-4 h-8 rounded border border-gray-400" 
-               style={{ backgroundColor: design.sleeveColor }} />
-          
-          {/* Collar */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-8 h-2 rounded-b border-b border-gray-400" 
-               style={{ backgroundColor: design.shirtColor }} />
-          
-          {/* Stripes if enabled */}
-          {design.hasStripes && (
-            <div className="absolute inset-0 flex justify-center items-center">
-              <div className="flex gap-1 h-full items-center pt-2 pb-2">
-                <div className="w-0.5 h-full opacity-80 rounded" style={{ backgroundColor: design.stripeColor }} />
-                <div className="w-0.5 h-full opacity-80 rounded" style={{ backgroundColor: design.stripeColor }} />
-                <div className="w-0.5 h-full opacity-80 rounded" style={{ backgroundColor: design.stripeColor }} />
-                <div className="w-0.5 h-full opacity-80 rounded" style={{ backgroundColor: design.stripeColor }} />
-              </div>
-            </div>
-          )}
-          
-          {/* White outline for white shirts */}
-          {design.shirtColor === '#ffffff' && (
-            <div className="absolute inset-0 border-2 border-gray-300 rounded-t-lg pointer-events-none" />
-          )}
-        </div>
-        
-        {/* Shorts */}
+      <div className={`${isSmall ? 'w-16 h-20' : 'w-32 h-40'} flex flex-col items-center justify-center bg-gray-50 rounded-lg p-2 border`}>
+        {/* Simple shirt rectangle */}
         <div 
-          className={`${shortsSize} rounded border-2 border-gray-400 mb-1`}
-          style={{ backgroundColor: design.shortsColor }}
-        >
-          {/* White outline for white shorts */}
-          {design.shortsColor === '#ffffff' && (
-            <div className="absolute inset-0 border border-gray-300 rounded pointer-events-none" />
-          )}
-        </div>
+          className={`${isSmall ? 'w-12 h-14' : 'w-24 h-28'} rounded-t-lg mb-1`}
+          style={shirtStyle}
+        />
         
-        {/* Socks - only show for large size */}
-        {size === 'large' && (
+        {/* Simple shorts rectangle */}
+        <div 
+          className={`${isSmall ? 'w-8 h-3' : 'w-16 h-6'} rounded mb-1`}
+          style={{
+            backgroundColor: design.shortsColor,
+            border: design.shortsColor === '#ffffff' ? '1px solid #e5e7eb' : 'none'
+          }}
+        />
+        
+        {/* Simple socks - only show for large size */}
+        {!isSmall && (
           <div className="flex gap-2">
             <div 
-              className={`${socksSize} rounded border border-gray-400`}
-              style={{ backgroundColor: design.socksColor }}
-            >
-              {/* White outline for white socks */}
-              {design.socksColor === '#ffffff' && (
-                <div className="absolute inset-0 border border-gray-300 rounded pointer-events-none" />
-              )}
-            </div>
+              className="w-3 h-8 rounded"
+              style={{
+                backgroundColor: design.socksColor,
+                border: design.socksColor === '#ffffff' ? '1px solid #e5e7eb' : 'none'
+              }}
+            />
             <div 
-              className={`${socksSize} rounded border border-gray-400`}
-              style={{ backgroundColor: design.socksColor }}
-            >
-              {/* White outline for white socks */}
-              {design.socksColor === '#ffffff' && (
-                <div className="absolute inset-0 border border-gray-300 rounded pointer-events-none" />
-              )}
-            </div>
+              className="w-3 h-8 rounded"
+              style={{
+                backgroundColor: design.socksColor,
+                border: design.socksColor === '#ffffff' ? '1px solid #e5e7eb' : 'none'
+              }}
+            />
           </div>
         )}
       </div>
     );
   };
 
-  // ... keep existing code (ColorSelector component)
   const ColorSelector = ({ 
     value, 
     onChange, 
@@ -240,7 +204,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
                 Design {kitTypes.find(k => k.key === activeKit)?.label}
               </CardTitle>
               <CardDescription>
-                Customize colors and patterns for your kit
+                Customize colors for your kit
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -252,49 +216,17 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
                 />
                 
                 <ColorSelector
-                  value={activeDesign.sleeveColor}
-                  onChange={(color) => updateKitDesign(activeKit, { sleeveColor: color })}
-                  label="Sleeve Color"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Shirt Style</Label>
-                <Select 
-                  value={activeDesign.hasStripes ? "stripes" : "plain"} 
-                  onValueChange={(value) => updateKitDesign(activeKit, { hasStripes: value === "stripes" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="plain">Plain Design</SelectItem>
-                    <SelectItem value="stripes">Vertical Stripes</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {activeDesign.hasStripes && (
-                <ColorSelector
-                  value={activeDesign.stripeColor}
-                  onChange={(color) => updateKitDesign(activeKit, { stripeColor: color })}
-                  label="Stripe Color"
-                />
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <ColorSelector
                   value={activeDesign.shortsColor}
                   onChange={(color) => updateKitDesign(activeKit, { shortsColor: color })}
                   label="Shorts Color"
                 />
-                
-                <ColorSelector
-                  value={activeDesign.socksColor}
-                  onChange={(color) => updateKitDesign(activeKit, { socksColor: color })}
-                  label="Socks Color"
-                />
               </div>
+
+              <ColorSelector
+                value={activeDesign.socksColor}
+                onChange={(color) => updateKitDesign(activeKit, { socksColor: color })}
+                label="Socks Color"
+              />
             </CardContent>
           </Card>
         </div>
@@ -356,41 +288,3 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     </div>
   );
 };
-
-const ColorSelector = ({ 
-  value, 
-  onChange, 
-  label 
-}: { 
-  value: string; 
-  onChange: (color: string) => void; 
-  label: string;
-}) => (
-  <div className="space-y-2">
-    <Label className="text-sm font-medium">{label}</Label>
-    <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="h-11">
-        <div className="flex items-center gap-3">
-          <div 
-            className="w-6 h-6 rounded-full border-2 border-gray-300 shadow-sm"
-            style={{ backgroundColor: value }}
-          />
-          <SelectValue />
-        </div>
-      </SelectTrigger>
-      <SelectContent>
-        {colorOptions.map((color) => (
-          <SelectItem key={color.value} value={color.value}>
-            <div className="flex items-center gap-3">
-              <div 
-                className="w-5 h-5 rounded-full border shadow-sm"
-                style={{ backgroundColor: color.value }}
-              />
-              {color.label}
-            </div>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  </div>
-);
