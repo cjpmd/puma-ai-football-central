@@ -124,6 +124,17 @@ const TeamManagement = () => {
 
       if (error) throw error;
 
+      // If linking to a club, add to club_teams table
+      if (teamData.clubId && data) {
+        const { error: linkError } = await supabase
+          .from('club_teams')
+          .insert({ club_id: teamData.clubId, team_id: data.id });
+
+        if (linkError && !linkError.message.includes('duplicate')) {
+          console.error('Error linking team to club:', linkError);
+        }
+      }
+
       console.log('Team created successfully:', data);
       await refreshUserData();
       setIsTeamDialogOpen(false);
@@ -165,6 +176,26 @@ const TeamManagement = () => {
         .eq('id', selectedTeam.id);
 
       if (error) throw error;
+
+      // Handle club linking/unlinking
+      if (teamData.hasOwnProperty('clubId')) {
+        // Remove existing club link
+        await supabase
+          .from('club_teams')
+          .delete()
+          .eq('team_id', selectedTeam.id);
+
+        // Add new club link if specified
+        if (teamData.clubId) {
+          const { error: linkError } = await supabase
+            .from('club_teams')
+            .insert({ club_id: teamData.clubId, team_id: selectedTeam.id });
+
+          if (linkError && !linkError.message.includes('duplicate')) {
+            console.error('Error linking team to club:', linkError);
+          }
+        }
+      }
 
       console.log('Team updated successfully');
       await refreshUserData();

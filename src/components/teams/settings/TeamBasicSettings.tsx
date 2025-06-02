@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,6 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Team, GameFormat, SubscriptionType } from '@/types';
 import { TeamLogoSettings } from './TeamLogoSettings';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+
+interface Club {
+  id: string;
+  name: string;
+}
 
 interface TeamBasicSettingsProps {
   team: Team;
@@ -21,6 +28,88 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   onSave,
   isSaving
 }) => {
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    loadClubs();
+  }, []);
+
+  const loadClubs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clubs')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setClubs(data || []);
+    } catch (error: any) {
+      console.error('Error loading clubs:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load clubs',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleClubChange = async (clubId: string) => {
+    try {
+      const newClubId = clubId || null;
+      
+      // Update the team's club_id in database
+      const { error } = await supabase
+        .from('teams')
+        .update({ club_id: newClubId })
+        .eq('id', team.id);
+
+      if (error) throw error;
+
+      // If linking to a club, add to club_teams table
+      if (newClubId) {
+        const { error: linkError } = await supabase
+          .from('club_teams')
+          .insert({ club_id: newClubId, team_id: team.id })
+          .select();
+
+        // Ignore error if already exists
+        if (linkError && !linkError.message.includes('duplicate')) {
+          throw linkError;
+        }
+      } else {
+        // If unlinking, remove from club_teams table
+        await supabase
+          .from('club_teams')
+          .delete()
+          .eq('team_id', team.id);
+      }
+
+      onUpdate({ clubId: newClubId });
+      
+      toast({
+        title: 'Club Link Updated',
+        description: newClubId ? 'Team linked to club successfully' : 'Team unlinked from club',
+      });
+    } catch (error: any) {
+      console.error('Error updating club link:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update club link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getClubName = (clubId: string | null) => {
+    if (!clubId) return 'Independent';
+    const club = clubs.find(c => c.id === clubId);
+    return club?.name || 'Unknown Club';
+  };
+
   return (
     <div className="space-y-6">
       {/* Logo Settings */}
@@ -31,7 +120,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
           <CardDescription>
-            Update your team's basic information
+            Update your team's basic information and club association
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -55,6 +144,38 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 placeholder="e.g., U12, U15, Senior"
               />
             </div>
+          </div>
+
+          {/* Club Association */}
+          <div className="space-y-2">
+            <Label htmlFor="club">Club Association</Label>
+            {loading ? (
+              <div className="text-sm text-muted-foreground">Loading clubs...</div>
+            ) : (
+              <Select 
+                value={team.clubId || ''} 
+                onValueChange={handleClubChange}
+                disabled={team.isReadOnly}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a club (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Independent team (No club)</SelectItem>
+                  {clubs.map((club) => (
+                    <SelectItem key={club.id} value={club.id}>
+                      {club.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            <div className="text-sm text-muted-foreground">
+              Current: <span className="font-medium">{getClubName(team.clubId)}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Linking to a club allows for shared management and resources.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

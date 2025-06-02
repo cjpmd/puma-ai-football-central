@@ -109,13 +109,13 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
 
           {/* Club Selection */}
           <div className="space-y-2">
-            <Label htmlFor="club">Club (Optional)</Label>
-            <Select value={formData.clubId} onValueChange={(value) => setFormData(prev => ({ ...prev, clubId: value }))}>
+            <Label htmlFor="club">Club</Label>
+            <Select value={formData.clubId || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, clubId: value || null }))}>
               <SelectTrigger>
                 <SelectValue placeholder="Select a club (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No club (Independent team)</SelectItem>
+                <SelectItem value="">Independent team (No club)</SelectItem>
                 {clubs.map((club) => (
                   <SelectItem key={club.id} value={club.id}>
                     {club.name}
@@ -123,6 +123,9 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-sm text-muted-foreground">
+              Linking to a club allows for shared management and resources.
+            </p>
           </div>
 
           {/* Game Format */}
