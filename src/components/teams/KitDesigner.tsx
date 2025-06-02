@@ -87,130 +87,61 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     onSave(designs);
   };
 
-  const ProfessionalKitPreview = ({ design, size = 'large' }: { design: KitDesign; size?: 'small' | 'large' }) => {
-    const dimensions = size === 'small' ? 'w-20 h-24' : 'w-40 h-48';
+  // Simple shirt silhouette component like the reference images
+  const SimpleShirtPreview = ({ design, size = 'large' }: { design: KitDesign; size?: 'small' | 'large' }) => {
+    const dimensions = size === 'small' ? 'w-16 h-20' : 'w-32 h-40';
     
     return (
-      <div className={`${dimensions} relative bg-gradient-to-b from-gray-50 to-gray-100 rounded-lg p-3 border-2 border-gray-200 shadow-lg`}>
-        <svg viewBox="0 0 400 480" className="w-full h-full drop-shadow-md">
-          <defs>
-            <linearGradient id={`shirtGradient-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={design.shirtColor} stopOpacity="1" />
-              <stop offset="100%" stopColor={design.shirtColor} stopOpacity="0.8" />
-            </linearGradient>
-            <linearGradient id={`sleeveGradient-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={design.sleeveColor} stopOpacity="1" />
-              <stop offset="100%" stopColor={design.sleeveColor} stopOpacity="0.8" />
-            </linearGradient>
-          </defs>
-          
-          {/* Professional football shirt outline */}
+      <div className={`${dimensions} relative flex flex-col items-center justify-center bg-gray-50 rounded-lg p-2 border`}>
+        {/* Simple shirt silhouette */}
+        <svg viewBox="0 0 100 120" className="w-full h-full">
+          {/* Main shirt body - simple rounded rectangle */}
           <path
-            d="M200 45s-15-10-25-15c-15-8-30-12-45-15-20-4-35-5-45-2-15 4-25 15-30 25-8 15-10 30-8 40 2 8 8 15 12 20 5 6 10 8 15 10 8 3 15 2 20 0 6-2 8-8 8-15 0-10-2-20-2-30v-25s50-8 80-8 80 8 80 8v25c0 10-2 20-2 30 0 7 2 13 8 15 5 2 12 3 20 0 5-2 10-4 15-10 4-5 10-12 12-20 2-10 0-25-8-40-5-10-15-21-30-25-10-3-25-2-45 2-15 3-30 7-45 15-10 5-25 15-25 15z"
-            fill={`url(#shirtGradient-${size})`}
-            stroke="#2a2a2a"
-            strokeWidth="2"
-            strokeLinejoin="round"
+            d="M20 25 L20 110 L80 110 L80 25 L75 20 L70 15 L65 15 L60 20 L60 15 L40 15 L40 20 L35 15 L30 15 L25 20 Z"
+            fill={design.shirtColor}
+            stroke="#333"
+            strokeWidth="1"
           />
           
-          {/* Main shirt body */}
-          <path
-            d="M80 90c0 0 5 80 8 120 3 50 5 100 5 120 0 25 10 35 25 35h164c15 0 25-10 25-35 0-20 2-70 5-120 3-40 8-120 8-120s-40-15-60-15h-120c-20 0-60 15-60 15z"
-            fill={`url(#shirtGradient-${size})`}
-            stroke="#2a2a2a"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
+          {/* Sleeves - simple rectangles */}
+          <rect x="10" y="15" width="15" height="25" fill={design.sleeveColor} stroke="#333" strokeWidth="1" rx="3" />
+          <rect x="75" y="15" width="15" height="25" fill={design.sleeveColor} stroke="#333" strokeWidth="1" rx="3" />
           
           {/* Stripes if enabled */}
           {design.hasStripes && (
             <>
-              <rect x="120" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
-              <rect x="145" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
-              <rect x="170" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
-              <rect x="195" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
-              <rect x="220" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
-              <rect x="245" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
-              <rect x="270" y="90" width="15" height="275" fill={design.stripeColor} opacity="0.9" />
+              <rect x="30" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
+              <rect x="38" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
+              <rect x="46" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
+              <rect x="54" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
+              <rect x="62" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
+              <rect x="70" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
             </>
           )}
           
-          {/* Left sleeve */}
-          <ellipse 
-            cx="60" 
-            cy="120" 
-            rx="25" 
-            ry="45" 
-            fill={`url(#sleeveGradient-${size})`} 
-            stroke="#2a2a2a" 
-            strokeWidth="2" 
-          />
-          
-          {/* Right sleeve */}
-          <ellipse 
-            cx="340" 
-            cy="120" 
-            rx="25" 
-            ry="45" 
-            fill={`url(#sleeveGradient-${size})`} 
-            stroke="#2a2a2a" 
-            strokeWidth="2" 
-          />
-          
-          {/* Collar */}
-          <path
-            d="M170 75c0-8 5-15 15-20 10-5 20-5 30-5s20 0 30 5c10 5 15 12 15 20"
-            fill="none"
-            stroke="#2a2a2a"
-            strokeWidth="2"
-            strokeLinecap="round"
-          />
-          
-          {/* Professional shorts */}
-          <path
-            d="M110 365c0 0-5 15-5 25 0 15 5 25 15 30 8 4 18 5 28 5h104c10 0 20-1 28-5 10-5 15-15 15-30 0-10-5-25-5-25s-5-5-15-5h-150c-10 0-15 5-15 5z"
-            fill={design.shortsColor}
-            stroke="#2a2a2a"
-            strokeWidth="2"
-            strokeLinejoin="round"
-          />
-          
-          {/* Shorts details */}
-          <circle cx="150" cy="380" r="3" fill="#2a2a2a" opacity="0.3" />
-          <circle cx="250" cy="380" r="3" fill="#2a2a2a" opacity="0.3" />
-          
-          {/* Professional socks (only show in large view) */}
-          {size === 'large' && (
-            <>
-              {/* Left sock */}
-              <path
-                d="M140 420c0 0-8 5-10 15-2 12 0 25 5 35 3 8 8 12 15 12s12-4 15-12c5-10 7-23 5-35-2-10-10-15-10-15s-5-2-10-2-10 2-10 2z"
-                fill={design.socksColor}
-                stroke="#2a2a2a"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              
-              {/* Right sock */}
-              <path
-                d="M260 420c0 0 8 5 10 15 2 12 0 25-5 35-3 8-8 12-15 12s-12-4-15-12c-5-10-7-23-5-35 2-10 10-15 10-15s5-2 10-2 10 2 10 2z"
-                fill={design.socksColor}
-                stroke="#2a2a2a"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-              
-              {/* Sock stripes */}
-              <rect x="138" y="430" width="24" height="4" fill="#ffffff" opacity="0.6" />
-              <rect x="138" y="440" width="24" height="4" fill="#ffffff" opacity="0.6" />
-              <rect x="238" y="430" width="24" height="4" fill="#ffffff" opacity="0.6" />
-              <rect x="238" y="440" width="24" height="4" fill="#ffffff" opacity="0.6" />
-            </>
-          )}
-          
-          {/* Shadow and depth */}
-          <ellipse cx="200" cy="475" rx="80" ry="8" fill="#000000" opacity="0.1" />
+          {/* Simple collar */}
+          <path d="M40 15 L45 10 L55 10 L60 15" fill="none" stroke="#333" strokeWidth="1" />
         </svg>
+        
+        {/* Shorts - simple rectangle below shirt */}
+        <div 
+          className="w-8 h-4 mt-1 rounded-sm border border-gray-400"
+          style={{ backgroundColor: design.shortsColor }}
+        />
+        
+        {/* Socks - two small rectangles */}
+        {size === 'large' && (
+          <div className="flex gap-1 mt-1">
+            <div 
+              className="w-2 h-3 rounded-sm border border-gray-400"
+              style={{ backgroundColor: design.socksColor }}
+            />
+            <div 
+              className="w-2 h-3 rounded-sm border border-gray-400"
+              style={{ backgroundColor: design.socksColor }}
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -256,7 +187,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
   const activeDesign = designs[activeKit];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Kit Type Selector */}
       <div className="flex flex-wrap gap-3">
         {kitTypes.map((kit) => (
@@ -273,21 +204,21 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Kit Designer Controls */}
         <div className="lg:col-span-3">
-          <Card className="shadow-lg">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <Shirt className="h-6 w-6 text-blue-600" />
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-3">
+                <Shirt className="h-5 w-5" />
                 Design {kitTypes.find(k => k.key === activeKit)?.label}
               </CardTitle>
-              <CardDescription className="text-base">
-                Customize colors and patterns for your professional kit
+              <CardDescription>
+                Customize colors and patterns for your kit
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-8 p-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ColorSelector
                   value={activeDesign.shirtColor}
                   onChange={(color) => updateKitDesign(activeKit, { shirtColor: color })}
@@ -301,13 +232,13 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
                 />
               </div>
 
-              <div className="space-y-4">
-                <Label className="text-base font-semibold">Shirt Style</Label>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Shirt Style</Label>
                 <Select 
                   value={activeDesign.hasStripes ? "stripes" : "plain"} 
                   onValueChange={(value) => updateKitDesign(activeKit, { hasStripes: value === "stripes" })}
                 >
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -325,7 +256,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
                 />
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <ColorSelector
                   value={activeDesign.shortsColor}
                   onChange={(color) => updateKitDesign(activeKit, { shortsColor: color })}
@@ -344,42 +275,42 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
 
         {/* Kit Preview */}
         <div className="lg:col-span-2">
-          <Card className="shadow-lg h-fit sticky top-4">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-              <CardTitle className="text-xl">Live Preview</CardTitle>
-              <CardDescription className="text-base">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle>Live Preview</CardTitle>
+              <CardDescription>
                 {kitTypes.find(k => k.key === activeKit)?.label}
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center py-12">
-              <ProfessionalKitPreview design={activeDesign} />
+            <CardContent className="flex items-center justify-center py-8">
+              <SimpleShirtPreview design={activeDesign} />
             </CardContent>
           </Card>
         </div>
       </div>
 
       {/* All Kits Overview */}
-      <Card className="shadow-lg">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50">
-          <CardTitle className="text-xl">Complete Kit Collection</CardTitle>
-          <CardDescription className="text-base">
-            Overview of all your team's professional kit designs
+      <Card>
+        <CardHeader>
+          <CardTitle>Complete Kit Collection</CardTitle>
+          <CardDescription>
+            Overview of all your team's kit designs
           </CardDescription>
         </CardHeader>
-        <CardContent className="p-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {kitTypes.map((kit) => (
               <div 
                 key={kit.key} 
-                className={`text-center space-y-4 p-6 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                className={`text-center space-y-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
                   activeKit === kit.key 
-                    ? 'border-blue-500 bg-blue-50 shadow-md transform scale-105' 
-                    : 'border-gray-200 hover:border-gray-300 bg-white'
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
                 }`}
                 onClick={() => setActiveKit(kit.key)}
               >
-                <ProfessionalKitPreview design={designs[kit.key]} size="small" />
-                <p className="text-sm font-semibold text-gray-700">{kit.label}</p>
+                <SimpleShirtPreview design={designs[kit.key]} size="small" />
+                <p className="text-sm font-medium">{kit.label}</p>
               </div>
             ))}
           </div>
@@ -390,10 +321,10 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
       <div className="flex justify-center">
         <Button 
           onClick={handleSave}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white px-12 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+          className="px-8 py-3 text-lg"
           size="lg"
         >
-          Save Professional Kit Designs
+          Save Kit Designs
         </Button>
       </div>
     </div>
