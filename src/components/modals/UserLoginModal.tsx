@@ -11,9 +11,10 @@ interface UserLoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogin: () => void;
+  onSwitchToSignup?: () => void;
 }
 
-export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps) {
+export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: UserLoginModalProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +46,14 @@ export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps
     }
   };
 
+  const handleSwitchToSignup = () => {
+    if (onSwitchToSignup) {
+      onSwitchToSignup();
+    } else {
+      onClose();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
@@ -69,12 +78,12 @@ export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <a
-                href="#"
+              <button
+                type="button"
                 className="text-sm text-puma-blue-500 hover:text-puma-blue-600"
               >
                 Forgot password?
-              </a>
+              </button>
             </div>
             <Input
               id="password"
@@ -93,17 +102,13 @@ export function UserLoginModal({ isOpen, onClose, onLogin }: UserLoginModalProps
           </Button>
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Don't have an account?</span>{" "}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onClose();
-                // We'd typically open the signup modal here
-              }}
-              className="text-puma-blue-500 hover:text-puma-blue-600"
+            <button
+              type="button"
+              onClick={handleSwitchToSignup}
+              className="text-puma-blue-500 hover:text-puma-blue-600 underline"
             >
               Sign up
-            </a>
+            </button>
           </div>
         </form>
       </DialogContent>

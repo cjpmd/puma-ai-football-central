@@ -11,9 +11,10 @@ interface UserSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSignup: () => void;
+  onSwitchToLogin?: () => void;
 }
 
-export function UserSignupModal({ isOpen, onClose, onSignup }: UserSignupModalProps) {
+export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: UserSignupModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,6 +60,14 @@ export function UserSignupModal({ isOpen, onClose, onSignup }: UserSignupModalPr
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSwitchToLogin = () => {
+    if (onSwitchToLogin) {
+      onSwitchToLogin();
+    } else {
+      onClose();
     }
   };
 
@@ -122,17 +131,13 @@ export function UserSignupModal({ isOpen, onClose, onSignup }: UserSignupModalPr
           </Button>
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Already have an account?</span>{" "}
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                onClose();
-                // We'd typically open the login modal here
-              }}
-              className="text-puma-blue-500 hover:text-puma-blue-600"
+            <button
+              type="button"
+              onClick={handleSwitchToLogin}
+              className="text-puma-blue-500 hover:text-puma-blue-600 underline"
             >
-              Log in
-            </a>
+              Sign in
+            </button>
           </div>
         </form>
       </DialogContent>
