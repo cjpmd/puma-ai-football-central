@@ -92,7 +92,10 @@ export const playerStatsService = {
     try {
       console.log('Regenerating all player stats from event_player_stats');
       
-      // Try the correct RPC function name
+      // First, clean up any events with "Unknown" opponents
+      await this.cleanupUnknownOpponentEvents();
+      
+      // Then regenerate all stats
       const { error } = await supabase.rpc('update_all_completed_events_stats');
 
       if (error) {
@@ -103,6 +106,61 @@ export const playerStatsService = {
       console.log('Successfully regenerated all player stats');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Clean up events with "Unknown" opponents
+   */
+  async cleanupUnknownOpponentEvents(): Promise<void> {
+    try {
+      console.log('Cleaning up events with unknown opponents...');
+      
+      // Delete event_player_stats for events with "Unknown" opponents
+      const { error: deleteStatsError } = await supabase
+        .from('event_player_stats')
+        .delete()
+        .in('event_id', 
+          supabase
+            .from('events')
+            .select('id')
+            .ilike('opponent', 'unknown')
+        );
+
+      if (deleteStatsError) {
+        console.error('Error deleting stats for unknown opponents:', deleteStatsError);
+      }
+
+      // Delete event_selections for events with "Unknown" opponents
+      const { error: deleteSelectionsError } = await supabase
+        .from('event_selections')
+        .delete()
+        .in('event_id', 
+          supabase
+            .from('events')
+            .select('id')
+            .ilike('opponent', 'unknown')
+        );
+
+      if (deleteSelectionsError) {
+        console.error('Error deleting selections for unknown opponents:', deleteSelectionsError);
+      }
+
+      // Delete the events themselves
+      const { error: deleteEventsError } = await supabase
+        .from('events')
+        .delete()
+        .ilike('opponent', 'unknown');
+
+      if (deleteEventsError) {
+        console.error('Error deleting unknown opponent events:', deleteEventsError);
+      } else {
+        console.log('Successfully cleaned up unknown opponent events');
+      }
+
+    } catch (error) {
+      console.error('Error cleaning up unknown opponent events:', error);
       throw error;
     }
   },

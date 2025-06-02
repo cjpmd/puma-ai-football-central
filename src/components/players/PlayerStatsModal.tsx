@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown } from 'lucide-react';
+import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown, Users, Timer, Award } from 'lucide-react';
 import { playerStatsService } from '@/services/playerStatsService';
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,6 +35,11 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const [isRegenerating, setIsRegenerating] = useState(false);
   const queryClient = useQueryClient();
   const { matchStats } = player;
+
+  // Filter out matches with "Unknown" opponent
+  const filteredRecentGames = (matchStats.recentGames || []).filter(game => 
+    game.opponent && game.opponent.toLowerCase() !== 'unknown'
+  );
 
   // Get top 3 positions by minutes played
   const topPositions = Object.entries(matchStats.minutesByPosition || {})
@@ -249,20 +254,32 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         <CardContent className="pt-0">
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                             <div className="text-center">
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Games</span>
+                              </div>
                               <div className="text-2xl font-bold">{stats.totalGames}</div>
-                              <div className="text-xs text-muted-foreground">Games</div>
                             </div>
                             <div className="text-center">
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Timer className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Minutes</span>
+                              </div>
                               <div className="text-2xl font-bold">{stats.totalMinutes}</div>
-                              <div className="text-xs text-muted-foreground">Minutes</div>
                             </div>
                             <div className="text-center">
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Crown className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">Captain</span>
+                              </div>
                               <div className="text-2xl font-bold">{stats.captainGames}</div>
-                              <div className="text-xs text-muted-foreground">Captain</div>
                             </div>
                             <div className="text-center">
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Award className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">POTM</span>
+                              </div>
                               <div className="text-2xl font-bold">{stats.potmCount}</div>
-                              <div className="text-xs text-muted-foreground">POTM</div>
                             </div>
                           </div>
                           
@@ -292,12 +309,12 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           </TabsContent>
           
           <TabsContent value="recent" className="space-y-4 py-4">
-            {(matchStats.recentGames || []).length > 0 ? (
+            {filteredRecentGames.length > 0 ? (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Match History</CardTitle>
                   <CardDescription>
-                    Detailed breakdown of recent matches
+                    Detailed breakdown of recent matches (excluding unknown opponents)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -313,7 +330,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {(matchStats.recentGames || []).map((game) => (
+                      {filteredRecentGames.map((game) => (
                         <TableRow key={game.id}>
                           <TableCell>
                             <div className="font-medium">
@@ -379,7 +396,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               </Card>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                No match history available for this player.
+                No match history available for this player (excluding unknown opponents).
               </div>
             )}
           </TabsContent>
