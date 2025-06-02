@@ -64,7 +64,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     notes: event?.notes || '',
     homeScore: event?.scores?.home || 0,
     awayScore: event?.scores?.away || 0,
-    playerOfTheMatchId: event?.playerOfTheMatchId || ''
+    playerOfTheMatchId: event?.playerOfTheMatchId || '',
+    kitSelection: event?.kitSelection || 'home'
   });
 
   useEffect(() => {
@@ -82,7 +83,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       }));
       setTeamTimeSlots(initialSlots);
       
-      // Set form data from event
       setFormData({
         type: event.type || 'training',
         title: event.title || '',
@@ -99,7 +99,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         notes: event.notes || '',
         homeScore: event.scores?.home || 0,
         awayScore: event.scores?.away || 0,
-        playerOfTheMatchId: event.playerOfTheMatchId || ''
+        playerOfTheMatchId: event.playerOfTheMatchId || '',
+        kitSelection: event.kitSelection || 'home'
       });
     }
   }, [event, teamId]);
@@ -162,14 +163,12 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const handleNumberOfTeamsChange = (newNumber: number) => {
     setNumberOfTeams(newNumber);
     
-    // Adjust team time slots
     const newSlots: TeamTimeSlot[] = [];
     for (let i = 1; i <= newNumber; i++) {
       const existingSlot = teamTimeSlots.find(slot => slot.teamNumber === i);
       if (existingSlot) {
         newSlots.push(existingSlot);
       } else {
-        // Create new slot based on the last slot or default
         const lastSlot = teamTimeSlots[teamTimeSlots.length - 1] || teamTimeSlots[0];
         newSlots.push({
           teamNumber: i,
@@ -190,13 +189,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     ));
   };
 
-  // Check if opponent is required for this event type
   const requiresOpponent = ['fixture', 'friendly', 'tournament', 'festival'].includes(formData.type);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validation for opponent field
     if (requiresOpponent && !formData.opponent.trim()) {
       alert('Opponent name is required for this event type');
       return;
@@ -215,7 +212,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
-      playerOfTheMatchId: formData.playerOfTheMatchId || undefined
+      playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
+      kitSelection: formData.kitSelection
     };
 
     onSubmit(eventData);
@@ -223,6 +221,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
 
   const gameFormats: GameFormat[] = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
   const eventTypes = ['training', 'fixture', 'friendly', 'tournament', 'festival', 'social'];
+  const kitOptions = ['home', 'away', 'training'];
 
   return (
     <ScrollArea className="max-h-[80vh] pr-4">
@@ -268,6 +267,26 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             placeholder="Add event description..."
             rows={2}
           />
+        </div>
+
+        {/* Kit Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="kitSelection">Kit Selection</Label>
+          <Select
+            value={formData.kitSelection}
+            onValueChange={(value) => setFormData(prev => ({ ...prev, kitSelection: value }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {kitOptions.map((kit) => (
+                <SelectItem key={kit} value={kit}>
+                  {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}

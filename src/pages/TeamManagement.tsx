@@ -40,7 +40,6 @@ const TeamManagement = () => {
 
       console.log('Loaded clubs:', data);
       
-      // Convert database format to Club interface with proper type handling
       const convertedClubs: Club[] = (data || []).map(club => ({
         id: club.id,
         name: club.name,
@@ -78,7 +77,6 @@ const TeamManagement = () => {
 
       console.log('Loaded linked teams raw:', data);
       
-      // Convert database format to Team interface with proper type handling
       const convertedTeams: Team[] = (data || []).map(team => ({
         id: team.id,
         name: team.name,
@@ -126,7 +124,6 @@ const TeamManagement = () => {
 
       if (error) throw error;
 
-      // Link the current user as the team admin
       if (data) {
         const { error: userTeamError } = await supabase
           .from('user_teams')
@@ -141,7 +138,6 @@ const TeamManagement = () => {
         }
       }
 
-      // If linking to a club, add to club_teams table
       if (teamData.clubId && data) {
         const { error: linkError } = await supabase
           .from('club_teams')
@@ -189,7 +185,6 @@ const TeamManagement = () => {
         logo_url: teamData.logoUrl
       };
 
-      // Only include kit_designs if it's provided
       if ('kitDesigns' in teamData) {
         updateData.kit_designs = teamData.kitDesigns as any;
       }
@@ -201,15 +196,12 @@ const TeamManagement = () => {
 
       if (error) throw error;
 
-      // Handle club linking/unlinking
       if (teamData.hasOwnProperty('clubId')) {
-        // Remove existing club link
         await supabase
           .from('club_teams')
           .delete()
           .eq('team_id', selectedTeam.id);
 
-        // Add new club link if specified
         if (teamData.clubId) {
           const { error: linkError } = await supabase
             .from('club_teams')
@@ -223,7 +215,7 @@ const TeamManagement = () => {
 
       console.log('Team updated successfully');
       await refreshUserData();
-      await loadLinkedTeams(); // Reload linked teams to show updated data
+      await loadLinkedTeams();
       setIsTeamDialogOpen(false);
       setIsSettingsModalOpen(false);
       setIsStaffModalOpen(false);
@@ -273,17 +265,18 @@ const TeamManagement = () => {
     <Card key={team.id} className={isLinked ? 'border-dashed opacity-75' : ''}>
       <CardHeader>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
+          <div className="w-8 h-8 flex items-center justify-center rounded bg-muted overflow-hidden">
             {team.logoUrl ? (
               <img 
                 src={team.logoUrl} 
                 alt={`${team.name} logo`}
-                className="w-7 h-7 object-contain rounded"
+                className="w-full h-full object-cover rounded"
                 onError={(e) => {
                   console.log('Logo failed to load:', team.logoUrl);
-                  e.currentTarget.style.display = 'none';
-                  const nextElement = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (nextElement) nextElement.style.display = 'block';
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'block';
                 }}
                 onLoad={() => {
                   console.log('Logo loaded successfully:', team.logoUrl);
@@ -423,7 +416,6 @@ const TeamManagement = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Managed Teams */}
             {teams.length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Your Teams</h2>
@@ -435,7 +427,6 @@ const TeamManagement = () => {
               </div>
             )}
 
-            {/* Linked Teams */}
             {linkedTeams.length > 0 && (
               <div>
                 <h2 className="text-xl font-semibold mb-4">Linked Teams</h2>
@@ -453,7 +444,6 @@ const TeamManagement = () => {
         )}
       </div>
 
-      {/* Modals */}
       {selectedTeam && (
         <>
           <TeamSettingsModal 

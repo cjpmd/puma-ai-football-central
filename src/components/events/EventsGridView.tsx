@@ -49,7 +49,6 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     const scores = [];
     const scoresData = event.scores as any;
     
-    // Check for team_1, team_2, etc.
     let teamNumber = 1;
     while (scoresData[`team_${teamNumber}`] !== undefined) {
       const ourScore = scoresData[`team_${teamNumber}`];
@@ -74,7 +73,6 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       teamNumber++;
     }
     
-    // Fallback to home/away scores if no team scores found
     if (scores.length === 0 && scoresData.home !== undefined && scoresData.away !== undefined) {
       const ourScore = event.is_home ? scoresData.home : scoresData.away;
       const opponentScore = event.is_home ? scoresData.away : scoresData.home;
@@ -97,7 +95,15 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     return scores;
   };
 
-  // Sort events by date
+  const getKitBadgeColor = (kitSelection: string) => {
+    switch (kitSelection) {
+      case 'home': return 'bg-blue-500';
+      case 'away': return 'bg-red-500';
+      case 'training': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
   const sortedEvents = [...events].sort((a, b) => 
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -113,12 +119,22 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
           <Card key={event.id} className="flex flex-col">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between mb-2">
-                <Badge 
-                  className={`text-xs ${matchType ? 'bg-red-500' : 'bg-blue-500'}`}
-                  variant="default"
-                >
-                  {event.event_type}
-                </Badge>
+                <div className="flex gap-2">
+                  <Badge 
+                    className={`text-xs ${matchType ? 'bg-red-500' : 'bg-blue-500'}`}
+                    variant="default"
+                  >
+                    {event.event_type}
+                  </Badge>
+                  {(event as any).kit_selection && (
+                    <Badge 
+                      className={`text-xs text-white ${getKitBadgeColor((event as any).kit_selection)}`}
+                      variant="secondary"
+                    >
+                      {(event as any).kit_selection} kit
+                    </Badge>
+                  )}
+                </div>
                 {completed && matchType && teamScores.length > 0 && (
                   <div className="flex gap-1">
                     {teamScores.map((score) => (

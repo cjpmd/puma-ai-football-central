@@ -46,6 +46,7 @@ const CalendarEventsPage = () => {
   const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly' | 'match'>('training');
   const [eventOpponent, setEventOpponent] = useState('');
   const [eventGameFormat, setEventGameFormat] = useState<GameFormat>('7-a-side');
+  const [eventKitSelection, setEventKitSelection] = useState('home');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
 
@@ -149,6 +150,7 @@ const CalendarEventsPage = () => {
     setEventEventType(event.event_type as any);
     setEventOpponent(event.opponent || '');
     setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
+    setEventKitSelection((event as any).kit_selection || 'home');
     setIsEditModalOpen(true);
   };
 
@@ -220,6 +222,7 @@ const CalendarEventsPage = () => {
     setEventEventType('training');
     setEventOpponent('');
     setEventGameFormat('7-a-side');
+    setEventKitSelection('home');
   };
 
   const closeEditModal = () => {
@@ -235,6 +238,7 @@ const CalendarEventsPage = () => {
     setEventEventType('training');
     setEventOpponent('');
     setEventGameFormat('7-a-side');
+    setEventKitSelection('home');
   };
 
   const handleTeamSelection = (event: DatabaseEvent) => {
@@ -257,7 +261,6 @@ const CalendarEventsPage = () => {
     const outcomes = [];
     const scores = event.scores as any;
     
-    // Look for team-specific outcomes
     for (let i = 1; i <= 4; i++) {
       const outcomeKey = `outcome_${i}`;
       if (scores[outcomeKey]) {
@@ -287,6 +290,7 @@ const CalendarEventsPage = () => {
     eventType === "match" || eventType === "fixture" || eventType === "friendly";
 
   const gameFormats: GameFormat[] = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
+  const kitOptions = ['home', 'away', 'training'];
 
   return (
     <DashboardLayout>
@@ -390,12 +394,10 @@ const CalendarEventsPage = () => {
           </div>
         </div>
 
-        {/* Availability Requests Panel */}
         {showAvailabilityRequests && (
           <AvailabilityNotificationService />
         )}
 
-        {/* Main Content */}
         {viewMode === 'grid' ? (
           <EventsGridView
             events={events}
@@ -449,6 +451,11 @@ const CalendarEventsPage = () => {
                         >
                           {event.event_type}
                         </Badge>
+                        {(event as any).kit_selection && (
+                          <Badge variant="outline">
+                            {(event as any).kit_selection} kit
+                          </Badge>
+                        )}
                         {isCompleted && eventIsMatchType && outcomes.length > 0 && (
                           <div className="flex gap-1">
                             {outcomes.map((outcome, index) => (
@@ -523,6 +530,9 @@ const CalendarEventsPage = () => {
                         {event.opponent && (
                           <p className="text-sm text-muted-foreground">Opponent: {event.opponent}</p>
                         )}
+                        {(event as any).kit_selection && (
+                          <p className="text-sm text-muted-foreground">Kit: {(event as any).kit_selection}</p>
+                        )}
                         {event.scores && eventIsMatchType && (
                           <div className="text-sm text-muted-foreground">
                             {outcomes.length > 0 && (
@@ -552,7 +562,6 @@ const CalendarEventsPage = () => {
           </div>
         )}
 
-        {/* Create Event Modal */}
         <Dialog open={isCreateModalOpen} onOpenChange={closeCreateModal}>
           <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -592,6 +601,24 @@ const CalendarEventsPage = () => {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="kitSelection" className="text-right">
+                  Kit
+                </Label>
+                <Select value={eventKitSelection} onValueChange={setEventKitSelection}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select kit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kitOptions.map((kit) => (
+                      <SelectItem key={kit} value={kit}>
+                        {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="gameFormat" className="text-right">
                   Game Format
                 </Label>
@@ -609,7 +636,6 @@ const CalendarEventsPage = () => {
                 </Select>
               </div>
 
-              {/* Opponent field for match types */}
               {isMatchType(eventEventType) && (
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="opponent" className="text-right">
@@ -697,7 +723,6 @@ const CalendarEventsPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Event Modal */}
         <Dialog open={isEditModalOpen} onOpenChange={closeEditModal}>
           <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -737,6 +762,24 @@ const CalendarEventsPage = () => {
               </div>
 
               <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="kitSelection" className="text-right">
+                  Kit
+                </Label>
+                <Select value={eventKitSelection} onValueChange={setEventKitSelection}>
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select kit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {kitOptions.map((kit) => (
+                      <SelectItem key={kit} value={kit}>
+                        {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
                 <Label htmlFor="gameFormat" className="text-right">
                   Game Format
                 </Label>
@@ -754,7 +797,6 @@ const CalendarEventsPage = () => {
                 </Select>
               </div>
 
-              {/* Opponent field for match types */}
               {isMatchType(eventEventType) && (
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="opponent" className="text-right">
@@ -842,7 +884,6 @@ const CalendarEventsPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Team Selection Modal */}
         <Dialog open={isTeamSelectionOpen} onOpenChange={handleTeamSelectionClose}>
           <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
             <DialogHeader>
@@ -859,7 +900,6 @@ const CalendarEventsPage = () => {
           </DialogContent>
         </Dialog>
 
-        {/* Post-Game Editor Modal */}
         {postGameEventId && (
           <PostGameEditor
             eventId={postGameEventId}

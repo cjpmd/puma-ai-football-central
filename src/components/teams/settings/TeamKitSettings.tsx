@@ -4,22 +4,7 @@ import { Team } from '@/types/team';
 import { KitDesigner } from '../KitDesigner';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
-interface KitDesign {
-  shirtColor: string;
-  sleeveColor: string;
-  hasStripes: boolean;
-  stripeColor: string;
-  shortsColor: string;
-  socksColor: string;
-}
-
-interface KitDesigns {
-  home: KitDesign;
-  away: KitDesign;
-  training: KitDesign;
-  goalkeeper: KitDesign;
-}
+import { KitDesigns } from '@/types/team';
 
 interface TeamKitSettingsProps {
   team: Team;
@@ -35,7 +20,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   const getInitialDesigns = (): Partial<KitDesigns> => {
     console.log('Getting initial designs for team:', team.name, 'kitDesigns:', team.kitDesigns);
     if (team.kitDesigns) {
-      return team.kitDesigns;
+      return team.kitDesigns as KitDesigns;
     }
     return {};
   };
@@ -44,11 +29,10 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
     try {
       console.log('Saving kit designs:', designs);
       
-      // Save directly to database using the correct column name
       const { error } = await supabase
         .from('teams')
         .update({ 
-          kit_designs: designs as any, // Cast to any for Json compatibility
+          kit_designs: designs as any,
           updated_at: new Date().toISOString()
         })
         .eq('id', team.id);
