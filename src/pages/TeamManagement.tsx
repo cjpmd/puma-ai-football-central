@@ -14,7 +14,7 @@ import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
 import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 
 const TeamManagement = () => {
-  const { teams, clubs, refreshUserData } = useAuth();
+  const { teams, clubs, refreshUserData, user } = useAuth();
   const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
@@ -123,6 +123,21 @@ const TeamManagement = () => {
       }]).select().single();
 
       if (error) throw error;
+
+      // Link the current user as the team admin
+      if (data) {
+        const { error: userTeamError } = await supabase
+          .from('user_teams')
+          .insert({
+            user_id: user.id,
+            team_id: data.id,
+            role: 'admin'
+          });
+
+        if (userTeamError) {
+          console.error('Error linking user to team:', userTeamError);
+        }
+      }
 
       // If linking to a club, add to club_teams table
       if (teamData.clubId && data) {
