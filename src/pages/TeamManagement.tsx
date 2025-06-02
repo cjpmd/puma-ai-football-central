@@ -190,7 +190,7 @@ const TeamManagement = () => {
       };
 
       // Only include kit_designs if it's provided
-      if (teamData.kitDesigns !== undefined) {
+      if ('kitDesigns' in teamData) {
         updateData.kit_designs = teamData.kitDesigns as any;
       }
 
