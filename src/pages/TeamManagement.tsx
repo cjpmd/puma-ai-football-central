@@ -199,13 +199,14 @@ const TeamManagement = () => {
 
       console.log('Team updated successfully');
       await refreshUserData();
+      await loadLinkedTeams(); // Reload linked teams to show updated data
       setIsTeamDialogOpen(false);
       setIsSettingsModalOpen(false);
       setIsStaffModalOpen(false);
       
       toast({
         title: 'Team updated',
-        description: `${teamData.name} has been updated successfully.`,
+        description: `${teamData.name || selectedTeam.name} has been updated successfully.`,
       });
     } catch (error: any) {
       console.error('Error updating team:', error);
@@ -359,7 +360,7 @@ const TeamManagement = () => {
               </DialogHeader>
               <TeamForm 
                 team={selectedTeam && !selectedTeam.isReadOnly ? selectedTeam : null} 
-                clubs={clubs || []}
+                clubs={allClubs || []}
                 onSubmit={selectedTeam && !selectedTeam.isReadOnly ? handleUpdateTeam : handleCreateTeam} 
                 onCancel={() => setIsTeamDialogOpen(false)}
               />

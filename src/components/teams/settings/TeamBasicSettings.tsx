@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Team, GameFormat, SubscriptionType } from '@/types';
 import { TeamLogoSettings } from './TeamLogoSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Club {
   id: string;
@@ -30,6 +32,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const [clubs, setClubs] = useState<Club[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { refreshUserData } = useAuth();
 
   useEffect(() => {
     loadClubs();
@@ -60,6 +63,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     try {
       const newClubId = clubId === 'independent' ? null : clubId;
       
+      console.log('Changing club from', team.clubId, 'to', newClubId);
+      
       // Update the team's club_id in database
       const { error } = await supabase
         .from('teams')
@@ -68,26 +73,29 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
       if (error) throw error;
 
+      // Remove existing club_teams link
+      await supabase
+        .from('club_teams')
+        .delete()
+        .eq('team_id', team.id);
+
       // If linking to a club, add to club_teams table
       if (newClubId) {
         const { error: linkError } = await supabase
           .from('club_teams')
-          .insert({ club_id: newClubId, team_id: team.id })
-          .select();
+          .insert({ club_id: newClubId, team_id: team.id });
 
         // Ignore error if already exists
         if (linkError && !linkError.message.includes('duplicate')) {
           throw linkError;
         }
-      } else {
-        // If unlinking, remove from club_teams table
-        await supabase
-          .from('club_teams')
-          .delete()
-          .eq('team_id', team.id);
       }
 
+      // Update local state
       onUpdate({ clubId: newClubId });
+      
+      // Refresh user data to get updated teams/clubs
+      await refreshUserData();
       
       toast({
         title: 'Club Link Updated',
@@ -131,6 +139,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 value={team.name}
                 onChange={(e) => onUpdate({ name: e.target.value })}
                 placeholder="Enter team name"
+                disabled={team.isReadOnly}
               />
             </div>
             
@@ -141,6 +150,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 value={team.ageGroup}
                 onChange={(e) => onUpdate({ ageGroup: e.target.value })}
                 placeholder="e.g., U12, U15, Senior"
+                disabled={team.isReadOnly}
               />
             </div>
           </div>
@@ -185,6 +195,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 type="date"
                 value={team.seasonStart}
                 onChange={(e) => onUpdate({ seasonStart: e.target.value })}
+                disabled={team.isReadOnly}
               />
             </div>
             
@@ -195,6 +206,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 type="date"
                 value={team.seasonEnd}
                 onChange={(e) => onUpdate({ seasonEnd: e.target.value })}
+                disabled={team.isReadOnly}
               />
             </div>
           </div>
@@ -205,6 +217,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
               <Select 
                 value={team.gameFormat} 
                 onValueChange={(value: GameFormat) => onUpdate({ gameFormat: value })}
+                disabled={team.isReadOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select game format" />
@@ -225,6 +238,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
               <Select 
                 value={team.subscriptionType || 'free'} 
                 onValueChange={(value: SubscriptionType) => onUpdate({ subscriptionType: value })}
+                disabled={team.isReadOnly}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select subscription type" />
@@ -249,6 +263,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                   value={team.managerName || ''}
                   onChange={(e) => onUpdate({ managerName: e.target.value })}
                   placeholder="Manager name"
+                  disabled={team.isReadOnly}
                 />
               </div>
               
@@ -260,6 +275,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                   value={team.managerEmail || ''}
                   onChange={(e) => onUpdate({ managerEmail: e.target.value })}
                   placeholder="manager@example.com"
+                  disabled={team.isReadOnly}
                 />
               </div>
               
@@ -270,16 +286,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                   value={team.managerPhone || ''}
                   onChange={(e) => onUpdate({ managerPhone: e.target.value })}
                   placeholder="Phone number"
+                  disabled={team.isReadOnly}
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <Button onClick={onSave} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
+          {!team.isReadOnly && (
+            <div className="flex justify-end pt-4">
+              <Button onClick={onSave} disabled={isSaving}>
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
