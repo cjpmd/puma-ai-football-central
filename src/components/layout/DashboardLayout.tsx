@@ -54,12 +54,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className={cn('flex h-full w-64 flex-col bg-background', className)}>
       <div className="flex h-16 shrink-0 items-center border-b px-6">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-green-100 flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-green-600">
-              <path d="M12 2C10.89 2 10 2.89 10 4V6H8C6.89 6 6 6.89 6 8V10C6 11.11 6.89 12 8 12H10V14C10 15.11 10.89 16 12 16S14 15.11 14 14V12H16C17.11 12 18 11.11 18 10V8C18 6.89 17.11 6 16 6H14V4C14 2.89 13.11 2 12 2Z"/>
-            </svg>
-          </div>
-          <h1 className="text-xl font-semibold text-foreground">Team Manager</h1>
+          <img 
+            src="/lovable-uploads/0e7b2d9e-64e2-46da-8a4f-01a3e2cd50df.png" 
+            alt="Team Manager Logo" 
+            className="w-8 h-8"
+          />
+          <h1 className="text-xl font-bold text-foreground">Team Manager</h1>
         </div>
       </div>
       <ScrollArea className="flex-1">

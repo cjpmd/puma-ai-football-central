@@ -102,16 +102,16 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       .slice(0, 3);
     
     if (sortedPositions.length === 0) {
-      return <span className="text-muted-foreground text-xs">No data</span>;
+      return <span className="text-muted-foreground text-xs">No position data</span>;
     }
     
     return (
-      <div className="space-y-1">
+      <div className="flex flex-wrap gap-1">
         {sortedPositions.map(([position, minutes]) => (
-          <div key={position} className="flex justify-between items-center text-xs">
+          <span key={position} className="text-xs">
             <span className="font-medium">{position}</span>
-            <span className="text-muted-foreground">{minutes}m</span>
-          </div>
+            <span className="text-muted-foreground ml-1">{minutes}m</span>
+          </span>
         ))}
       </div>
     );
@@ -122,7 +122,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
 
   return (
-    <Card className={`h-[320px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
+    <Card className={`h-[340px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">

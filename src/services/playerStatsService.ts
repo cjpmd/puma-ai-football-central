@@ -7,9 +7,10 @@ export const playerStatsService = {
    */
   async updatePlayerStats(playerId: string): Promise<void> {
     try {
+      console.log('=== DEBUGGING PLAYER STATS UPDATE ===');
       console.log('Updating stats for player:', playerId);
       
-      // Debug: Check what position data exists for this player
+      // Debug: Check what position data exists for this player in event_player_stats
       const { data: playerStats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
@@ -22,20 +23,22 @@ export const playerStatsService = {
       if (statsError) {
         console.error('Error fetching player stats for debugging:', statsError);
       } else {
+        console.log('=== EVENT_PLAYER_STATS DATA ===');
         console.log('Current event_player_stats for player:', playerStats);
         console.log('Position data breakdown:', 
-          playerStats.map(stat => ({
+          playerStats?.map(stat => ({
             date: stat.events?.date,
             opponent: stat.events?.opponent,
             position: stat.position,
             minutes: stat.minutes_played,
-            eventId: stat.event_id
+            eventId: stat.event_id,
+            playerId: stat.player_id
           }))
         );
       }
 
       // Also check event_selections to see what was actually selected
-      const { data: selections, error: selectionsError } = await supabase
+      const { data: eventSelections, error: selectionsError } = await supabase
         .from('event_selections')
         .select(`
           *,
@@ -43,15 +46,34 @@ export const playerStatsService = {
         `)
         .in('event_id', playerStats?.map(s => s.event_id) || []);
 
-      if (!selectionsError && selections) {
-        console.log('Event selections for comparison:', 
-          selections.map(sel => ({
-            date: sel.events?.date,
-            opponent: sel.events?.opponent,
-            playerPositions: sel.player_positions,
-            eventId: sel.event_id
-          }))
-        );
+      if (!selectionsError && eventSelections) {
+        console.log('=== EVENT_SELECTIONS DATA ===');
+        eventSelections.forEach(selection => {
+          console.log(`Event ${selection.event_id} (${selection.events?.date} vs ${selection.events?.opponent}):`);
+          console.log('Player positions in selection:', selection.player_positions);
+          
+          // Check if this player is in the selection
+          const playerInSelection = selection.player_positions?.find((pp: any) => 
+            pp.playerId === playerId || pp.player_id === playerId
+          );
+          if (playerInSelection) {
+            console.log('Player found in selection:', playerInSelection);
+          } else {
+            console.log('Player NOT found in this selection');
+          }
+        });
+      }
+
+      // Check the players table to see current match_stats
+      const { data: currentPlayer, error: playerError } = await supabase
+        .from('players')
+        .select('match_stats')
+        .eq('id', playerId)
+        .single();
+
+      if (!playerError && currentPlayer) {
+        console.log('=== CURRENT PLAYER MATCH_STATS ===');
+        console.log('Current match_stats:', currentPlayer.match_stats);
       }
 
       const { error } = await supabase.rpc('update_player_match_stats', {
@@ -63,7 +85,21 @@ export const playerStatsService = {
         throw error;
       }
       
+      // Check the updated stats
+      const { data: updatedPlayer, error: updatedError } = await supabase
+        .from('players')
+        .select('match_stats')
+        .eq('id', playerId)
+        .single();
+
+      if (!updatedError && updatedPlayer) {
+        console.log('=== UPDATED PLAYER MATCH_STATS ===');
+        console.log('Updated match_stats:', updatedPlayer.match_stats);
+        console.log('Minutes by position:', updatedPlayer.match_stats?.minutesByPosition);
+      }
+      
       console.log('Successfully updated player stats for:', playerId);
+      console.log('=== END DEBUGGING ===');
     } catch (error) {
       console.error('Error updating player stats:', error);
       throw error;
