@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -132,7 +133,14 @@ const PlayerManagementTab = () => {
 
   const renderTopPositions = (player: Player) => {
     const positions = player.matchStats?.minutesByPosition || {};
-    const sortedPositions = Object.entries(positions)
+    
+    // Convert positions object to array and ensure values are numbers
+    const positionEntries = Object.entries(positions).map(([position, minutes]) => [
+      position, 
+      typeof minutes === 'number' ? minutes : 0
+    ] as [string, number]);
+    
+    const sortedPositions = positionEntries
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3);
     
