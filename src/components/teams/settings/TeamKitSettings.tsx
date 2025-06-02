@@ -15,6 +15,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   onUpdate
 }) => {
   const { toast } = useToast();
+  const [isSaving, setIsSaving] = useState(false);
 
   const getInitialDesigns = (): Partial<KitDesigns> => {
     console.log('Getting initial designs for team:', team.name, 'kitDesigns:', team.kitDesigns);
@@ -25,6 +26,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   };
 
   const handleSaveDesigns = async (designs: KitDesigns) => {
+    setIsSaving(true);
     try {
       console.log('Saving kit designs:', designs);
       
@@ -41,12 +43,12 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         throw error;
       }
 
-      // Update parent component
+      // Update parent component with new designs
       onUpdate({ kitDesigns: designs });
       
       toast({
-        title: 'Kit designs saved',
-        description: 'Your kit designs have been saved successfully.',
+        title: 'Kit designs saved successfully',
+        description: 'Your kit designs have been saved and updated.',
       });
     } catch (error: any) {
       console.error('Error saving kit designs:', error);
@@ -55,6 +57,8 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         description: error.message || 'Failed to save kit designs',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -70,6 +74,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
       <KitDesigner 
         initialDesigns={getInitialDesigns()}
         onSave={handleSaveDesigns}
+        isSaving={isSaving}
       />
     </div>
   );

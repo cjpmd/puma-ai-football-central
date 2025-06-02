@@ -256,9 +256,23 @@ const TeamManagement = () => {
   const getClubName = (clubId?: string) => {
     console.log('Getting club name for ID:', clubId, 'Available clubs:', allClubs);
     if (!clubId) return 'Independent';
+    
+    // First try to find in allClubs
     const club = allClubs.find(c => c.id === clubId);
-    console.log('Found club:', club);
-    return club?.name || 'Unknown Club';
+    if (club) {
+      console.log('Found club in allClubs:', club);
+      return club.name;
+    }
+    
+    // If not found in allClubs, try to find in user's clubs
+    const userClub = clubs?.find(c => c.id === clubId);
+    if (userClub) {
+      console.log('Found club in user clubs:', userClub);
+      return userClub.name;
+    }
+    
+    console.log('Club not found, returning Unknown Club');
+    return 'Unknown Club';
   };
 
   const TeamCard = ({ team, isLinked = false }: { team: Team; isLinked?: boolean }) => (

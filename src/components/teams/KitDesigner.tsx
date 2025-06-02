@@ -1,12 +1,10 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Shirt } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Shirt, CheckCircle } from 'lucide-react';
 
 interface KitDesign {
   shirtColor: string;
@@ -27,6 +25,7 @@ interface KitDesigns {
 interface KitDesignerProps {
   initialDesigns?: Partial<KitDesigns>;
   onSave: (designs: KitDesigns) => void;
+  isSaving?: boolean;
 }
 
 const defaultKit: KitDesign = {
@@ -55,7 +54,8 @@ const colorOptions = [
 
 export const KitDesigner: React.FC<KitDesignerProps> = ({
   initialDesigns = {},
-  onSave
+  onSave,
+  isSaving = false
 }) => {
   const [designs, setDesigns] = useState<KitDesigns>({
     home: { ...defaultKit, ...initialDesigns.home },
@@ -65,7 +65,6 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
   });
 
   const [activeKit, setActiveKit] = useState<keyof KitDesigns>('home');
-  const { toast } = useToast();
 
   const kitTypes = [
     { key: 'home' as const, label: 'Home Kit', color: 'bg-blue-500' },
@@ -82,8 +81,10 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
   };
 
   const handleSave = () => {
-    console.log('Saving kit designs:', designs);
-    onSave(designs);
+    if (!isSaving) {
+      console.log('Saving kit designs:', designs);
+      onSave(designs);
+    }
   };
 
   // Simple shirt preview with stripe support
@@ -320,10 +321,21 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
       <div className="flex justify-center">
         <Button 
           onClick={handleSave}
+          disabled={isSaving}
           className="px-8 py-3 text-lg"
           size="lg"
         >
-          Save Kit Designs
+          {isSaving ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              Saving...
+            </>
+          ) : (
+            <>
+              <CheckCircle className="mr-2 h-4 w-4" />
+              Save Kit Designs
+            </>
+          )}
         </Button>
       </div>
     </div>

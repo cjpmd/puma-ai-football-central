@@ -19,6 +19,8 @@ export function Header() {
                       location.pathname.includes('/events') ||
                       location.pathname.includes('/analytics');
 
+  console.log('Header - showTeamLogo:', showTeamLogo, 'currentTeam:', currentTeam);
+
   return (
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">

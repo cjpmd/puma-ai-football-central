@@ -1,14 +1,15 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TeamLogoSettings } from './TeamLogoSettings';
-import { Team } from '@/types';
+import { Team, Club } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeamBasicSettingsProps {
   team: Team;
@@ -23,24 +24,53 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   onSave,
   isSaving
 }) => {
+  const { toast } = useToast();
+  const { clubs } = useAuth();
+  const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
+  
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
+    clubId: team.clubId || '',
     managerName: team.managerName || '',
     managerEmail: team.managerEmail || '',
     managerPhone: team.managerPhone || '',
   });
 
-  const { toast } = useToast();
+  useEffect(() => {
+    loadAvailableClubs();
+  }, [clubs]);
+
+  const loadAvailableClubs = async () => {
+    try {
+      const { data, error } = await supabase.from('clubs').select('*');
+      if (error) throw error;
+      
+      const convertedClubs: Club[] = (data || []).map(club => ({
+        id: club.id,
+        name: club.name,
+        referenceNumber: club.reference_number,
+        serialNumber: club.serial_number,
+        subscriptionType: club.subscription_type as any || 'free',
+        logoUrl: club.logo_url,
+        createdAt: club.created_at,
+        updatedAt: club.updated_at
+      }));
+      
+      setAvailableClubs(convertedClubs);
+    } catch (error) {
+      console.error('Error loading clubs:', error);
+    }
+  };
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Update team data immediately for live preview
-    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd'].includes(field)) {
+    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
       onUpdate({ [field]: value });
     }
   };
@@ -58,6 +88,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           game_format: formData.gameFormat,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
+          club_id: formData.clubId || null,
           manager_name: formData.managerName,
           manager_email: formData.managerEmail,
           manager_phone: formData.managerPhone,
@@ -70,6 +101,26 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         throw teamError;
       }
 
+      // Handle club linking
+      if (formData.clubId !== team.clubId) {
+        // Remove existing club link
+        await supabase
+          .from('club_teams')
+          .delete()
+          .eq('team_id', team.id);
+
+        // Add new club link if specified
+        if (formData.clubId) {
+          const { error: linkError } = await supabase
+            .from('club_teams')
+            .insert({ club_id: formData.clubId, team_id: team.id });
+
+          if (linkError && !linkError.message.includes('duplicate')) {
+            console.error('Error linking team to club:', linkError);
+          }
+        }
+      }
+
       // Update the team data in parent component
       onUpdate({
         name: formData.name,
@@ -77,6 +128,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         gameFormat: formData.gameFormat as any,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
+        clubId: formData.clubId || undefined,
       });
 
       toast({
@@ -129,21 +181,40 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="game-format">Game Format</Label>
-            <Select value={formData.gameFormat} onValueChange={(value) => handleInputChange('gameFormat', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="11-a-side">11v11</SelectItem>
-                <SelectItem value="9-a-side">9v9</SelectItem>
-                <SelectItem value="7-a-side">7v7</SelectItem>
-                <SelectItem value="5-a-side">5v5</SelectItem>
-                <SelectItem value="4-a-side">4v4</SelectItem>
-                <SelectItem value="3-a-side">3v3</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="game-format">Game Format</Label>
+              <Select value={formData.gameFormat} onValueChange={(value) => handleInputChange('gameFormat', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="11-a-side">11v11</SelectItem>
+                  <SelectItem value="9-a-side">9v9</SelectItem>
+                  <SelectItem value="7-a-side">7v7</SelectItem>
+                  <SelectItem value="5-a-side">5v5</SelectItem>
+                  <SelectItem value="4-a-side">4v4</SelectItem>
+                  <SelectItem value="3-a-side">3v3</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="club-selection">Club Affiliation</Label>
+              <Select value={formData.clubId} onValueChange={(value) => handleInputChange('clubId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a club or leave independent" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Independent (No Club)</SelectItem>
+                  {availableClubs.map((club) => (
+                    <SelectItem key={club.id} value={club.id}>
+                      {club.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
