@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, AlertCircle } from 'lucide-react';
 
 interface LogoUploadProps {
-  currentLogoUrl?: string;
+  currentLogoUrl?: string | null;
   onLogoChange: (logoUrl: string | null) => void;
   entityType: 'team' | 'club';
   entityId: string;
@@ -28,6 +28,9 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    console.log('Starting logo upload for:', entityType, entityId, entityName);
+    console.log('File details:', { name: file.name, size: file.size, type: file.type });
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
@@ -52,51 +55,99 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
 
     setUploading(true);
     try {
-      // Delete old logo if it exists
-      if (currentLogoUrl) {
+      // First, check if logos bucket exists, if not, we'll try to create it
+      const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+      console.log('Available storage buckets:', buckets);
+      
+      if (bucketsError) {
+        console.error('Error checking buckets:', bucketsError);
+        throw new Error('Unable to access storage. Please check your permissions.');
+      }
+
+      const logosBucketExists = buckets?.some(bucket => bucket.name === 'logos');
+      
+      if (!logosBucketExists) {
+        console.log('Logos bucket does not exist');
+        throw new Error('Storage bucket not configured. Please contact support.');
+      }
+
+      // Delete old logo if it exists and has a valid path
+      if (currentLogoUrl && currentLogoUrl.includes('/storage/v1/object/public/logos/')) {
         const oldFileName = currentLogoUrl.split('/').pop();
-        if (oldFileName) {
-          await supabase.storage.from('logos').remove([`${entityType}s/${oldFileName}`]);
+        if (oldFileName && oldFileName !== 'undefined') {
+          console.log('Deleting old logo file:', oldFileName);
+          const deleteResult = await supabase.storage
+            .from('logos')
+            .remove([`${entityType}s/${oldFileName}`]);
+          
+          console.log('Delete result:', deleteResult);
         }
       }
 
-      // Upload new logo
+      // Upload new logo with timestamp to ensure uniqueness
       const fileExt = file.name.split('.').pop();
       const fileName = `${entityId}-${Date.now()}.${fileExt}`;
       const filePath = `${entityType}s/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(filePath, file);
+      console.log('Uploading file to path:', filePath);
 
-      if (uploadError) throw uploadError;
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('logos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        throw uploadError;
+      }
+
+      console.log('Upload successful:', uploadData);
 
       // Get public URL
       const { data: urlData } = supabase.storage
         .from('logos')
         .getPublicUrl(filePath);
 
+      console.log('Public URL data:', urlData);
+
+      if (!urlData.publicUrl) {
+        throw new Error('Failed to get public URL for uploaded file');
+      }
+
       const logoUrl = urlData.publicUrl;
+      console.log('Generated logo URL:', logoUrl);
 
       // Update entity in database
       const tableName = entityType === 'team' ? 'teams' : 'clubs';
-      const { error: updateError } = await supabase
+      console.log('Updating table:', tableName, 'with logo URL:', logoUrl);
+      
+      const { error: updateError, data: updateData } = await supabase
         .from(tableName)
         .update({ logo_url: logoUrl })
-        .eq('id', entityId);
+        .eq('id', entityId)
+        .select();
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Database update error:', updateError);
+        throw updateError;
+      }
 
+      console.log('Database update successful:', updateData);
+
+      // Call the callback to update the parent component
       onLogoChange(logoUrl);
+      
       toast({
-        title: 'Logo uploaded',
+        title: 'Logo uploaded successfully',
         description: `${entityName} logo has been updated successfully.`,
       });
     } catch (error: any) {
       console.error('Error uploading logo:', error);
       toast({
         title: 'Upload failed',
-        description: error.message || 'Failed to upload logo',
+        description: error.message || 'Failed to upload logo. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -111,10 +162,17 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
 
     setUploading(true);
     try {
-      // Delete from storage
-      const fileName = currentLogoUrl.split('/').pop();
-      if (fileName) {
-        await supabase.storage.from('logos').remove([`${entityType}s/${fileName}`]);
+      // Delete from storage if it's a valid storage URL
+      if (currentLogoUrl.includes('/storage/v1/object/public/logos/')) {
+        const fileName = currentLogoUrl.split('/').pop();
+        if (fileName && fileName !== 'undefined') {
+          console.log('Removing logo file:', fileName);
+          const deleteResult = await supabase.storage
+            .from('logos')
+            .remove([`${entityType}s/${fileName}`]);
+          
+          console.log('Remove result:', deleteResult);
+        }
       }
 
       // Update entity in database
@@ -144,15 +202,18 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Label htmlFor={`logo-upload-${entityId}`}>Logo</Label>
+        <Label htmlFor={`logo-upload-${entityId}`} className="text-base font-semibold">
+          {entityType === 'team' ? 'Team' : 'Club'} Logo
+        </Label>
         {currentLogoUrl && (
           <Button
             variant="outline"
             size="sm"
             onClick={handleRemoveLogo}
             disabled={uploading}
+            className="text-red-600 hover:text-red-700"
           >
             <X className="h-4 w-4 mr-1" />
             Remove
@@ -160,32 +221,46 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
         )}
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-6">
         {/* Logo preview */}
-        <div className="w-16 h-16 border-2 border-dashed border-muted-foreground rounded-lg flex items-center justify-center bg-muted">
+        <div className="w-20 h-20 border-2 border-dashed border-muted-foreground rounded-xl flex items-center justify-center bg-muted shadow-inner">
           {currentLogoUrl ? (
             <img 
               src={currentLogoUrl} 
               alt={`${entityName} logo`}
-              className="w-14 h-14 object-contain rounded"
+              className="w-18 h-18 object-contain rounded-lg"
+              onError={(e) => {
+                console.log('Logo failed to load:', currentLogoUrl);
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.nextElementSibling?.classList.remove('hidden');
+              }}
+              onLoad={() => {
+                console.log('Logo loaded successfully:', currentLogoUrl);
+              }}
             />
           ) : (
-            <Upload className="h-6 w-6 text-muted-foreground" />
+            <Upload className="h-8 w-8 text-muted-foreground" />
+          )}
+          {currentLogoUrl && (
+            <div className="hidden flex items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-red-500" />
+            </div>
           )}
         </div>
 
         {/* Upload input */}
-        <div className="flex-1">
+        <div className="flex-1 space-y-2">
           <Input
             id={`logo-upload-${entityId}`}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/svg+xml"
             onChange={handleFileUpload}
             disabled={uploading}
-            className="cursor-pointer"
+            className="cursor-pointer file:cursor-pointer file:mr-4 file:px-4 file:py-2 file:rounded-md file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
           />
-          <p className="text-xs text-muted-foreground mt-1">
-            JPEG, PNG, WebP, or SVG. Max 5MB.
+          <p className="text-sm text-muted-foreground">
+            Upload JPEG, PNG, WebP, or SVG. Maximum 5MB.
+            {uploading && <span className="text-blue-600 font-medium"> Uploading...</span>}
           </p>
         </div>
       </div>

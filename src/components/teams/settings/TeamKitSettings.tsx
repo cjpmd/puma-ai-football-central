@@ -30,23 +30,38 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
 }) => {
   const { toast } = useToast();
 
-  // Convert existing kitIcons to kitDesigns format if they exist
+  // Convert existing kitDesigns to proper format
   const getInitialDesigns = (): Partial<KitDesigns> => {
+    console.log('Getting initial designs for team:', team.name, 'kitDesigns:', team.kitDesigns);
     if (team.kitDesigns) {
       return team.kitDesigns;
     }
-    // If we have old kit icons, we'll start fresh with the designer
     return {};
   };
 
   const handleSaveDesigns = async (designs: KitDesigns) => {
     try {
       console.log('Saving kit designs:', designs);
+      console.log('Current team data:', team);
       
-      // Update the team with new kit designs
-      const updateData = { 
+      // IMPORTANT: Preserve ALL existing team data, especially clubId
+      const updateData: Partial<Team> = { 
         kitDesigns: designs,
-        // Keep kitIcons for backward compatibility but mark as using designer
+        // Preserve existing club association
+        clubId: team.clubId,
+        // Keep all other important fields
+        name: team.name,
+        ageGroup: team.ageGroup,
+        gameFormat: team.gameFormat,
+        seasonStart: team.seasonStart,
+        seasonEnd: team.seasonEnd,
+        subscriptionType: team.subscriptionType,
+        performanceCategories: team.performanceCategories,
+        logoUrl: team.logoUrl,
+        managerName: team.managerName,
+        managerEmail: team.managerEmail,
+        managerPhone: team.managerPhone,
+        // Update kitIcons to indicate using designer
         kitIcons: {
           home: 'designer',
           away: 'designer', 
@@ -55,14 +70,14 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         }
       };
       
-      console.log('Update data:', updateData);
+      console.log('Complete update data with preserved fields:', updateData);
       
-      // Call the onUpdate function with the new data
+      // Call the onUpdate function with the complete data
       await onUpdate(updateData);
       
       toast({
         title: 'Kit designs saved successfully',
-        description: 'Your team kit designs have been updated.',
+        description: 'Your professional team kit designs have been updated.',
       });
     } catch (error) {
       console.error('Error saving kit designs:', error);
@@ -75,11 +90,11 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold">Kit Designer</h3>
-        <p className="text-sm text-muted-foreground">
-          Design custom kits for your team with colors and patterns
+    <div className="space-y-8">
+      <div className="text-center space-y-2">
+        <h3 className="text-2xl font-bold">Professional Kit Designer</h3>
+        <p className="text-lg text-muted-foreground">
+          Design custom professional kits for your team with realistic colors and patterns
         </p>
       </div>
 
