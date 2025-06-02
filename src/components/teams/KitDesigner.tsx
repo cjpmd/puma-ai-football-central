@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -87,57 +86,47 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     onSave(designs);
   };
 
-  // Simple shirt silhouette component like the reference images
+  // Very simple shirt preview using basic div elements
   const SimpleShirtPreview = ({ design, size = 'large' }: { design: KitDesign; size?: 'small' | 'large' }) => {
     const dimensions = size === 'small' ? 'w-16 h-20' : 'w-32 h-40';
     
     return (
       <div className={`${dimensions} relative flex flex-col items-center justify-center bg-gray-50 rounded-lg p-2 border`}>
-        {/* Simple shirt silhouette */}
-        <svg viewBox="0 0 100 120" className="w-full h-full">
-          {/* Main shirt body - simple rounded rectangle */}
-          <path
-            d="M20 25 L20 110 L80 110 L80 25 L75 20 L70 15 L65 15 L60 20 L60 15 L40 15 L40 20 L35 15 L30 15 L25 20 Z"
-            fill={design.shirtColor}
-            stroke="#333"
-            strokeWidth="1"
+        {/* Simple shirt shape using Shirt icon from Lucide */}
+        <div className="relative">
+          <Shirt 
+            size={size === 'small' ? 32 : 64} 
+            style={{ color: design.shirtColor }}
+            className="mb-2"
           />
           
-          {/* Sleeves - simple rectangles */}
-          <rect x="10" y="15" width="15" height="25" fill={design.sleeveColor} stroke="#333" strokeWidth="1" rx="3" />
-          <rect x="75" y="15" width="15" height="25" fill={design.sleeveColor} stroke="#333" strokeWidth="1" rx="3" />
-          
-          {/* Stripes if enabled */}
+          {/* Stripe overlay if enabled */}
           {design.hasStripes && (
-            <>
-              <rect x="30" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
-              <rect x="38" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
-              <rect x="46" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
-              <rect x="54" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
-              <rect x="62" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
-              <rect x="70" y="25" width="4" height="85" fill={design.stripeColor} opacity="0.9" />
-            </>
+            <div className="absolute inset-0 flex justify-center items-center">
+              <div className="flex gap-1 h-full items-center">
+                <div className="w-1 h-8 opacity-70" style={{ backgroundColor: design.stripeColor }} />
+                <div className="w-1 h-8 opacity-70" style={{ backgroundColor: design.stripeColor }} />
+                <div className="w-1 h-8 opacity-70" style={{ backgroundColor: design.stripeColor }} />
+              </div>
+            </div>
           )}
-          
-          {/* Simple collar */}
-          <path d="M40 15 L45 10 L55 10 L60 15" fill="none" stroke="#333" strokeWidth="1" />
-        </svg>
+        </div>
         
-        {/* Shorts - simple rectangle below shirt */}
+        {/* Simple shorts - small rectangle */}
         <div 
-          className="w-8 h-4 mt-1 rounded-sm border border-gray-400"
+          className="w-6 h-3 mb-1 rounded-sm border border-gray-400"
           style={{ backgroundColor: design.shortsColor }}
         />
         
-        {/* Socks - two small rectangles */}
+        {/* Simple socks - two small rectangles for large size only */}
         {size === 'large' && (
-          <div className="flex gap-1 mt-1">
+          <div className="flex gap-1">
             <div 
-              className="w-2 h-3 rounded-sm border border-gray-400"
+              className="w-1.5 h-2 rounded-sm border border-gray-400"
               style={{ backgroundColor: design.socksColor }}
             />
             <div 
-              className="w-2 h-3 rounded-sm border border-gray-400"
+              className="w-1.5 h-2 rounded-sm border border-gray-400"
               style={{ backgroundColor: design.socksColor }}
             />
           </div>
@@ -146,6 +135,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     );
   };
 
+  // ... keep existing code (ColorSelector component)
   const ColorSelector = ({ 
     value, 
     onChange, 
