@@ -10,7 +10,7 @@ import {
   UserMinus, 
   ArrowRightLeft, 
   Users, 
-  Settings, 
+  Cog, 
   Target, 
   MessageSquare, 
   BarChart3, 
@@ -108,7 +108,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     return (
       <div className="space-y-1">
         {sortedPositions.map(([position, minutes]) => (
-          <div key={position} className="flex justify-between text-xs">
+          <div key={position} className="flex justify-between items-center text-xs">
             <span className="font-medium">{position}</span>
             <span className="text-muted-foreground">{minutes}m</span>
           </div>
@@ -142,7 +142,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                <Settings className="h-3 w-3" />
+                <Cog className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -264,20 +264,22 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             </div>
             
             {/* Captain and POTM indicators - only show if they have counts */}
-            <div className="flex gap-1">
-              {captainGames > 0 && (
-                <Badge variant="outline" className="border-yellow-500 text-yellow-600 flex items-center gap-1 text-xs px-1 py-0">
-                  <Crown className="h-2 w-2" />
-                  {captainGames}
-                </Badge>
-              )}
-              {potmCount > 0 && (
-                <Badge variant="outline" className="border-purple-500 text-purple-600 flex items-center gap-1 text-xs px-1 py-0">
-                  <Trophy className="h-2 w-2" />
-                  {potmCount}
-                </Badge>
-              )}
-            </div>
+            {(captainGames > 0 || potmCount > 0) && (
+              <div className="flex gap-1">
+                {captainGames > 0 && (
+                  <Badge variant="outline" className="border-yellow-500 text-yellow-600 flex items-center gap-1 text-xs px-1 py-0">
+                    <Crown className="h-2 w-2" />
+                    {captainGames}
+                  </Badge>
+                )}
+                {potmCount > 0 && (
+                  <Badge variant="outline" className="border-purple-500 text-purple-600 flex items-center gap-1 text-xs px-1 py-0">
+                    <Trophy className="h-2 w-2" />
+                    {potmCount}
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Top 3 Positions */}
