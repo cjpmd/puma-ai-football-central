@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
@@ -52,14 +51,19 @@ export const playerStatsService = {
           console.log(`Event ${selection.event_id} (${selection.events?.date} vs ${selection.events?.opponent}):`);
           console.log('Player positions in selection:', selection.player_positions);
           
-          // Check if this player is in the selection
-          const playerInSelection = selection.player_positions?.find((pp: any) => 
-            pp.playerId === playerId || pp.player_id === playerId
-          );
-          if (playerInSelection) {
-            console.log('Player found in selection:', playerInSelection);
+          // Check if this player is in the selection - properly handle Json type
+          const playerPositions = selection.player_positions;
+          if (Array.isArray(playerPositions)) {
+            const playerInSelection = playerPositions.find((pp: any) => 
+              pp.playerId === playerId || pp.player_id === playerId
+            );
+            if (playerInSelection) {
+              console.log('Player found in selection:', playerInSelection);
+            } else {
+              console.log('Player NOT found in this selection');
+            }
           } else {
-            console.log('Player NOT found in this selection');
+            console.log('Player positions is not an array:', typeof playerPositions);
           }
         });
       }
@@ -74,6 +78,15 @@ export const playerStatsService = {
       if (!playerError && currentPlayer) {
         console.log('=== CURRENT PLAYER MATCH_STATS ===');
         console.log('Current match_stats:', currentPlayer.match_stats);
+        
+        // Safely access minutesByPosition with proper type checking
+        const matchStats = currentPlayer.match_stats;
+        if (matchStats && typeof matchStats === 'object' && !Array.isArray(matchStats)) {
+          const statsObj = matchStats as any;
+          if (statsObj.minutesByPosition) {
+            console.log('Minutes by position:', statsObj.minutesByPosition);
+          }
+        }
       }
 
       const { error } = await supabase.rpc('update_player_match_stats', {
@@ -95,7 +108,15 @@ export const playerStatsService = {
       if (!updatedError && updatedPlayer) {
         console.log('=== UPDATED PLAYER MATCH_STATS ===');
         console.log('Updated match_stats:', updatedPlayer.match_stats);
-        console.log('Minutes by position:', updatedPlayer.match_stats?.minutesByPosition);
+        
+        // Safely access minutesByPosition with proper type checking
+        const updatedMatchStats = updatedPlayer.match_stats;
+        if (updatedMatchStats && typeof updatedMatchStats === 'object' && !Array.isArray(updatedMatchStats)) {
+          const updatedStatsObj = updatedMatchStats as any;
+          if (updatedStatsObj.minutesByPosition) {
+            console.log('Updated minutes by position:', updatedStatsObj.minutesByPosition);
+          }
+        }
       }
       
       console.log('Successfully updated player stats for:', playerId);
