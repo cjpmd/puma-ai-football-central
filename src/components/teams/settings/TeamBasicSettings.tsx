@@ -25,7 +25,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   isSaving
 }) => {
   const { toast } = useToast();
-  const { clubs } = useAuth();
+  const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   
   const [formData, setFormData] = useState({
@@ -42,7 +42,22 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   useEffect(() => {
     loadAvailableClubs();
-  }, [clubs]);
+  }, []);
+
+  useEffect(() => {
+    // Update form data when team prop changes
+    setFormData({
+      name: team.name || '',
+      ageGroup: team.ageGroup || '',
+      gameFormat: team.gameFormat || '11-a-side',
+      seasonStart: team.seasonStart || '',
+      seasonEnd: team.seasonEnd || '',
+      clubId: team.clubId || '',
+      managerName: team.managerName || '',
+      managerEmail: team.managerEmail || '',
+      managerPhone: team.managerPhone || '',
+    });
+  }, [team]);
 
   const loadAvailableClubs = async () => {
     try {
@@ -71,7 +86,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     
     // Update team data immediately for live preview
     if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      onUpdate({ [field]: value });
+      onUpdate({ [field]: value === 'independent' ? null : value });
     }
   };
 
@@ -104,7 +119,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         throw teamError;
       }
 
-      // Handle club linking
+      // Handle club linking separately
       if (clubIdForDb !== team.clubId) {
         // Remove existing club link
         await supabase
@@ -132,7 +147,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
+        managerName: formData.managerName,
+        managerEmail: formData.managerEmail,
+        managerPhone: formData.managerPhone,
       });
+
+      // Refresh user data to get updated team information
+      await refreshUserData();
 
       toast({
         title: 'Settings saved',
@@ -148,10 +169,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
+  const handleLogoUpdate = (logoData: Partial<Team>) => {
+    console.log('Logo update received:', logoData);
+    onUpdate(logoData);
+  };
+
   return (
     <div className="space-y-6">
       {/* Team Logo */}
-      <TeamLogoSettings team={team} onUpdate={onUpdate} />
+      <TeamLogoSettings team={team} onUpdate={handleLogoUpdate} />
 
       {/* Basic Information */}
       <Card>

@@ -13,8 +13,9 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
   const [logoUrl, setLogoUrl] = useState(team.logoUrl || null);
 
   const handleLogoChange = (newLogoUrl: string | null) => {
-    console.log('Logo changed to:', newLogoUrl);
+    console.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
     setLogoUrl(newLogoUrl);
+    // Update parent component immediately
     onUpdate({ logoUrl: newLogoUrl });
   };
 
@@ -28,7 +29,7 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
       </CardHeader>
       <CardContent>
         <LogoUpload
-          currentLogoUrl={logoUrl}
+          currentLogoUrl={team.logoUrl}
           onLogoChange={handleLogoChange}
           entityType="team"
           entityId={team.id}

@@ -43,7 +43,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         throw error;
       }
 
-      // Update parent component with new designs
+      // Update parent component with new designs - DO NOT close modal
       onUpdate({ kitDesigns: designs });
       
       toast({

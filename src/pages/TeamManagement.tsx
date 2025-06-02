@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -92,6 +93,9 @@ const TeamManagement = () => {
           { home: '', away: '', training: '', goalkeeper: '' },
         logoUrl: team.logo_url,
         kitDesigns: team.kit_designs ? team.kit_designs as any : undefined,
+        managerName: team.manager_name,
+        managerEmail: team.manager_email,
+        managerPhone: team.manager_phone,
         createdAt: team.created_at,
         updatedAt: team.updated_at,
         isReadOnly: true
@@ -119,7 +123,10 @@ const TeamManagement = () => {
         performance_categories: teamData.performanceCategories || [],
         kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
         logo_url: teamData.logoUrl,
-        kit_designs: ('kitDesigns' in teamData && teamData.kitDesigns) ? teamData.kitDesigns as any : null
+        kit_designs: ('kitDesigns' in teamData && teamData.kitDesigns) ? teamData.kitDesigns as any : null,
+        manager_name: teamData.managerName,
+        manager_email: teamData.managerEmail,
+        manager_phone: teamData.managerPhone,
       }]).select().single();
 
       if (error) throw error;
@@ -172,22 +179,25 @@ const TeamManagement = () => {
     try {
       console.log('Updating team with data:', teamData);
       
-      const updateData: any = {
-        name: teamData.name,
-        age_group: teamData.ageGroup,
-        season_start: teamData.seasonStart,
-        season_end: teamData.seasonEnd,
-        club_id: teamData.clubId || null,
-        game_format: teamData.gameFormat,
-        subscription_type: teamData.subscriptionType,
-        performance_categories: teamData.performanceCategories,
-        kit_icons: teamData.kitIcons,
-        logo_url: teamData.logoUrl
-      };
-
-      if ('kitDesigns' in teamData) {
-        updateData.kit_designs = teamData.kitDesigns as any;
-      }
+      const updateData: any = {};
+      
+      // Only include fields that are being updated
+      if ('name' in teamData) updateData.name = teamData.name;
+      if ('ageGroup' in teamData) updateData.age_group = teamData.ageGroup;
+      if ('seasonStart' in teamData) updateData.season_start = teamData.seasonStart;
+      if ('seasonEnd' in teamData) updateData.season_end = teamData.seasonEnd;
+      if ('clubId' in teamData) updateData.club_id = teamData.clubId || null;
+      if ('gameFormat' in teamData) updateData.game_format = teamData.gameFormat;
+      if ('subscriptionType' in teamData) updateData.subscription_type = teamData.subscriptionType;
+      if ('performanceCategories' in teamData) updateData.performance_categories = teamData.performanceCategories;
+      if ('kitIcons' in teamData) updateData.kit_icons = teamData.kitIcons;
+      if ('logoUrl' in teamData) updateData.logo_url = teamData.logoUrl;
+      if ('kitDesigns' in teamData) updateData.kit_designs = teamData.kitDesigns as any;
+      if ('managerName' in teamData) updateData.manager_name = teamData.managerName;
+      if ('managerEmail' in teamData) updateData.manager_email = teamData.managerEmail;
+      if ('managerPhone' in teamData) updateData.manager_phone = teamData.managerPhone;
+      
+      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('teams')
@@ -196,7 +206,8 @@ const TeamManagement = () => {
 
       if (error) throw error;
 
-      if (teamData.hasOwnProperty('clubId')) {
+      // Handle club linking if clubId was updated
+      if ('clubId' in teamData && teamData.clubId !== selectedTeam.clubId) {
         await supabase
           .from('club_teams')
           .delete()
@@ -213,12 +224,12 @@ const TeamManagement = () => {
         }
       }
 
+      // Update local team state
+      setSelectedTeam(prev => prev ? { ...prev, ...teamData } : null);
+
       console.log('Team updated successfully');
       await refreshUserData();
       await loadLinkedTeams();
-      setIsTeamDialogOpen(false);
-      setIsSettingsModalOpen(false);
-      setIsStaffModalOpen(false);
       
       toast({
         title: 'Team updated',
