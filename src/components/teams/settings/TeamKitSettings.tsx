@@ -58,9 +58,6 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
         subscriptionType: team.subscriptionType,
         performanceCategories: team.performanceCategories,
         logoUrl: team.logoUrl,
-        managerName: team.managerName,
-        managerEmail: team.managerEmail,
-        managerPhone: team.managerPhone,
         // Update kitIcons to indicate using designer
         kitIcons: {
           home: 'designer',
