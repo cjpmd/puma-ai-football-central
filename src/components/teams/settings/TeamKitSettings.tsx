@@ -44,7 +44,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
     try {
       console.log('Saving kit designs:', designs);
       
-      // Save directly to database
+      // Save directly to database using the correct column name
       const { error } = await supabase
         .from('teams')
         .update({ 

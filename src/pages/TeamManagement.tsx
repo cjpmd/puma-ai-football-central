@@ -93,6 +93,7 @@ const TeamManagement = () => {
           team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
           { home: '', away: '', training: '', goalkeeper: '' },
         logoUrl: team.logo_url,
+        kitDesigns: team.kit_designs,
         createdAt: team.created_at,
         updatedAt: team.updated_at,
         isReadOnly: true
@@ -186,7 +187,8 @@ const TeamManagement = () => {
           subscription_type: teamData.subscriptionType,
           performance_categories: teamData.performanceCategories,
           kit_icons: teamData.kitIcons,
-          logo_url: teamData.logoUrl
+          logo_url: teamData.logoUrl,
+          kit_designs: teamData.kitDesigns
         })
         .eq('id', selectedTeam.id);
 

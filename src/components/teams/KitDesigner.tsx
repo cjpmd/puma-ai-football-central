@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Shirt } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -50,9 +51,6 @@ const colorOptions = [
   { value: '#84cc16', label: 'Lime' },
   { value: '#e11d48', label: 'Rose' },
   { value: '#0ea5e9', label: 'Sky' },
-  { value: '#6366f1', label: 'Indigo' },
-  { value: '#8b5cf6', label: 'Violet' },
-  { value: '#f59e0b', label: 'Amber' },
 ];
 
 export const KitDesigner: React.FC<KitDesignerProps> = ({
@@ -88,23 +86,45 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     onSave(designs);
   };
 
-  // Very simple shirt preview
+  // Simple shirt preview with stripe support
   const SimpleShirtPreview = ({ design, size = 'large' }: { design: KitDesign; size?: 'small' | 'large' }) => {
     const isSmall = size === 'small';
-    const shirtStyle = {
-      backgroundColor: design.shirtColor,
-      border: design.shirtColor === '#ffffff' ? '2px solid #e5e7eb' : '1px solid #9ca3af'
-    };
+    const shirtClasses = `${isSmall ? 'w-12 h-16' : 'w-24 h-32'} rounded-t-lg mb-1 border relative overflow-hidden`;
     
     return (
       <div className={`${isSmall ? 'w-16 h-20' : 'w-32 h-40'} flex flex-col items-center justify-center bg-gray-50 rounded-lg p-2 border`}>
-        {/* Simple shirt rectangle */}
+        {/* Simple shirt */}
         <div 
-          className={`${isSmall ? 'w-12 h-14' : 'w-24 h-28'} rounded-t-lg mb-1`}
-          style={shirtStyle}
-        />
+          className={shirtClasses}
+          style={{
+            backgroundColor: design.shirtColor,
+            border: design.shirtColor === '#ffffff' ? '2px solid #e5e7eb' : '1px solid #9ca3af'
+          }}
+        >
+          {/* Stripes overlay */}
+          {design.hasStripes && (
+            <div 
+              className="absolute inset-0 opacity-70"
+              style={{
+                background: `repeating-linear-gradient(
+                  90deg,
+                  transparent,
+                  transparent 8px,
+                  ${design.stripeColor} 8px,
+                  ${design.stripeColor} 12px
+                )`
+              }}
+            />
+          )}
+          
+          {/* Collar */}
+          <div 
+            className={`${isSmall ? 'w-3 h-2' : 'w-6 h-3'} mx-auto bg-white rounded-b-sm border-t-0`}
+            style={{ marginTop: isSmall ? '2px' : '4px' }}
+          />
+        </div>
         
-        {/* Simple shorts rectangle */}
+        {/* Simple shorts */}
         <div 
           className={`${isSmall ? 'w-8 h-3' : 'w-16 h-6'} rounded mb-1`}
           style={{
@@ -204,7 +224,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
                 Design {kitTypes.find(k => k.key === activeKit)?.label}
               </CardTitle>
               <CardDescription>
-                Customize colors for your kit
+                Customize colors and patterns for your kit
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -221,6 +241,27 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
                   label="Shorts Color"
                 />
               </div>
+
+              {/* Stripes Toggle */}
+              <div className="flex items-center justify-between">
+                <Label htmlFor="stripes-toggle" className="text-sm font-medium">
+                  Add Stripes
+                </Label>
+                <Switch
+                  id="stripes-toggle"
+                  checked={activeDesign.hasStripes}
+                  onCheckedChange={(checked) => updateKitDesign(activeKit, { hasStripes: checked })}
+                />
+              </div>
+
+              {/* Stripe Color - only show if stripes enabled */}
+              {activeDesign.hasStripes && (
+                <ColorSelector
+                  value={activeDesign.stripeColor}
+                  onChange={(color) => updateKitDesign(activeKit, { stripeColor: color })}
+                  label="Stripe Color"
+                />
+              )}
 
               <ColorSelector
                 value={activeDesign.socksColor}
