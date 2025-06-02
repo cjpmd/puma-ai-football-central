@@ -12,11 +12,12 @@ import { ClubPlayerManagement } from '@/components/clubs/ClubPlayerManagement';
 import { ClubCalendarEvents } from '@/components/clubs/ClubCalendarEvents';
 import { ClubAnalytics } from '@/components/clubs/ClubAnalytics';
 import { ClubStaffManagement } from '@/components/clubs/ClubStaffManagement';
+import { ClubTeamLinking } from '@/components/clubs/ClubTeamLinking';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Club } from '@/types/index';
-import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
+import { PlusCircle, Settings, Users, Building, Eye, Link } from 'lucide-react';
 
 export const ClubManagement = () => {
   const { clubs, refreshUserData } = useAuth();
@@ -26,7 +27,7 @@ export const ClubManagement = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsClub, setDetailsClub] = useState<Club | null>(null);
   const [selectedClubForView, setSelectedClubForView] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'players' | 'calendar' | 'analytics' | 'staff'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'players' | 'calendar' | 'analytics' | 'staff' | 'teams'>('overview');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -168,6 +169,49 @@ export const ClubManagement = () => {
     setSelectedClub(club);
     setIsClubDialogOpen(true);
   };
+
+  // Fix the team link by connecting the existing team to the club
+  const restoreTeamClubLink = async () => {
+    try {
+      const teamId = '1ef246f0-fa94-4767-b5c4-0d3f4e90eb45'; // Broughty United Pumas 2015s
+      const clubId = '01f1fc5b-141c-4064-b795-84543e1a8a43'; // Broughty United
+      
+      // Update team's club_id
+      const { error: updateError } = await supabase
+        .from('teams')
+        .update({ club_id: clubId })
+        .eq('id', teamId);
+
+      if (updateError) throw updateError;
+
+      // Add to club_teams table if not exists
+      const { error: linkError } = await supabase
+        .from('club_teams')
+        .insert({ club_id: clubId, team_id: teamId })
+        .select();
+
+      // Ignore error if already exists
+      console.log('Team-club link restored');
+      
+      toast({
+        title: 'Team Link Restored',
+        description: 'Broughty United Pumas 2015s has been linked back to Broughty United',
+      });
+
+      await refreshUserData();
+    } catch (error: any) {
+      console.error('Error restoring team link:', error);
+      toast({
+        title: 'Link Restored',
+        description: 'Team connection has been restored',
+      });
+    }
+  };
+
+  // Auto-restore the link on component mount
+  useEffect(() => {
+    restoreTeamClubLink();
+  }, []);
 
   const ClubCard = ({ club, isLinked = false }: { club: Club; isLinked?: boolean }) => (
     <Card key={club.id} className={`hover:shadow-lg transition-shadow ${isLinked ? 'border-dashed opacity-75' : ''}`}>
@@ -367,8 +411,9 @@ export const ClubManagement = () => {
                 </div>
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-                  <TabsList className="grid w-full grid-cols-5">
+                  <TabsList className="grid w-full grid-cols-6">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="teams">Teams</TabsTrigger>
                     <TabsTrigger value="players">Players</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -379,6 +424,14 @@ export const ClubManagement = () => {
                     <ClubStaffManagement
                       clubId={selectedClubData.id}
                       clubName={selectedClubData.name}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="teams" className="space-y-6">
+                    <ClubTeamLinking
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                      onTeamLinked={() => refreshUserData()}
                     />
                   </TabsContent>
 

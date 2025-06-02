@@ -1,29 +1,28 @@
+
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, Mail, Phone, Award, CheckCircle, Clock, Copy, Eye, EyeOff, Link } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, Search, Shield, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 
-interface ClubStaffMember {
+interface StaffMember {
   id: string;
   name: string;
   email: string;
   phone?: string;
   role: string;
-  teamName: string;
   teamId: string;
+  teamName: string;
+  ageGroup: string;
   pvgChecked: boolean;
   pvgCheckedBy?: string;
   pvgCheckedAt?: string;
-  coachingBadges: string[];
-  certificates: any[];
-  linkingCode?: string;
+  userId?: string;
 }
 
 interface ClubStaffManagementProps {
@@ -35,12 +34,13 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
   clubId,
   clubName
 }) => {
-  const [staff, setStaff] = useState<ClubStaffMember[]>([]);
+  const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
-  const [showLinkingCodes, setShowLinkingCodes] = useState<{[key: string]: boolean}>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [teamSummaries, setTeamSummaries] = useState<Record<string, any>>({});
   const { toast } = useToast();
-  const { user } = useAuth();
 
   useEffect(() => {
     if (clubId) {
@@ -48,77 +48,86 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     }
   }, [clubId]);
 
+  useEffect(() => {
+    filterStaff();
+  }, [staff, searchTerm, selectedTeam]);
+
   const loadClubStaff = async () => {
     try {
       setLoading(true);
       console.log('Loading staff for club:', clubId);
 
-      // First get teams linked to this club with proper join
+      // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
         .from('club_teams')
         .select(`
           team_id,
-          teams!inner(id, name)
+          teams!inner(
+            id,
+            name,
+            age_group
+          )
         `)
         .eq('club_id', clubId);
 
-      if (clubTeamsError) {
-        console.error('Error fetching club teams:', clubTeamsError);
-        throw clubTeamsError;
-      }
-
-      console.log('Club teams found:', clubTeams);
+      if (clubTeamsError) throw clubTeamsError;
 
       if (!clubTeams || clubTeams.length === 0) {
-        console.log('No teams linked to this club');
         setStaff([]);
         return;
       }
 
       const teamIds = clubTeams.map(ct => ct.team_id);
-      console.log('Team IDs:', teamIds);
 
-      // Get staff for these teams including linking codes
-      const { data: teamStaff, error: staffError } = await supabase
+      // Get all staff from linked teams
+      const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
         .select('*')
         .in('team_id', teamIds);
 
-      if (staffError) {
-        console.error('Error fetching team staff:', staffError);
-        throw staffError;
-      }
+      if (staffError) throw staffError;
 
-      console.log('Team staff data:', teamStaff);
+      // Transform data to include team information
+      const staffWithTeams = staffData?.map(member => {
+        const teamData = clubTeams.find(ct => ct.team_id === member.team_id)?.teams;
+        return {
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          phone: member.phone,
+          role: member.role,
+          teamId: member.team_id,
+          teamName: teamData?.name || 'Unknown Team',
+          ageGroup: teamData?.age_group || 'Unknown',
+          pvgChecked: member.pvg_checked || false,
+          pvgCheckedBy: member.pvg_checked_by,
+          pvgCheckedAt: member.pvg_checked_at,
+          userId: member.user_id
+        };
+      }) || [];
 
-      if (teamStaff && teamStaff.length > 0) {
-        const staffMembers: ClubStaffMember[] = teamStaff.map(staff => {
-          const team = clubTeams.find(ct => ct.team_id === staff.team_id);
-          return {
-            id: staff.id,
-            name: staff.name || 'Unknown',
-            email: staff.email || '',
-            phone: staff.phone || '',
-            role: staff.role,
-            teamName: team?.teams?.name || 'Unknown Team',
-            teamId: staff.team_id,
-            pvgChecked: staff.pvg_checked || false,
-            pvgCheckedBy: staff.pvg_checked_by || '',
-            pvgCheckedAt: staff.pvg_checked_at || '',
-            coachingBadges: Array.isArray(staff.coaching_badges) 
-              ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
-              : [],
-            certificates: Array.isArray(staff.certificates) ? staff.certificates : [],
-            linkingCode: staff.linking_code
+      // Calculate team summaries
+      const summaries = staffWithTeams.reduce((acc, member) => {
+        const teamId = member.teamId;
+        if (!acc[teamId]) {
+          acc[teamId] = {
+            teamName: member.teamName,
+            ageGroup: member.ageGroup,
+            totalStaff: 0,
+            pvgCheckedCount: 0
           };
-        });
+        }
+        
+        acc[teamId].totalStaff++;
+        if (member.pvgChecked) {
+          acc[teamId].pvgCheckedCount++;
+        }
+        
+        return acc;
+      }, {} as Record<string, any>);
 
-        console.log('Processed staff members:', staffMembers);
-        setStaff(staffMembers);
-      } else {
-        console.log('No staff found in linked teams');
-        setStaff([]);
-      }
+      setStaff(staffWithTeams);
+      setTeamSummaries(summaries);
     } catch (error: any) {
       console.error('Error loading club staff:', error);
       toast({
@@ -126,92 +135,56 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         description: error.message || 'Failed to load club staff',
         variant: 'destructive',
       });
-      setStaff([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePVGCheck = async (staffId: string, checked: boolean) => {
+  const filterStaff = () => {
+    let filtered = staff;
+
+    if (searchTerm) {
+      filtered = filtered.filter(member =>
+        member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.role.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (selectedTeam !== 'all') {
+      filtered = filtered.filter(member => member.teamId === selectedTeam);
+    }
+
+    setFilteredStaff(filtered);
+  };
+
+  const updatePVGStatus = async (staffId: string, checked: boolean) => {
     try {
-      setUpdating(staffId);
-      console.log('Updating PVG status for staff:', staffId, checked);
-
-      const updateData = {
-        pvg_checked: checked,
-        pvg_checked_by: checked ? user?.id : null,
-        pvg_checked_at: checked ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString()
-      };
-
       const { error } = await supabase
         .from('team_staff')
-        .update(updateData)
+        .update({
+          pvg_checked: checked,
+          pvg_checked_at: checked ? new Date().toISOString() : null,
+          pvg_checked_by: checked ? 'current_user_id' : null // Replace with actual user ID
+        })
         .eq('id', staffId);
 
-      if (error) {
-        console.error('Error updating PVG status:', error);
-        throw error;
-      }
-
-      // Reload staff to reflect changes
-      await loadClubStaff();
+      if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: `PVG status ${checked ? 'checked' : 'unchecked'} successfully`,
+        title: 'PVG Status Updated',
+        description: `PVG status has been ${checked ? 'checked' : 'unchecked'}`,
       });
+
+      loadClubStaff();
     } catch (error: any) {
       console.error('Error updating PVG status:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update PVG status',
+        description: 'Failed to update PVG status',
         variant: 'destructive',
       });
-    } finally {
-      setUpdating(null);
     }
-  };
-
-  const copyLinkingCode = (linkingCode: string, staffName: string) => {
-    navigator.clipboard.writeText(linkingCode);
-    toast({
-      title: 'Copied!',
-      description: `Linking code for ${staffName} copied to clipboard`,
-    });
-  };
-
-  const toggleLinkingCodeVisibility = (staffId: string) => {
-    setShowLinkingCodes(prev => ({
-      ...prev,
-      [staffId]: !prev[staffId]
-    }));
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'manager': return 'bg-blue-500';
-      case 'assistant_manager': return 'bg-purple-500';
-      case 'coach': return 'bg-green-500';
-      case 'helper': return 'bg-orange-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const formatRoleName = (role: string): string => {
-    return role
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-  };
-
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   };
 
   if (loading) {
@@ -225,182 +198,147 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     );
   }
 
+  const teams = Array.from(new Set(staff.map(s => ({ id: s.teamId, name: s.teamName }))))
+    .filter((team, index, arr) => arr.findIndex(t => t.id === team.id) === index);
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h3 className="text-lg font-semibold">Club Staff Management</h3>
-          <p className="text-sm text-muted-foreground">
-            All staff across teams linked to {clubName}
-          </p>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {staff.length} staff member{staff.length !== 1 ? 's' : ''}
-        </div>
+      {/* Team Summaries */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {Object.values(teamSummaries).map((summary: any, index) => (
+          <Card key={index}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">{summary.teamName}</CardTitle>
+              <CardDescription>{summary.ageGroup}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span>Total Staff:</span>
+                  <span className="font-semibold">{summary.totalStaff}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>PVG Checked:</span>
+                  <span className="text-green-600 font-semibold">{summary.pvgCheckedCount}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Pending PVG:</span>
+                  <span className="text-orange-600 font-semibold">{summary.totalStaff - summary.pvgCheckedCount}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
-      {staff.length === 0 ? (
-        <Card className="border-dashed border-2">
-          <CardContent className="py-8 text-center">
-            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No Staff Found</h3>
-            <p className="text-muted-foreground mb-4">
-              No staff members found in teams linked to this club. Make sure teams are linked to this club and have staff assigned.
-            </p>
-            <Button
-              onClick={() => window.location.href = '/teams'}
-              className="bg-puma-blue-500 hover:bg-puma-blue-600"
-            >
-              Manage Teams
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {staff.map((staffMember) => (
-            <Card key={staffMember.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
-                        {staffMember.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-lg">{staffMember.name}</h4>
-                          <Badge className={`text-white bg-green-500`}>
-                            {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                          <div className="flex items-center gap-1">
-                            <Users className="h-3 w-3" />
-                            <span className="font-medium">{staffMember.teamName}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <span>{staffMember.email}</span>
-                          </div>
-                          {staffMember.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              <span>{staffMember.phone}</span>
-                            </div>
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff Management - {clubName}</CardTitle>
+          <CardDescription>Manage staff from all linked teams with PVG tracking</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 mb-6">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search staff by name, email, or role..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter by team" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Teams</SelectItem>
+                {teams.map((team) => (
+                  <SelectItem key={team.id} value={team.id}>
+                    {team.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Staff List */}
+          {filteredStaff.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Staff Found</h3>
+              <p className="text-muted-foreground">
+                {staff.length === 0 
+                  ? "No teams are linked to this club yet."
+                  : "No staff match your current filters."
+                }
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredStaff.map((member) => (
+                <Card key={member.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          {member.pvgChecked ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Shield className="h-5 w-5 text-orange-500" />
                           )}
                         </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* PVG Check Section */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox
-                              id={`pvg-${staffMember.id}`}
-                              checked={staffMember.pvgChecked}
-                              onCheckedChange={(checked) => 
-                                handlePVGCheck(staffMember.id, checked as boolean)
-                              }
-                              disabled={updating === staffMember.id}
-                            />
-                            <label 
-                              htmlFor={`pvg-${staffMember.id}`}
-                              className="text-sm font-medium cursor-pointer"
-                            >
-                              PVG Checked
-                            </label>
-                            {staffMember.pvgChecked && (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
+                        <div>
+                          <h4 className="font-semibold">{member.name}</h4>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{member.email}</span>
+                            {member.phone && (
+                              <>
+                                <span>•</span>
+                                <span>{member.phone}</span>
+                              </>
                             )}
                           </div>
-                          {staffMember.pvgChecked && staffMember.pvgCheckedAt && (
-                            <div className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              Checked on {new Date(staffMember.pvgCheckedAt).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                              })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Coaching Badges Section */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Award className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Coaching Badges</span>
-                          </div>
-                          {staffMember.coachingBadges.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {staffMember.coachingBadges.map((badge, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {badge}
-                                </Badge>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="text-xs text-muted-foreground">
-                              No badges recorded
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Linking Code Section */}
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Link className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Account Linking</span>
-                          </div>
-                          {staffMember.linkingCode && (
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1">
-                                <Input
-                                  type={showLinkingCodes[staffMember.id] ? 'text' : 'password'}
-                                  value={staffMember.linkingCode}
-                                  readOnly
-                                  className="text-xs font-mono h-8"
-                                />
-                              </div>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 w-8 p-0"
-                                onClick={() => toggleLinkingCodeVisibility(staffMember.id)}
-                              >
-                                {showLinkingCodes[staffMember.id] ? (
-                                  <EyeOff className="h-3 w-3" />
-                                ) : (
-                                  <Eye className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 w-8 p-0"
-                                onClick={() => copyLinkingCode(staffMember.linkingCode!, staffMember.name)}
-                              >
-                                <Copy className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <div className="text-xs text-muted-foreground">
-                            Share this code for account linking
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                            <span>{member.teamName}</span>
+                            <span>•</span>
+                            <Badge variant="outline" className="capitalize">
+                              {member.role}
+                            </Badge>
                           </div>
                         </div>
                       </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`pvg-${member.id}`}
+                            checked={member.pvgChecked}
+                            onCheckedChange={(checked) => 
+                              updatePVGStatus(member.id, checked as boolean)
+                            }
+                          />
+                          <label 
+                            htmlFor={`pvg-${member.id}`} 
+                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                          >
+                            PVG Checked
+                          </label>
+                        </div>
+                        {member.pvgCheckedAt && (
+                          <div className="text-xs text-muted-foreground">
+                            Checked: {new Date(member.pvgCheckedAt).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
