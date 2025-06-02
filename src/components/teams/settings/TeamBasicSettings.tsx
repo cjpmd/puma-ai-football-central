@@ -1,24 +1,19 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Team, GameFormat, SubscriptionType } from '@/types';
+import { Textarea } from '@/components/ui/textarea';
 import { TeamLogoSettings } from './TeamLogoSettings';
-import { supabase } from '@/integrations/supabase/client';
+import { Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-
-interface Club {
-  id: string;
-  name: string;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeamBasicSettingsProps {
   team: Team;
-  onUpdate: (updates: Partial<Team>) => void;
+  onUpdate: (teamData: Partial<Team>) => void;
   onSave: () => void;
   isSaving: boolean;
 }
@@ -29,97 +24,76 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   onSave,
   isSaving
 }) => {
-  const [clubs, setClubs] = useState<Club[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({
+    name: team.name || '',
+    ageGroup: team.ageGroup || '',
+    gameFormat: team.gameFormat || '11v11',
+    seasonStart: team.seasonStart || '',
+    seasonEnd: team.seasonEnd || '',
+    managerName: team.staff?.find(s => s.role === 'Manager')?.name || '',
+    managerEmail: team.staff?.find(s => s.role === 'Manager')?.email || '',
+    managerPhone: team.staff?.find(s => s.role === 'Manager')?.phone || '',
+  });
+
   const { toast } = useToast();
-  const { refreshUserData } = useAuth();
 
-  useEffect(() => {
-    loadClubs();
-  }, []);
-
-  const loadClubs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clubs')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
-      setClubs(data || []);
-    } catch (error: any) {
-      console.error('Error loading clubs:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load clubs',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Update team data immediately for live preview
+    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd'].includes(field)) {
+      onUpdate({ [field]: value });
     }
   };
 
-  const handleClubChange = async (clubId: string) => {
+  const handleSaveBasicSettings = async () => {
     try {
-      const newClubId = clubId === 'independent' ? null : clubId;
+      console.log('Saving basic team settings:', formData);
       
-      console.log('Changing club from', team.clubId, 'to', newClubId);
-      
-      // Update the team's club_id in database immediately
-      const { error } = await supabase
+      // Update the team basic information
+      const { error: teamError } = await supabase
         .from('teams')
-        .update({ club_id: newClubId })
+        .update({
+          name: formData.name,
+          age_group: formData.ageGroup,
+          game_format: formData.gameFormat,
+          season_start: formData.seasonStart,
+          season_end: formData.seasonEnd,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', team.id);
 
-      if (error) throw error;
-
-      // Remove existing club_teams link
-      await supabase
-        .from('club_teams')
-        .delete()
-        .eq('team_id', team.id);
-
-      // If linking to a club, add to club_teams table
-      if (newClubId) {
-        const { error: linkError } = await supabase
-          .from('club_teams')
-          .insert({ club_id: newClubId, team_id: team.id });
-
-        // Ignore error if already exists
-        if (linkError && !linkError.message.includes('duplicate')) {
-          throw linkError;
-        }
+      if (teamError) {
+        console.error('Team update error:', teamError);
+        throw teamError;
       }
 
-      // Update local state
-      onUpdate({ clubId: newClubId });
-      
-      // Refresh user data to get updated teams/clubs
-      await refreshUserData();
-      
+      // Update the team data in parent component
+      onUpdate({
+        name: formData.name,
+        ageGroup: formData.ageGroup,
+        gameFormat: formData.gameFormat as any,
+        seasonStart: formData.seasonStart,
+        seasonEnd: formData.seasonEnd,
+      });
+
       toast({
-        title: 'Club Link Updated',
-        description: newClubId ? 'Team linked to club successfully' : 'Team unlinked from club',
+        title: 'Settings saved',
+        description: 'Team basic settings have been updated successfully.',
       });
     } catch (error: any) {
-      console.error('Error updating club link:', error);
+      console.error('Error saving basic settings:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to update club link',
+        title: 'Error saving settings',
+        description: error.message || 'Failed to save team settings',
         variant: 'destructive',
       });
     }
-  };
-
-  const getClubName = (clubId: string | null) => {
-    if (!clubId) return 'Independent';
-    const club = clubs.find(c => c.id === clubId);
-    return club?.name || 'Unknown Club';
   };
 
   return (
     <div className="space-y-6">
-      {/* Logo Settings */}
+      {/* Team Logo */}
       <TeamLogoSettings team={team} onUpdate={onUpdate} />
 
       {/* Basic Information */}
@@ -127,178 +101,122 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
           <CardDescription>
-            Update your team's basic information and club association
+            Configure your team's basic details and season information.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Team Name</Label>
+              <Label htmlFor="team-name">Team Name</Label>
               <Input
-                id="name"
-                value={team.name}
-                onChange={(e) => onUpdate({ name: e.target.value })}
+                id="team-name"
+                value={formData.name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
                 placeholder="Enter team name"
-                disabled={team.isReadOnly}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="ageGroup">Age Group</Label>
+              <Label htmlFor="age-group">Age Group</Label>
               <Input
-                id="ageGroup"
-                value={team.ageGroup}
-                onChange={(e) => onUpdate({ ageGroup: e.target.value })}
-                placeholder="e.g., U12, U15, Senior"
-                disabled={team.isReadOnly}
+                id="age-group"
+                value={formData.ageGroup}
+                onChange={(e) => handleInputChange('ageGroup', e.target.value)}
+                placeholder="e.g., U16, Senior"
               />
             </div>
           </div>
 
-          {/* Club Association */}
           <div className="space-y-2">
-            <Label htmlFor="club">Club Association</Label>
-            {loading ? (
-              <div className="text-sm text-muted-foreground">Loading clubs...</div>
-            ) : (
-              <Select 
-                value={team.clubId || 'independent'} 
-                onValueChange={handleClubChange}
-                disabled={team.isReadOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a club (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="independent">Independent team (No club)</SelectItem>
-                  {clubs.map((club) => (
-                    <SelectItem key={club.id} value={club.id}>
-                      {club.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            <div className="text-sm text-muted-foreground">
-              Current: <span className="font-medium">{getClubName(team.clubId)}</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Linking to a club allows for shared management and resources.
-            </p>
+            <Label htmlFor="game-format">Game Format</Label>
+            <Select value={formData.gameFormat} onValueChange={(value) => handleInputChange('gameFormat', value)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="11v11">11v11</SelectItem>
+                <SelectItem value="9v9">9v9</SelectItem>
+                <SelectItem value="7v7">7v7</SelectItem>
+                <SelectItem value="5v5">5v5</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="seasonStart">Season Start</Label>
+              <Label htmlFor="season-start">Season Start</Label>
               <Input
-                id="seasonStart"
+                id="season-start"
                 type="date"
-                value={team.seasonStart}
-                onChange={(e) => onUpdate({ seasonStart: e.target.value })}
-                disabled={team.isReadOnly}
+                value={formData.seasonStart}
+                onChange={(e) => handleInputChange('seasonStart', e.target.value)}
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="seasonEnd">Season End</Label>
+              <Label htmlFor="season-end">Season End</Label>
               <Input
-                id="seasonEnd"
+                id="season-end"
                 type="date"
-                value={team.seasonEnd}
-                onChange={(e) => onUpdate({ seasonEnd: e.target.value })}
-                disabled={team.isReadOnly}
+                value={formData.seasonEnd}
+                onChange={(e) => handleInputChange('seasonEnd', e.target.value)}
               />
             </div>
           </div>
 
+          <div className="flex justify-end pt-4">
+            <Button 
+              onClick={handleSaveBasicSettings}
+              disabled={isSaving}
+              className="bg-puma-blue-500 hover:bg-puma-blue-600"
+            >
+              {isSaving ? 'Saving...' : 'Save Basic Settings'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Manager Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Manager Information</CardTitle>
+          <CardDescription>
+            Contact details for the team manager.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="manager-name">Manager Name</Label>
+            <Input
+              id="manager-name"
+              value={formData.managerName}
+              onChange={(e) => handleInputChange('managerName', e.target.value)}
+              placeholder="Enter manager name"
+            />
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="gameFormat">Game Format</Label>
-              <Select 
-                value={team.gameFormat} 
-                onValueChange={(value: GameFormat) => onUpdate({ gameFormat: value })}
-                disabled={team.isReadOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select game format" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="11-a-side">11v11</SelectItem>
-                  <SelectItem value="9-a-side">9v9</SelectItem>
-                  <SelectItem value="7-a-side">7v7</SelectItem>
-                  <SelectItem value="5-a-side">5v5</SelectItem>
-                  <SelectItem value="4-a-side">4v4</SelectItem>
-                  <SelectItem value="3-a-side">3v3</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="manager-email">Manager Email</Label>
+              <Input
+                id="manager-email"
+                type="email"
+                value={formData.managerEmail}
+                onChange={(e) => handleInputChange('managerEmail', e.target.value)}
+                placeholder="manager@example.com"
+              />
             </div>
-
+            
             <div className="space-y-2">
-              <Label htmlFor="subscriptionType">Subscription Type</Label>
-              <Select 
-                value={team.subscriptionType || 'free'} 
-                onValueChange={(value: SubscriptionType) => onUpdate({ subscriptionType: value })}
-                disabled={team.isReadOnly}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select subscription type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                  <SelectItem value="pro">Professional</SelectItem>
-                  <SelectItem value="analytics_plus">Analytics Plus</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label htmlFor="manager-phone">Manager Phone</Label>
+              <Input
+                id="manager-phone"
+                value={formData.managerPhone}
+                onChange={(e) => handleInputChange('managerPhone', e.target.value)}
+                placeholder="Enter phone number"
+              />
             </div>
           </div>
-
-          <div className="space-y-4">
-            <h4 className="font-semibold">Manager Information</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="managerName">Manager Name</Label>
-                <Input
-                  id="managerName"
-                  value={team.managerName || ''}
-                  onChange={(e) => onUpdate({ managerName: e.target.value })}
-                  placeholder="Manager name"
-                  disabled={team.isReadOnly}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="managerEmail">Manager Email</Label>
-                <Input
-                  id="managerEmail"
-                  type="email"
-                  value={team.managerEmail || ''}
-                  onChange={(e) => onUpdate({ managerEmail: e.target.value })}
-                  placeholder="manager@example.com"
-                  disabled={team.isReadOnly}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="managerPhone">Manager Phone</Label>
-                <Input
-                  id="managerPhone"
-                  value={team.managerPhone || ''}
-                  onChange={(e) => onUpdate({ managerPhone: e.target.value })}
-                  placeholder="Phone number"
-                  disabled={team.isReadOnly}
-                />
-              </div>
-            </div>
-          </div>
-
-          {!team.isReadOnly && (
-            <div className="flex justify-end pt-4">
-              <Button onClick={onSave} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>

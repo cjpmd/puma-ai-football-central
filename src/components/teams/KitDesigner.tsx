@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Shirt } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface KitDesign {
   shirtColor: string;
@@ -47,6 +48,11 @@ const colorOptions = [
   { value: '#f97316', label: 'Orange' },
   { value: '#06b6d4', label: 'Cyan' },
   { value: '#84cc16', label: 'Lime' },
+  { value: '#e11d48', label: 'Rose' },
+  { value: '#0ea5e9', label: 'Sky' },
+  { value: '#6366f1', label: 'Indigo' },
+  { value: '#8b5cf6', label: 'Violet' },
+  { value: '#f59e0b', label: 'Amber' },
 ];
 
 export const KitDesigner: React.FC<KitDesignerProps> = ({
@@ -61,6 +67,7 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
   });
 
   const [activeKit, setActiveKit] = useState<keyof KitDesigns>('home');
+  const { toast } = useToast();
 
   const kitTypes = [
     { key: 'home' as const, label: 'Home Kit', color: 'bg-blue-500' },
@@ -76,43 +83,56 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     }));
   };
 
+  const handleSave = () => {
+    onSave(designs);
+    toast({
+      title: 'Kit designs saved',
+      description: 'Your team kit designs have been updated successfully.',
+    });
+  };
+
   const KitPreview = ({ design, size = 'large' }: { design: KitDesign; size?: 'small' | 'large' }) => {
-    const dimensions = size === 'small' ? 'w-12 h-12' : 'w-24 h-24';
+    const dimensions = size === 'small' ? 'w-16 h-20' : 'w-32 h-40';
     
     return (
-      <div className={`${dimensions} relative`}>
-        <svg viewBox="0 0 100 100" className="w-full h-full">
-          {/* Shirt body */}
+      <div className={`${dimensions} relative bg-gray-50 rounded-lg p-2 border`}>
+        <svg viewBox="0 0 120 150" className="w-full h-full">
+          {/* Main shirt with professional outline */}
           <path
-            d="M20 25 L30 20 L35 25 L40 20 L50 22 L60 20 L65 25 L70 20 L80 25 L80 75 L20 75 Z"
+            d="M20 45s3-15 8-20c5-5 15-12 25-15s20-5 25-5 15 2 25 5 20 10 25 15c5 5 8 20 8 20l5 15c2 8 0 15-3 20-2 3-8 5-12 3-3-1-5-8-5-8s-2 25-2 40v35c0 10-5 15-15 15H35c-10 0-15-5-15-15V95c0-15-2-40-2-40s-2 7-5 8c-4 2-10 0-12-3-3-5-5-12-3-20l5-15z"
             fill={design.shirtColor}
-            stroke="#000"
-            strokeWidth="1"
+            stroke="#2a2a2a"
+            strokeWidth="1.5"
+            strokeLinejoin="round"
           />
           
           {/* Stripes if enabled */}
           {design.hasStripes && (
             <>
-              <rect x="25" y="25" width="6" height="50" fill={design.stripeColor} />
-              <rect x="35" y="25" width="6" height="50" fill={design.stripeColor} />
-              <rect x="45" y="25" width="6" height="50" fill={design.stripeColor} />
-              <rect x="55" y="25" width="6" height="50" fill={design.stripeColor} />
-              <rect x="65" y="25" width="6" height="50" fill={design.stripeColor} />
+              <rect x="32" y="45" width="6" height="45" fill={design.stripeColor} />
+              <rect x="42" y="45" width="6" height="45" fill={design.stripeColor} />
+              <rect x="52" y="45" width="6" height="45" fill={design.stripeColor} />
+              <rect x="62" y="45" width="6" height="45" fill={design.stripeColor} />
+              <rect x="72" y="45" width="6" height="45" fill={design.stripeColor} />
+              <rect x="82" y="45" width="6" height="45" fill={design.stripeColor} />
             </>
           )}
           
           {/* Sleeves */}
-          <ellipse cx="15" cy="35" rx="8" ry="15" fill={design.sleeveColor} stroke="#000" strokeWidth="1" />
-          <ellipse cx="85" cy="35" rx="8" ry="15" fill={design.sleeveColor} stroke="#000" strokeWidth="1" />
+          <ellipse cx="15" cy="55" rx="10" ry="18" fill={design.sleeveColor} stroke="#2a2a2a" strokeWidth="1.5" />
+          <ellipse cx="105" cy="55" rx="10" ry="18" fill={design.sleeveColor} stroke="#2a2a2a" strokeWidth="1.5" />
+          
+          {/* Collar/Neck */}
+          <ellipse cx="60" cy="45" rx="8" ry="5" fill="none" stroke="#2a2a2a" strokeWidth="1.5" />
           
           {/* Shorts */}
-          <rect x="25" y="75" width="50" height="20" fill={design.shortsColor} stroke="#000" strokeWidth="1" />
+          <rect x="35" y="90" width="50" height="25" rx="3" fill={design.shortsColor} stroke="#2a2a2a" strokeWidth="1.5" />
           
           {/* Socks (only show in large view) */}
           {size === 'large' && (
             <>
-              <rect x="28" y="95" width="8" height="5" fill={design.socksColor} />
-              <rect x="64" y="95" width="8" height="5" fill={design.socksColor} />
+              <rect x="40" y="115" width="12" height="25" rx="2" fill={design.socksColor} stroke="#2a2a2a" strokeWidth="1" />
+              <rect x="68" y="115" width="12" height="25" rx="2" fill={design.socksColor} stroke="#2a2a2a" strokeWidth="1" />
             </>
           )}
         </svg>
@@ -130,12 +150,12 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
     label: string;
   }) => (
     <div className="space-y-2">
-      <Label>{label}</Label>
+      <Label className="text-sm font-medium">{label}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger className="h-10">
           <div className="flex items-center gap-2">
             <div 
-              className="w-4 h-4 rounded border"
+              className="w-5 h-5 rounded border-2 border-gray-300"
               style={{ backgroundColor: value }}
             />
             <SelectValue />
@@ -178,99 +198,111 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Kit Designer */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shirt className="h-5 w-5" />
-              Design {kitTypes.find(k => k.key === activeKit)?.label}
-            </CardTitle>
-            <CardDescription>
-              Customize colors and patterns for your kit
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <ColorSelector
-                value={activeDesign.shirtColor}
-                onChange={(color) => updateKitDesign(activeKit, { shirtColor: color })}
-                label="Shirt Color"
-              />
-              
-              <ColorSelector
-                value={activeDesign.sleeveColor}
-                onChange={(color) => updateKitDesign(activeKit, { sleeveColor: color })}
-                label="Sleeve Color"
-              />
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Kit Designer Controls */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shirt className="h-5 w-5" />
+                Design {kitTypes.find(k => k.key === activeKit)?.label}
+              </CardTitle>
+              <CardDescription>
+                Customize colors and patterns for your kit
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ColorSelector
+                  value={activeDesign.shirtColor}
+                  onChange={(color) => updateKitDesign(activeKit, { shirtColor: color })}
+                  label="Shirt Color"
+                />
+                
+                <ColorSelector
+                  value={activeDesign.sleeveColor}
+                  onChange={(color) => updateKitDesign(activeKit, { sleeveColor: color })}
+                  label="Sleeve Color"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label>Shirt Style</Label>
-              <Select 
-                value={activeDesign.hasStripes ? "stripes" : "plain"} 
-                onValueChange={(value) => updateKitDesign(activeKit, { hasStripes: value === "stripes" })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="plain">Plain</SelectItem>
-                  <SelectItem value="stripes">Vertical Stripes</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Shirt Style</Label>
+                <Select 
+                  value={activeDesign.hasStripes ? "stripes" : "plain"} 
+                  onValueChange={(value) => updateKitDesign(activeKit, { hasStripes: value === "stripes" })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="plain">Plain</SelectItem>
+                    <SelectItem value="stripes">Vertical Stripes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {activeDesign.hasStripes && (
-              <ColorSelector
-                value={activeDesign.stripeColor}
-                onChange={(color) => updateKitDesign(activeKit, { stripeColor: color })}
-                label="Stripe Color"
-              />
-            )}
+              {activeDesign.hasStripes && (
+                <ColorSelector
+                  value={activeDesign.stripeColor}
+                  onChange={(color) => updateKitDesign(activeKit, { stripeColor: color })}
+                  label="Stripe Color"
+                />
+              )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <ColorSelector
-                value={activeDesign.shortsColor}
-                onChange={(color) => updateKitDesign(activeKit, { shortsColor: color })}
-                label="Shorts Color"
-              />
-              
-              <ColorSelector
-                value={activeDesign.socksColor}
-                onChange={(color) => updateKitDesign(activeKit, { socksColor: color })}
-                label="Socks Color"
-              />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ColorSelector
+                  value={activeDesign.shortsColor}
+                  onChange={(color) => updateKitDesign(activeKit, { shortsColor: color })}
+                  label="Shorts Color"
+                />
+                
+                <ColorSelector
+                  value={activeDesign.socksColor}
+                  onChange={(color) => updateKitDesign(activeKit, { socksColor: color })}
+                  label="Socks Color"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Kit Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Kit Preview</CardTitle>
-            <CardDescription>
-              Live preview of your kit design
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center">
-            <KitPreview design={activeDesign} />
-          </CardContent>
-        </Card>
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Live Preview</CardTitle>
+              <CardDescription>
+                {kitTypes.find(k => k.key === activeKit)?.label}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center py-8">
+              <KitPreview design={activeDesign} />
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
-      {/* All Kits Preview */}
+      {/* All Kits Overview */}
       <Card>
         <CardHeader>
-          <CardTitle>All Kits Overview</CardTitle>
+          <CardTitle>Complete Kit Collection</CardTitle>
           <CardDescription>
-            Preview of all your team's kit designs
+            Overview of all your team's kit designs
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {kitTypes.map((kit) => (
-              <div key={kit.key} className="text-center space-y-2">
+              <div 
+                key={kit.key} 
+                className={`text-center space-y-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  activeKit === kit.key 
+                    ? 'border-blue-500 bg-blue-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveKit(kit.key)}
+              >
                 <KitPreview design={designs[kit.key]} size="small" />
                 <p className="text-sm font-medium">{kit.label}</p>
               </div>
@@ -282,8 +314,9 @@ export const KitDesigner: React.FC<KitDesignerProps> = ({
       {/* Save Button */}
       <div className="flex justify-end">
         <Button 
-          onClick={() => onSave(designs)}
-          className="bg-puma-blue-500 hover:bg-puma-blue-600"
+          onClick={handleSave}
+          className="bg-puma-blue-500 hover:bg-puma-blue-600 px-8"
+          size="lg"
         >
           Save Kit Designs
         </Button>
