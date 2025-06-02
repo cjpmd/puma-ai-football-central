@@ -1,4 +1,3 @@
-
 import { SubscriptionType, GameFormat } from './index';
 
 export type PlayerAttributeGroup = "goalkeeping" | "mental" | "physical" | "technical";
@@ -81,6 +80,12 @@ export interface Team {
     training: string;
     goalkeeper: string;
   };
+  kitDesigns?: {
+    home: KitDesign;
+    away: KitDesign;
+    training: KitDesign;
+    goalkeeper: KitDesign;
+  };
   logoUrl?: string | null;
   playerAttributes?: Record<PlayerAttributeGroup, PlayerAttribute[]>;
   staff?: TeamStaff[];
@@ -95,4 +100,13 @@ export interface Team {
   isReadOnly?: boolean; // For linked teams
   createdAt?: string;
   updatedAt?: string;
+}
+
+interface KitDesign {
+  shirtColor: string;
+  sleeveColor: string;
+  hasStripes: boolean;
+  stripeColor: string;
+  shortsColor: string;
+  socksColor: string;
 }
