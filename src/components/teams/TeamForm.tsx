@@ -29,7 +29,11 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const submitData = {
+      ...formData,
+      clubId: formData.clubId === 'independent' ? null : formData.clubId
+    };
+    onSubmit(submitData);
   };
 
   const handleLogoChange = (logoUrl: string | null) => {
@@ -110,12 +114,15 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
           {/* Club Selection */}
           <div className="space-y-2">
             <Label htmlFor="club">Club</Label>
-            <Select value={formData.clubId || ''} onValueChange={(value) => setFormData(prev => ({ ...prev, clubId: value || null }))}>
+            <Select 
+              value={formData.clubId || 'independent'} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, clubId: value === 'independent' ? null : value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select a club (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Independent team (No club)</SelectItem>
+                <SelectItem value="independent">Independent team (No club)</SelectItem>
                 {clubs.map((club) => (
                   <SelectItem key={club.id} value={club.id}>
                     {club.name}

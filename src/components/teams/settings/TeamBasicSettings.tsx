@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,7 +58,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   const handleClubChange = async (clubId: string) => {
     try {
-      const newClubId = clubId || null;
+      const newClubId = clubId === 'independent' ? null : clubId;
       
       // Update the team's club_id in database
       const { error } = await supabase
@@ -153,7 +152,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
               <div className="text-sm text-muted-foreground">Loading clubs...</div>
             ) : (
               <Select 
-                value={team.clubId || ''} 
+                value={team.clubId || 'independent'} 
                 onValueChange={handleClubChange}
                 disabled={team.isReadOnly}
               >
@@ -161,7 +160,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                   <SelectValue placeholder="Select a club (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Independent team (No club)</SelectItem>
+                  <SelectItem value="independent">Independent team (No club)</SelectItem>
                   {clubs.map((club) => (
                     <SelectItem key={club.id} value={club.id}>
                       {club.name}
