@@ -1,24 +1,29 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { Building, PlusCircle, Settings, UserPlus, Eye, MapPin, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { ClubForm } from '@/components/clubs/ClubForm';
 import { ClubDetailsModal } from '@/components/clubs/ClubDetailsModal';
-import { Club } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Badge } from '@/components/ui/badge';
+import { Club } from '@/types/club';
+import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
+
+interface ClubWithReadOnly extends Club {
+  isReadOnly?: boolean;
+}
 
 export const ClubManagement = () => {
   const { clubs, refreshUserData } = useAuth();
   const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
-  const [selectedClub, setSelectedClub] = useState<Club | null>(null);
+  const [selectedClub, setSelectedClub] = useState<ClubWithReadOnly | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [detailsClub, setDetailsClub] = useState<Club | null>(null);
+  const [detailsClub, setDetailsClub] = useState<ClubWithReadOnly | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,13 +57,16 @@ export const ClubManagement = () => {
         return;
       }
 
-      const linkedClubsData = userClubs?.map(uc => ({
-        ...uc.clubs,
-        userRole: uc.role
-      })).filter(club => club.id) || [];
+      const linkedClubsData = userClubs?.map(uc => {
+        if (!uc.clubs) return null;
+        return {
+          ...uc.clubs,
+          userRole: uc.role
+        };
+      }).filter(club => club?.id) || [];
 
       console.log('Loaded linked clubs:', linkedClubsData);
-      setLinkedClubs(linkedClubsData);
+      setLinkedClubs(linkedClubsData as Club[]);
     } catch (error) {
       console.error('Error in loadLinkedClubs:', error);
     }
@@ -66,48 +74,30 @@ export const ClubManagement = () => {
 
   const handleCreateClub = async (clubData: Partial<Club>) => {
     try {
-      // Insert club into the database - serial number will be auto-generated
-      const { data: clubResult, error: clubError } = await supabase
-        .from('clubs')
-        .insert([
-          {
-            name: clubData.name,
-            reference_number: clubData.referenceNumber,
-            subscription_type: clubData.subscriptionType || 'free'
-          }
-        ])
-        .select('id')
-        .single();
+      console.log('Creating club with data:', clubData);
+      
+      const { data, error } = await supabase.from('clubs').insert([{
+        name: clubData.name,
+        reference_number: clubData.referenceNumber,
+        subscription_type: clubData.subscriptionType || 'free',
+        logo_url: clubData.logoUrl
+      }]).select().single();
 
-      if (clubError) {
-        throw clubError;
-      }
+      if (error) throw error;
 
-      // Add the current user as club admin via user_clubs table
-      const { error: userClubError } = await supabase
-        .from('user_clubs')
-        .insert([
-          {
-            user_id: (await supabase.auth.getUser()).data.user?.id,
-            club_id: clubResult.id,
-            role: 'club_admin'
-          }
-        ]);
-
-      if (userClubError) {
-        throw userClubError;
-      }
-
+      console.log('Club created successfully:', data);
       await refreshUserData();
       setIsClubDialogOpen(false);
+      
       toast({
-        title: 'Club Created Successfully',
-        description: `${clubData.name} has been created with a unique serial number and you've been assigned as admin.`,
+        title: 'Club created',
+        description: `${clubData.name} has been created successfully.`,
       });
     } catch (error: any) {
+      console.error('Error creating club:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to create club',
+        title: 'Error creating club',
+        description: error.message,
         variant: 'destructive',
       });
     }
@@ -115,45 +105,48 @@ export const ClubManagement = () => {
 
   const handleUpdateClub = async (clubData: Partial<Club>) => {
     if (!selectedClub?.id) return;
-    
+
     try {
+      console.log('Updating club with data:', clubData);
+      
       const { error } = await supabase
         .from('clubs')
         .update({
           name: clubData.name,
           reference_number: clubData.referenceNumber,
-          subscription_type: clubData.subscriptionType
+          subscription_type: clubData.subscriptionType,
+          logo_url: clubData.logoUrl
         })
         .eq('id', selectedClub.id);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
 
+      console.log('Club updated successfully');
       await refreshUserData();
       setIsClubDialogOpen(false);
-      setSelectedClub(null);
+      
       toast({
-        title: 'Club Updated',
-        description: `${clubData.name} has been successfully updated.`,
+        title: 'Club updated',
+        description: `${clubData.name} has been updated successfully.`,
       });
     } catch (error: any) {
+      console.error('Error updating club:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update club',
+        title: 'Error updating club',
+        description: error.message,
         variant: 'destructive',
       });
     }
   };
 
-  const openEditClubDialog = (club: Club) => {
-    setSelectedClub(club);
-    setIsClubDialogOpen(true);
-  };
-
   const openDetailsModal = (club: Club, isReadOnly = false) => {
     setDetailsClub({ ...club, isReadOnly });
     setIsDetailsModalOpen(true);
+  };
+
+  const openEditClubDialog = (club: Club) => {
+    setSelectedClub(club);
+    setIsClubDialogOpen(true);
   };
 
   const ClubCard = ({ club, isLinked = false }: { club: Club; isLinked?: boolean }) => (

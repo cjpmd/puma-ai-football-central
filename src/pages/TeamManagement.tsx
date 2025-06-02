@@ -1,29 +1,41 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { TeamForm } from '@/components/teams/TeamForm';
 import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
 import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
-import { Team, Club } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Team } from '@/types/team';
+import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 
-// Type for the minimal club data we fetch
-type ClubData = {
+interface ClubData {
   id: string;
   name: string;
-};
+  referenceNumber?: string;
+  subscriptionType?: string;
+  serialNumber?: string;
+  teams?: any[];
+  logoUrl?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface TeamWithReadOnly extends Team {
+  isReadOnly?: boolean;
+}
 
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
   const [allClubs, setAllClubs] = useState<ClubData[]>([]);
   const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<TeamWithReadOnly | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const { toast } = useToast();
@@ -36,16 +48,14 @@ const TeamManagement = () => {
   const loadAllClubs = async () => {
     try {
       console.log('Loading all clubs...');
-      const { data, error } = await supabase
-        .from('clubs')
-        .select('id, name');
-
+      const { data, error } = await supabase.from('clubs').select('*');
+      
       if (error) {
         console.error('Error loading clubs:', error);
         return;
       }
 
-      console.log('Loaded all clubs:', data);
+      console.log('Loaded clubs:', data);
       setAllClubs(data || []);
     } catch (error) {
       console.error('Error in loadAllClubs:', error);
@@ -63,15 +73,34 @@ const TeamManagement = () => {
         .from('teams')
         .select('*')
         .in('club_id', clubIds)
-        .neq('id', teams?.map(t => t.id) || []); // Exclude teams user already manages
+        .not('id', 'in', `(${teams?.map(t => t.id).join(',') || ''})`);
 
       if (error) {
         console.error('Error loading linked teams:', error);
         return;
       }
 
-      console.log('Loaded linked teams:', data);
-      setLinkedTeams(data || []);
+      console.log('Loaded linked teams raw:', data);
+      
+      // Convert database format to Team interface
+      const convertedTeams: Team[] = (data || []).map(team => ({
+        id: team.id,
+        name: team.name,
+        ageGroup: team.age_group,
+        seasonStart: team.season_start,
+        seasonEnd: team.season_end,
+        clubId: team.club_id,
+        gameFormat: team.game_format,
+        subscriptionType: team.subscription_type,
+        performanceCategories: team.performance_categories || [],
+        kitIcons: team.kit_icons || { home: '', away: '', training: '', goalkeeper: '' },
+        logoUrl: team.logo_url,
+        created_at: team.created_at,
+        updated_at: team.updated_at
+      }));
+
+      console.log('Converted linked teams:', convertedTeams);
+      setLinkedTeams(convertedTeams);
     } catch (error) {
       console.error('Error in loadLinkedTeams:', error);
     }
@@ -80,69 +109,35 @@ const TeamManagement = () => {
   const handleCreateTeam = async (teamData: Partial<Team>) => {
     try {
       console.log('Creating team with data:', teamData);
-      // Insert team into the database
-      const { data: teamResult, error: teamError } = await supabase
-        .from('teams')
-        .insert([
-          {
-            name: teamData.name,
-            age_group: teamData.ageGroup,
-            season_start: teamData.seasonStart,
-            season_end: teamData.seasonEnd,
-            club_id: teamData.clubId,
-            game_format: teamData.gameFormat,
-            subscription_type: teamData.subscriptionType || 'free',
-            performance_categories: teamData.performanceCategories || [],
-            kit_icons: teamData.kitIcons || {
-              home: '',
-              away: '',
-              training: '',
-              goalkeeper: ''
-            }
-          }
-        ])
-        .select('id')
-        .single();
+      
+      const { data, error } = await supabase.from('teams').insert([{
+        name: teamData.name,
+        age_group: teamData.ageGroup,
+        season_start: teamData.seasonStart,
+        season_end: teamData.seasonEnd,
+        club_id: teamData.clubId || null,
+        game_format: teamData.gameFormat,
+        subscription_type: teamData.subscriptionType || 'free',
+        performance_categories: teamData.performanceCategories || [],
+        kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
+        logo_url: teamData.logoUrl
+      }]).select().single();
 
-      if (teamError) {
-        console.error('Team creation error:', teamError);
-        throw teamError;
-      }
+      if (error) throw error;
 
-      console.log('Team created successfully:', teamResult);
-
-      // Add the current user as team manager
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData.user) {
-        throw new Error('Unable to get current user');
-      }
-
-      const { error: userTeamError } = await supabase
-        .from('user_teams')
-        .insert([
-          {
-            user_id: userData.user.id,
-            team_id: teamResult.id,
-            role: 'team_manager'
-          }
-        ]);
-
-      if (userTeamError) {
-        console.error('User team assignment error:', userTeamError);
-        throw userTeamError;
-      }
-
+      console.log('Team created successfully:', data);
       await refreshUserData();
       setIsTeamDialogOpen(false);
+      
       toast({
-        title: 'Team Created',
-        description: `${teamData.name} has been successfully created.`,
+        title: 'Team created',
+        description: `${teamData.name} has been created successfully.`,
       });
     } catch (error: any) {
-      console.error('Team creation failed:', error);
+      console.error('Error creating team:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to create team',
+        title: 'Error creating team',
+        description: error.message,
         variant: 'destructive',
       });
     }
@@ -150,9 +145,10 @@ const TeamManagement = () => {
 
   const handleUpdateTeam = async (teamData: Partial<Team>) => {
     if (!selectedTeam?.id) return;
-    
+
     try {
       console.log('Updating team with data:', teamData);
+      
       const { error } = await supabase
         .from('teams')
         .update({
@@ -160,36 +156,32 @@ const TeamManagement = () => {
           age_group: teamData.ageGroup,
           season_start: teamData.seasonStart,
           season_end: teamData.seasonEnd,
-          club_id: teamData.clubId,
+          club_id: teamData.clubId || null,
           game_format: teamData.gameFormat,
           subscription_type: teamData.subscriptionType,
-          performance_categories: teamData.performanceCategories || [],
-          kit_icons: teamData.kitIcons || {
-            home: '',
-            away: '',
-            training: '',
-            goalkeeper: ''
-          }
+          performance_categories: teamData.performanceCategories,
+          kit_icons: teamData.kitIcons,
+          logo_url: teamData.logoUrl
         })
         .eq('id', selectedTeam.id);
 
-      if (error) {
-        console.error('Team update error:', error);
-        throw error;
-      }
+      if (error) throw error;
 
+      console.log('Team updated successfully');
       await refreshUserData();
       setIsTeamDialogOpen(false);
-      setSelectedTeam(null);
+      setIsSettingsModalOpen(false);
+      setIsStaffModalOpen(false);
+      
       toast({
-        title: 'Team Updated',
-        description: `${teamData.name} has been successfully updated.`,
+        title: 'Team updated',
+        description: `${teamData.name} has been updated successfully.`,
       });
     } catch (error: any) {
-      console.error('Team update failed:', error);
+      console.error('Error updating team:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update team',
+        title: 'Error updating team',
+        description: error.message,
         variant: 'destructive',
       });
     }
@@ -208,31 +200,14 @@ const TeamManagement = () => {
   };
 
   const openEditTeamDialog = (team: Team) => {
-    console.log('Opening edit dialog for team:', team);
     setSelectedTeam(team);
     setIsTeamDialogOpen(true);
   };
 
   const getClubName = (clubId?: string) => {
-    console.log('Getting club name for clubId:', clubId, 'Available clubs:', clubs, 'All clubs:', allClubs);
     if (!clubId) return 'Independent';
-    
-    // Try from auth context clubs first
-    const authClub = clubs?.find(club => club.id === clubId);
-    if (authClub) {
-      console.log('Found club name from auth context:', authClub.name, 'for clubId:', clubId);
-      return authClub.name;
-    }
-    
-    // If not found, try from all clubs
-    const allClub = allClubs.find(club => club.id === clubId);
-    if (allClub) {
-      console.log('Found club name from all clubs:', allClub.name, 'for clubId:', clubId);
-      return allClub.name;
-    }
-    
-    console.log('No club found for clubId:', clubId, 'returning Independent');
-    return 'Independent';
+    const club = allClubs.find(c => c.id === clubId);
+    return club?.name || 'Unknown Club';
   };
 
   const TeamCard = ({ team, isLinked = false }: { team: Team; isLinked?: boolean }) => (

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Club } from '@/types';
+import { Club } from '@/types/club';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface ClubFormProps {
@@ -18,7 +18,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
   const [formData, setFormData] = useState({
     name: club?.name || '',
     referenceNumber: club?.referenceNumber || '',
-    subscriptionType: club?.subscriptionType || 'free',
+    subscriptionType: club?.subscriptionType || 'free' as const,
     logoUrl: club?.logoUrl || null
   });
 
@@ -77,7 +77,12 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
           {/* Subscription Type */}
           <div className="space-y-2">
             <Label htmlFor="subscriptionType">Subscription Type</Label>
-            <Select value={formData.subscriptionType} onValueChange={(value) => setFormData(prev => ({ ...prev, subscriptionType: value }))}>
+            <Select 
+              value={formData.subscriptionType} 
+              onValueChange={(value: 'free' | 'premium' | 'pro') => 
+                setFormData(prev => ({ ...prev, subscriptionType: value }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select subscription type" />
               </SelectTrigger>

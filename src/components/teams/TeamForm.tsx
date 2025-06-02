@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Team, Club } from '@/types';
+import { Team } from '@/types/team';
+import { Club } from '@/types/club';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 
 interface TeamFormProps {
@@ -22,8 +23,8 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
     seasonStart: team?.seasonStart || '',
     seasonEnd: team?.seasonEnd || '',
     clubId: team?.clubId || '',
-    gameFormat: team?.gameFormat || '',
-    subscriptionType: team?.subscriptionType || 'free',
+    gameFormat: team?.gameFormat || '' as const,
+    subscriptionType: team?.subscriptionType || 'free' as const,
     logoUrl: team?.logoUrl || null
   });
 
@@ -128,15 +129,18 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
           {/* Game Format */}
           <div className="space-y-2">
             <Label htmlFor="gameFormat">Game Format</Label>
-            <Select value={formData.gameFormat} onValueChange={(value) => setFormData(prev => ({ ...prev, gameFormat: value }))}>
+            <Select 
+              value={formData.gameFormat} 
+              onValueChange={(value: string) => setFormData(prev => ({ ...prev, gameFormat: value }))}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select game format" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="11v11">11v11</SelectItem>
-                <SelectItem value="9v9">9v9</SelectItem>
-                <SelectItem value="7v7">7v7</SelectItem>
-                <SelectItem value="5v5">5v5</SelectItem>
+                <SelectItem value="11-a-side">11v11</SelectItem>
+                <SelectItem value="9-a-side">9v9</SelectItem>
+                <SelectItem value="7-a-side">7v7</SelectItem>
+                <SelectItem value="5-a-side">5v5</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -144,7 +148,12 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
           {/* Subscription Type */}
           <div className="space-y-2">
             <Label htmlFor="subscriptionType">Subscription Type</Label>
-            <Select value={formData.subscriptionType} onValueChange={(value) => setFormData(prev => ({ ...prev, subscriptionType: value }))}>
+            <Select 
+              value={formData.subscriptionType} 
+              onValueChange={(value: 'free' | 'premium' | 'pro') => 
+                setFormData(prev => ({ ...prev, subscriptionType: value }))
+              }
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select subscription type" />
               </SelectTrigger>
