@@ -3,47 +3,36 @@ import { useState } from "react";
 import { UserSignupModal } from "../modals/UserSignupModal";
 import { UserLoginModal } from "../modals/UserLoginModal";
 import { useNavigate } from "react-router-dom";
-
 export function Hero() {
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const navigate = useNavigate();
-
   const handleSignup = () => {
     setShowSignupModal(false);
     navigate("/dashboard");
   };
-
   const handleLogin = () => {
     setShowLoginModal(false);
     navigate("/dashboard");
   };
-
   const switchToLogin = () => {
     setShowSignupModal(false);
     setShowLoginModal(true);
   };
-
   const switchToSignup = () => {
     setShowLoginModal(false);
     setShowSignupModal(true);
   };
-
-  return (
-    <div className="relative overflow-hidden bg-white">
+  return <div className="relative overflow-hidden bg-white">
       <div className="absolute inset-0 bg-gradient-to-br from-puma-blue-50 to-transparent" />
       
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Logo Section */}
         <div className="pt-8 pb-4 text-center">
-          <img 
-            src="/lovable-uploads/52998c71-592a-493d-bab1-7a1a5726080e.png" 
-            alt="Puma-AI Logo" 
-            className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 mx-auto mb-4"
-          />
+          <img src="/lovable-uploads/52998c71-592a-493d-bab1-7a1a5726080e.png" alt="Puma-AI Logo" className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 mx-auto mb-4" />
           <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-gray-900">
             <span className="block">Welcome to</span>
-            <span className="block text-puma-blue-500">Puma-AI</span>
+            <span className="block text-puma-blue-500">puma-ai</span>
           </h1>
         </div>
 
@@ -52,23 +41,13 @@ export function Hero() {
             <span className="block">Elevate your</span>
             <span className="block text-puma-blue-500">football management</span>
           </h2>
-          <p className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-gray-600 px-4">
-            Puma-AI is the comprehensive platform for managing football teams and clubs. 
-            Track player development, organize fixtures, and analyze performance—all in one place.
-          </p>
+          <p className="mx-auto mt-6 max-w-2xl text-base sm:text-lg text-gray-600 px-4">puma-ai is the comprehensive platform for managing football teams and clubs. Track player development, organise fixtures, and analyse performance—all in one place.</p>
           <div className="mx-auto mt-10 max-w-xl px-4">
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Button 
-                onClick={() => setShowSignupModal(true)}
-                className="h-12 px-8 bg-puma-blue-500 hover:bg-puma-blue-600 text-base w-full sm:w-auto"
-              >
+              <Button onClick={() => setShowSignupModal(true)} className="h-12 px-8 bg-puma-blue-500 hover:bg-puma-blue-600 text-base w-full sm:w-auto">
                 Get started
               </Button>
-              <Button 
-                onClick={() => setShowLoginModal(true)}
-                variant="outline" 
-                className="h-12 px-8 text-base border-puma-blue-500 text-puma-blue-500 hover:bg-puma-blue-50 w-full sm:w-auto"
-              >
+              <Button onClick={() => setShowLoginModal(true)} variant="outline" className="h-12 px-8 text-base border-puma-blue-500 text-puma-blue-500 hover:bg-puma-blue-50 w-full sm:w-auto">
                 Sign in
               </Button>
             </div>
@@ -138,10 +117,7 @@ export function Hero() {
               Join thousands of clubs and teams already using Puma-AI to streamline their operations and improve player development.
             </p>
             <div className="mt-8 sm:mt-10">
-              <Button 
-                onClick={() => setShowSignupModal(true)}
-                className="h-12 px-8 bg-puma-green-500 hover:bg-puma-green-600 text-base w-full sm:w-auto"
-              >
+              <Button onClick={() => setShowSignupModal(true)} className="h-12 px-8 bg-puma-green-500 hover:bg-puma-green-600 text-base w-full sm:w-auto">
                 Start your free trial
               </Button>
             </div>
@@ -149,19 +125,8 @@ export function Hero() {
         </div>
       </div>
 
-      <UserSignupModal
-        isOpen={showSignupModal}
-        onClose={() => setShowSignupModal(false)}
-        onSignup={handleSignup}
-        onSwitchToLogin={switchToLogin}
-      />
+      <UserSignupModal isOpen={showSignupModal} onClose={() => setShowSignupModal(false)} onSignup={handleSignup} onSwitchToLogin={switchToLogin} />
 
-      <UserLoginModal
-        isOpen={showLoginModal}
-        onClose={() => setShowLoginModal(false)}
-        onLogin={handleLogin}
-        onSwitchToSignup={switchToSignup}
-      />
-    </div>
-  );
+      <UserLoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} onSwitchToSignup={switchToSignup} />
+    </div>;
 }
