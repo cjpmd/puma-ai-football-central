@@ -13,6 +13,7 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
   const [logoUrl, setLogoUrl] = useState(team.logoUrl || null);
 
   const handleLogoChange = (newLogoUrl: string | null) => {
+    console.log('Logo changed to:', newLogoUrl);
     setLogoUrl(newLogoUrl);
     onUpdate({ logoUrl: newLogoUrl });
   };
@@ -22,7 +23,7 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
       <CardHeader>
         <CardTitle>Team Logo</CardTitle>
         <CardDescription>
-          Upload and manage your team's logo
+          Upload and manage your team's logo. This will appear next to your team name and in the header.
         </CardDescription>
       </CardHeader>
       <CardContent>

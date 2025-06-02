@@ -65,7 +65,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Changing club from', team.clubId, 'to', newClubId);
       
-      // Update the team's club_id in database
+      // Update the team's club_id in database immediately
       const { error } = await supabase
         .from('teams')
         .update({ club_id: newClubId })

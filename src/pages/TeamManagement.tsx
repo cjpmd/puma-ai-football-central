@@ -270,6 +270,13 @@ const TeamManagement = () => {
                 src={team.logoUrl} 
                 alt={`${team.name} logo`}
                 className="w-7 h-7 object-contain rounded"
+                onError={(e) => {
+                  console.log('Logo failed to load:', team.logoUrl);
+                  e.currentTarget.style.display = 'none';
+                }}
+                onLoad={() => {
+                  console.log('Logo loaded successfully:', team.logoUrl);
+                }}
               />
             ) : (
               <Users className="h-5 w-5 text-muted-foreground" />

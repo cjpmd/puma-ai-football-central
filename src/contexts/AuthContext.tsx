@@ -10,7 +10,8 @@ interface AuthContextType {
   profile: Profile | null;
   teams: Team[];
   clubs: Club[];
-  isLoading: boolean;
+  currentTeam: Team | null;
+  loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -27,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -71,7 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             // Always set loading to false after processing auth state change
             if (mounted) {
               console.log('Auth state processed, setting loading to false');
-              setIsLoading(false);
+              setLoading(false);
             }
           }
         });
@@ -102,13 +103,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }).finally(() => {
             if (mounted) {
               console.log('Initial data load complete, setting loading to false');
-              setIsLoading(false);
+              setLoading(false);
             }
           });
         } else {
           console.log('No existing session found');
           if (mounted) {
-            setIsLoading(false);
+            setLoading(false);
           }
         }
 
@@ -129,16 +130,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             description: 'Failed to initialize authentication. Please refresh the page.',
             variant: 'destructive',
           });
-          setIsLoading(false);
+          setLoading(false);
         }
       }
     };
 
     // Set a fallback timeout to ensure loading never gets stuck
     initializationTimeout = setTimeout(() => {
-      if (mounted && isLoading) {
+      if (mounted && loading) {
         console.warn('Auth initialization timeout, forcing loading to false');
-        setIsLoading(false);
+        setLoading(false);
       }
     }, 10000); // 10 second timeout
 
@@ -474,7 +475,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     teams,
     clubs,
-    isLoading,
+    currentTeam: teams && teams.length > 0 ? teams[0] : null, // Use first team as current team
+    loading,
     login,
     logout,
     signIn,
