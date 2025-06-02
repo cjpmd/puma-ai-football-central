@@ -217,7 +217,7 @@ export const ClubAnalytics: React.FC<ClubAnalyticsProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Age Groups</SelectItem>
-                {uniqueAgeGroups.map((ageGroup) => (
+                {uniqueAgeGroups.map((ageGroup: string) => (
                   <SelectItem key={ageGroup} value={ageGroup}>
                     {ageGroup}
                   </SelectItem>
@@ -315,7 +315,7 @@ export const ClubAnalytics: React.FC<ClubAnalyticsProps> = ({
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ ageGroup, count }) => `${ageGroup}: ${count}`}
+                  label={({ ageGroup, count }: { ageGroup: string; count: number }) => `${ageGroup}: ${count}`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="count"
@@ -340,7 +340,7 @@ export const ClubAnalytics: React.FC<ClubAnalyticsProps> = ({
         <CardContent>
           <div className="space-y-4">
             {analyticsData.teamStats.map((team: any, index: number) => (
-              <Card key={index} className="p-4">
+              <Card key={`team-${index}`} className="p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-semibold">{team.name}</h4>
                   <Badge variant="outline">{team.ageGroup}</Badge>

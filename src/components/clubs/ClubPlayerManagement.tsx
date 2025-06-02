@@ -89,12 +89,24 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
       const playersWithTeams = playersData?.map(player => {
         const teamData = clubTeams.find(ct => ct.team_id === player.team_id)?.teams;
         return {
-          ...player,
-          teamName: teamData?.name || 'Unknown Team',
-          ageGroup: teamData?.age_group || 'Unknown',
+          id: player.id,
+          name: player.name,
           dateOfBirth: player.date_of_birth,
           squadNumber: player.squad_number,
-          teamId: player.team_id
+          type: player.type,
+          status: player.status,
+          teamId: player.team_id,
+          teamName: teamData?.name || 'Unknown Team',
+          ageGroup: teamData?.age_group || 'Unknown',
+          availability: player.availability,
+          matchStats: player.match_stats || {
+            totalGames: 0,
+            totalMinutes: 0,
+            captainGames: 0,
+            playerOfTheMatchCount: 0,
+            minutesByPosition: {},
+            recentGames: []
+          }
         };
       }) || [];
 

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -89,13 +88,19 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
       const eventsWithTeams = eventsData?.map(event => {
         const teamData = clubTeams.find(ct => ct.team_id === event.team_id)?.teams;
         return {
-          ...event,
-          teamName: teamData?.name || 'Unknown Team',
-          ageGroup: teamData?.age_group || 'Unknown',
+          id: event.id,
+          title: event.title,
+          date: event.date,
           startTime: event.start_time,
           endTime: event.end_time,
+          location: event.location,
           eventType: event.event_type,
-          isHome: event.is_home
+          opponent: event.opponent,
+          teamId: event.team_id,
+          teamName: teamData?.name || 'Unknown Team',
+          ageGroup: teamData?.age_group || 'Unknown',
+          isHome: event.is_home,
+          scores: event.scores
         };
       }) || [];
 

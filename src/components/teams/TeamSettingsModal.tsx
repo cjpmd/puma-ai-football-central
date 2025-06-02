@@ -30,13 +30,26 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   onUpdate
 }) => {
   const [activeTab, setActiveTab] = useState('basic');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Save logic would go here - for now just close modal
+      onClose();
+    } catch (error) {
+      console.error('Error saving team settings:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const settingsTabs = [
     {
       id: 'basic',
       label: 'Basic',
       icon: <Settings className="h-4 w-4" />,
-      component: <TeamBasicSettings team={team} onUpdate={onUpdate} />
+      component: <TeamBasicSettings team={team} onUpdate={onUpdate} onSave={handleSave} isSaving={isSaving} />
     },
     {
       id: 'subscription',
