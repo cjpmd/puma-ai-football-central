@@ -10,8 +10,7 @@ import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Team } from '@/types/team';
-import { SubscriptionType } from '@/types/index';
+import { Team, SubscriptionType } from '@/types/index';
 import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 
 interface ClubData {

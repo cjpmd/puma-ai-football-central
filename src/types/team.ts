@@ -1,4 +1,6 @@
 
+import { SubscriptionType, GameFormat } from './index';
+
 export type PlayerAttributeGroup = "goalkeeping" | "mental" | "physical" | "technical";
 
 export interface PlayerAttribute {
@@ -70,8 +72,8 @@ export interface Team {
   seasonStart: string;
   seasonEnd: string;
   clubId?: string;
-  gameFormat: string;
-  subscriptionType?: string;
+  gameFormat: GameFormat;
+  subscriptionType?: SubscriptionType;
   performanceCategories?: string[];
   kitIcons?: {
     home: string;

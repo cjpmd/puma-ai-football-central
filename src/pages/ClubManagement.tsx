@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { ClubDetailsModal } from '@/components/clubs/ClubDetailsModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Club } from '@/types/club';
+import { Club } from '@/types/index';
 import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
 
 export const ClubManagement = () => {
@@ -35,7 +34,7 @@ export const ClubManagement = () => {
         .select(`
           club_id,
           role,
-          club:clubs!user_clubs_club_id_fkey (
+          clubs!user_clubs_club_id_fkey (
             id,
             name,
             reference_number,
@@ -54,16 +53,16 @@ export const ClubManagement = () => {
       }
 
       const linkedClubsData = userClubs?.map(uc => {
-        if (!uc.club) return null;
+        if (!uc.clubs) return null;
         return {
-          id: uc.club.id,
-          name: uc.club.name,
-          referenceNumber: uc.club.reference_number || undefined,
-          subscriptionType: uc.club.subscription_type,
-          serialNumber: uc.club.serial_number,
-          logoUrl: uc.club.logo_url,
-          createdAt: uc.club.created_at,
-          updatedAt: uc.club.updated_at,
+          id: uc.clubs.id,
+          name: uc.clubs.name,
+          referenceNumber: uc.clubs.reference_number || undefined,
+          subscriptionType: uc.clubs.subscription_type as Club['subscriptionType'],
+          serialNumber: uc.clubs.serial_number,
+          logoUrl: uc.clubs.logo_url,
+          createdAt: uc.clubs.created_at,
+          updatedAt: uc.clubs.updated_at,
           userRole: uc.role,
           isReadOnly: true,
           teams: []

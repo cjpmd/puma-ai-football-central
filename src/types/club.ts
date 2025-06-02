@@ -1,9 +1,11 @@
 
+import { SubscriptionType } from './index';
+
 export interface Club {
   id: string;
   name: string;
   referenceNumber?: string;
-  subscriptionType?: string;
+  subscriptionType?: SubscriptionType;
   serialNumber?: string;
   teams?: any[];
   logoUrl?: string | null;
