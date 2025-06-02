@@ -527,6 +527,7 @@ export type Database = {
           game_format: string | null
           id: string
           is_home: boolean | null
+          kit_selection: string | null
           location: string | null
           meeting_time: string | null
           notes: string | null
@@ -554,6 +555,7 @@ export type Database = {
           game_format?: string | null
           id?: string
           is_home?: boolean | null
+          kit_selection?: string | null
           location?: string | null
           meeting_time?: string | null
           notes?: string | null
@@ -581,6 +583,7 @@ export type Database = {
           game_format?: string | null
           id?: string
           is_home?: boolean | null
+          kit_selection?: string | null
           location?: string | null
           meeting_time?: string | null
           notes?: string | null

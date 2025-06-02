@@ -1,10 +1,9 @@
 
 import { useState } from 'react';
-import { Team } from '@/types/team';
+import { Team, KitDesigns } from '@/types/team';
 import { KitDesigner } from '../KitDesigner';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { KitDesigns } from '@/types/team';
 
 interface TeamKitSettingsProps {
   team: Team;

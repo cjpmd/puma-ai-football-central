@@ -26,6 +26,7 @@ export interface DatabaseEvent {
   meeting_time?: string;
   total_minutes?: number;
   teams?: string[];
+  kit_selection?: 'home' | 'away' | 'training'; // Added this property
   created_at: string;
   updated_at: string;
 }

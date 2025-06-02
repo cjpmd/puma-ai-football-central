@@ -52,6 +52,7 @@ export type Team = {
     showPlayerStatsToPlayers: boolean;
   };
   isReadOnly?: boolean; // For linked teams
+  kitDesigns?: any; // Added this property
   createdAt: string;
   updatedAt: string;
 };
@@ -256,6 +257,7 @@ export interface Event {
   playerOfTheMatchId?: string;
   meetingTime?: string;
   teams?: string[];
+  kitSelection?: 'home' | 'away' | 'training'; // Added this property
 }
 
 export type EquipmentItem = {
