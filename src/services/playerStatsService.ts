@@ -9,20 +9,49 @@ export const playerStatsService = {
     try {
       console.log('Updating stats for player:', playerId);
       
-      // First, let's check the event_player_stats for this player to debug
+      // Debug: Check what position data exists for this player
       const { data: playerStats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
           *,
-          events!inner(date, opponent, end_time),
-          performance_categories(name)
+          events!inner(date, opponent, end_time)
         `)
-        .eq('player_id', playerId);
+        .eq('player_id', playerId)
+        .order('events(date)', { ascending: false });
 
       if (statsError) {
         console.error('Error fetching player stats for debugging:', statsError);
       } else {
         console.log('Current event_player_stats for player:', playerStats);
+        console.log('Position data breakdown:', 
+          playerStats.map(stat => ({
+            date: stat.events?.date,
+            opponent: stat.events?.opponent,
+            position: stat.position,
+            minutes: stat.minutes_played,
+            eventId: stat.event_id
+          }))
+        );
+      }
+
+      // Also check event_selections to see what was actually selected
+      const { data: selections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select(`
+          *,
+          events!inner(date, opponent)
+        `)
+        .in('event_id', playerStats?.map(s => s.event_id) || []);
+
+      if (!selectionsError && selections) {
+        console.log('Event selections for comparison:', 
+          selections.map(sel => ({
+            date: sel.events?.date,
+            opponent: sel.events?.opponent,
+            playerPositions: sel.player_positions,
+            eventId: sel.event_id
+          }))
+        );
       }
 
       const { error } = await supabase.rpc('update_player_match_stats', {
@@ -64,9 +93,6 @@ export const playerStatsService = {
     }
   },
 
-  /**
-   * Update all completed events' player stats
-   */
   async updateAllCompletedEventsStats(): Promise<void> {
     try {
       console.log('Starting bulk update of all completed events');
@@ -85,9 +111,6 @@ export const playerStatsService = {
     }
   },
 
-  /**
-   * Regenerate all player stats from scratch
-   */
   async regenerateAllPlayerStats(): Promise<void> {
     try {
       console.log('Regenerating all player stats from event_player_stats');
@@ -110,9 +133,6 @@ export const playerStatsService = {
     }
   },
 
-  /**
-   * Clean up events with "Unknown" opponents
-   */
   async cleanupUnknownOpponentEvents(): Promise<void> {
     try {
       console.log('Cleaning up events with unknown opponents...');
@@ -174,9 +194,6 @@ export const playerStatsService = {
     }
   },
 
-  /**
-   * Check if an event has ended based on date and time
-   */
   isEventCompleted(eventDate: string, endTime?: string): boolean {
     const today = new Date();
     const eventDateObj = new Date(eventDate);

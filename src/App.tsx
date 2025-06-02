@@ -15,6 +15,10 @@ import PlayerManagement from "./pages/PlayerManagement";
 import PlayerManagementTab from "./pages/PlayerManagementTab";
 import Analytics from "./pages/Analytics";
 import CalendarEvents from "./pages/CalendarEvents";
+import ClubManagement from "./pages/ClubManagement";
+import StaffManagement from "./pages/StaffManagement";
+import UserManagement from "./pages/UserManagement";
+import SubscriptionManagement from "./pages/SubscriptionManagement";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +79,38 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/clubs"
+                element={
+                  <ProtectedRoute>
+                    <ClubManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/staff"
+                element={
+                  <ProtectedRoute>
+                    <StaffManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <ProtectedRoute>
+                    <UserManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/subscriptions"
+                element={
+                  <ProtectedRoute>
+                    <SubscriptionManagement />
                   </ProtectedRoute>
                 }
               />

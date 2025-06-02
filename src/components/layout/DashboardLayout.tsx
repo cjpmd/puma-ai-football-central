@@ -14,7 +14,11 @@ import {
   LogOut,
   BarChart3,
   Trophy,
-  UserCheck
+  UserCheck,
+  Building2,
+  UserCog,
+  UserPlus,
+  CreditCard
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -29,7 +33,10 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Player Management', href: '/player-management', icon: UserCheck },
   { name: 'Teams', href: '/teams', icon: Trophy },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Clubs', href: '/clubs', icon: Building2 },
+  { name: 'Staff Management', href: '/staff', icon: UserCog },
+  { name: 'User Management', href: '/users', icon: UserPlus },
+  { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
 ];
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
@@ -44,12 +51,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const Sidebar = ({ className }: { className?: string }) => (
-    <div className={cn('flex h-full w-64 flex-col', className)}>
-      <div className="flex h-16 shrink-0 items-center border-b px-4">
-        <h1 className="text-xl font-bold">Team Manager</h1>
+    <div className={cn('flex h-full w-64 flex-col bg-background', className)}>
+      <div className="flex h-16 shrink-0 items-center border-b px-6">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-green-100 flex items-center justify-center">
+            <div className="w-6 h-6 text-green-600">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z"/>
+                <path d="M2 17L12 22L22 17"/>
+                <path d="M2 12L12 17L22 12"/>
+              </svg>
+            </div>
+          </div>
+          <h1 className="text-xl font-bold text-foreground">Team Manager</h1>
+        </div>
       </div>
       <ScrollArea className="flex-1">
-        <nav className="flex flex-col gap-1 p-4">
+        <nav className="flex flex-col gap-2 p-4">
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
             return (
@@ -57,14 +75,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 key={item.name}
                 to={item.href}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-primary text-primary-foreground'
+                    ? 'bg-accent text-accent-foreground'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                 )}
                 onClick={() => setSidebarOpen(false)}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-5 w-5" />
                 {item.name}
               </Link>
             );
@@ -72,25 +90,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
       </ScrollArea>
       <div className="border-t p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-sm font-medium text-primary-foreground">
-              {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
-            </span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
-            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-          </div>
-        </div>
         <Button
-          variant="outline"
-          size="sm"
-          className="w-full justify-start"
+          variant="ghost"
+          className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
           onClick={handleSignOut}
         >
-          <LogOut className="h-4 w-4 mr-2" />
-          Sign out
+          <LogOut className="h-5 w-5 mr-3" />
+          Sign Out
         </Button>
       </div>
     </div>
