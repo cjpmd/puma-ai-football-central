@@ -18,7 +18,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
   const [formData, setFormData] = useState({
     name: club?.name || '',
     referenceNumber: club?.referenceNumber || '',
-    subscriptionType: club?.subscriptionType || 'free' as SubscriptionType,
+    subscriptionType: (club?.subscriptionType || 'free') as SubscriptionType,
     logoUrl: club?.logoUrl || null
   });
 
@@ -90,6 +90,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
                 <SelectItem value="pro">Professional</SelectItem>
+                <SelectItem value="analytics_plus">Analytics Plus</SelectItem>
               </SelectContent>
             </Select>
           </div>

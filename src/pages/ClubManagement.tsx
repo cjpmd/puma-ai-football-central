@@ -5,8 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClubForm } from '@/components/clubs/ClubForm';
 import { ClubDetailsModal } from '@/components/clubs/ClubDetailsModal';
+import { ClubPlayerManagement } from '@/components/clubs/ClubPlayerManagement';
+import { ClubCalendarEvents } from '@/components/clubs/ClubCalendarEvents';
+import { ClubAnalytics } from '@/components/clubs/ClubAnalytics';
+import { ClubStaffManagement } from '@/components/clubs/ClubStaffManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,11 +25,21 @@ export const ClubManagement = () => {
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsClub, setDetailsClub] = useState<Club | null>(null);
+  const [selectedClubForView, setSelectedClubForView] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'overview' | 'players' | 'calendar' | 'analytics' | 'staff'>('overview');
   const { toast } = useToast();
 
   useEffect(() => {
     loadLinkedClubs();
   }, []);
+
+  // Auto-select club if only one available
+  useEffect(() => {
+    const allClubs = [...clubs, ...linkedClubs];
+    if (allClubs.length === 1 && !selectedClubForView) {
+      setSelectedClubForView(allClubs[0].id);
+    }
+  }, [clubs, linkedClubs, selectedClubForView]);
 
   const loadLinkedClubs = async () => {
     try {
@@ -228,7 +243,10 @@ export const ClubManagement = () => {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => openDetailsModal(club, isLinked)}
+          onClick={() => {
+            setSelectedClubForView(club.id);
+            setActiveTab('overview');
+          }}
           className="flex-1"
         >
           <Eye className="mr-2 h-4 w-4" />
@@ -247,6 +265,9 @@ export const ClubManagement = () => {
       </CardFooter>
     </Card>
   );
+
+  const allClubs = [...clubs, ...linkedClubs];
+  const selectedClubData = allClubs.find(c => c.id === selectedClubForView);
 
   return (
     <DashboardLayout>
@@ -288,7 +309,7 @@ export const ClubManagement = () => {
           </Dialog>
         </div>
 
-        {clubs.length === 0 && linkedClubs.length === 0 ? (
+        {allClubs.length === 0 ? (
           <Card className="border-dashed border-2 border-muted">
             <CardContent className="py-8 flex flex-col items-center justify-center text-center">
               <div className="rounded-full bg-muted p-3 mb-4">
@@ -310,26 +331,95 @@ export const ClubManagement = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Owned Clubs */}
-            {clubs.length > 0 && (
+            {/* Club Selection */}
+            {allClubs.length > 1 && !selectedClubForView && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Your Clubs</h2>
+                <h2 className="text-xl font-semibold mb-4">Select a Club</h2>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Owned Clubs */}
                   {clubs.map((club) => (
                     <ClubCard key={club.id} club={club} />
+                  ))}
+                  {/* Linked Clubs */}
+                  {linkedClubs.map((club) => (
+                    <ClubCard key={club.id} club={club} isLinked={true} />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Linked Clubs */}
-            {linkedClubs.length > 0 && (
+            {/* Club Details View */}
+            {selectedClubData && (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setSelectedClubForView('')}
+                    >
+                      ← Back to Clubs
+                    </Button>
+                    <h2 className="text-xl font-semibold">{selectedClubData.name}</h2>
+                    {selectedClubData.isReadOnly && (
+                      <Badge variant="outline">Read-only</Badge>
+                    )}
+                  </div>
+                </div>
+
+                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="players">Players</TabsTrigger>
+                    <TabsTrigger value="calendar">Calendar</TabsTrigger>
+                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                    <TabsTrigger value="staff">Staff</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="overview" className="space-y-6">
+                    <ClubStaffManagement
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="players" className="space-y-6">
+                    <ClubPlayerManagement
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="calendar" className="space-y-6">
+                    <ClubCalendarEvents
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="analytics" className="space-y-6">
+                    <ClubAnalytics
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="staff" className="space-y-6">
+                    <ClubStaffManagement
+                      clubId={selectedClubData.id}
+                      clubName={selectedClubData.name}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </div>
+            )}
+
+            {/* Show club cards if no club selected but clubs exist */}
+            {!selectedClubForView && allClubs.length === 1 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Linked Clubs</h2>
-                <p className="text-muted-foreground mb-4">
-                  Clubs you're associated with (read-only access)
-                </p>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {clubs.map((club) => (
+                    <ClubCard key={club.id} club={club} />
+                  ))}
                   {linkedClubs.map((club) => (
                     <ClubCard key={club.id} club={club} isLinked={true} />
                   ))}

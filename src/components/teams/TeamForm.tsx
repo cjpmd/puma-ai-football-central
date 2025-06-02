@@ -22,8 +22,8 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
     seasonStart: team?.seasonStart || '',
     seasonEnd: team?.seasonEnd || '',
     clubId: team?.clubId || '',
-    gameFormat: team?.gameFormat || '11-a-side' as GameFormat,
-    subscriptionType: team?.subscriptionType || 'free' as SubscriptionType,
+    gameFormat: (team?.gameFormat || '11-a-side') as GameFormat,
+    subscriptionType: (team?.subscriptionType || 'free') as SubscriptionType,
     logoUrl: team?.logoUrl || null
   });
 
@@ -140,6 +140,8 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 <SelectItem value="9-a-side">9v9</SelectItem>
                 <SelectItem value="7-a-side">7v7</SelectItem>
                 <SelectItem value="5-a-side">5v5</SelectItem>
+                <SelectItem value="4-a-side">4v4</SelectItem>
+                <SelectItem value="3-a-side">3v3</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -160,6 +162,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="premium">Premium</SelectItem>
                 <SelectItem value="pro">Professional</SelectItem>
+                <SelectItem value="analytics_plus">Analytics Plus</SelectItem>
               </SelectContent>
             </Select>
           </div>
