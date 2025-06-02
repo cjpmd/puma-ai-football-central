@@ -42,9 +42,9 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
         // Always add goalkeeping attributes for goalkeepers
         if (player.type === 'goalkeeper') {
           defaultAttributes = [
-            ...DEFAULT_PLAYER_ATTRIBUTES.goalkeeping.map((name, index) => ({
+            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
               id: `gk-${index}`,
-              name,
+              name: attr.name,
               group: "goalkeeping" as const,
               value: 5,
               enabled: true
@@ -53,23 +53,23 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
         } else {
           // For outfield players, add technical, physical, and mental attributes
           defaultAttributes = [
-            ...DEFAULT_PLAYER_ATTRIBUTES.technical.map((name, index) => ({
+            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'technical').map((attr, index) => ({
               id: `tech-${index}`,
-              name,
+              name: attr.name,
               group: "technical" as const,
               value: 5,
               enabled: true
             })),
-            ...DEFAULT_PLAYER_ATTRIBUTES.physical.map((name, index) => ({
+            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'physical').map((attr, index) => ({
               id: `phys-${index}`,
-              name,
+              name: attr.name,
               group: "physical" as const,
               value: 5,
               enabled: true
             })),
-            ...DEFAULT_PLAYER_ATTRIBUTES.mental.map((name, index) => ({
+            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'mental').map((attr, index) => ({
               id: `ment-${index}`,
-              name,
+              name: attr.name,
               group: "mental" as const,
               value: 5,
               enabled: true
@@ -79,9 +79,9 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
           // Optionally add goalkeeping attributes for outfield players (disabled by default)
           defaultAttributes = [
             ...defaultAttributes,
-            ...DEFAULT_PLAYER_ATTRIBUTES.goalkeeping.map((name, index) => ({
+            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
               id: `gk-${index}`,
-              name,
+              name: attr.name,
               group: "goalkeeping" as const,
               value: 5,
               enabled: false
