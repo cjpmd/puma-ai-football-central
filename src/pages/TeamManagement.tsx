@@ -121,7 +121,7 @@ const TeamManagement = () => {
         performance_categories: teamData.performanceCategories || [],
         kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
         logo_url: teamData.logoUrl,
-        kit_designs: teamData.kitDesigns ? teamData.kitDesigns as any : null
+        kit_designs: ('kitDesigns' in teamData && teamData.kitDesigns) ? teamData.kitDesigns as any : null
       }]).select().single();
 
       if (error) throw error;
