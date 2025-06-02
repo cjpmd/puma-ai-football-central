@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -11,24 +10,12 @@ import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Team, SubscriptionType, GameFormat } from '@/types/index';
+import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
 import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
-
-interface ClubData {
-  id: string;
-  name: string;
-  referenceNumber?: string;
-  subscriptionType?: string;
-  serialNumber?: string;
-  teams?: any[];
-  logoUrl?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-}
 
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
-  const [allClubs, setAllClubs] = useState<ClubData[]>([]);
+  const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -52,7 +39,20 @@ const TeamManagement = () => {
       }
 
       console.log('Loaded clubs:', data);
-      setAllClubs(data || []);
+      
+      // Convert database format to Club interface with proper type handling
+      const convertedClubs: Club[] = (data || []).map(club => ({
+        id: club.id,
+        name: club.name,
+        referenceNumber: club.reference_number,
+        serialNumber: club.serial_number,
+        subscriptionType: (club.subscription_type as SubscriptionType) || 'free',
+        logoUrl: club.logo_url,
+        createdAt: club.created_at,
+        updatedAt: club.updated_at
+      }));
+
+      setAllClubs(convertedClubs);
     } catch (error) {
       console.error('Error in loadAllClubs:', error);
     }
