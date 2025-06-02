@@ -349,53 +349,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    console.log('Signing out user...');
+    console.log('Starting signOut process...');
     setLoading(true);
     
     try {
-      // First check if we have a user to sign out
-      if (!user) {
-        console.log('No user found to sign out');
-        // Clear all state anyway
-        setUser(null);
-        setSession(null);
-        setTeams([]);
-        setClubs([]);
-        setProfile(null);
-        setLoading(false);
-        return;
-      }
-      
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        throw error;
-      }
-      
-      // Clear all state immediately
+      // Clear local state immediately to prevent UI issues
       setUser(null);
       setSession(null);
       setTeams([]);
       setClubs([]);
       setProfile(null);
       
-      console.log('Sign out successful');
+      // Then attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Supabase signOut error:', error);
+        // Don't throw the error, as we've already cleared local state
+        toast({
+          title: 'Sign out warning',
+          description: 'Local session cleared, but there may have been an issue with the server.',
+          variant: 'destructive',
+        });
+      } else {
+        console.log('Sign out successful');
+      }
+      
+      // Navigate to home page
+      navigate('/');
     } catch (error: any) {
       console.error('Error during sign out:', error);
-      
-      // Clear state anyway to ensure the UI updates properly
-      setUser(null);
-      setSession(null);
-      setTeams([]);
-      setClubs([]);
-      setProfile(null);
-      
       toast({
-        title: 'Sign out failed',
-        description: error.message,
-        variant: 'destructive',
+        title: 'Sign out completed',
+        description: 'You have been signed out locally.',
       });
       
-      throw error; // Re-throw to allow component handling
+      // Navigate regardless of error
+      navigate('/');
     } finally {
       setLoading(false);
     }
@@ -478,7 +468,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentTeam: teams && teams.length > 0 ? teams[0] : null, // Use first team as current team
     loading,
     login,
-    logout,
+    logout: signOut, // Use signOut for logout
     signIn,
     signUp,
     signOut,

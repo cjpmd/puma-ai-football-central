@@ -55,25 +55,30 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
 
     setUploading(true);
     try {
-      // First, check if logos bucket exists, if not, we'll try to create it
+      // Test storage connection first
+      console.log('Testing storage connection...');
       const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-      console.log('Available storage buckets:', buckets);
       
       if (bucketsError) {
-        console.error('Error checking buckets:', bucketsError);
-        throw new Error('Unable to access storage. Please check your permissions.');
+        console.error('Error accessing storage:', bucketsError);
+        throw new Error(`Storage access error: ${bucketsError.message}`);
       }
 
-      const logosBucketExists = buckets?.some(bucket => bucket.name === 'logos');
+      console.log('Available storage buckets:', buckets);
       
-      if (!logosBucketExists) {
-        console.log('Logos bucket does not exist');
-        throw new Error('Storage bucket not configured. Please contact support.');
+      const logosBucket = buckets?.find(bucket => bucket.name === 'logos');
+      
+      if (!logosBucket) {
+        console.error('Logos bucket not found in available buckets');
+        throw new Error('Logos storage bucket not found. Please contact support.');
       }
+
+      console.log('Logos bucket found:', logosBucket);
 
       // Delete old logo if it exists and has a valid path
       if (currentLogoUrl && currentLogoUrl.includes('/storage/v1/object/public/logos/')) {
-        const oldFileName = currentLogoUrl.split('/').pop();
+        const urlParts = currentLogoUrl.split('/');
+        const oldFileName = urlParts[urlParts.length - 1];
         if (oldFileName && oldFileName !== 'undefined') {
           console.log('Deleting old logo file:', oldFileName);
           const deleteResult = await supabase.storage
@@ -100,7 +105,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
 
       if (uploadError) {
         console.error('Upload error:', uploadError);
-        throw uploadError;
+        throw new Error(`Upload failed: ${uploadError.message}`);
       }
 
       console.log('Upload successful:', uploadData);
@@ -131,7 +136,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
 
       if (updateError) {
         console.error('Database update error:', updateError);
-        throw updateError;
+        throw new Error(`Database update failed: ${updateError.message}`);
       }
 
       console.log('Database update successful:', updateData);
@@ -164,7 +169,8 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
     try {
       // Delete from storage if it's a valid storage URL
       if (currentLogoUrl.includes('/storage/v1/object/public/logos/')) {
-        const fileName = currentLogoUrl.split('/').pop();
+        const urlParts = currentLogoUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
         if (fileName && fileName !== 'undefined') {
           console.log('Removing logo file:', fileName);
           const deleteResult = await supabase.storage

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Team } from '@/types/team';
 import { KitDesigner } from '../KitDesigner';
@@ -44,38 +45,18 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
       console.log('Saving kit designs:', designs);
       console.log('Current team data:', team);
       
-      // IMPORTANT: Preserve ALL existing team data, especially clubId
+      // Create the update object with ONLY the kitDesigns field
+      // The parent component should handle preserving other fields
       const updateData: Partial<Team> = { 
-        kitDesigns: designs,
-        // Preserve existing club association
-        clubId: team.clubId,
-        // Keep all other important fields
-        name: team.name,
-        ageGroup: team.ageGroup,
-        gameFormat: team.gameFormat,
-        seasonStart: team.seasonStart,
-        seasonEnd: team.seasonEnd,
-        subscriptionType: team.subscriptionType,
-        performanceCategories: team.performanceCategories,
-        logoUrl: team.logoUrl,
-        // Update kitIcons to indicate using designer
-        kitIcons: {
-          home: 'designer',
-          away: 'designer', 
-          training: 'designer',
-          goalkeeper: 'designer'
-        }
+        kitDesigns: designs
       };
       
-      console.log('Complete update data with preserved fields:', updateData);
+      console.log('Update data for kit designs:', updateData);
       
-      // Call the onUpdate function with the complete data
+      // Call the onUpdate function
       await onUpdate(updateData);
       
-      toast({
-        title: 'Kit designs saved successfully',
-        description: 'Your professional team kit designs have been updated.',
-      });
+      console.log('Kit designs saved successfully');
     } catch (error) {
       console.error('Error saving kit designs:', error);
       toast({
