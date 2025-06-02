@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { UserLoginModal } from "@/components/modals/UserLoginModal";
 import { UserSignupModal } from "@/components/modals/UserSignupModal";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Logo } from "./Logo";
 import { useLocation } from "react-router-dom";
 import { EntityHeader } from "@/components/shared/EntityHeader";
@@ -53,8 +53,16 @@ export function Header() {
               </div>
             ) : (
               <div className="flex items-center space-x-2">
-                <UserLoginModal />
-                <UserSignupModal />
+                <UserLoginModal 
+                  isOpen={false}
+                  onClose={() => {}}
+                  onLogin={() => {}}
+                />
+                <UserSignupModal 
+                  isOpen={false}
+                  onClose={() => {}}
+                  onSignup={() => {}}
+                />
               </div>
             )}
           </nav>

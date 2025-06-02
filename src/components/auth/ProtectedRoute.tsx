@@ -7,10 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { session, isLoading } = useAuth();
+  const { session, loading } = useAuth();
   const location = useLocation();
 
-  if (isLoading) {
+  if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 

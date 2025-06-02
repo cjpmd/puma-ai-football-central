@@ -350,7 +350,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     console.log('Signing out user...');
-    setIsLoading(true);
+    setLoading(true);
     
     try {
       // First check if we have a user to sign out
@@ -362,7 +362,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTeams([]);
         setClubs([]);
         setProfile(null);
-        setIsLoading(false);
+        setLoading(false);
         return;
       }
       
@@ -397,12 +397,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       throw error; // Re-throw to allow component handling
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const login = async () => {
-    setIsLoading(true);
+    setLoading(true);
     try {
       await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -415,14 +415,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const logout = async () => {
     console.log('Logging out user...');
     try {
-      setIsLoading(true);
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) {
         throw error;
@@ -443,13 +443,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
   const refreshUserData = async () => {
     if (user) {
-      setIsLoading(true);
+      setLoading(true);
       try {
         await Promise.all([
           fetchProfile(user.id),
@@ -464,7 +464,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: 'destructive',
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     }
   };
