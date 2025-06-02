@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -61,7 +60,7 @@ export type Club = {
   name: string;
   referenceNumber?: string;
   serialNumber?: string;
-  teams: string[]; // Array of team IDs
+  teams?: string[]; // Array of team IDs - made optional
   subscriptionType: SubscriptionType;
   logoUrl?: string | null;
   officials?: ClubOfficial[];
