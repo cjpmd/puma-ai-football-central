@@ -121,7 +121,7 @@ const TeamManagement = () => {
         performance_categories: teamData.performanceCategories || [],
         kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
         logo_url: teamData.logoUrl,
-        kit_designs: teamData.kitDesigns || null
+        kit_designs: teamData.kitDesigns ? teamData.kitDesigns as any : null
       }]).select().single();
 
       if (error) throw error;
@@ -191,7 +191,7 @@ const TeamManagement = () => {
 
       // Only include kit_designs if it's provided
       if (teamData.kitDesigns !== undefined) {
-        updateData.kit_designs = teamData.kitDesigns;
+        updateData.kit_designs = teamData.kitDesigns as any;
       }
 
       const { error } = await supabase

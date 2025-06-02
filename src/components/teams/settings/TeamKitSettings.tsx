@@ -48,7 +48,7 @@ export const TeamKitSettings: React.FC<TeamKitSettingsProps> = ({
       const { error } = await supabase
         .from('teams')
         .update({ 
-          kit_designs: designs,
+          kit_designs: designs as any, // Cast to any for Json compatibility
           updated_at: new Date().toISOString()
         })
         .eq('id', team.id);
