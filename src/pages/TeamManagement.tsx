@@ -22,12 +22,8 @@ interface ClubData {
   serialNumber?: string;
   teams?: any[];
   logoUrl?: string | null;
-  created_at?: string;
-  updated_at?: string;
-}
-
-interface TeamWithReadOnly extends Team {
-  isReadOnly?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 const TeamManagement = () => {
@@ -35,7 +31,7 @@ const TeamManagement = () => {
   const [allClubs, setAllClubs] = useState<ClubData[]>([]);
   const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<TeamWithReadOnly | null>(null);
+  const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const { toast } = useToast();
@@ -82,7 +78,7 @@ const TeamManagement = () => {
 
       console.log('Loaded linked teams raw:', data);
       
-      // Convert database format to Team interface
+      // Convert database format to Team interface with proper type handling
       const convertedTeams: Team[] = (data || []).map(team => ({
         id: team.id,
         name: team.name,
@@ -93,10 +89,13 @@ const TeamManagement = () => {
         gameFormat: team.game_format,
         subscriptionType: team.subscription_type,
         performanceCategories: team.performance_categories || [],
-        kitIcons: team.kit_icons || { home: '', away: '', training: '', goalkeeper: '' },
+        kitIcons: typeof team.kit_icons === 'object' && team.kit_icons !== null ? 
+          team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
+          { home: '', away: '', training: '', goalkeeper: '' },
         logoUrl: team.logo_url,
-        created_at: team.created_at,
-        updated_at: team.updated_at
+        createdAt: team.created_at,
+        updatedAt: team.updated_at,
+        isReadOnly: true
       }));
 
       console.log('Converted linked teams:', convertedTeams);
@@ -189,13 +188,15 @@ const TeamManagement = () => {
 
   const openTeamSettingsModal = (team: Team, isReadOnly = false) => {
     console.log('Opening settings for team:', team, 'Read only:', isReadOnly);
-    setSelectedTeam({ ...team, isReadOnly });
+    const teamWithReadOnly: Team = { ...team, isReadOnly };
+    setSelectedTeam(teamWithReadOnly);
     setIsSettingsModalOpen(true);
   };
 
   const openStaffModal = (team: Team, isReadOnly = false) => {
     console.log('Opening staff modal for team:', team, 'Read only:', isReadOnly);
-    setSelectedTeam({ ...team, isReadOnly });
+    const teamWithReadOnly: Team = { ...team, isReadOnly };
+    setSelectedTeam(teamWithReadOnly);
     setIsStaffModalOpen(true);
   };
 

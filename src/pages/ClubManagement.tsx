@@ -13,17 +13,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Club } from '@/types/club';
 import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
 
-interface ClubWithReadOnly extends Club {
-  isReadOnly?: boolean;
-}
-
 export const ClubManagement = () => {
   const { clubs, refreshUserData } = useAuth();
   const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
-  const [selectedClub, setSelectedClub] = useState<ClubWithReadOnly | null>(null);
+  const [selectedClub, setSelectedClub] = useState<Club | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [detailsClub, setDetailsClub] = useState<ClubWithReadOnly | null>(null);
+  const [detailsClub, setDetailsClub] = useState<Club | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,8 +56,16 @@ export const ClubManagement = () => {
       const linkedClubsData = userClubs?.map(uc => {
         if (!uc.clubs) return null;
         return {
-          ...uc.clubs,
-          userRole: uc.role
+          id: uc.clubs.id,
+          name: uc.clubs.name,
+          referenceNumber: uc.clubs.reference_number,
+          subscriptionType: uc.clubs.subscription_type,
+          serialNumber: uc.clubs.serial_number,
+          logoUrl: uc.clubs.logo_url,
+          createdAt: uc.clubs.created_at,
+          updatedAt: uc.clubs.updated_at,
+          userRole: uc.role,
+          isReadOnly: true
         };
       }).filter(club => club?.id) || [];
 

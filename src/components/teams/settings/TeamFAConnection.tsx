@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Team, FAProvider } from '@/types/team';
+import { Team } from '@/types/team';
 import { Wifi, Upload, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 interface TeamFAConnectionProps {
@@ -21,7 +21,7 @@ export const TeamFAConnection: React.FC<TeamFAConnectionProps> = ({
 }) => {
   const [faConnection, setFaConnection] = useState(
     team.faConnection || {
-      provider: 'comet' as FAProvider,
+      provider: 'comet',
       isConnected: false,
       syncEnabled: false
     }
@@ -63,7 +63,7 @@ export const TeamFAConnection: React.FC<TeamFAConnectionProps> = ({
     }));
   };
 
-  const getProviderInfo = (provider: FAProvider) => {
+  const getProviderInfo = (provider: string) => {
     switch (provider) {
       case 'comet':
         return { name: 'Comet FA', description: 'Connect to Comet Football Association system' };
@@ -113,7 +113,7 @@ export const TeamFAConnection: React.FC<TeamFAConnectionProps> = ({
               value={faConnection.provider}
               onValueChange={(value) => setFaConnection(prev => ({ 
                 ...prev, 
-                provider: value as FAProvider 
+                provider: value
               }))}
             >
               <SelectTrigger id="faProvider">
@@ -259,7 +259,7 @@ export const TeamFAConnection: React.FC<TeamFAConnectionProps> = ({
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Auto Sync:</span>
                 <Switch
-                  checked={faConnection.syncEnabled}
+                  checked={faConnection.syncEnabled || false}
                   onCheckedChange={(checked) => {
                     setFaConnection(prev => ({ ...prev, syncEnabled: checked }));
                     onUpdate({ faConnection: { ...faConnection, syncEnabled: checked } });

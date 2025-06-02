@@ -9,6 +9,6 @@ export interface Club {
   logoUrl?: string | null;
   userRole?: string; // For linked clubs
   isReadOnly?: boolean; // For linked clubs
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

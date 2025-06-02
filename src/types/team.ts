@@ -61,13 +61,7 @@ export interface TeamStaff {
   updatedAt?: string;
 }
 
-export interface FAProvider {
-  id: string;
-  name: string;
-  logoUrl?: string;
-  apiEndpoint?: string;
-  requiresCredentials?: boolean;
-}
+export type FAProvider = "comet" | "matchday" | "fulltime" | "playmetrix" | "custom";
 
 export interface Team {
   id: string;
@@ -94,8 +88,9 @@ export interface Team {
     isConnected: boolean;
     lastSync?: string;
     credentials?: Record<string, any>;
+    syncEnabled?: boolean;
   };
   isReadOnly?: boolean; // For linked teams
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
