@@ -1,17 +1,18 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player } from '@/types';
-import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Users, Settings, Calendar, BarChart3, MessageSquare, Target, ArrowUp, ArrowDown, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { PlayerParentModal } from '@/components/players/PlayerParentModal';
 import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
 import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModal';
@@ -27,6 +28,7 @@ const PlayerManagementTab = () => {
   const queryClient = useQueryClient();
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
   const [searchTerm, setSearchTerm] = useState('');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [performanceTrends, setPerformanceTrends] = useState<Map<string, PerformanceTrend>>(new Map());
@@ -83,10 +85,16 @@ const PlayerManagementTab = () => {
     },
   });
 
-  const filteredPlayers = players.filter(player =>
-    player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    player.squadNumber?.toString().includes(searchTerm)
-  );
+  // Filter players based on search and subscription type
+  const filteredPlayers = players.filter(player => {
+    const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.squadNumber?.toString().includes(searchTerm);
+    
+    const matchesSubscription = subscriptionFilter === 'all' || 
+      player.subscriptionType === subscriptionFilter;
+    
+    return matchesSearch && matchesSubscription;
+  });
 
   const handleModalOpen = (modal: string, player: Player) => {
     setSelectedPlayer(player);
@@ -108,21 +116,34 @@ const PlayerManagementTab = () => {
     handleModalClose();
   };
 
-  const renderPerformanceIcon = (playerId: string) => {
+  const renderPerformanceIndicator = (playerId: string) => {
     const trend = performanceTrends.get(playerId);
-    if (!trend) return null;
+    if (!trend) return <Minus className="h-4 w-4 text-gray-400" />;
     
-    const iconName = getPerformanceIcon(trend);
-    if (!iconName) return null;
-    
-    const IconComponent = iconName === 'arrow-up' ? ArrowUp : ArrowDown;
-    const colorClass = getPerformanceColor(trend);
-    
-    return (
-      <IconComponent 
-        className={`h-4 w-4 ${colorClass}`}
-      />
-    );
+    switch (trend) {
+      case 'improving':
+        return (
+          <Badge variant="outline" className="border-green-500 text-green-600 bg-green-50 flex items-center gap-1">
+            <TrendingUp className="h-3 w-3" />
+            Improving
+          </Badge>
+        );
+      case 'needs-work':
+        return (
+          <Badge variant="outline" className="border-red-500 text-red-600 bg-red-50 flex items-center gap-1">
+            <TrendingDown className="h-3 w-3" />
+            Needs Work
+          </Badge>
+        );
+      case 'maintaining':
+      default:
+        return (
+          <Badge variant="outline" className="border-gray-400 text-gray-600 bg-gray-50 flex items-center gap-1">
+            <Minus className="h-3 w-3" />
+            Maintaining
+          </Badge>
+        );
+    }
   };
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
@@ -149,17 +170,18 @@ const PlayerManagementTab = () => {
           </div>
           {teams.length > 1 && (
             <div className="min-w-[250px]">
-              <select
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
         </div>
@@ -186,6 +208,18 @@ const PlayerManagementTab = () => {
                     className="pl-10"
                   />
                 </div>
+                
+                <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by subscription" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Players</SelectItem>
+                    <SelectItem value="full_squad">Full Squad</SelectItem>
+                    <SelectItem value="training">Training Only</SelectItem>
+                  </SelectContent>
+                </Select>
+                
                 <Badge variant="secondary">
                   {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
                 </Badge>
@@ -197,6 +231,7 @@ const PlayerManagementTab = () => {
                     <TableRow>
                       <TableHead>Player</TableHead>
                       <TableHead>Squad #</TableHead>
+                      <TableHead>Subscription</TableHead>
                       <TableHead>Games</TableHead>
                       <TableHead>Minutes</TableHead>
                       <TableHead>Availability</TableHead>
@@ -220,6 +255,13 @@ const PlayerManagementTab = () => {
                             #{player.squadNumber}
                           </Badge>
                         </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}
+                          >
+                            {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
+                          </Badge>
+                        </TableCell>
                         <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
                         <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
                         <TableCell>
@@ -235,9 +277,7 @@ const PlayerManagementTab = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <div className="flex justify-center">
-                            {renderPerformanceIcon(player.id)}
-                          </div>
+                          {renderPerformanceIndicator(player.id)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2 flex-wrap">
@@ -299,7 +339,7 @@ const PlayerManagementTab = () => {
 
               {filteredPlayers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  {searchTerm ? 'No players found matching your search.' : 'No players found for this team.'}
+                  {searchTerm || subscriptionFilter !== 'all' ? 'No players found matching your filters.' : 'No players found for this team.'}
                 </div>
               )}
             </div>

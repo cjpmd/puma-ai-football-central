@@ -1,143 +1,60 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Trophy, Users, Calendar, TrendingUp, Lock, Crown } from 'lucide-react';
-import { MatchStats } from '@/types';
-
-interface PlayerStats {
-  name: string;
-  totalGames: number;
-  totalMinutes: number;
-  captainGames: number;
-  playerOfTheMatchCount: number;
-}
-
-interface TeamAnalytics {
-  totalPlayers: number;
-  totalEvents: number;
-  upcomingEvents: number;
-  averageAttendance: number;
-  gamesWon: number;
-  gamesLost: number;
-  gamesDrawn: number;
-}
+import { useQuery } from '@tanstack/react-query';
+import { playersService } from '@/services/playersService';
+import { Player } from '@/types';
+import { Users, Timer, Crown, Trophy, TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const Analytics = () => {
   const { teams } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
-  const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
-  const [teamAnalytics, setTeamAnalytics] = useState<TeamAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [hasAnalyticsPlus, setHasAnalyticsPlus] = useState(false);
 
-  useEffect(() => {
-    if (teams.length > 0 && selectedTeamId) {
-      loadAnalytics();
-    }
-  }, [teams, selectedTeamId]);
-
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
-      
-      // Load basic team analytics
-      const { data: playersData } = await supabase
-        .from('players')
-        .select('name, match_stats')
-        .eq('team_id', selectedTeamId)
-        .eq('status', 'active');
-
-      const { data: eventsData } = await supabase
-        .from('events')
-        .select('id, date, scores, end_time')
-        .eq('team_id', selectedTeamId);
-
-      if (playersData) {
-        const stats: PlayerStats[] = playersData.map(player => {
-          // Safely cast match_stats from Json to MatchStats
-          const matchStats = (player.match_stats as MatchStats) || {
-            totalGames: 0,
-            captainGames: 0,
-            playerOfTheMatchCount: 0,
-            totalMinutes: 0,
-            minutesByPosition: {},
-            recentGames: []
-          };
-          
-          return {
-            name: player.name,
-            totalGames: matchStats.totalGames || 0,
-            totalMinutes: matchStats.totalMinutes || 0,
-            captainGames: matchStats.captainGames || 0,
-            playerOfTheMatchCount: matchStats.playerOfTheMatchCount || 0,
-          };
-        });
-        setPlayerStats(stats);
-      }
-
-      if (eventsData) {
-        const totalEvents = eventsData.length;
-        const upcomingEvents = eventsData.filter(e => new Date(e.date) > new Date()).length;
-        const completedGames = eventsData.filter(e => e.scores && new Date(e.date) <= new Date());
-        
-        let gamesWon = 0, gamesLost = 0, gamesDrawn = 0;
-        
-        completedGames.forEach(game => {
-          if (game.scores) {
-            const scores = game.scores as any;
-            if (scores.home > scores.away) gamesWon++;
-            else if (scores.home < scores.away) gamesLost++;
-            else gamesDrawn++;
-          }
-        });
-
-        setTeamAnalytics({
-          totalPlayers: playersData?.length || 0,
-          totalEvents,
-          upcomingEvents,
-          averageAttendance: 0, // Would need event attendance data
-          gamesWon,
-          gamesLost,
-          gamesDrawn,
-        });
-      }
-
-      // Check subscription status
-      const selectedTeam = teams.find(t => t.id === selectedTeamId);
-      setHasAnalyticsPlus(selectedTeam?.subscriptionType === 'analytics_plus');
-      
-    } catch (error) {
-      console.error('Error loading analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const topPlayers = playerStats
-    .filter(p => p.totalGames > 0)
-    .sort((a, b) => b.totalGames - a.totalGames)
-    .slice(0, 5);
-
-  const gameResults = teamAnalytics ? [
-    { name: 'Won', value: teamAnalytics.gamesWon, color: '#22c55e' },
-    { name: 'Lost', value: teamAnalytics.gamesLost, color: '#ef4444' },
-    { name: 'Drawn', value: teamAnalytics.gamesDrawn, color: '#eab308' },
-  ] : [];
-
-  const handleUpgrade = () => {
-    window.open('https://lovable.dev/projects/fb21d593-e7fb-4b5d-9fcf-49682061565e', '_blank');
-  };
+  // Fetch active players
+  const { data: players = [], isLoading } = useQuery({
+    queryKey: ['active-players', selectedTeamId],
+    queryFn: () => selectedTeamId ? playersService.getActivePlayersByTeamId(selectedTeamId) : [],
+    enabled: !!selectedTeamId,
+  });
 
   const selectedTeam = teams.find(t => t.id === selectedTeamId);
 
-  if (loading) {
+  // Calculate team statistics
+  const teamStats = {
+    totalPlayers: players.length,
+    totalGames: players.reduce((sum, player) => sum + (player.matchStats?.totalGames || 0), 0),
+    totalMinutes: players.reduce((sum, player) => sum + (player.matchStats?.totalMinutes || 0), 0),
+    totalCaptainGames: players.reduce((sum, player) => sum + (player.matchStats?.captainGames || 0), 0),
+    totalPOTMCount: players.reduce((sum, player) => sum + (player.matchStats?.playerOfTheMatchCount || 0), 0),
+    fullSquadPlayers: players.filter(p => p.subscriptionType === 'full_squad').length,
+    trainingOnlyPlayers: players.filter(p => p.subscriptionType === 'training').length,
+  };
+
+  // Top performers
+  const topMinutesPlayers = [...players]
+    .sort((a, b) => (b.matchStats?.totalMinutes || 0) - (a.matchStats?.totalMinutes || 0))
+    .slice(0, 5);
+
+  const topGamePlayers = [...players]
+    .sort((a, b) => (b.matchStats?.totalGames || 0) - (a.matchStats?.totalGames || 0))
+    .slice(0, 5);
+
+  const captainLeaders = [...players]
+    .filter(p => (p.matchStats?.captainGames || 0) > 0)
+    .sort((a, b) => (b.matchStats?.captainGames || 0) - (a.matchStats?.captainGames || 0))
+    .slice(0, 5);
+
+  const potmLeaders = [...players]
+    .filter(p => (p.matchStats?.playerOfTheMatchCount || 0) > 0)
+    .sort((a, b) => (b.matchStats?.playerOfTheMatchCount || 0) - (a.matchStats?.playerOfTheMatchCount || 0))
+    .slice(0, 5);
+
+  if (isLoading) {
     return (
       <DashboardLayout>
         <div className="space-y-6">
@@ -157,200 +74,293 @@ const Analytics = () => {
               Team and player performance insights
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            {!hasAnalyticsPlus && (
-              <Button onClick={handleUpgrade} className="bg-yellow-500 hover:bg-yellow-600">
-                <Crown className="mr-2 h-4 w-4" />
-                Upgrade to Analytics+
-              </Button>
-            )}
-            {teams.length > 1 && (
-              <select
-                value={selectedTeamId}
-                onChange={(e) => setSelectedTeamId(e.target.value)}
-                className="px-3 py-2 border rounded-md"
-              >
-                {teams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+          {teams.length > 1 && (
+            <div className="min-w-[250px]">
+              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select team" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
-        {!hasAnalyticsPlus && (
-          <Card className="border-yellow-200 bg-yellow-50">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <Lock className="h-5 w-5 text-yellow-600" />
-                <div>
-                  <h3 className="font-semibold text-yellow-800">Upgrade to Analytics+ for Advanced Features</h3>
-                  <p className="text-yellow-700 text-sm">
-                    Get detailed performance analysis, advanced statistics, and player development tracking.
-                  </p>
-                </div>
-                <Button onClick={handleUpgrade} variant="outline" className="ml-auto">
-                  Learn More
-                </Button>
+        {/* Team Overview */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                Total Players
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold">{teamStats.totalPlayers}</div>
+              <div className="text-xs text-muted-foreground">
+                {teamStats.fullSquadPlayers} Full Squad, {teamStats.trainingOnlyPlayers} Training Only
               </div>
             </CardContent>
           </Card>
-        )}
 
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="players">Player Stats</TabsTrigger>
-            <TabsTrigger value="performance" disabled={!hasAnalyticsPlus}>
-              Performance Analysis {!hasAnalyticsPlus && <Lock className="ml-1 h-3 w-3" />}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-4">
-            {teamAnalytics && (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Players</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{teamAnalytics.totalPlayers}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Events</CardTitle>
-                    <Calendar className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{teamAnalytics.totalEvents}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Upcoming Events</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{teamAnalytics.upcomingEvents}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Games Played</CardTitle>
-                    <Trophy className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {teamAnalytics.gamesWon + teamAnalytics.gamesLost + teamAnalytics.gamesDrawn}
-                    </div>
-                  </CardContent>
-                </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <BarChart3 className="h-4 w-4" />
+                Total Games
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold">{teamStats.totalGames}</div>
+              <div className="text-xs text-muted-foreground">
+                Across all players
               </div>
-            )}
+            </CardContent>
+          </Card>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Top Players by Games</CardTitle>
-                  <CardDescription>Most active players this season</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={topPlayers}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="totalGames" fill="#3b82f6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <Timer className="h-4 w-4" />
+                Total Minutes
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold">{teamStats.totalMinutes}</div>
+              <div className="text-xs text-muted-foreground">
+                Playing time
+              </div>
+            </CardContent>
+          </Card>
 
-              {gameResults.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Game Results</CardTitle>
-                    <CardDescription>Win/Loss/Draw breakdown</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ResponsiveContainer width="100%" height={300}>
-                      <PieChart>
-                        <Pie
-                          data={gameResults}
-                          cx="50%"
-                          cy="50%"
-                          outerRadius={80}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ name, value }) => `${name}: ${value}`}
-                        >
-                          {gameResults.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <Crown className="h-4 w-4" />
+                Captain Games
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-2xl font-bold">{teamStats.totalCaptainGames}</div>
+              <div className="text-xs text-muted-foreground">
+                Leadership instances
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-          <TabsContent value="players" className="space-y-4">
+        {/* Top Performers */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Timer className="h-5 w-5" />
+                Most Minutes Played
+              </CardTitle>
+              <CardDescription>
+                Players with the highest total playing time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Player</TableHead>
+                    <TableHead>Minutes</TableHead>
+                    <TableHead>Games</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topMinutesPlayers.map((player, index) => (
+                    <TableRow key={player.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center text-xs">
+                            {index + 1}
+                          </Badge>
+                          <span className="font-medium">{player.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {player.matchStats?.totalMinutes || 0}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {player.matchStats?.totalGames || 0}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Most Games Played
+              </CardTitle>
+              <CardDescription>
+                Players with the highest number of appearances
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Player</TableHead>
+                    <TableHead>Games</TableHead>
+                    <TableHead>Minutes</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {topGamePlayers.map((player, index) => (
+                    <TableRow key={player.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center text-xs">
+                            {index + 1}
+                          </Badge>
+                          <span className="font-medium">{player.name}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {player.matchStats?.totalGames || 0}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {player.matchStats?.totalMinutes || 0}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {captainLeaders.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Player Statistics</CardTitle>
-                <CardDescription>Detailed player performance data</CardDescription>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Crown className="h-5 w-5" />
+                  Captain Leaders
+                </CardTitle>
+                <CardDescription>
+                  Players who have captained the most games
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {playerStats.map((player, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-medium">{player.name}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {player.totalGames} games • {player.totalMinutes} minutes
-                        </p>
-                      </div>
-                      <div className="flex gap-2">
-                        {player.captainGames > 0 && (
-                          <Badge variant="outline">Captain: {player.captainGames}</Badge>
-                        )}
-                        {player.playerOfTheMatchCount > 0 && (
-                          <Badge variant="outline">POTM: {player.playerOfTheMatchCount}</Badge>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player</TableHead>
+                      <TableHead>Captain Games</TableHead>
+                      <TableHead>Total Games</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {captainLeaders.map((player, index) => (
+                      <TableRow key={player.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center text-xs">
+                              {index + 1}
+                            </Badge>
+                            <span className="font-medium">{player.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {player.matchStats?.captainGames || 0}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {player.matchStats?.totalGames || 0}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
-          </TabsContent>
+          )}
 
-          <TabsContent value="performance" className="space-y-4">
+          {potmLeaders.length > 0 && (
             <Card>
-              <CardContent className="pt-6">
-                <div className="text-center py-8">
-                  <Lock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Analytics+ Required</h3>
-                  <p className="text-muted-foreground mb-4">
-                    Upgrade to Analytics+ to access advanced performance analysis features.
-                  </p>
-                  <Button onClick={handleUpgrade}>
-                    <Crown className="mr-2 h-4 w-4" />
-                    Upgrade Now
-                  </Button>
-                </div>
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Trophy className="h-5 w-5" />
+                  Player of the Match Leaders
+                </CardTitle>
+                <CardDescription>
+                  Players with the most POTM awards
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Player</TableHead>
+                      <TableHead>POTM Awards</TableHead>
+                      <TableHead>Total Games</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {potmLeaders.map((player, index) => (
+                      <TableRow key={player.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="w-6 h-6 p-0 flex items-center justify-center text-xs">
+                              {index + 1}
+                            </Badge>
+                            <span className="font-medium">{player.name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          {player.matchStats?.playerOfTheMatchCount || 0}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {player.matchStats?.totalGames || 0}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
+
+        {/* Subscription Breakdown */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Subscription Breakdown</CardTitle>
+            <CardDescription>
+              Distribution of player subscription types
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{teamStats.fullSquadPlayers}</div>
+                <div className="text-sm text-blue-600">Full Squad Players</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {teamStats.totalPlayers > 0 ? Math.round((teamStats.fullSquadPlayers / teamStats.totalPlayers) * 100) : 0}% of squad
+                </div>
+              </div>
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <div className="text-2xl font-bold text-green-600">{teamStats.trainingOnlyPlayers}</div>
+                <div className="text-sm text-green-600">Training Only Players</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  {teamStats.totalPlayers > 0 ? Math.round((teamStats.trainingOnlyPlayers / teamStats.totalPlayers) * 100) : 0}% of squad
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

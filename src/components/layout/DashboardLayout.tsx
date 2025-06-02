@@ -1,201 +1,128 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAuthorization } from "@/contexts/AuthorizationContext";
+import { useState } from 'react';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
-  Menu, 
   Home, 
   Users, 
   Calendar, 
-  BarChart3, 
   Settings, 
+  Menu,
   LogOut,
+  BarChart3,
   Trophy,
-  Shirt,
-  ClipboardList,
-  UserCog,
-  UserPlus
-} from "lucide-react";
-import { Logo } from "./Logo";
+  UserCheck
+} from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+const navigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Teams', href: '/teams', icon: Trophy },
+  { name: 'Players', href: '/players', icon: Users },
+  { name: 'Player Management', href: '/player-management', icon: UserCheck },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Calendar', href: '/calendar', icon: Calendar },
+  { name: 'Settings', href: '/settings', icon: Settings },
+];
+
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
-  const { 
-    canManageUsers, 
-    canManageTeams, 
-    canManageClubs, 
-    canViewAnalytics,
-    loading: authLoading 
-  } = useAuthorization();
-
-  const menuItems = [
-    { 
-      icon: Home, 
-      label: "Dashboard", 
-      path: "/dashboard", 
-      show: true 
-    },
-    { 
-      icon: Users, 
-      label: "Players", 
-      path: "/players", 
-      show: true 
-    },
-    { 
-      icon: Calendar, 
-      label: "Calendar & Events", 
-      path: "/calendar", 
-      show: true 
-    },
-    { 
-      icon: BarChart3, 
-      label: "Analytics", 
-      path: "/analytics", 
-      show: canViewAnalytics 
-    },
-    { 
-      icon: ClipboardList, 
-      label: "Player Management", 
-      path: "/player-management", 
-      show: true 
-    },
-    { 
-      icon: Trophy, 
-      label: "Teams", 
-      path: "/teams", 
-      show: canManageTeams 
-    },
-    { 
-      icon: Shirt, 
-      label: "Clubs", 
-      path: "/clubs", 
-      show: canManageClubs 
-    },
-    { 
-      icon: UserCog, 
-      label: "Staff Management", 
-      path: "/staff", 
-      show: true 
-    },
-    { 
-      icon: UserPlus, 
-      label: "User Management", 
-      path: "/users", 
-      show: canManageUsers 
-    },
-    { 
-      icon: Settings, 
-      label: "Subscriptions", 
-      path: "/subscriptions", 
-      show: true 
-    },
-  ];
-
-  const visibleMenuItems = authLoading ? menuItems : menuItems.filter(item => item.show);
-
-  const handleNavigation = (path: string) => {
-    navigate(path);
-    setIsOpen(false);
-  };
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
+    navigate('/login');
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Desktop Sidebar */}
-      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
-        <div className="flex flex-col flex-grow pt-5 bg-white overflow-y-auto border-r border-gray-200">
-          <div className="flex items-center flex-shrink-0 px-4">
-            <Logo />
-          </div>
-          
-          <div className="mt-8 flex-grow flex flex-col">
-            <nav className="flex-1 px-2 space-y-1">
-              {visibleMenuItems.map((item) => (
-                <Button
-                  key={item.path}
-                  variant="ghost"
-                  className="w-full justify-start"
-                  onClick={() => handleNavigation(item.path)}
-                >
-                  <item.icon className="mr-3 h-5 w-5" />
-                  {item.label}
-                </Button>
-              ))}
-            </nav>
-            
-            <div className="px-2 pb-4">
-              <Button
-                variant="ghost"
-                className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
-                onClick={handleSignOut}
+  const Sidebar = ({ className }: { className?: string }) => (
+    <div className={cn('flex h-full w-64 flex-col', className)}>
+      <div className="flex h-16 shrink-0 items-center border-b px-4">
+        <h1 className="text-xl font-bold">PUMA Squad</h1>
+      </div>
+      <ScrollArea className="flex-1">
+        <nav className="flex flex-col gap-1 p-4">
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                onClick={() => setSidebarOpen(false)}
               >
-                <LogOut className="mr-3 h-5 w-5" />
-                Sign Out
-              </Button>
-            </div>
+                <item.icon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+      </ScrollArea>
+      <div className="border-t p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
+            <span className="text-sm font-medium text-primary-foreground">
+              {user?.name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+            </span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{user?.name || 'User'}</p>
+            <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full justify-start"
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Sign out
+        </Button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block">
+        <Sidebar className="border-r" />
       </div>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden">
-        <div className="bg-white shadow-sm border-b">
-          <div className="px-4 py-3 flex items-center justify-between">
-            <Logo />
-            <Sheet open={isOpen} onOpenChange={setIsOpen}>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <Menu className="h-6 w-6" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="left" className="w-64">
-                <div className="py-4">
-                  <Logo />
-                </div>
-                <nav className="mt-8 space-y-1">
-                  {visibleMenuItems.map((item) => (
-                    <Button
-                      key={item.path}
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => handleNavigation(item.path)}
-                    >
-                      <item.icon className="mr-3 h-5 w-5" />
-                      {item.label}
-                    </Button>
-                  ))}
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 mt-8"
-                    onClick={handleSignOut}
-                  >
-                    <LogOut className="mr-3 h-5 w-5" />
-                    Sign Out
-                  </Button>
-                </nav>
-              </SheetContent>
-            </Sheet>
-          </div>
-        </div>
-      </div>
+      {/* Mobile sidebar */}
+      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+        <SheetTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden fixed top-4 left-4 z-40"
+          >
+            <Menu className="h-6 w-6" />
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="left" className="p-0 w-64">
+          <Sidebar />
+        </SheetContent>
+      </Sheet>
 
-      {/* Main Content */}
-      <div className="md:pl-64">
-        <main className="py-6">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className="flex-1 overflow-auto">
+          <div className="container mx-auto p-6">
             {children}
           </div>
         </main>

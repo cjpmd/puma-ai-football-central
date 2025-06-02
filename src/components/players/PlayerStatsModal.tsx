@@ -41,7 +41,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     game.opponent && game.opponent.toLowerCase() !== 'unknown'
   );
 
-  // Get top 3 positions by minutes played
+  // Get top 5 positions by minutes played
   const topPositions = Object.entries(matchStats.minutesByPosition || {})
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
@@ -140,7 +140,10 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Games</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    Total Games
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="text-2xl font-bold">{matchStats.totalGames}</div>
@@ -149,7 +152,10 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Total Minutes</CardTitle>
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Timer className="h-4 w-4" />
+                    Total Minutes
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="text-2xl font-bold">{matchStats.totalMinutes}</div>
@@ -177,7 +183,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <Trophy className="h-4 w-4" />
+                    <Award className="h-4 w-4" />
                     POTM
                   </CardTitle>
                 </CardHeader>
@@ -365,11 +371,15 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
-                              {Object.entries(game.minutesByPosition || {}).map(([position, minutes]) => (
-                                <Badge key={position} variant="outline" className="text-xs">
-                                  {position}: {minutes}m
-                                </Badge>
-                              ))}
+                              {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 ? (
+                                Object.entries(game.minutesByPosition).map(([position, minutes]) => (
+                                  <Badge key={position} variant="outline" className="text-xs">
+                                    {position}: {minutes}m
+                                  </Badge>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground text-xs">No position data</span>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
