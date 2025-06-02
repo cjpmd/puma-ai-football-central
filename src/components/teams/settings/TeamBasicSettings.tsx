@@ -79,6 +79,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     try {
       console.log('Saving basic team settings:', formData);
       
+      // Convert 'independent' back to null for database storage
+      const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
+      
       // Update the team basic information
       const { error: teamError } = await supabase
         .from('teams')
@@ -88,7 +91,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           game_format: formData.gameFormat,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
-          club_id: formData.clubId || null,
+          club_id: clubIdForDb,
           manager_name: formData.managerName,
           manager_email: formData.managerEmail,
           manager_phone: formData.managerPhone,
@@ -102,7 +105,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       }
 
       // Handle club linking
-      if (formData.clubId !== team.clubId) {
+      if (clubIdForDb !== team.clubId) {
         // Remove existing club link
         await supabase
           .from('club_teams')
@@ -110,10 +113,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           .eq('team_id', team.id);
 
         // Add new club link if specified
-        if (formData.clubId) {
+        if (clubIdForDb) {
           const { error: linkError } = await supabase
             .from('club_teams')
-            .insert({ club_id: formData.clubId, team_id: team.id });
+            .insert({ club_id: clubIdForDb, team_id: team.id });
 
           if (linkError && !linkError.message.includes('duplicate')) {
             console.error('Error linking team to club:', linkError);
@@ -128,7 +131,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         gameFormat: formData.gameFormat as any,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
-        clubId: formData.clubId || undefined,
+        clubId: clubIdForDb || undefined,
       });
 
       toast({
@@ -201,12 +204,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="club-selection">Club Affiliation</Label>
-              <Select value={formData.clubId} onValueChange={(value) => handleInputChange('clubId', value)}>
+              <Select value={formData.clubId || 'independent'} onValueChange={(value) => handleInputChange('clubId', value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a club or leave independent" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Independent (No Club)</SelectItem>
+                  <SelectItem value="independent">Independent (No Club)</SelectItem>
                   {availableClubs.map((club) => (
                     <SelectItem key={club.id} value={club.id}>
                       {club.name}
