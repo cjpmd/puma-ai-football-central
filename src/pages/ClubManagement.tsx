@@ -20,7 +20,7 @@ import { Club } from '@/types/index';
 import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
 
 export const ClubManagement = () => {
-  const { clubs, refreshUserData } = useAuth();
+  const { clubs, refreshUserData, teams } = useAuth();
   const [linkedClubs, setLinkedClubs] = useState<Club[]>([]);
   const [isClubDialogOpen, setIsClubDialogOpen] = useState(false);
   const [selectedClub, setSelectedClub] = useState<Club | null>(null);
@@ -32,7 +32,7 @@ export const ClubManagement = () => {
 
   useEffect(() => {
     loadLinkedClubs();
-  }, []);
+  }, [teams]);
 
   // Auto-select club if only one available
   useEffect(() => {
@@ -45,25 +45,24 @@ export const ClubManagement = () => {
   const loadLinkedClubs = async () => {
     try {
       console.log('Loading linked clubs...');
+      console.log('User teams:', teams);
       
-      // First, try to get clubs through team-club relationships
-      const { data: teamClubs, error: teamClubsError } = await supabase
-        .from('club_teams_detailed')
-        .select('*');
-
-      if (teamClubsError) {
-        console.error('Error loading team-club relationships:', teamClubsError);
-      } else {
-        console.log('Team-club relationships:', teamClubs);
+      if (!teams || teams.length === 0) {
+        console.log('No teams available, skipping linked clubs load');
+        setLinkedClubs([]);
+        return;
       }
 
-      // Also try to get clubs that user is linked to but doesn't own
-      const { data: userClubs, error } = await supabase
-        .from('user_clubs')
+      // Get team IDs that the user has access to
+      const teamIds = teams.map(team => team.id);
+      console.log('Team IDs:', teamIds);
+
+      // Get clubs linked to these teams
+      const { data: teamClubRelations, error: teamClubError } = await supabase
+        .from('club_teams')
         .select(`
           club_id,
-          role,
-          clubs!user_clubs_club_id_fkey (
+          clubs!club_teams_club_id_fkey (
             id,
             name,
             reference_number,
@@ -74,31 +73,41 @@ export const ClubManagement = () => {
             updated_at
           )
         `)
-        .neq('role', 'club_admin'); // Only show clubs where user is not admin
+        .in('team_id', teamIds);
 
-      if (error) {
-        console.error('Error loading linked clubs:', error);
+      if (teamClubError) {
+        console.error('Error loading team-club relationships:', teamClubError);
         return;
       }
 
-      console.log('User clubs data:', userClubs);
+      console.log('Team-club relations:', teamClubRelations);
 
-      const linkedClubsData = userClubs?.map(uc => {
-        if (!uc.clubs) return null;
-        return {
-          id: uc.clubs.id,
-          name: uc.clubs.name,
-          referenceNumber: uc.clubs.reference_number || undefined,
-          subscriptionType: uc.clubs.subscription_type as Club['subscriptionType'],
-          serialNumber: uc.clubs.serial_number,
-          logoUrl: uc.clubs.logo_url,
-          createdAt: uc.clubs.created_at,
-          updatedAt: uc.clubs.updated_at,
-          userRole: uc.role,
-          isReadOnly: true,
-          teams: []
-        };
-      }).filter(club => club?.id) || [];
+      // Filter out clubs that the user already owns
+      const ownedClubIds = clubs.map(club => club.id);
+      console.log('Owned club IDs:', ownedClubIds);
+
+      const linkedClubsData = teamClubRelations
+        ?.filter(relation => relation.clubs && !ownedClubIds.includes(relation.clubs.id))
+        .map(relation => {
+          const club = relation.clubs!;
+          return {
+            id: club.id,
+            name: club.name,
+            referenceNumber: club.reference_number || undefined,
+            subscriptionType: club.subscription_type as Club['subscriptionType'],
+            serialNumber: club.serial_number,
+            logoUrl: club.logo_url,
+            createdAt: club.created_at,
+            updatedAt: club.updated_at,
+            userRole: 'team_member', // User has access through team membership
+            isReadOnly: true,
+            teams: []
+          };
+        })
+        .filter((club, index, self) => 
+          // Remove duplicates based on club ID
+          index === self.findIndex(c => c.id === club.id)
+        ) || [];
 
       console.log('Processed linked clubs:', linkedClubsData);
       setLinkedClubs(linkedClubsData as Club[]);
