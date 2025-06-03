@@ -37,7 +37,7 @@ export const LinkedClubCard: React.FC<LinkedClubCardProps> = ({ club }) => {
           id,
           role,
           user_id,
-          profiles!club_officials_user_id_fkey (
+          profiles!user_id (
             name,
             email
           )
