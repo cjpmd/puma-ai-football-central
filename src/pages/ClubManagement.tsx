@@ -13,6 +13,7 @@ import { ClubCalendarEvents } from '@/components/clubs/ClubCalendarEvents';
 import { ClubAnalytics } from '@/components/clubs/ClubAnalytics';
 import { ClubStaffManagement } from '@/components/clubs/ClubStaffManagement';
 import { ClubTeamLinking } from '@/components/clubs/ClubTeamLinking';
+import { LinkedClubCard } from '@/components/clubs/LinkedClubCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -343,7 +344,7 @@ export const ClubManagement = () => {
                   ))}
                   {/* Linked Clubs */}
                   {linkedClubs.map((club) => (
-                    <ClubCard key={club.id} club={club} isLinked={true} />
+                    <LinkedClubCard key={club.id} club={club} />
                   ))}
                 </div>
               </div>
@@ -431,7 +432,7 @@ export const ClubManagement = () => {
                     <ClubCard key={club.id} club={club} />
                   ))}
                   {linkedClubs.map((club) => (
-                    <ClubCard key={club.id} club={club} isLinked={true} />
+                    <LinkedClubCard key={club.id} club={club} />
                   ))}
                 </div>
               </div>
