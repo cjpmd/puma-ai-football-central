@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -46,7 +45,19 @@ export const ClubManagement = () => {
   const loadLinkedClubs = async () => {
     try {
       console.log('Loading linked clubs...');
-      // Get clubs that user is linked to but doesn't own
+      
+      // First, try to get clubs through team-club relationships
+      const { data: teamClubs, error: teamClubsError } = await supabase
+        .from('club_teams_detailed')
+        .select('*');
+
+      if (teamClubsError) {
+        console.error('Error loading team-club relationships:', teamClubsError);
+      } else {
+        console.log('Team-club relationships:', teamClubs);
+      }
+
+      // Also try to get clubs that user is linked to but doesn't own
       const { data: userClubs, error } = await supabase
         .from('user_clubs')
         .select(`
@@ -70,6 +81,8 @@ export const ClubManagement = () => {
         return;
       }
 
+      console.log('User clubs data:', userClubs);
+
       const linkedClubsData = userClubs?.map(uc => {
         if (!uc.clubs) return null;
         return {
@@ -87,7 +100,7 @@ export const ClubManagement = () => {
         };
       }).filter(club => club?.id) || [];
 
-      console.log('Loaded linked clubs:', linkedClubsData);
+      console.log('Processed linked clubs:', linkedClubsData);
       setLinkedClubs(linkedClubsData as Club[]);
     } catch (error) {
       console.error('Error in loadLinkedClubs:', error);
