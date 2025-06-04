@@ -8,11 +8,11 @@ export interface EventSelectionData {
   team_number: number;
   period_number: number;
   formation: string;
-  player_positions: any[];
-  substitutes: string[];
-  substitute_players: string[];
+  player_positions: any;
+  substitutes: any;
+  substitute_players: any;
   captain_id: string | null;
-  staff_selection: any[];
+  staff_selection: any;
   performance_category_id: string | null;
   duration_minutes: number;
   created_at: string;
