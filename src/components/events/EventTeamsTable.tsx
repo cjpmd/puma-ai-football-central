@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
 import { FormationSelector } from './FormationSelector';
-import { Database } from '@/types/supabase';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { GameFormat } from '@/types';
@@ -48,7 +47,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   gameFormat,
   onClose
 }) => {
-  const [teams, setTeams] = useState<TeamData[]>([{ teamNumber: 1, periods: [{ periodNumber: 1, selections: [] }] }]);
+  const [teams, setTeams] = useState<TeamData[]>([{ teamNumber: 1, periods: [{ periodNumber: 1 }] }]);
   const [availableCategories, setAvailableCategories] = useState<PerformanceCategory[]>([]);
   const { toast } = useToast();
 
@@ -199,14 +198,18 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
     const newTeamNumber = Math.max(...teams.map(t => t.teamNumber), 0) + 1;
     const newTeam: TeamData = {
       teamNumber: newTeamNumber,
-      periods: [{ periodNumber: 1, selections: [] }]
+      periods: [{ periodNumber: 1 }]
     };
     setTeams([...teams, newTeam]);
   };
 
   const deleteTeam = (teamNumber: number) => {
     if (teams.length <= 1) {
-      toast.error('Cannot delete the last team');
+      toast({
+        title: 'Error',
+        description: 'Cannot delete the last team',
+        variant: 'destructive',
+      });
       return;
     }
     setTeams(teams.filter(t => t.teamNumber !== teamNumber));
@@ -218,7 +221,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
         const newPeriodNumber = Math.max(...team.periods.map(p => p.periodNumber), 0) + 1;
         return {
           ...team,
-          periods: [...team.periods, { periodNumber: newPeriodNumber, selections: [] }]
+          periods: [...team.periods, { periodNumber: newPeriodNumber }]
         };
       }
       return team;
@@ -229,7 +232,11 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
     setTeams(teams.map(team => {
       if (team.teamNumber === teamNumber) {
         if (team.periods.length <= 1) {
-          toast.error('Cannot delete the last period');
+          toast({
+            title: 'Error',
+            description: 'Cannot delete the last period',
+            variant: 'destructive',
+          });
           return team;
         }
         return {
@@ -247,17 +254,17 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
     console.log('Teams data:', teams);
 
     try {
-      // 1. Fetch existing team assignments for the event
-      const { data: existingAssignments, error: fetchError } = await supabase
-        .from('event_team_assignments')
+      // 1. Fetch existing team selections for the event
+      const { data: existingSelections, error: fetchError } = await supabase
+        .from('event_selections')
         .select('*')
         .eq('event_id', eventId);
 
       if (fetchError) {
-        console.error('Error fetching existing team assignments:', fetchError);
+        console.error('Error fetching existing team selections:', fetchError);
         toast({
           title: 'Error',
-          description: 'Failed to fetch existing team assignments',
+          description: 'Failed to fetch existing team selections',
           variant: 'destructive',
         });
         return;
@@ -272,11 +279,12 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
 
           return {
             event_id: eventId,
+            team_id: primaryTeamId,
             team_number: team.teamNumber,
             performance_category_id: team.performanceCategoryId || null,
             period_number: period.periodNumber,
-            formation: period.formation || null,
-            duration_minutes: period.durationMinutes || null,
+            formation: period.formation || '',
+            duration_minutes: period.durationMinutes || 45,
             player_positions: playerPositions,
             substitute_players: substitutePlayers,
             staff_selection: staffSelection,
@@ -287,42 +295,42 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
 
       // 3. Execute the upsert operation
       const { error: upsertError } = await supabase
-        .from('event_team_assignments')
+        .from('event_selections')
         .upsert(upsertData, { onConflict: 'event_id, team_number, period_number' });
 
       if (upsertError) {
-        console.error('Error upserting event team assignments:', upsertError);
+        console.error('Error upserting event team selections:', upsertError);
         toast({
           title: 'Error',
-          description: 'Failed to save team assignments',
+          description: 'Failed to save team selections',
           variant: 'destructive',
         });
         return;
       }
 
-      // 4. Identify and delete removed assignments
-      const existingKeys = existingAssignments?.map(assignment => `${assignment.event_id}-${assignment.team_number}-${assignment.period_number}`) || [];
+      // 4. Identify and delete removed selections
+      const existingKeys = existingSelections?.map(selection => `${selection.event_id}-${selection.team_number}-${selection.period_number}`) || [];
       const upsertKeys = upsertData.map(data => `${data.event_id}-${data.team_number}-${data.period_number}`);
 
-      const assignmentsToDelete = existingAssignments?.filter(assignment => {
-        const key = `${assignment.event_id}-${assignment.team_number}-${assignment.period_number}`;
+      const selectionsToDelete = existingSelections?.filter(selection => {
+        const key = `${selection.event_id}-${selection.team_number}-${selection.period_number}`;
         return !upsertKeys.includes(key);
       }) || [];
 
-      // 5. Delete removed assignments
-      if (assignmentsToDelete.length > 0) {
-        const deleteIds = assignmentsToDelete.map(assignment => assignment.id);
+      // 5. Delete removed selections
+      if (selectionsToDelete.length > 0) {
+        const deleteIds = selectionsToDelete.map(selection => selection.id);
 
         const { error: deleteError } = await supabase
-          .from('event_team_assignments')
+          .from('event_selections')
           .delete()
           .in('id', deleteIds);
 
         if (deleteError) {
-          console.error('Error deleting event team assignments:', deleteError);
+          console.error('Error deleting event team selections:', deleteError);
           toast({
             title: 'Error',
-            description: 'Failed to delete removed team assignments',
+            description: 'Failed to delete removed team selections',
             variant: 'destructive',
           });
           return;
@@ -331,15 +339,15 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
 
       toast({
         title: 'Success',
-        description: 'Team assignments saved successfully!',
+        description: 'Team selections saved successfully!',
       });
       if (onClose) onClose();
 
     } catch (error) {
-      console.error('Error saving team assignments:', error);
+      console.error('Error saving team selections:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save team assignments',
+        description: 'Failed to save team selections',
         variant: 'destructive',
       });
     }
