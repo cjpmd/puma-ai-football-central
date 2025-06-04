@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock, Eye } from 'lucide-react';
+import { Users, Bell, CheckCircle, Settings, Plus, Save, Clock, Eye, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailability';
 import { StaffSelectionSection } from './StaffSelectionSection';
@@ -476,6 +476,87 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }));
   };
 
+  const deletePeriod = (periodToDelete: number) => {
+    const currentPeriods = teamPeriods[activeTeam] || [1];
+    
+    // Don't allow deleting the last period
+    if (currentPeriods.length <= 1) {
+      return;
+    }
+    
+    const updatedPeriods = currentPeriods.filter(period => period !== periodToDelete);
+    
+    setTeamPeriods(prev => ({
+      ...prev,
+      [activeTeam]: updatedPeriods
+    }));
+    
+    // Remove the period state
+    const keyToDelete = `${activeTeam}-${periodToDelete}`;
+    setPeriodStates(prev => {
+      const newStates = { ...prev };
+      delete newStates[keyToDelete];
+      return newStates;
+    });
+    
+    // If the deleted period was active, switch to the first available period
+    if (activePeriod === periodToDelete) {
+      setActivePeriod(updatedPeriods[0]);
+    }
+  };
+
+  const deleteTeam = (teamToDelete: string) => {
+    // Don't allow deleting the last team
+    if (teams.length <= 1) {
+      return;
+    }
+    
+    const updatedTeams = teams.filter(team => team !== teamToDelete);
+    setTeams(updatedTeams);
+    
+    // Remove team state
+    setTeamStates(prev => {
+      const newStates = { ...prev };
+      delete newStates[teamToDelete];
+      return newStates;
+    });
+    
+    // Remove all period states for this team
+    setPeriodStates(prev => {
+      const newStates = { ...prev };
+      Object.keys(newStates).forEach(key => {
+        if (key.startsWith(`${teamToDelete}-`)) {
+          delete newStates[key];
+        }
+      });
+      return newStates;
+    });
+    
+    // Remove team periods
+    setTeamPeriods(prev => {
+      const newPeriods = { ...prev };
+      delete newPeriods[teamToDelete];
+      return newPeriods;
+    });
+    
+    // Update staff assignments
+    setStaffAssignments(prev => {
+      const newAssignments = { ...prev };
+      Object.keys(newAssignments).forEach(staffId => {
+        newAssignments[staffId] = newAssignments[staffId].filter(id => id !== teamToDelete);
+        if (newAssignments[staffId].length === 0) {
+          delete newAssignments[staffId];
+        }
+      });
+      return newAssignments;
+    });
+    
+    // If the deleted team was active, switch to the first available team
+    if (activeTeam === teamToDelete) {
+      setActiveTeam(updatedTeams[0]);
+    }
+  };
+
   const getTeamDisplayName = (teamId: string) => {
     const teamIndex = teams.indexOf(teamId);
     const teamState = teamStates[teamId];
@@ -817,15 +898,26 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             {/* Team Tabs */}
             <div className="bg-gray-100 p-1 rounded-lg flex items-center justify-center gap-1">
               {teams.map((teamId) => (
-                <Button
-                  key={teamId}
-                  variant={teamId === activeTeam ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setActiveTeam(teamId)}
-                  className={teamId === activeTeam ? "bg-white shadow-sm text-gray-900" : "text-gray-700 hover:text-gray-900"}
-                >
-                  {getTeamDisplayName(teamId)}
-                </Button>
+                <div key={teamId} className="flex items-center">
+                  <Button
+                    variant={teamId === activeTeam ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setActiveTeam(teamId)}
+                    className={teamId === activeTeam ? "bg-white shadow-sm text-gray-900" : "text-gray-700 hover:text-gray-900"}
+                  >
+                    {getTeamDisplayName(teamId)}
+                  </Button>
+                  {teams.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => deleteTeam(teamId)}
+                      className="ml-1 h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
               ))}
             </div>
 
@@ -833,14 +925,25 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {currentTeamPeriods.map((period) => (
-                  <Button
-                    key={period}
-                    variant={period === activePeriod ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setActivePeriod(period)}
-                  >
-                    Period {period}
-                  </Button>
+                  <div key={period} className="flex items-center">
+                    <Button
+                      variant={period === activePeriod ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setActivePeriod(period)}
+                    >
+                      Period {period}
+                    </Button>
+                    {currentTeamPeriods.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deletePeriod(period)}
+                        className="ml-1 h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                 ))}
                 <Button size="sm" variant="outline" onClick={addPeriod}>
                   <Plus className="h-3 w-3" />
