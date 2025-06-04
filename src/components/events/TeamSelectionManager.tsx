@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -58,7 +59,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .order('period_number', { ascending: true });
 
       if (error) throw error;
-      setSelections(data || []);
+      
+      // Transform database response to match EventSelection interface
+      const transformedData = (data || []).map(item => ({
+        id: item.id,
+        team_id: item.team_id,
+        team_number: item.team_number,
+        period_number: item.period_number,
+        formation: item.formation,
+        player_positions: Array.isArray(item.player_positions) ? item.player_positions : [],
+        substitutes: Array.isArray(item.substitutes) ? item.substitutes : [],
+        staff_selection: Array.isArray(item.staff_selection) ? item.staff_selection : [],
+        captain_id: item.captain_id,
+        performance_category_id: item.performance_category_id
+      }));
+      
+      setSelections(transformedData);
     } catch (error) {
       console.error('Error loading selections:', error);
     } finally {
@@ -111,7 +127,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .single();
 
       if (error) throw error;
-      setSelections(prev => [...prev, data]);
+      
+      // Transform response to match interface
+      const transformedSelection = {
+        id: data.id,
+        team_id: data.team_id,
+        team_number: data.team_number,
+        period_number: data.period_number,
+        formation: data.formation,
+        player_positions: Array.isArray(data.player_positions) ? data.player_positions : [],
+        substitutes: Array.isArray(data.substitutes) ? data.substitutes : [],
+        staff_selection: Array.isArray(data.staff_selection) ? data.staff_selection : [],
+        captain_id: data.captain_id,
+        performance_category_id: data.performance_category_id
+      };
+      
+      setSelections(prev => [...prev, transformedSelection]);
     } catch (error) {
       console.error('Error adding team:', error);
     }
@@ -154,7 +185,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .single();
 
       if (error) throw error;
-      setSelections(prev => [...prev, data]);
+      
+      // Transform response to match interface
+      const transformedSelection = {
+        id: data.id,
+        team_id: data.team_id,
+        team_number: data.team_number,
+        period_number: data.period_number,
+        formation: data.formation,
+        player_positions: Array.isArray(data.player_positions) ? data.player_positions : [],
+        substitutes: Array.isArray(data.substitutes) ? data.substitutes : [],
+        staff_selection: Array.isArray(data.staff_selection) ? data.staff_selection : [],
+        captain_id: data.captain_id,
+        performance_category_id: data.performance_category_id
+      };
+      
+      setSelections(prev => [...prev, transformedSelection]);
     } catch (error) {
       console.error('Error adding period:', error);
     }
