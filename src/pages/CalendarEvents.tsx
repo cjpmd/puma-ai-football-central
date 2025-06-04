@@ -893,7 +893,7 @@ const CalendarEventsPage = () => {
               <EventTeamsTable
                 eventId={selectedEvent.id}
                 primaryTeamId={selectedTeamId}
-                gameFormat={selectedEvent.game_format || '7-a-side'}
+                gameFormat={(selectedEvent.game_format as GameFormat) || '7-a-side'}
                 onClose={handleTeamSelectionClose}
               />
             )}

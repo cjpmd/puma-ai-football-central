@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -480,12 +481,11 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
                         formation={period.formation}
                         gameFormat={gameFormat}
                         selectedPlayers={Object.values(period.playerPositions || {})}
-                        onPlayersChange={(players) => updatePeriodPlayers(team.teamNumber, period.periodNumber, players)}
+                        onPlayersChange={(playersPositions) => updatePeriodPlayers(team.teamNumber, period.periodNumber, playersPositions)}
                         substitutePlayers={period.substitutePlayers || []}
                         onSubstitutesChange={(subs) => updatePeriodSubstitutes(team.teamNumber, period.periodNumber, subs)}
                         captainId={period.captainId}
                         onCaptainChange={(captainId) => updatePeriodCaptain(team.teamNumber, period.periodNumber, captainId)}
-                        performanceCategoryId={team.performanceCategoryId}
                       />
 
                       <StaffSelectionSection
@@ -508,3 +508,4 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
     </div>
   );
 };
+
