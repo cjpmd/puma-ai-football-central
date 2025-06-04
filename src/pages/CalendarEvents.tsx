@@ -149,7 +149,7 @@ const CalendarEventsPage = () => {
     setEventNotes(event.notes || '');
     setEventEventType(event.event_type as any);
     setEventOpponent(event.opponent || '');
-    setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
+    setEventGameFormat((event.game_format as GameFormat) || '7-a-side');
     setEventKitSelection((event as any).kit_selection || 'home');
     setIsEditModalOpen(true);
   };
