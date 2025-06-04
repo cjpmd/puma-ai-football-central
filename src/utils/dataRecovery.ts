@@ -19,15 +19,19 @@ export interface EventSelectionData {
   updated_at: string;
 }
 
-export const checkEventSelections = async (eventTitle: string): Promise<{
+export interface DataRecoveryResults {
   event: any | null;
   selections: EventSelectionData[];
   playerStats: any[];
-}> => {
+  deletionLogs: any[];
+  recentSelections: any[];
+}
+
+export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRecoveryResults> => {
   try {
-    console.log('Searching for event with title:', eventTitle);
+    console.log('Starting comprehensive data check for event:', eventTitle);
     
-    // First, find the event by title
+    // Find the event by title
     const { data: events, error: eventError } = await supabase
       .from('events')
       .select('*')
@@ -41,7 +45,13 @@ export const checkEventSelections = async (eventTitle: string): Promise<{
     console.log('Found events:', events);
 
     if (!events || events.length === 0) {
-      return { event: null, selections: [], playerStats: [] };
+      return { 
+        event: null, 
+        selections: [], 
+        playerStats: [], 
+        deletionLogs: [],
+        recentSelections: []
+      };
     }
 
     const targetEvent = events[0];
@@ -51,7 +61,8 @@ export const checkEventSelections = async (eventTitle: string): Promise<{
     const { data: selections, error: selectionsError } = await supabase
       .from('event_selections')
       .select('*')
-      .eq('event_id', targetEvent.id);
+      .eq('event_id', targetEvent.id)
+      .order('created_at', { ascending: false });
 
     if (selectionsError) {
       console.error('Error finding selections:', selectionsError);
@@ -73,16 +84,65 @@ export const checkEventSelections = async (eventTitle: string): Promise<{
 
     console.log('Found player stats:', playerStats);
 
+    // Check for any recent selections in the same team (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { data: recentSelections, error: recentError } = await supabase
+      .from('event_selections')
+      .select(`
+        *,
+        events!inner(title, date, event_type)
+      `)
+      .eq('team_id', targetEvent.team_id)
+      .gte('created_at', sevenDaysAgo.toISOString())
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (recentError) {
+      console.error('Error finding recent selections:', recentError);
+    }
+
+    console.log('Found recent selections:', recentSelections);
+
+    // Try to find any deletion-related logs or patterns
+    // Check if there are any event_teams entries that might indicate deletion
+    const { data: eventTeams, error: eventTeamsError } = await supabase
+      .from('event_teams')
+      .select('*')
+      .eq('event_id', targetEvent.id);
+
+    if (eventTeamsError) {
+      console.error('Error checking event teams:', eventTeamsError);
+    }
+
+    console.log('Event teams data:', eventTeams);
+
     return {
       event: targetEvent,
       selections: selections || [],
-      playerStats: playerStats || []
+      playerStats: playerStats || [],
+      deletionLogs: [], // We don't have deletion logs in current schema
+      recentSelections: recentSelections || []
     };
 
   } catch (error) {
-    console.error('Error checking event selections:', error);
+    console.error('Error in comprehensive data check:', error);
     throw error;
   }
+};
+
+export const checkEventSelections = async (eventTitle: string): Promise<{
+  event: any | null;
+  selections: EventSelectionData[];
+  playerStats: any[];
+}> => {
+  const results = await comprehensiveDataCheck(eventTitle);
+  return {
+    event: results.event,
+    selections: results.selections,
+    playerStats: results.playerStats
+  };
 };
 
 export const restoreEventSelections = async (eventId: string, selectionsData: EventSelectionData[]) => {
@@ -90,37 +150,30 @@ export const restoreEventSelections = async (eventId: string, selectionsData: Ev
     console.log('Restoring selections for event:', eventId);
     console.log('Selections data:', selectionsData);
 
-    // Delete existing selections first
-    const { error: deleteError } = await supabase
-      .from('event_selections')
-      .delete()
-      .eq('event_id', eventId);
+    // Don't delete existing selections, just insert new ones with conflict handling
+    const restoreData = selectionsData.map(selection => ({
+      event_id: selection.event_id,
+      team_id: selection.team_id,
+      team_number: selection.team_number,
+      period_number: selection.period_number,
+      formation: selection.formation,
+      player_positions: selection.player_positions,
+      substitutes: selection.substitutes,
+      substitute_players: selection.substitute_players,
+      captain_id: selection.captain_id,
+      staff_selection: selection.staff_selection,
+      performance_category_id: selection.performance_category_id,
+      duration_minutes: selection.duration_minutes
+    }));
 
-    if (deleteError) {
-      console.error('Error deleting existing selections:', deleteError);
-      throw deleteError;
-    }
-
-    // Insert restored selections
     const { data, error: insertError } = await supabase
       .from('event_selections')
-      .insert(selectionsData.map(selection => ({
-        event_id: selection.event_id,
-        team_id: selection.team_id,
-        team_number: selection.team_number,
-        period_number: selection.period_number,
-        formation: selection.formation,
-        player_positions: selection.player_positions,
-        substitutes: selection.substitutes,
-        substitute_players: selection.substitute_players,
-        captain_id: selection.captain_id,
-        staff_selection: selection.staff_selection,
-        performance_category_id: selection.performance_category_id,
-        duration_minutes: selection.duration_minutes
-      })));
+      .upsert(restoreData, {
+        onConflict: 'event_id,team_number,period_number'
+      });
 
     if (insertError) {
-      console.error('Error inserting restored selections:', insertError);
+      console.error('Error restoring selections:', insertError);
       throw insertError;
     }
 
@@ -129,6 +182,43 @@ export const restoreEventSelections = async (eventId: string, selectionsData: Ev
 
   } catch (error) {
     console.error('Error restoring event selections:', error);
+    throw error;
+  }
+};
+
+export const createSelectionsFromTemplate = async (eventId: string, templateSelections: any[]) => {
+  try {
+    console.log('Creating selections from template for event:', eventId);
+    
+    const newSelections = templateSelections.map(template => ({
+      event_id: eventId,
+      team_id: template.team_id,
+      team_number: template.team_number,
+      period_number: template.period_number,
+      formation: template.formation,
+      player_positions: template.player_positions,
+      substitutes: template.substitutes,
+      substitute_players: template.substitute_players,
+      captain_id: template.captain_id,
+      staff_selection: template.staff_selection,
+      performance_category_id: template.performance_category_id,
+      duration_minutes: template.duration_minutes
+    }));
+
+    const { data, error } = await supabase
+      .from('event_selections')
+      .insert(newSelections);
+
+    if (error) {
+      console.error('Error creating selections from template:', error);
+      throw error;
+    }
+
+    console.log('Successfully created selections from template:', data);
+    return data;
+
+  } catch (error) {
+    console.error('Error creating selections from template:', error);
     throw error;
   }
 };

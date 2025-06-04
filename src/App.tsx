@@ -19,6 +19,7 @@ import ClubManagement from "./pages/ClubManagement";
 import StaffManagement from "./pages/StaffManagement";
 import UserManagement from "./pages/UserManagement";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
+import DataRecovery from "./pages/DataRecovery";
 
 const queryClient = new QueryClient();
 
@@ -111,6 +112,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <SubscriptionManagement />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/data-recovery"
+                element={
+                  <ProtectedRoute>
+                    <DataRecovery />
                   </ProtectedRoute>
                 }
               />
