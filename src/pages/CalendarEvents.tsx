@@ -149,7 +149,7 @@ const CalendarEventsPage = () => {
     setEventNotes(event.notes || '');
     setEventEventType(event.event_type as any);
     setEventOpponent(event.opponent || '');
-    setEventGameFormat((event.game_format as GameFormat) || '7-a-side');
+    setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
     setEventKitSelection((event as any).kit_selection || 'home');
     setIsEditModalOpen(true);
   };
@@ -893,7 +893,7 @@ const CalendarEventsPage = () => {
               <EventTeamsTable
                 eventId={selectedEvent.id}
                 primaryTeamId={selectedTeamId}
-                gameFormat={(selectedEvent.game_format as GameFormat) || '7-a-side'}
+                gameFormat={selectedEvent.game_format || '7-a-side'}
                 onClose={handleTeamSelectionClose}
               />
             )}
