@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Trophy, Calendar, Users } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trophy, Calendar, Users, Filter, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -27,15 +28,43 @@ interface EventResult {
   }>;
 }
 
+interface TeamStats {
+  teamName: string;
+  wins: number;
+  draws: number;
+  losses: number;
+  goalsFor: number;
+  goalsAgainst: number;
+  totalGames: number;
+}
+
+interface EventTypeStats {
+  eventType: string;
+  teams: { [teamName: string]: TeamStats };
+  totalGames: number;
+  totalWins: number;
+  totalDraws: number;
+  totalLosses: number;
+  totalGoalsFor: number;
+  totalGoalsAgainst: number;
+}
+
 export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }) => {
   const [results, setResults] = useState<EventResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [eventTypeStats, setEventTypeStats] = useState<{ [eventType: string]: EventTypeStats }>({});
 
   useEffect(() => {
     if (selectedTeamId) {
       loadResults();
     }
   }, [selectedTeamId]);
+
+  useEffect(() => {
+    calculateStats();
+  }, [results]);
 
   const loadResults = async () => {
     try {
@@ -155,6 +184,61 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
     }
   };
 
+  const calculateStats = () => {
+    const stats: { [eventType: string]: EventTypeStats } = {};
+
+    results.forEach(result => {
+      if (!stats[result.eventType]) {
+        stats[result.eventType] = {
+          eventType: result.eventType,
+          teams: {},
+          totalGames: 0,
+          totalWins: 0,
+          totalDraws: 0,
+          totalLosses: 0,
+          totalGoalsFor: 0,
+          totalGoalsAgainst: 0
+        };
+      }
+
+      result.teams.forEach(team => {
+        if (!stats[result.eventType].teams[team.teamName]) {
+          stats[result.eventType].teams[team.teamName] = {
+            teamName: team.teamName,
+            wins: 0,
+            draws: 0,
+            losses: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            totalGames: 0
+          };
+        }
+
+        const teamStats = stats[result.eventType].teams[team.teamName];
+        teamStats.totalGames++;
+        teamStats.goalsFor += team.ourScore;
+        teamStats.goalsAgainst += team.opponentScore;
+
+        if (team.outcome === 'win') {
+          teamStats.wins++;
+          stats[result.eventType].totalWins++;
+        } else if (team.outcome === 'loss') {
+          teamStats.losses++;
+          stats[result.eventType].totalLosses++;
+        } else if (team.outcome === 'draw') {
+          teamStats.draws++;
+          stats[result.eventType].totalDraws++;
+        }
+
+        stats[result.eventType].totalGames++;
+        stats[result.eventType].totalGoalsFor += team.ourScore;
+        stats[result.eventType].totalGoalsAgainst += team.opponentScore;
+      });
+    });
+
+    setEventTypeStats(stats);
+  };
+
   const getEventTypeBadgeColor = (eventType: string) => {
     switch (eventType) {
       case 'match': 
@@ -170,18 +254,41 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
     }
   };
 
+  const getFilteredResults = () => {
+    return results.filter(result => {
+      const eventTypeMatch = selectedEventType === 'all' || result.eventType === selectedEventType;
+      const teamMatch = selectedTeam === 'all' || result.teams.some(team => team.teamName === selectedTeam);
+      return eventTypeMatch && teamMatch;
+    });
+  };
+
+  const getUniqueEventTypes = () => {
+    return Array.from(new Set(results.map(result => result.eventType)));
+  };
+
+  const getUniqueTeams = () => {
+    const teams = new Set<string>();
+    results.forEach(result => {
+      result.teams.forEach(team => teams.add(team.teamName));
+    });
+    return Array.from(teams);
+  };
+
   const calculateSummaryStats = () => {
+    const filteredResults = getFilteredResults();
     let totalWins = 0;
     let totalLosses = 0;
     let totalDraws = 0;
     let totalGames = 0;
 
-    results.forEach(result => {
+    filteredResults.forEach(result => {
       result.teams.forEach(team => {
-        totalGames++;
-        if (team.outcome === 'win') totalWins++;
-        else if (team.outcome === 'loss') totalLosses++;
-        else if (team.outcome === 'draw') totalDraws++;
+        if (selectedTeam === 'all' || team.teamName === selectedTeam) {
+          totalGames++;
+          if (team.outcome === 'win') totalWins++;
+          else if (team.outcome === 'loss') totalLosses++;
+          else if (team.outcome === 'draw') totalDraws++;
+        }
       });
     });
 
@@ -189,6 +296,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   };
 
   const summaryStats = calculateSummaryStats();
+  const filteredResults = getFilteredResults();
 
   if (loading) {
     return (
@@ -207,112 +315,211 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Trophy className="h-5 w-5" />
-          Results Summary
-        </CardTitle>
-        <CardDescription>
-          All completed events with team results and outcomes
-        </CardDescription>
+    <div className="space-y-6">
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Filter className="h-5 w-5" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block">Event Type</label>
+              <Select value={selectedEventType} onValueChange={setSelectedEventType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Event Types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Event Types</SelectItem>
+                  {getUniqueEventTypes().map(eventType => (
+                    <SelectItem key={eventType} value={eventType}>
+                      {eventType.charAt(0).toUpperCase() + eventType.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Team / Performance Category</label>
+              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All Teams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Teams</SelectItem>
+                  {getUniqueTeams().map(team => (
+                    <SelectItem key={team} value={team}>
+                      {team}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Statistics Summary */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Statistics Summary
+          </CardTitle>
+          <CardDescription>
+            Performance breakdown by event type and team
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {Object.values(eventTypeStats).map(eventStat => (
+              <div key={eventStat.eventType} className="border rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-4">
+                  <Badge className={`text-white text-sm ${getEventTypeBadgeColor(eventStat.eventType)}`}>
+                    {eventStat.eventType.toUpperCase()}
+                  </Badge>
+                  <span className="text-sm text-muted-foreground">
+                    {eventStat.totalGames} games • {eventStat.totalWins}W {eventStat.totalDraws}D {eventStat.totalLosses}L • 
+                    {eventStat.totalGoalsFor} goals for, {eventStat.totalGoalsAgainst} against
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.values(eventStat.teams).map(team => (
+                    <div key={team.teamName} className="bg-muted/30 rounded p-3">
+                      <div className="font-medium text-sm mb-2">{team.teamName}</div>
+                      <div className="text-xs space-y-1">
+                        <div>Games: {team.totalGames}</div>
+                        <div className="text-green-600">Wins: {team.wins}</div>
+                        <div className="text-gray-600">Draws: {team.draws}</div>
+                        <div className="text-red-600">Losses: {team.losses}</div>
+                        <div>Goals: {team.goalsFor} for, {team.goalsAgainst} against</div>
+                        <div>Goal Diff: {team.goalsFor - team.goalsAgainst > 0 ? '+' : ''}{team.goalsFor - team.goalsAgainst}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Results Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Trophy className="h-5 w-5" />
+            Results Summary
+          </CardTitle>
+          <CardDescription>
+            {selectedEventType !== 'all' || selectedTeam !== 'all' ? 'Filtered r' : 'R'}esults 
+            {selectedEventType !== 'all' && ` for ${selectedEventType} events`}
+            {selectedTeam !== 'all' && ` for ${selectedTeam}`}
+          </CardDescription>
+          
+          {summaryStats.totalGames > 0 && (
+            <div className="flex gap-4 mt-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">{summaryStats.totalWins}</div>
+                <div className="text-xs text-muted-foreground">Wins</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-gray-600">{summaryStats.totalDraws}</div>
+                <div className="text-xs text-muted-foreground">Draws</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">{summaryStats.totalLosses}</div>
+                <div className="text-xs text-muted-foreground">Losses</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold">{summaryStats.totalGames}</div>
+                <div className="text-xs text-muted-foreground">Total Games</div>
+              </div>
+            </div>
+          )}
+        </CardHeader>
         
-        {summaryStats.totalGames > 0 && (
-          <div className="flex gap-4 mt-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{summaryStats.totalWins}</div>
-              <div className="text-xs text-muted-foreground">Wins</div>
+        <CardContent>
+          {filteredResults.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No events match the selected filters.</p>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-gray-600">{summaryStats.totalDraws}</div>
-              <div className="text-xs text-muted-foreground">Draws</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{summaryStats.totalLosses}</div>
-              <div className="text-xs text-muted-foreground">Losses</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold">{summaryStats.totalGames}</div>
-              <div className="text-xs text-muted-foreground">Total Games</div>
-            </div>
-          </div>
-        )}
-      </CardHeader>
-      
-      <CardContent>
-        {results.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No completed events with results found.</p>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Team</TableHead>
-                <TableHead>Score</TableHead>
-                <TableHead>Opponent</TableHead>
-                <TableHead>Result</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {results.map((result) => (
-                result.teams.map((team, teamIndex) => (
-                  <TableRow key={`${result.id}-${team.teamNumber}`}>
-                    {teamIndex === 0 && (
-                      <>
-                        <TableCell rowSpan={result.teams.length} className="border-r">
-                          <div className="font-medium">
-                            {format(new Date(result.date), 'MMM dd, yyyy')}
-                          </div>
-                        </TableCell>
-                        <TableCell rowSpan={result.teams.length} className="border-r">
-                          <div className="font-medium">{result.title}</div>
-                        </TableCell>
-                        <TableCell rowSpan={result.teams.length} className="border-r">
-                          <Badge className={`text-white text-xs ${getEventTypeBadgeColor(result.eventType)}`}>
-                            {result.eventType}
-                          </Badge>
-                        </TableCell>
-                      </>
-                    )}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{team.teamName}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono font-bold">
-                        {team.ourScore} - {team.opponentScore}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {result.opponent && (
-                        <span className="text-muted-foreground">vs {result.opponent}</span>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Event</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Team</TableHead>
+                  <TableHead>Score</TableHead>
+                  <TableHead>Opponent</TableHead>
+                  <TableHead>Result</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredResults.map((result) => (
+                  result.teams
+                    .filter(team => selectedTeam === 'all' || team.teamName === selectedTeam)
+                    .map((team, teamIndex) => (
+                    <TableRow key={`${result.id}-${team.teamNumber}`}>
+                      {teamIndex === 0 && (
+                        <>
+                          <TableCell rowSpan={selectedTeam === 'all' ? result.teams.length : 1} className="border-r">
+                            <div className="font-medium">
+                              {format(new Date(result.date), 'MMM dd, yyyy')}
+                            </div>
+                          </TableCell>
+                          <TableCell rowSpan={selectedTeam === 'all' ? result.teams.length : 1} className="border-r">
+                            <div className="font-medium">{result.title}</div>
+                          </TableCell>
+                          <TableCell rowSpan={selectedTeam === 'all' ? result.teams.length : 1} className="border-r">
+                            <Badge className={`text-white text-xs ${getEventTypeBadgeColor(result.eventType)}`}>
+                              {result.eventType}
+                            </Badge>
+                          </TableCell>
+                        </>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{team.outcomeIcon}</span>
-                        <Badge 
-                          variant={team.outcome === 'win' ? 'default' : team.outcome === 'loss' ? 'destructive' : 'secondary'}
-                          className={team.outcome === 'win' ? 'bg-green-500 hover:bg-green-600' : ''}
-                        >
-                          {team.outcome.toUpperCase()}
-                        </Badge>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-medium">{team.teamName}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono font-bold">
+                          {team.ourScore} - {team.opponentScore}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        {result.opponent && (
+                          <span className="text-muted-foreground">vs {result.opponent}</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">{team.outcomeIcon}</span>
+                          <Badge 
+                            variant={team.outcome === 'win' ? 'default' : team.outcome === 'loss' ? 'destructive' : 'secondary'}
+                            className={team.outcome === 'win' ? 'bg-green-500 hover:bg-green-600' : ''}
+                          >
+                            {team.outcome.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
