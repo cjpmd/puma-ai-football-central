@@ -23,11 +23,11 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting send-invitation-email function");
     
-    // Try different possible secret names
-    const resendApiKey = Deno.env.get("SUPABASE_INTEGRATION") || 
+    // The secret name with spaces gets converted to underscores in environment variables
+    const resendApiKey = Deno.env.get("puma_ai_api_key_Resend") || 
                         Deno.env.get("RESEND_API_KEY") || 
-                        Deno.env.get("ONBOARDING") ||
-                        Deno.env.get("PUMA_AI_API_KEY_RESEND");
+                        Deno.env.get("Onboarding") ||
+                        Deno.env.get("Supabase_Integration");
     
     console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
     
