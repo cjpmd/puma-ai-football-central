@@ -23,12 +23,20 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting send-invitation-email function");
     
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    // Try different possible secret names
+    const resendApiKey = Deno.env.get("SUPABASE_INTEGRATION") || 
+                        Deno.env.get("RESEND_API_KEY") || 
+                        Deno.env.get("ONBOARDING") ||
+                        Deno.env.get("PUMA_AI_API_KEY_RESEND");
+    
+    console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
+    
     if (!resendApiKey) {
-      console.error("RESEND_API_KEY is not configured");
-      throw new Error("RESEND_API_KEY environment variable is not set");
+      console.error("No Resend API key found in environment variables");
+      throw new Error("Resend API key not configured. Please check Supabase secrets.");
     }
 
+    console.log("Resend API key found, initializing Resend client");
     const resend = new Resend(resendApiKey);
     
     const { email, name, invitationCode, role }: InvitationEmailRequest = await req.json();
@@ -38,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     const invitationUrl = `${appUrl}/auth?invitation=${invitationCode}`;
 
     const emailResponse = await resend.emails.send({
-      from: "Coach's Playbook <noreply@resend.dev>",
+      from: "Coach's Playbook <onboarding@resend.dev>",
       to: [email],
       subject: `You've been invited to join Coach's Playbook as ${role}`,
       html: `
