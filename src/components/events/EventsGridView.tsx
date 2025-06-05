@@ -1,10 +1,11 @@
-
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -23,6 +24,50 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   onDeleteEvent,
   onScoreEdit
 }) => {
+  const [performanceCategoryNames, setPerformanceCategoryNames] = useState<{ [eventId: string]: { [teamNumber: string]: string } }>({});
+
+  useEffect(() => {
+    loadPerformanceCategoryNames();
+  }, [events]);
+
+  const loadPerformanceCategoryNames = async () => {
+    try {
+      const eventIds = events.map(event => event.id);
+      if (eventIds.length === 0) return;
+
+      const { data: selections, error } = await supabase
+        .from('event_selections')
+        .select(`
+          event_id,
+          team_number,
+          performance_category_id,
+          performance_categories!inner(name)
+        `)
+        .in('event_id', eventIds);
+
+      if (error) {
+        console.error('Error loading performance categories:', error);
+        return;
+      }
+
+      const categoryMap: { [eventId: string]: { [teamNumber: string]: string } } = {};
+      
+      selections?.forEach(selection => {
+        if (!categoryMap[selection.event_id]) {
+          categoryMap[selection.event_id] = {};
+        }
+        const categoryName = (selection.performance_categories as any)?.name;
+        if (categoryName) {
+          categoryMap[selection.event_id][selection.team_number.toString()] = categoryName;
+        }
+      });
+
+      setPerformanceCategoryNames(categoryMap);
+    } catch (error) {
+      console.error('Error in loadPerformanceCategoryNames:', error);
+    }
+  };
+
   const isEventCompleted = (event: DatabaseEvent) => {
     const today = new Date();
     const eventDate = new Date(event.date);
@@ -48,13 +93,14 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     
     const scores = [];
     const scoresData = event.scores as any;
+    const eventCategories = performanceCategoryNames[event.id] || {};
     
     let teamNumber = 1;
     while (scoresData[`team_${teamNumber}`] !== undefined) {
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
       const outcome = scoresData[`outcome_${teamNumber}`];
-      const teamName = scoresData[`team_${teamNumber}_name`] || `Team ${teamNumber}`;
+      const teamName = eventCategories[teamNumber.toString()] || scoresData[`team_${teamNumber}_name`] || `Team ${teamNumber}`;
       
       let outcomeIcon = '';
       if (outcome === 'win') outcomeIcon = '🏆';
@@ -82,9 +128,11 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       else if (ourScore < opponentScore) outcomeIcon = '❌';
       else outcomeIcon = '🤝';
       
+      const teamName = eventCategories['1'] || 'Team 1';
+      
       scores.push({
         teamNumber: 1,
-        teamName: 'Team 1',
+        teamName,
         ourScore,
         opponentScore,
         outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',
