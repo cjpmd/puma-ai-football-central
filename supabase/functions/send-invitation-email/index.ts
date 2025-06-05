@@ -23,7 +23,7 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting send-invitation-email function");
     
-    // The secret name with spaces gets converted to underscores in environment variables
+    // Check for the Resend API key with the correct environment variable name
     const resendApiKey = Deno.env.get("puma_ai_api_key_Resend") || 
                         Deno.env.get("RESEND_API_KEY") || 
                         Deno.env.get("Onboarding") ||
@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     const invitationUrl = `${appUrl}/auth?invitation=${invitationCode}`;
 
     const emailResponse = await resend.emails.send({
-      from: "Puma AI Coach's Playbook <noreply@puma-ai.com>",
+      from: "Puma AI Coach's Playbook <team@puma-ai.co.uk>",
       to: [email],
       subject: `You've been invited to join Coach's Playbook as ${role}`,
       html: `
