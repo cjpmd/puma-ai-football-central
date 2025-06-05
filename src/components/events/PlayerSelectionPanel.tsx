@@ -147,6 +147,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
 
       const conflicts: { [playerId: string]: string[] } = {};
       
+      // Only check conflicts for players who are actually selected in the current team/period
       const allSelectedPlayers = [...selectedPlayers, ...substitutePlayers];
       
       allSelectedPlayers.forEach(playerId => {
@@ -156,10 +157,13 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           const playerPositions = (selection.player_positions as any[]) || [];
           const substitutePlayersList = (selection.substitute_players as string[]) || [];
           
-          const hasPlayer = playerPositions.some((pp: any) => pp.playerId === playerId || pp.player_id === playerId) ||
-                           substitutePlayersList.includes(playerId);
+          // Check if this player is actually selected in the other team's selection
+          const isInPlayerPositions = playerPositions.some((pp: any) => 
+            pp.playerId === playerId || pp.player_id === playerId
+          );
+          const isInSubstitutes = substitutePlayersList.includes(playerId);
           
-          if (hasPlayer) {
+          if (isInPlayerPositions || isInSubstitutes) {
             conflictTeams.push(`Team ${selection.team_number} Period ${selection.period_number}`);
           }
         });
