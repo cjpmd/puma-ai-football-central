@@ -238,6 +238,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       onCaptainChange('');
     } else {
       onCaptainChange(playerId);
+      // Only auto-add to selected players if they're not already in the team for this period
       if (!selectedPlayers.includes(playerId) && !substitutePlayers.includes(playerId)) {
         onPlayersChange([...selectedPlayers, playerId]);
       }
@@ -372,7 +373,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           ))}
           
           <div className="mt-4 space-y-2">
-            <Label>Captain</Label>
+            <Label>Captain for Period {periodNumber || 1}</Label>
             <Select value={captainId || 'none'} onValueChange={(value) => onCaptainChange(value === 'none' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="No Captain" />
@@ -423,6 +424,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                             Conflict: {hasConflict.join(', ')}
                           </span>
                         </div>
+                      )}
+                      {captainId === playerId && (
+                        <Crown className="h-4 w-4 text-yellow-500" />
                       )}
                       <Button
                         variant="outline"
@@ -503,6 +507,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                     </span>
                   </div>
                 )}
+                {captainId === player.id && (
+                  <Crown className="h-4 w-4 text-yellow-500" />
+                )}
               </div>
             </div>
             {title === 'starter' && (
@@ -513,7 +520,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 className="flex items-center gap-1"
               >
                 <Crown className="h-3 w-3" />
-                {captainId === player.id ? 'Captain' : 'Make Captain'}
+                {captainId === player.id ? `Captain P${periodNumber || 1}` : 'Make Captain'}
               </Button>
             )}
           </div>

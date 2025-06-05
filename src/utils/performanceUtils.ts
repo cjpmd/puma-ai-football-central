@@ -1,97 +1,158 @@
+
+import { supabase } from '@/integrations/supabase/client';
+
 export type PerformanceTrend = 'improving' | 'maintaining' | 'needs-work';
 
-interface AttributeChange {
-  timestamp: string;
-  previousValue: number;
-  newValue: number;
-  category: string;
-}
-
-export async function calculatePerformanceTrend(playerId: string): Promise<PerformanceTrend> {
+export const calculatePerformanceTrend = async (playerId: string): Promise<PerformanceTrend> => {
   try {
-    // Get the player's recent attribute changes
-    const attributeChanges = await getRecentAttributeChanges(playerId);
-    
-    if (attributeChanges.length === 0) {
+    // Get recent event player stats to calculate trend
+    const { data: recentStats, error } = await supabase
+      .from('event_player_stats')
+      .select(`
+        event_id,
+        minutes_played,
+        position,
+        is_captain,
+        performance_category_id,
+        events!inner(
+          date,
+          player_of_match_id,
+          end_time
+        )
+      `)
+      .eq('player_id', playerId)
+      .not('events.date', 'is', null)
+      .order('events(date)', { ascending: false })
+      .order('events(end_time)', { ascending: false })
+      .limit(10);
+
+    if (error) {
+      console.error('Error fetching recent stats:', error);
       return 'maintaining';
     }
 
-    // Check if there are any improvements in the last 2 weeks
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-
-    const recentImprovements = attributeChanges.filter(change => {
-      const changeDate = new Date(change.timestamp);
-      return changeDate >= twoWeeksAgo && change.newValue > change.previousValue;
-    });
-
-    const recentDeclines = attributeChanges.filter(change => {
-      const changeDate = new Date(change.timestamp);
-      return changeDate >= twoWeeksAgo && change.newValue < change.previousValue;
-    });
-
-    // If there are recent improvements, mark as improving
-    if (recentImprovements.length > 0) {
-      return 'improving';
+    if (!recentStats || recentStats.length < 3) {
+      return 'maintaining';
     }
 
-    // If there are recent declines, mark as needs work
-    if (recentDeclines.length > 0) {
-      return 'needs-work';
-    }
+    // Calculate performance indicators
+    const recentGames = recentStats.slice(0, 5);
+    const previousGames = recentStats.slice(5, 10);
 
-    // Otherwise, maintaining
+    // Calculate average minutes per game
+    const recentMinutesAvg = recentGames.reduce((sum, stat) => sum + (stat.minutes_played || 0), 0) / recentGames.length;
+    const previousMinutesAvg = previousGames.length > 0 
+      ? previousGames.reduce((sum, stat) => sum + (stat.minutes_played || 0), 0) / previousGames.length 
+      : recentMinutesAvg;
+
+    // Count captain appointments
+    const recentCaptainGames = recentGames.filter(stat => stat.is_captain).length;
+    const previousCaptainGames = previousGames.filter(stat => stat.is_captain).length;
+
+    // Count POTM awards
+    const recentPOTM = recentGames.filter(stat => stat.events?.player_of_match_id === playerId).length;
+    const previousPOTM = previousGames.filter(stat => stat.events?.player_of_match_id === playerId).length;
+
+    // Simple scoring system
+    let trendScore = 0;
+
+    // Minutes trend (30% weight)
+    if (recentMinutesAvg > previousMinutesAvg * 1.1) trendScore += 30;
+    else if (recentMinutesAvg < previousMinutesAvg * 0.8) trendScore -= 30;
+
+    // Captain appointments (35% weight)
+    if (recentCaptainGames > previousCaptainGames) trendScore += 35;
+    else if (recentCaptainGames < previousCaptainGames) trendScore -= 15;
+
+    // POTM awards (35% weight)
+    if (recentPOTM > previousPOTM) trendScore += 35;
+    else if (recentPOTM < previousPOTM) trendScore -= 20;
+
+    // Determine trend based on score
+    if (trendScore >= 25) return 'improving';
+    if (trendScore <= -25) return 'needs-work';
     return 'maintaining';
+
   } catch (error) {
     console.error('Error calculating performance trend:', error);
     return 'maintaining';
   }
-}
+};
 
-async function getRecentAttributeChanges(playerId: string): Promise<AttributeChange[]> {
-  // In a real implementation, this would fetch from a database
-  // For now, we'll simulate recent changes for Oscar Grieve
-  if (playerId === 'oscar-grieve-id') {
-    const now = new Date();
-    return [
-      {
-        timestamp: now.toISOString(),
-        previousValue: 6,
-        newValue: 8,
-        category: 'Shot Stopping'
-      },
-      {
-        timestamp: now.toISOString(),
-        previousValue: 5.0,
-        newValue: 5.7,
-        category: 'Overall'
+export const getPlayerMatchHistory = async (playerId: string) => {
+  try {
+    const { data, error } = await supabase
+      .from('event_player_stats')
+      .select(`
+        *,
+        events!inner(
+          id,
+          date,
+          opponent,
+          start_time,
+          player_of_match_id,
+          event_type
+        ),
+        performance_categories(
+          name
+        )
+      `)
+      .eq('player_id', playerId)
+      .not('events.date', 'is', null)
+      .order('events(date)', { ascending: false })
+      .order('events(start_time)', { ascending: false });
+
+    if (error) throw error;
+
+    // Group by event and aggregate positions properly
+    const eventGroups = data?.reduce((acc, stat) => {
+      const eventId = stat.events?.id;
+      if (!eventId) return acc;
+
+      if (!acc[eventId]) {
+        acc[eventId] = {
+          id: eventId,
+          date: stat.events?.date,
+          opponent: stat.events?.opponent,
+          eventType: stat.events?.event_type,
+          performanceCategory: stat.performance_categories?.name,
+          totalMinutes: 0,
+          minutesByPosition: {},
+          captain: false,
+          playerOfTheMatch: stat.events?.player_of_match_id === playerId,
+          wasSubstitute: false,
+          teams: new Set(),
+          periods: new Set()
+        };
       }
-    ];
-  }
-  
-  return [];
-}
 
-export function getPerformanceIcon(trend: PerformanceTrend): string {
-  switch (trend) {
-    case 'improving':
-      return '📈';
-    case 'needs-work':
-      return '📉';
-    case 'maintaining':
-    default:
-      return '➡️';
-  }
-}
+      // Aggregate data properly
+      acc[eventId].totalMinutes += stat.minutes_played || 0;
+      acc[eventId].captain = acc[eventId].captain || stat.is_captain;
+      acc[eventId].wasSubstitute = acc[eventId].wasSubstitute || stat.is_substitute;
+      acc[eventId].teams.add(stat.team_number);
+      acc[eventId].periods.add(stat.period_number);
 
-export function getPerformanceColor(trend: PerformanceTrend): string {
-  switch (trend) {
-    case 'improving':
-      return 'text-green-600';
-    case 'needs-work':
-      return 'text-red-600';
-    case 'maintaining':
-    default:
-      return 'text-gray-600';
+      // Aggregate position minutes
+      if (stat.position && stat.minutes_played > 0) {
+        if (!acc[eventId].minutesByPosition[stat.position]) {
+          acc[eventId].minutesByPosition[stat.position] = 0;
+        }
+        acc[eventId].minutesByPosition[stat.position] += stat.minutes_played;
+      }
+
+      return acc;
+    }, {} as Record<string, any>) || {};
+
+    // Convert to array and format
+    return Object.values(eventGroups).map(event => ({
+      ...event,
+      teams: Array.from(event.teams),
+      periods: Array.from(event.periods)
+    }));
+
+  } catch (error) {
+    console.error('Error fetching player match history:', error);
+    return [];
   }
-}
+};

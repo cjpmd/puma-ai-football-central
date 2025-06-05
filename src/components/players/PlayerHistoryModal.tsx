@@ -9,9 +9,11 @@ import { playersService } from '@/services/playersService';
 import { formatDate } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Crown, Trophy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Badge } from '@/components/ui/badge';
+import { getPlayerMatchHistory } from '@/utils/performanceUtils';
 
 interface PlayerHistoryModalProps {
   player: Player;
@@ -31,6 +33,13 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
   const { data: transfers = [], isLoading: isTransfersLoading } = useQuery({
     queryKey: ['player-transfers', player.id],
     queryFn: () => playersService.getTransferHistory(player.id),
+    enabled: isOpen,
+  });
+
+  // Get corrected match history
+  const { data: matchHistory = [], isLoading: isMatchHistoryLoading } = useQuery({
+    queryKey: ['player-match-history', player.id],
+    queryFn: () => getPlayerMatchHistory(player.id),
     enabled: isOpen,
   });
 
@@ -96,21 +105,118 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
       loadTeamNames();
     }
   }, [isOpen, transfers, teams]);
+
+  const renderPositionsPlayed = (minutesByPosition: Record<string, number>) => {
+    if (!minutesByPosition || Object.keys(minutesByPosition).length === 0) {
+      return <span className="text-muted-foreground">No position data</span>;
+    }
+
+    const sortedPositions = Object.entries(minutesByPosition)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 3);
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {sortedPositions.map(([position, minutes]) => (
+          <Badge key={position} variant="outline" className="text-xs">
+            {position}: {minutes}m
+          </Badge>
+        ))}
+      </div>
+    );
+  };
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             Player History - {player.name}
           </DialogTitle>
         </DialogHeader>
         
-        <Tabs defaultValue="transfers" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="matches" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="matches">Match History</TabsTrigger>
             <TabsTrigger value="transfers">Transfers</TabsTrigger>
             <TabsTrigger value="attributes">Attributes</TabsTrigger>
           </TabsList>
+          
+          <TabsContent value="matches" className="space-y-4 py-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Recent Match History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isMatchHistoryLoading ? (
+                  <div className="text-center py-4">Loading match history...</div>
+                ) : matchHistory.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground">
+                    No match history available for this player.
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Opponent</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Minutes</TableHead>
+                        <TableHead>Positions</TableHead>
+                        <TableHead>Role</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {matchHistory.map((match, index) => (
+                        <TableRow key={`${match.id}-${index}`}>
+                          <TableCell>{formatDate(match.date, 'PP')}</TableCell>
+                          <TableCell>{match.opponent || 'Training'}</TableCell>
+                          <TableCell>
+                            {match.performanceCategory && (
+                              <Badge variant="outline">{match.performanceCategory}</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>{match.totalMinutes}</TableCell>
+                          <TableCell>
+                            {renderPositionsPlayed(match.minutesByPosition)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {match.captain && (
+                                <div className="flex items-center gap-1">
+                                  <Crown className="h-3 w-3 text-yellow-500" />
+                                  <span className="text-xs">Captain</span>
+                                </div>
+                              )}
+                              {match.playerOfTheMatch && (
+                                <div className="flex items-center gap-1">
+                                  <Trophy className="h-3 w-3 text-gold-500" />
+                                  <span className="text-xs">POTM</span>
+                                </div>
+                              )}
+                              {match.wasSubstitute && (
+                                <Badge variant="secondary" className="text-xs">Sub</Badge>
+                              )}
+                              {match.teams?.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  Teams: {match.teams.join(', ')}
+                                </Badge>
+                              )}
+                              {match.periods?.length > 1 && (
+                                <Badge variant="outline" className="text-xs">
+                                  Periods: {match.periods.join(', ')}
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
           
           <TabsContent value="transfers" className="space-y-4 py-4">
             <Card>
