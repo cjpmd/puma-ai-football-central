@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export type PerformanceTrend = 'improving' | 'maintaining' | 'needs-work';
@@ -81,7 +80,8 @@ export const calculatePerformanceTrend = async (playerId: string): Promise<Perfo
 
 export const getPlayerMatchHistory = async (playerId: string) => {
   try {
-    const { data, error } = await supabase
+    // First get the player stats with event details
+    const { data: playerStats, error: statsError } = await supabase
       .from('event_player_stats')
       .select(`
         *,
@@ -92,9 +92,6 @@ export const getPlayerMatchHistory = async (playerId: string) => {
           start_time,
           player_of_match_id,
           event_type
-        ),
-        performance_categories(
-          name
         )
       `)
       .eq('player_id', playerId)
@@ -102,10 +99,25 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       .order('events(date)', { ascending: false })
       .order('events(start_time)', { ascending: false });
 
-    if (error) throw error;
+    if (statsError) throw statsError;
+
+    // Get performance categories separately to avoid join issues
+    const { data: performanceCategories, error: categoriesError } = await supabase
+      .from('performance_categories')
+      .select('id, name');
+
+    if (categoriesError) {
+      console.error('Error fetching performance categories:', categoriesError);
+    }
+
+    // Create a map of performance category IDs to names
+    const categoryMap = new Map();
+    performanceCategories?.forEach(cat => {
+      categoryMap.set(cat.id, cat.name);
+    });
 
     // Group by event and aggregate positions properly
-    const eventGroups = data?.reduce((acc, stat) => {
+    const eventGroups = playerStats?.reduce((acc, stat) => {
       const eventId = stat.events?.id;
       if (!eventId) return acc;
 
@@ -115,7 +127,7 @@ export const getPlayerMatchHistory = async (playerId: string) => {
           date: stat.events?.date,
           opponent: stat.events?.opponent,
           eventType: stat.events?.event_type,
-          performanceCategory: stat.performance_categories?.name,
+          performanceCategory: stat.performance_category_id ? categoryMap.get(stat.performance_category_id) : null,
           totalMinutes: 0,
           minutesByPosition: {},
           captain: false,
