@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
     const invitationUrl = `${appUrl}/auth?invitation=${invitationCode}`;
 
     const emailResponse = await resend.emails.send({
-      from: "Puma AI Coach's Playbook <team@puma-ai.co.uk>",
+      from: "Puma AI <team@puma-ai.co.uk>",
       to: [email],
       subject: `You've been invited to join Puma AI as ${role}`,
       html: `
