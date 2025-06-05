@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ import StaffManagement from "./pages/StaffManagement";
 import UserManagement from "./pages/UserManagement";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
 import DataRecovery from "./pages/DataRecovery";
+import EmailTestPage from "./pages/EmailTestPage";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +120,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <DataRecovery />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/email-test"
+                element={
+                  <ProtectedRoute>
+                    <EmailTestPage />
                   </ProtectedRoute>
                 }
               />
