@@ -48,12 +48,12 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "Puma AI Coach's Playbook <team@puma-ai.co.uk>",
       to: [email],
-      subject: `You've been invited to join Coach's Playbook as ${role}`,
+      subject: `You've been invited to join Puma AI as ${role}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2563eb;">Welcome to Coach's Playbook!</h1>
+          <h1 style="color: #2563eb;">Welcome to Puma AI!</h1>
           <p>Hi ${name},</p>
-          <p>You've been invited to join Coach's Playbook as a <strong>${role}</strong>.</p>
+          <p>You've been invited to join Puma AI as a <strong>${role}</strong>.</p>
           
           <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
             <h3 style="margin-top: 0;">Your invitation code:</h3>
@@ -70,7 +70,7 @@ const handler = async (req: Request): Promise<Response> => {
           <p style="margin-top: 30px;">To accept your invitation:</p>
           <ol>
             <li>Click the "Accept Invitation" button above, or</li>
-            <li>Go to the Coach's Playbook login page and use your invitation code</li>
+            <li>Go to the Puma AI login page and use your invitation code</li>
             <li>Create your account or log in if you already have one</li>
           </ol>
           
