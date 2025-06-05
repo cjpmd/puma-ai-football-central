@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { playersService } from '@/services/playersService';
 import { Player } from '@/types';
 import { Users, Timer, Crown, Trophy, TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ResultsSummary } from '@/components/analytics/ResultsSummary';
 
 const Analytics = () => {
   const { teams } = useAuth();
@@ -91,6 +91,9 @@ const Analytics = () => {
             </div>
           )}
         </div>
+
+        {/* Results Summary */}
+        <ResultsSummary selectedTeamId={selectedTeamId} />
 
         {/* Team Overview */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
