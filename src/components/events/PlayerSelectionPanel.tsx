@@ -373,7 +373,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
           ))}
           
           <div className="mt-4 space-y-2">
-            <Label>Captain for Period {periodNumber || 1}</Label>
+            <Label>Team Captain (all periods)</Label>
             <Select value={captainId || 'none'} onValueChange={(value) => onCaptainChange(value === 'none' ? '' : value)}>
               <SelectTrigger>
                 <SelectValue placeholder="No Captain" />
@@ -520,7 +520,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 className="flex items-center gap-1"
               >
                 <Crown className="h-3 w-3" />
-                {captainId === player.id ? `Captain P${periodNumber || 1}` : 'Make Captain'}
+                {captainId === player.id ? 'Team Captain' : 'Make Captain'}
               </Button>
             )}
           </div>
@@ -609,6 +609,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   <div className="ml-auto text-sm text-muted-foreground">
                     {selectedPlayers.length} starters, {substitutePlayers.length} substitutes
                     {periodNumber && ` (Period ${periodNumber})`}
+                    {captainId && (
+                      <span> • Captain for all periods</span>
+                    )}
                   </div>
                 </div>
 
