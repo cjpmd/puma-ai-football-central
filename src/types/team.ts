@@ -64,6 +64,7 @@ export interface TeamStaff {
   email: string;
   role: string;
   phone?: string;
+  user_id?: string;
   linkingCode?: string;
   pvgChecked?: boolean;
   pvgCheckedBy?: string;
