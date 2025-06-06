@@ -11,6 +11,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2 } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
+import { UserLinkingPanel } from './UserLinkingPanel';
+import { DualRoleManagement } from './DualRoleManagement';
+import { BulkUserImport } from './BulkUserImport';
+import { InvitationResendPanel } from './InvitationResendPanel';
 
 interface UserProfile {
   id: string;
@@ -258,6 +262,8 @@ export const UserManagementSystem = () => {
     ).join(' ');
   };
 
+  const [activeTab, setActiveTab] = useState('users');
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -287,252 +293,280 @@ export const UserManagementSystem = () => {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="min-w-[200px]">
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger>
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="global_admin">Global Admin</SelectItem>
-                  <SelectItem value="club_admin">Club Admin</SelectItem>
-                  <SelectItem value="team_manager">Team Manager</SelectItem>
-                  <SelectItem value="coach">Coach</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="parent">Parent</SelectItem>
-                  <SelectItem value="player">Player</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="linking">Manual Linking</TabsTrigger>
+          <TabsTrigger value="dual-roles">Dual Roles</TabsTrigger>
+          <TabsTrigger value="bulk-import">Bulk Import</TabsTrigger>
+          <TabsTrigger value="invitations">Invitations</TabsTrigger>
+        </TabsList>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Users className="h-8 w-8 text-puma-blue-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
-                <p className="text-2xl font-bold">{users.length}</p>
+        <TabsContent value="users" className="mt-6">
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search by name or email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div className="min-w-[200px]">
+                  <Select value={roleFilter} onValueChange={setRoleFilter}>
+                    <SelectTrigger>
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Filter by role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      <SelectItem value="global_admin">Global Admin</SelectItem>
+                      <SelectItem value="club_admin">Club Admin</SelectItem>
+                      <SelectItem value="team_manager">Team Manager</SelectItem>
+                      <SelectItem value="coach">Coach</SelectItem>
+                      <SelectItem value="staff">Staff</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="player">Player</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Shield className="h-8 w-8 text-green-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Admins</p>
-                <p className="text-2xl font-bold">
-                  {users.filter(u => u.roles.some(r => r.includes('admin'))).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Link2 className="h-8 w-8 text-purple-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Linked Accounts</p>
-                <p className="text-2xl font-bold">
-                  {users.filter(u => u.playerLinks.length > 0 || u.staffLinks.length > 0).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-sm text-muted-foreground">Active This Month</p>
-                <p className="text-2xl font-bold">
-                  {users.filter(u => {
-                    const oneMonthAgo = new Date();
-                    oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-                    return new Date(u.created_at) > oneMonthAgo;
-                  }).length}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Users List */}
-      <div className="space-y-4">
-        {filteredUsers.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="py-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Users Found</h3>
-              <p className="text-muted-foreground mb-4">
-                {searchTerm || roleFilter !== 'all' 
-                  ? 'No users match your current filters.'
-                  : 'No users have been created yet.'
-                }
-              </p>
-              {!searchTerm && roleFilter === 'all' && (
-                <Button
-                  onClick={() => setShowInviteModal(true)}
-                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                >
-                  Invite First User
-                </Button>
-              )}
             </CardContent>
           </Card>
-        ) : (
-          filteredUsers.map((user) => (
-            <Card key={user.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <Avatar className="h-12 w-12">
-                      <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
-                        {user.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-lg">{user.name}</h4>
-                          <div className="flex flex-wrap gap-1">
-                            {user.roles.map((role) => (
-                              <Badge 
-                                key={role} 
-                                className={`text-white ${getRoleColor(role)}`}
-                              >
-                                {formatRoleName(role)}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
-                          <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <span>{user.email}</span>
-                          </div>
-                          {user.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              <span>{user.phone}</span>
-                            </div>
-                          )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>Joined {new Date(user.created_at).toLocaleDateString()}</span>
-                          </div>
-                        </div>
-                      </div>
 
-                      <Tabs defaultValue="teams" className="w-full">
-                        <TabsList className="grid grid-cols-4 w-fit">
-                          <TabsTrigger value="teams">Teams</TabsTrigger>
-                          <TabsTrigger value="clubs">Clubs</TabsTrigger>
-                          <TabsTrigger value="players">Players</TabsTrigger>
-                          <TabsTrigger value="staff">Staff</TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="teams" className="mt-3">
-                          {user.teams.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {user.teams.map((team) => (
-                                <div key={team.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                  <span className="font-medium">{team.name}</span>
-                                  <Badge variant="outline">{formatRoleName(team.role)}</Badge>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No team associations</p>
-                          )}
-                        </TabsContent>
-
-                        <TabsContent value="clubs" className="mt-3">
-                          {user.clubs.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {user.clubs.map((club) => (
-                                <div key={club.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                  <span className="font-medium">{club.name}</span>
-                                  <Badge variant="outline">{formatRoleName(club.role)}</Badge>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No club associations</p>
-                          )}
-                        </TabsContent>
-
-                        <TabsContent value="players" className="mt-3">
-                          {user.playerLinks.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {user.playerLinks.map((player) => (
-                                <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                  <div>
-                                    <span className="font-medium">{player.name}</span>
-                                    <p className="text-xs text-muted-foreground">{player.team}</p>
-                                  </div>
-                                  <Badge variant="outline">{formatRoleName(player.relationship)}</Badge>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No player links</p>
-                          )}
-                        </TabsContent>
-
-                        <TabsContent value="staff" className="mt-3">
-                          {user.staffLinks.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                              {user.staffLinks.map((staff) => (
-                                <div key={staff.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                                  <div>
-                                    <span className="font-medium">{staff.name}</span>
-                                    <p className="text-xs text-muted-foreground">{staff.team} - {formatRoleName(staff.role)}</p>
-                                  </div>
-                                  <Badge variant="outline">{formatRoleName(staff.relationship)}</Badge>
-                                </div>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm text-muted-foreground">No staff links</p>
-                          )}
-                        </TabsContent>
-                      </Tabs>
-                    </div>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Users className="h-8 w-8 text-puma-blue-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Users</p>
+                    <p className="text-2xl font-bold">{users.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-8 w-8 text-green-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Admins</p>
+                    <p className="text-2xl font-bold">
+                      {users.filter(u => u.roles.some(r => r.includes('admin'))).length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Link2 className="h-8 w-8 text-purple-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Linked Accounts</p>
+                    <p className="text-2xl font-bold">
+                      {users.filter(u => u.playerLinks.length > 0 || u.staffLinks.length > 0).length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-8 w-8 text-orange-500" />
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active This Month</p>
+                    <p className="text-2xl font-bold">
+                      {users.filter(u => {
+                        const oneMonthAgo = new Date();
+                        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+                        return new Date(u.created_at) > oneMonthAgo;
+                      }).length}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Users List */}
+          <div className="space-y-4">
+            {filteredUsers.length === 0 ? (
+              <Card className="border-dashed border-2">
+                <CardContent className="py-8 text-center">
+                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold mb-2">No Users Found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {searchTerm || roleFilter !== 'all' 
+                      ? 'No users match your current filters.'
+                      : 'No users have been created yet.'
+                    }
+                  </p>
+                  {!searchTerm && roleFilter === 'all' && (
+                    <Button
+                      onClick={() => setShowInviteModal(true)}
+                      className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                    >
+                      Invite First User
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              filteredUsers.map((user) => (
+                <Card key={user.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4 flex-1">
+                        <Avatar className="h-12 w-12">
+                          <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
+                            {user.name.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <div className="flex items-center gap-3 mb-2">
+                              <h4 className="font-semibold text-lg">{user.name}</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {user.roles.map((role) => (
+                                  <Badge 
+                                    key={role} 
+                                    className={`text-white ${getRoleColor(role)}`}
+                                  >
+                                    {formatRoleName(role)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                              <div className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                <span>{user.email}</span>
+                              </div>
+                              {user.phone && (
+                                <div className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  <span>{user.phone}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                <span>Joined {new Date(user.created_at).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <Tabs defaultValue="teams" className="w-full">
+                            <TabsList className="grid grid-cols-4 w-fit">
+                              <TabsTrigger value="teams">Teams</TabsTrigger>
+                              <TabsTrigger value="clubs">Clubs</TabsTrigger>
+                              <TabsTrigger value="players">Players</TabsTrigger>
+                              <TabsTrigger value="staff">Staff</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="teams" className="mt-3">
+                              {user.teams.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {user.teams.map((team) => (
+                                    <div key={team.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                      <span className="font-medium">{team.name}</span>
+                                      <Badge variant="outline">{formatRoleName(team.role)}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No team associations</p>
+                              )}
+                            </TabsContent>
+
+                            <TabsContent value="clubs" className="mt-3">
+                              {user.clubs.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {user.clubs.map((club) => (
+                                    <div key={club.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                      <span className="font-medium">{club.name}</span>
+                                      <Badge variant="outline">{formatRoleName(club.role)}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No club associations</p>
+                              )}
+                            </TabsContent>
+
+                            <TabsContent value="players" className="mt-3">
+                              {user.playerLinks.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {user.playerLinks.map((player) => (
+                                    <div key={player.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                      <div>
+                                        <span className="font-medium">{player.name}</span>
+                                        <p className="text-xs text-muted-foreground">{player.team}</p>
+                                      </div>
+                                      <Badge variant="outline">{formatRoleName(player.relationship)}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No player links</p>
+                              )}
+                            </TabsContent>
+
+                            <TabsContent value="staff" className="mt-3">
+                              {user.staffLinks.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                  {user.staffLinks.map((staff) => (
+                                    <div key={staff.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                      <div>
+                                        <span className="font-medium">{staff.name}</span>
+                                        <p className="text-xs text-muted-foreground">{staff.team} - {formatRoleName(staff.role)}</p>
+                                      </div>
+                                      <Badge variant="outline">{formatRoleName(staff.relationship)}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground">No staff links</p>
+                              )}
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="linking" className="mt-6">
+          <UserLinkingPanel />
+        </TabsContent>
+
+        <TabsContent value="dual-roles" className="mt-6">
+          <DualRoleManagement />
+        </TabsContent>
+
+        <TabsContent value="bulk-import" className="mt-6">
+          <BulkUserImport />
+        </TabsContent>
+
+        <TabsContent value="invitations" className="mt-6">
+          <InvitationResendPanel />
+        </TabsContent>
+      </Tabs>
 
       <UserInvitationModal
         isOpen={showInviteModal}
