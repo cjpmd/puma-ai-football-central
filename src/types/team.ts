@@ -28,6 +28,8 @@ export interface FAConnection {
   lastSync?: string;
 }
 
+export type NameDisplayOption = 'firstName' | 'surname' | 'fullName' | 'initials';
+
 export interface Team {
   id: string;
   name: string;
@@ -54,6 +56,7 @@ export interface Team {
   playerAttributes?: Record<PlayerAttributeGroup, PlayerAttribute[]>;
   faConnection?: FAConnection;
   staff?: TeamStaff[];
+  nameDisplayOption?: NameDisplayOption;
   createdAt: string;
   updatedAt: string;
 }

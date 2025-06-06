@@ -19,6 +19,8 @@ import { GameFormat } from '@/types';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
+import { formatPlayerName } from '@/utils/nameUtils';
+import { NameDisplayOption } from '@/types/team';
 
 interface TeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -73,6 +75,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [saving, setSaving] = useState(false);
   const [allPlayers, setAllPlayers] = useState<Player[]>([]);
   const [allStaff, setAllStaff] = useState<any[]>([]);
+  const [nameDisplayOption, setNameDisplayOption] = useState<NameDisplayOption>('surname');
   
   // Team-level states (now includes captain again)
   const [teamStates, setTeamStates] = useState<Record<string, TeamState>>({});
@@ -155,8 +158,25 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       loadExistingSelections();
       loadTeamPlayers();
       loadTeamStaff();
+      loadTeamNameDisplaySetting();
     }
   }, [isOpen, event.id]);
+
+  const loadTeamNameDisplaySetting = async () => {
+    try {
+      const actualTeamId = getActualTeamId(event.team_id);
+      const { data, error } = await supabase
+        .from('teams')
+        .select('name_display_option')
+        .eq('id', actualTeamId)
+        .single();
+
+      if (error) throw error;
+      setNameDisplayOption(data?.name_display_option || 'surname');
+    } catch (error) {
+      console.error('Error loading team name display setting:', error);
+    }
+  };
 
   const loadTeamPlayers = async () => {
     try {
@@ -194,10 +214,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     const player = allPlayers.find(p => p.id === playerId);
     if (!player) return `Player ${playerId}`;
     
-    // Extract surname (last word in name)
-    const nameParts = player.name.trim().split(' ');
-    const surname = nameParts[nameParts.length - 1];
-    return `${surname} (#${player.squad_number})`;
+    const formattedName = formatPlayerName(player.name, nameDisplayOption);
+    return `${formattedName} (#${player.squad_number})`;
   };
 
   const getStaffName = (staffId: string): string => {
