@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ interface UnlinkedUser {
   email: string;
   roles: string[];
   created_at: string;
+  team_names: string[];
 }
 
 interface LinkableEntity {
@@ -44,23 +44,40 @@ export const UserLinkingPanel: React.FC = () => {
 
   const loadUnlinkedUsers = async () => {
     try {
-      // Get all users who don't have team associations
+      // Get all users with their team associations
       const { data: profiles, error } = await supabase
         .from('profiles')
-        .select('*');
+        .select(`
+          *,
+          user_teams!inner(
+            team_id,
+            teams!inner(name)
+          )
+        `);
 
       if (error) throw error;
 
-      // Filter out users who already have team associations
-      const { data: userTeams } = await supabase
-        .from('user_teams')
+      // Get users who have player or staff links
+      const { data: playerLinks } = await supabase
+        .from('user_players')
         .select('user_id');
 
-      const linkedUserIds = new Set(userTeams?.map(ut => ut.user_id) || []);
-      
+      const { data: staffLinks } = await supabase
+        .from('user_staff')
+        .select('user_id');
+
+      const linkedUserIds = new Set([
+        ...(playerLinks?.map(pl => pl.user_id) || []),
+        ...(staffLinks?.map(sl => sl.user_id) || [])
+      ]);
+
+      // Filter users who have team associations but no player/staff links
       const unlinked = profiles?.filter(profile => 
         !linkedUserIds.has(profile.id) && profile.id !== user?.id
-      ) || [];
+      ).map(profile => ({
+        ...profile,
+        team_names: (profile as any).user_teams?.map((ut: any) => ut.teams.name) || []
+      })) || [];
 
       setUnlinkedUsers(unlinked);
     } catch (error) {
@@ -386,10 +403,13 @@ export const UserLinkingPanel: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Unlinked Users ({filteredUsers.length})
+              Users Without Player/Staff Links ({filteredUsers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
+            <p className="text-sm text-muted-foreground mb-4">
+              These users have team access but aren't linked to any player or staff profile.
+            </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {filteredUsers.map(user => (
                 <div key={user.id} className="flex items-center justify-between p-2 border rounded">
@@ -403,6 +423,11 @@ export const UserLinkingPanel: React.FC = () => {
                         </Badge>
                       ))}
                     </div>
+                    {user.team_names.length > 0 && (
+                      <div className="text-xs text-blue-600 mt-1">
+                        Teams: {user.team_names.join(', ')}
+                      </div>
+                    )}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {new Date(user.created_at).toLocaleDateString()}

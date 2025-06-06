@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { userInvitationService } from '@/services/userInvitationService';
-import { Users, UserPlus, Link } from 'lucide-react';
+import { Users, UserPlus, Link, Hash } from 'lucide-react';
 
 interface EnhancedSignupModalProps {
   isOpen: boolean;
@@ -29,9 +29,52 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   const [role, setRole] = useState('');
   const [invitationCode, setInvitationCode] = useState(initialInvitationCode);
   const [linkingCode, setLinkingCode] = useState('');
+  const [teamCode, setTeamCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [signupMethod, setSignupMethod] = useState<'invitation' | 'linking' | 'open'>('open');
+  const [signupMethod, setSignupMethod] = useState<'invitation' | 'linking' | 'open' | 'team_code'>('open');
+  const [invitationDetails, setInvitationDetails] = useState<any>(null);
+  const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
+
+  // Check for invitation details when invitation code is provided
+  useEffect(() => {
+    const fetchInvitationDetails = async () => {
+      if (initialInvitationCode) {
+        try {
+          const { data, error } = await supabase
+            .from('user_invitations')
+            .select(`
+              *,
+              teams!inner(name)
+            `)
+            .eq('invitation_code', initialInvitationCode)
+            .eq('status', 'pending')
+            .single();
+
+          if (data && !error) {
+            setInvitationDetails(data);
+            setName(data.name || '');
+            setEmail(data.email || '');
+            setTeamName((data as any).teams?.name || '');
+            setSignupMethod('invitation');
+          }
+        } catch (error) {
+          console.error('Error fetching invitation details:', error);
+        }
+      }
+    };
+
+    fetchInvitationDetails();
+  }, [initialInvitationCode]);
+
+  // Auto-set default tab based on invitation code
+  useEffect(() => {
+    if (initialInvitationCode && invitationDetails) {
+      setSignupMethod('invitation');
+    } else if (!initialInvitationCode) {
+      setSignupMethod('team_code');
+    }
+  }, [initialInvitationCode, invitationDetails]);
 
   const handleSignup = async () => {
     if (!email || !password || !name) {
@@ -70,9 +113,37 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       return;
     }
 
+    if (signupMethod === 'team_code' && !teamCode) {
+      toast({
+        title: 'Team Code Required',
+        description: 'Please enter your team code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      // Validate team code before creating account
+      if (signupMethod === 'team_code') {
+        const { data: team, error: teamError } = await supabase
+          .from('teams')
+          .select('id, name')
+          .eq('id', teamCode)
+          .single();
+
+        if (teamError || !team) {
+          toast({
+            title: 'Invalid Team Code',
+            description: 'The team code you entered is not valid',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Create the user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -120,6 +191,35 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
               return;
             }
           }
+        } else if (signupMethod === 'team_code') {
+          // Add user to team with default parent role
+          await supabase
+            .from('user_teams')
+            .insert({
+              user_id: authData.user.id,
+              team_id: teamCode,
+              role: 'parent'
+            });
+
+          // Update user profile with parent role
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('roles')
+            .eq('id', authData.user.id)
+            .single();
+
+          const currentRoles = profile?.roles || [];
+          if (!currentRoles.includes('parent')) {
+            await supabase
+              .from('profiles')
+              .update({ roles: [...currentRoles, 'parent'] })
+              .eq('id', authData.user.id);
+          }
+
+          toast({
+            title: 'Account Created',
+            description: 'Your account has been created and linked to your team!',
+          });
         } else {
           toast({
             title: 'Account Created',
@@ -141,29 +241,40 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     }
   };
 
+  const getDialogTitle = () => {
+    if (teamName) {
+      return `Create Account - ${teamName}`;
+    }
+    return 'Create Account';
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Create Account</DialogTitle>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>
             Choose how you'd like to create your account
           </DialogDescription>
         </DialogHeader>
 
         <Tabs value={signupMethod} onValueChange={(value) => setSignupMethod(value as any)}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="open" className="text-xs">
-              <Users className="h-3 w-3 mr-1" />
-              Open
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="invitation" className="text-xs">
               <UserPlus className="h-3 w-3 mr-1" />
               Invite
             </TabsTrigger>
+            <TabsTrigger value="team_code" className="text-xs">
+              <Hash className="h-3 w-3 mr-1" />
+              Team
+            </TabsTrigger>
             <TabsTrigger value="linking" className="text-xs">
               <Link className="h-3 w-3 mr-1" />
               Link
+            </TabsTrigger>
+            <TabsTrigger value="open" className="text-xs">
+              <Users className="h-3 w-3 mr-1" />
+              Open
             </TabsTrigger>
           </TabsList>
 
@@ -178,6 +289,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your full name"
                 required
+                disabled={signupMethod === 'invitation' && !!invitationDetails}
               />
             </div>
 
@@ -190,6 +302,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
+                disabled={signupMethod === 'invitation' && !!invitationDetails}
               />
             </div>
 
@@ -206,29 +319,6 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             </div>
 
             {/* Tab-specific content */}
-            <TabsContent value="open" className="space-y-4">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm">Select Your Role</CardTitle>
-                  <CardDescription className="text-xs">
-                    Choose the role that best describes you
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Select value={role} onValueChange={setRole}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select your role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="staff">Staff Member</SelectItem>
-                      <SelectItem value="parent">Parent</SelectItem>
-                      <SelectItem value="player">Player</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             <TabsContent value="invitation" className="space-y-4">
               <Card>
                 <CardHeader className="pb-3">
@@ -242,6 +332,25 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                     value={invitationCode}
                     onChange={(e) => setInvitationCode(e.target.value)}
                     placeholder="Enter invitation code"
+                    required
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="team_code" className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Team Code</CardTitle>
+                  <CardDescription className="text-xs">
+                    Enter your team's unique code to join
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Input
+                    value={teamCode}
+                    onChange={(e) => setTeamCode(e.target.value)}
+                    placeholder="Enter team code"
                     required
                   />
                 </CardContent>
@@ -263,6 +372,29 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                     placeholder="Enter linking code"
                     required
                   />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="open" className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Select Your Role</CardTitle>
+                  <CardDescription className="text-xs">
+                    Choose the role that best describes you
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff Member</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="player">Player</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
             </TabsContent>
