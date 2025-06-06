@@ -7,10 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
-import { Plus, Edit, Trash2, Users, Mail, Phone, Award } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Mail, Phone, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { userInvitationService } from '@/services/userInvitationService';
 
 interface TeamStaffSettingsProps {
   team: Team;
@@ -23,7 +24,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
 }) => {
   const [staff, setStaff] = useState<TeamStaff[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAddingStaff, setIsAddingStaff] = useState(false);
+  const [isInvitingStaff, setIsInvitingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
   const [newStaff, setNewStaff] = useState({
     name: '',
@@ -96,7 +97,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
   };
 
-  const handleAddStaff = async () => {
+  const handleInviteStaff = async () => {
     if (!newStaff.name || !newStaff.email) {
       toast({
         title: 'Error',
@@ -107,38 +108,29 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
 
     try {
-      console.log('TeamStaffSettings: Adding new staff member:', newStaff);
+      console.log('TeamStaffSettings: Inviting new staff member:', newStaff);
       
-      const { error } = await supabase
-        .from('team_staff')
-        .insert({
-          team_id: team.id,
-          name: newStaff.name,
-          email: newStaff.email,
-          phone: newStaff.phone || null,
-          role: newStaff.role,
-        });
-
-      if (error) {
-        console.error('TeamStaffSettings: Error adding staff:', error);
-        throw error;
-      }
+      await userInvitationService.inviteUser({
+        email: newStaff.email,
+        name: newStaff.name,
+        role: 'staff',
+        teamId: team.id
+      });
       
-      console.log('TeamStaffSettings: Staff member added successfully');
-      await loadStaffFromDatabase();
+      console.log('TeamStaffSettings: Staff invitation sent successfully');
       
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setIsAddingStaff(false);
+      setIsInvitingStaff(false);
       
       toast({
-        title: 'Success',
-        description: `${newStaff.name} has been added to ${team.name}`,
+        title: 'Invitation Sent',
+        description: `Invitation sent to ${newStaff.name} at ${newStaff.email}`,
       });
     } catch (error: any) {
-      console.error('TeamStaffSettings: Error in handleAddStaff:', error);
+      console.error('TeamStaffSettings: Error in handleInviteStaff:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add staff member',
+        description: error.message || 'Failed to send invitation',
         variant: 'destructive',
       });
     }
@@ -253,31 +245,101 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     );
   }
 
+  // Split staff into linked and unlinked
+  const linkedStaff = staff.filter(s => s.user_id);
+  const unlinkedStaff = staff.filter(s => !s.user_id);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h3 className="text-lg font-semibold">Staff Management</h3>
           <p className="text-sm text-muted-foreground">
-            Manage your team's coaching staff and helpers.
+            Invite staff members to join your team. They'll receive an email invitation to create an account.
           </p>
         </div>
         <Button 
-          onClick={() => setIsAddingStaff(true)}
+          onClick={() => setIsInvitingStaff(true)}
           className="bg-puma-blue-500 hover:bg-puma-blue-600"
         >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Staff
+          <UserPlus className="h-4 w-4 mr-2" />
+          Invite Staff
         </Button>
       </div>
 
-      {/* Add/Edit Staff Form */}
-      {(isAddingStaff || editingStaff) && (
+      {/* Invite Staff Form */}
+      {isInvitingStaff && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {editingStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
-            </CardTitle>
+            <CardTitle>Invite New Staff Member</CardTitle>
+            <CardDescription>
+              Send an invitation email to a new staff member
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="staffName">Name</Label>
+                <Input
+                  id="staffName"
+                  value={newStaff.name}
+                  onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="staffRole">Role</Label>
+                <Select 
+                  value={newStaff.role}
+                  onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
+                >
+                  <SelectTrigger id="staffRole">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manager">Manager</SelectItem>
+                    <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
+                    <SelectItem value="coach">Coach</SelectItem>
+                    <SelectItem value="helper">Helper</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="staffEmail">Email</Label>
+              <Input
+                id="staffEmail"
+                type="email"
+                value={newStaff.email}
+                onChange={(e) => setNewStaff(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button onClick={handleInviteStaff}>
+                Send Invitation
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsInvitingStaff(false);
+                  setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Edit Staff Form */}
+      {editingStaff && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Edit Staff Member</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -332,13 +394,12 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={editingStaff ? handleUpdateStaff : handleAddStaff}>
-                {editingStaff ? 'Update' : 'Add'} Staff Member
+              <Button onClick={handleUpdateStaff}>
+                Update Staff Member
               </Button>
               <Button 
                 variant="outline" 
                 onClick={() => {
-                  setIsAddingStaff(false);
                   setEditingStaff(null);
                   setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
                 }}
@@ -350,36 +411,26 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
         </Card>
       )}
 
-      {/* Staff List */}
-      <div className="space-y-4">
-        {staff.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="py-8 text-center">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Staff Added</h3>
-              <p className="text-muted-foreground mb-4">
-                Start by adding your team's coaching staff and helpers.
-              </p>
-              <Button onClick={() => setIsAddingStaff(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Staff Member
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          staff.map((staffMember) => (
+      {/* Linked Staff Section */}
+      {linkedStaff.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-semibold text-green-700">Active Staff Members ({linkedStaff.length})</h4>
+          {linkedStaff.map((staffMember) => (
             <Card key={staffMember.id}>
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                      <Users className="h-6 w-6 text-muted-foreground" />
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                      <Users className="h-6 w-6 text-green-600" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <h4 className="font-semibold">{staffMember.name}</h4>
                         <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
                           {getRoleLabel(staffMember.role)}
+                        </Badge>
+                        <Badge variant="outline" className="text-green-600 border-green-600">
+                          Active
                         </Badge>
                       </div>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
@@ -428,9 +479,95 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
                 </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Unlinked Staff Section */}
+      {unlinkedStaff.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="font-semibold text-orange-700">Pending Staff Invitations ({unlinkedStaff.length})</h4>
+          <p className="text-sm text-muted-foreground">
+            These staff members haven't created accounts yet. You can use Manual User Linking if they already have accounts.
+          </p>
+          {unlinkedStaff.map((staffMember) => (
+            <Card key={staffMember.id} className="border-orange-200">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                      <Users className="h-6 w-6 text-orange-600" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold">{staffMember.name}</h4>
+                        <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
+                          {getRoleLabel(staffMember.role)}
+                        </Badge>
+                        <Badge variant="outline" className="text-orange-600 border-orange-600">
+                          Pending
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {staffMember.email}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setEditingStaff(staffMember);
+                        setNewStaff({
+                          name: staffMember.name,
+                          email: staffMember.email,
+                          phone: staffMember.phone || '',
+                          role: staffMember.role
+                        });
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        if (confirm(`Are you sure you want to remove ${staffMember.name}?`)) {
+                          handleRemoveStaff(staffMember.id);
+                        }
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {staff.length === 0 && (
+        <Card className="border-dashed border-2">
+          <CardContent className="py-8 text-center">
+            <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-semibold mb-2">No Staff Members</h3>
+            <p className="text-muted-foreground mb-4">
+              Start by inviting your team's coaching staff and helpers.
+            </p>
+            <Button onClick={() => setIsInvitingStaff(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite First Staff Member
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

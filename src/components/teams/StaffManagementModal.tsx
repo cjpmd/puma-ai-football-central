@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Team, TeamStaff } from '@/types/team';
-import { Plus, Trash2, Users, Mail, Phone } from 'lucide-react';
+import { UserPlus, Trash2, Users, Mail, Phone, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { userInvitationService } from '@/services/userInvitationService';
 
 interface StaffManagementModalProps {
   team: Team;
@@ -27,7 +28,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 }) => {
   const [staff, setStaff] = useState<TeamStaff[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isAddingStaff, setIsAddingStaff] = useState(false);
+  const [isInvitingStaff, setIsInvitingStaff] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
@@ -42,13 +44,15 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       console.log('StaffManagementModal: Modal opened for team:', team.id);
       setStaff([]);
       setLoading(true);
-      setIsAddingStaff(false);
+      setIsInvitingStaff(false);
+      setEditingStaff(null);
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       loadStaff();
     } else if (!isOpen) {
       // Clean up state when modal closes
       setStaff([]);
-      setIsAddingStaff(false);
+      setIsInvitingStaff(false);
+      setEditingStaff(null);
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
     }
   }, [isOpen, team?.id]);
@@ -79,34 +83,6 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       if (data) {
         const staffMembers: TeamStaff[] = data.map(record => {
           try {
-            // Safely handle coaching badges
-            let coachingBadges: string[] = [];
-            if (record.coaching_badges) {
-              if (Array.isArray(record.coaching_badges)) {
-                coachingBadges = record.coaching_badges
-                  .filter(badge => typeof badge === 'string' && badge.trim().length > 0)
-                  .map(badge => String(badge));
-              }
-            }
-
-            // Safely handle certificates
-            let certificates: any[] = [];
-            if (record.certificates) {
-              if (Array.isArray(record.certificates)) {
-                certificates = record.certificates
-                  .filter(cert => cert && typeof cert === 'object')
-                  .map(cert => {
-                    const certObj = cert as Record<string, any>;
-                    return {
-                      name: String(certObj.name || ''),
-                      issuedBy: String(certObj.issuedBy || ''),
-                      dateIssued: String(certObj.dateIssued || ''),
-                      expiryDate: certObj.expiryDate ? String(certObj.expiryDate) : undefined
-                    };
-                  });
-              }
-            }
-
             return {
               id: record.id,
               name: record.name || '',
@@ -114,14 +90,13 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               phone: record.phone || '',
               role: record.role as TeamStaff['role'],
               user_id: record.user_id || undefined,
-              coachingBadges,
-              certificates,
+              coachingBadges: [],
+              certificates: [],
               createdAt: record.created_at,
               updatedAt: record.updated_at
             };
           } catch (parseError) {
             console.error('StaffManagementModal: Error parsing staff record:', parseError, record);
-            // Return a minimal valid staff member
             return {
               id: record.id,
               name: record.name || 'Unknown',
@@ -155,8 +130,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
-  const handleAddStaff = async () => {
-    // Validate input
+  const handleInviteStaff = async () => {
     if (!newStaff.name.trim()) {
       toast({
         title: 'Validation Error',
@@ -175,7 +149,6 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newStaff.email.trim())) {
       toast({
@@ -196,60 +169,82 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
 
     try {
-      console.log('StaffManagementModal: Adding staff member:', newStaff);
+      console.log('StaffManagementModal: Inviting staff member:', newStaff);
 
-      const insertData = {
-        team_id: team.id,
-        name: newStaff.name.trim(),
+      await userInvitationService.inviteUser({
         email: newStaff.email.trim(),
-        phone: newStaff.phone.trim() || null,
-        role: newStaff.role,
-        coaching_badges: [],
-        certificates: []
-      };
+        name: newStaff.name.trim(),
+        role: 'staff',
+        teamId: team.id
+      });
 
-      console.log('StaffManagementModal: Insert data:', insertData);
+      console.log('StaffManagementModal: Staff invitation sent successfully');
 
-      const { data, error } = await supabase
+      // Reset form
+      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+      setIsInvitingStaff(false);
+      
+      toast({
+        title: 'Invitation Sent',
+        description: `Invitation sent to ${newStaff.name} at ${newStaff.email}`,
+      });
+    } catch (error: any) {
+      console.error('StaffManagementModal: Error inviting staff:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send invitation',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateStaff = async () => {
+    if (!editingStaff || !newStaff.name.trim() || !newStaff.email.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Name and email are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      console.log('StaffManagementModal: Updating staff member:', editingStaff.id, newStaff);
+      
+      const { error } = await supabase
         .from('team_staff')
-        .insert(insertData)
-        .select()
-        .single();
+        .update({
+          name: newStaff.name.trim(),
+          email: newStaff.email.trim(),
+          phone: newStaff.phone.trim() || null,
+          role: newStaff.role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingStaff.id);
 
       if (error) {
-        console.error('StaffManagementModal: Insert error:', error);
-        
-        // Handle specific error cases
-        if (error.code === '23505') {
-          toast({
-            title: 'Error',
-            description: 'A staff member with this email already exists for this team',
-            variant: 'destructive',
-          });
-          return;
-        }
-        
+        console.error('StaffManagementModal: Update error:', error);
         throw error;
       }
 
-      console.log('StaffManagementModal: Staff member added successfully:', data);
+      console.log('StaffManagementModal: Staff member updated successfully');
 
       // Reload staff list
       await loadStaff();
       
       // Reset form
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setIsAddingStaff(false);
+      setEditingStaff(null);
       
       toast({
         title: 'Success',
-        description: `${newStaff.name} has been added to ${team.name}`,
+        description: `${newStaff.name} has been updated`,
       });
     } catch (error: any) {
-      console.error('StaffManagementModal: Error adding staff:', error);
+      console.error('StaffManagementModal: Error updating staff:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to add staff member',
+        description: error.message || 'Failed to update staff member',
         variant: 'destructive',
       });
     }
@@ -309,13 +304,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     return null;
   }
 
+  // Split staff into linked and unlinked
+  const linkedStaff = staff.filter(s => s.user_id);
+  const unlinkedStaff = staff.filter(s => !s.user_id);
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Staff Management - {team.name}</DialogTitle>
           <DialogDescription>
-            Manage your team's coaching staff and helpers.
+            Invite staff members to join your team. They'll receive an email invitation to create an account.
           </DialogDescription>
         </DialogHeader>
         
@@ -323,19 +322,26 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Team Staff</h3>
             <Button 
-              onClick={() => setIsAddingStaff(true)}
+              onClick={() => setIsInvitingStaff(true)}
               disabled={loading}
               className="bg-puma-blue-500 hover:bg-puma-blue-600"
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Add Staff
+              <UserPlus className="h-4 w-4 mr-2" />
+              Invite Staff
             </Button>
           </div>
 
-          {isAddingStaff && (
+          {(isInvitingStaff || editingStaff) && (
             <Card>
               <CardHeader>
-                <CardTitle>Add New Staff Member</CardTitle>
+                <CardTitle>
+                  {editingStaff ? 'Edit Staff Member' : 'Invite New Staff Member'}
+                </CardTitle>
+                {!editingStaff && (
+                  <CardDescription>
+                    Send an invitation email to a new staff member
+                  </CardDescription>
+                )}
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -358,6 +364,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                       onChange={(e) => setNewStaff(prev => ({ ...prev, email: e.target.value }))}
                       placeholder="Enter email address"
                       maxLength={255}
+                      disabled={!!editingStaff}
                     />
                   </div>
                 </div>
@@ -393,11 +400,14 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button onClick={handleAddStaff}>Add Staff Member</Button>
+                  <Button onClick={editingStaff ? handleUpdateStaff : handleInviteStaff}>
+                    {editingStaff ? 'Update Staff Member' : 'Send Invitation'}
+                  </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => {
-                      setIsAddingStaff(false);
+                      setIsInvitingStaff(false);
+                      setEditingStaff(null);
                       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
                     }}
                   >
@@ -415,67 +425,165 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 <p>Loading staff...</p>
               </div>
             </div>
-          ) : staff.length === 0 ? (
-            <Card className="border-dashed border-2">
-              <CardContent className="py-8 text-center">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">No Staff Added</h3>
-                <p className="text-muted-foreground mb-4">
-                  Start by adding your team's coaching staff and helpers.
-                </p>
-                <Button onClick={() => setIsAddingStaff(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add First Staff Member
-                </Button>
-              </CardContent>
-            </Card>
           ) : (
-            <div className="space-y-4">
-              {staff.map((staffMember) => (
-                <Card key={staffMember.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
-                          <Users className="h-6 w-6 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h4 className="font-semibold">{staffMember.name}</h4>
-                            <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
-                              {getRoleLabel(staffMember.role)}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                            <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {staffMember.email}
+            <div className="space-y-6">
+              {/* Active Staff */}
+              {linkedStaff.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-green-700">Active Staff Members ({linkedStaff.length})</h4>
+                  {linkedStaff.map((staffMember) => (
+                    <Card key={staffMember.id}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                              <Users className="h-6 w-6 text-green-600" />
                             </div>
-                            {staffMember.phone && (
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3 w-3" />
-                                {staffMember.phone}
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold">{staffMember.name}</h4>
+                                <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
+                                  {getRoleLabel(staffMember.role)}
+                                </Badge>
+                                <Badge variant="outline" className="text-green-600 border-green-600">
+                                  Active
+                                </Badge>
                               </div>
-                            )}
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {staffMember.email}
+                                </div>
+                                {staffMember.phone && (
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3" />
+                                    {staffMember.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingStaff(staffMember);
+                                setNewStaff({
+                                  name: staffMember.name,
+                                  email: staffMember.email,
+                                  phone: staffMember.phone || '',
+                                  role: staffMember.role
+                                });
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to remove ${staffMember.name}?`)) {
+                                  handleRemoveStaff(staffMember.id, staffMember.name);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          if (confirm(`Are you sure you want to remove ${staffMember.name}?`)) {
-                            handleRemoveStaff(staffMember.id, staffMember.name);
-                          }
-                        }}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Pending Staff */}
+              {unlinkedStaff.length > 0 && (
+                <div className="space-y-4">
+                  <h4 className="font-semibold text-orange-700">Pending Staff Invitations ({unlinkedStaff.length})</h4>
+                  <p className="text-sm text-muted-foreground">
+                    These staff members haven't created accounts yet.
+                  </p>
+                  {unlinkedStaff.map((staffMember) => (
+                    <Card key={staffMember.id} className="border-orange-200">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                              <Users className="h-6 w-6 text-orange-600" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold">{staffMember.name}</h4>
+                                <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
+                                  {getRoleLabel(staffMember.role)}
+                                </Badge>
+                                <Badge variant="outline" className="text-orange-600 border-orange-600">
+                                  Pending
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                                <div className="flex items-center gap-1">
+                                  <Mail className="h-3 w-3" />
+                                  {staffMember.email}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingStaff(staffMember);
+                                setNewStaff({
+                                  name: staffMember.name,
+                                  email: staffMember.email,
+                                  phone: staffMember.phone || '',
+                                  role: staffMember.role
+                                });
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to remove ${staffMember.name}?`)) {
+                                  handleRemoveStaff(staffMember.id, staffMember.name);
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {/* Empty State */}
+              {staff.length === 0 && (
+                <Card className="border-dashed border-2">
+                  <CardContent className="py-8 text-center">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="font-semibold mb-2">No Staff Members</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Start by inviting your team's coaching staff and helpers.
+                    </p>
+                    <Button onClick={() => setIsInvitingStaff(true)}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Invite First Staff Member
+                    </Button>
                   </CardContent>
                 </Card>
-              ))}
+              )}
             </div>
           )}
         </div>
