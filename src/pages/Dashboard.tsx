@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
@@ -8,18 +7,26 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/contexts/AuthorizationContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Trophy, Shirt, UserPlus, BarChart3, Timer } from "lucide-react";
-import { ResultsSummary } from "@/components/analytics/ResultsSummary";
+import { Users, Trophy, Shirt, UserPlus, BarChart3, Timer, Calendar } from "lucide-react";
+import { SimplifiedResultsSummary } from "@/components/dashboard/SimplifiedResultsSummary";
 import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { teams, user, profile } = useAuth();
   const { canManageUsers, canManageTeams, canManageClubs, canViewAnalytics } = useAuthorization();
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
+  const [teamStats, setTeamStats] = useState({
+    totalPlayers: 0,
+    totalGames: 0,
+    totalMinutes: 0,
+    trainingHours: 0,
+    upcomingEvents: 0
+  });
   
   const hasTeams = teams.length > 0;
 
@@ -30,10 +37,64 @@ const Dashboard = () => {
     enabled: !!selectedTeamId,
   });
 
-  // Calculate team statistics
-  const teamStats = {
-    totalGames: players.reduce((sum, player) => sum + (player.matchStats?.totalGames || 0), 0),
-    totalMinutes: players.reduce((sum, player) => sum + (player.matchStats?.totalMinutes || 0), 0),
+  useEffect(() => {
+    if (selectedTeamId) {
+      loadTeamStats();
+    }
+  }, [selectedTeamId, players]);
+
+  const loadTeamStats = async () => {
+    try {
+      // Get upcoming events
+      const today = new Date().toISOString().split('T')[0];
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('team_id', selectedTeamId)
+        .gte('date', today)
+        .order('date');
+
+      if (eventsError) throw eventsError;
+
+      // Get training events from this month for hours calculation
+      const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+      const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+      
+      const { data: trainingData, error: trainingError } = await supabase
+        .from('events')
+        .select('*')
+        .eq('team_id', selectedTeamId)
+        .eq('event_type', 'training')
+        .gte('date', startOfMonth)
+        .lte('date', endOfMonth);
+
+      if (trainingError) throw trainingError;
+
+      // Calculate training hours (assuming 1.5 hours per session if not specified)
+      const trainingHours = trainingData?.reduce((total, event) => {
+        if (event.start_time && event.end_time) {
+          const start = new Date(`2000-01-01T${event.start_time}`);
+          const end = new Date(`2000-01-01T${event.end_time}`);
+          return total + (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        }
+        return total + 1.5; // Default 1.5 hours if times not specified
+      }, 0) || 0;
+
+      // Calculate team statistics
+      const totalGames = players.reduce((sum, player) => sum + (player.matchStats?.totalGames || 0), 0);
+      const totalMinutes = players.reduce((sum, player) => sum + (player.matchStats?.totalMinutes || 0), 0);
+
+      setTeamStats({
+        totalPlayers: players.length,
+        totalGames,
+        totalMinutes,
+        trainingHours: Math.round(trainingHours),
+        upcomingEvents: eventsData?.length || 0
+      });
+
+    } catch (error) {
+      console.error('Error loading team stats:', error);
+    }
   };
 
   return (
@@ -153,11 +214,21 @@ const Dashboard = () => {
               </div>
             )}
 
-            {/* Results Summary */}
-            <ResultsSummary selectedTeamId={selectedTeamId} />
+            {/* Condensed Team Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    Players
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-2xl font-bold">{teamStats.totalPlayers}</div>
+                  <div className="text-xs text-muted-foreground">Active</div>
+                </CardContent>
+              </Card>
 
-            {/* Team Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
@@ -167,9 +238,7 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="text-2xl font-bold">{teamStats.totalGames}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Across all players
-                  </div>
+                  <div className="text-xs text-muted-foreground">All players</div>
                 </CardContent>
               </Card>
 
@@ -182,12 +251,39 @@ const Dashboard = () => {
                 </CardHeader>
                 <CardContent className="pt-0">
                   <div className="text-2xl font-bold">{teamStats.totalMinutes}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Playing time
-                  </div>
+                  <div className="text-xs text-muted-foreground">Playing time</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Timer className="h-4 w-4" />
+                    Training Hours
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-2xl font-bold">{teamStats.trainingHours}</div>
+                  <div className="text-xs text-muted-foreground">This month</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Calendar className="h-4 w-4" />
+                    Upcoming Events
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-2xl font-bold">{teamStats.upcomingEvents}</div>
+                  <div className="text-xs text-muted-foreground">Scheduled</div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Simplified Results Summary */}
+            <SimplifiedResultsSummary selectedTeamId={selectedTeamId} />
             
             <TeamOverview />
             
