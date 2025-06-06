@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,12 +17,6 @@ interface DashboardStats {
     type: string;
   } | null;
   trainingHours: number;
-  recentPlayers: Array<{
-    id: string;
-    name: string;
-    status: 'new' | 'updated';
-    date: string;
-  }>;
 }
 
 export function TeamOverview() {
@@ -32,8 +25,7 @@ export function TeamOverview() {
     totalPlayers: 0,
     upcomingEvents: 0,
     nextEvent: null,
-    trainingHours: 0,
-    recentPlayers: []
+    trainingHours: 0
   });
   const [loading, setLoading] = useState(true);
 
@@ -93,21 +85,6 @@ export function TeamOverview() {
         return total + 1.5; // Default 1.5 hours if times not specified
       }, 0) || 0;
 
-      // Get recent players (created or updated in last 30 days)
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const recentPlayers = playersData?.filter(player => {
-        const createdAt = new Date(player.created_at);
-        const updatedAt = new Date(player.updated_at);
-        return createdAt > thirtyDaysAgo || updatedAt > thirtyDaysAgo;
-      }).map(player => ({
-        id: player.id,
-        name: player.name,
-        status: new Date(player.created_at) > thirtyDaysAgo ? 'new' as const : 'updated' as const,
-        date: new Date(player.created_at) > thirtyDaysAgo ? player.created_at : player.updated_at
-      })).slice(0, 3) || [];
-
       // Get next event
       const nextEvent = eventsData?.[0] ? {
         title: eventsData[0].title,
@@ -121,8 +98,7 @@ export function TeamOverview() {
         totalPlayers: playersData?.length || 0,
         upcomingEvents: eventsData?.length || 0,
         nextEvent,
-        trainingHours: Math.round(trainingHours),
-        recentPlayers
+        trainingHours: Math.round(trainingHours)
       });
 
     } catch (error) {
@@ -166,9 +142,6 @@ export function TeamOverview() {
               <div className="text-2xl font-bold">{stats.totalPlayers}</div>
               <Users className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              {stats.recentPlayers.filter(p => p.status === 'new').length} new this month
-            </p>
           </CardContent>
         </Card>
         
@@ -203,105 +176,64 @@ export function TeamOverview() {
         </Card>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-7">
-        <Card className="md:col-span-4">
-          <CardHeader>
-            <CardTitle>Next Event</CardTitle>
-            {stats.nextEvent && (
-              <CardDescription>
-                {formatDate(stats.nextEvent.date)} • {formatTime(stats.nextEvent.time)}
-              </CardDescription>
-            )}
-          </CardHeader>
-          <CardContent>
-            {stats.nextEvent ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-puma-blue-50 p-2 rounded-lg">
-                      <Calendar className="h-5 w-5 text-puma-blue-500" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold">{stats.nextEvent.title}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {stats.nextEvent.type.charAt(0).toUpperCase() + stats.nextEvent.type.slice(1)}
-                      </p>
-                    </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Next Event</CardTitle>
+          {stats.nextEvent && (
+            <CardDescription>
+              {formatDate(stats.nextEvent.date)} • {formatTime(stats.nextEvent.time)}
+            </CardDescription>
+          )}
+        </CardHeader>
+        <CardContent>
+          {stats.nextEvent ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-puma-blue-50 p-2 rounded-lg">
+                    <Calendar className="h-5 w-5 text-puma-blue-500" />
                   </div>
-                  <Button size="sm" onClick={() => window.location.href = '/calendar'}>
-                    View Details
-                  </Button>
+                  <div>
+                    <h3 className="font-semibold">{stats.nextEvent.title}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {stats.nextEvent.type.charAt(0).toUpperCase() + stats.nextEvent.type.slice(1)}
+                    </p>
+                  </div>
                 </div>
-                
-                <div className="pt-2 space-y-2">
-                  {stats.nextEvent.time && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Start Time</span>
-                      <span className="font-medium">{formatTime(stats.nextEvent.time)}</span>
-                    </div>
-                  )}
-                  {stats.nextEvent.location && (
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Location</span>
-                      <span className="font-medium">{stats.nextEvent.location}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">No Upcoming Events</h3>
-                <p className="text-muted-foreground mb-4">
-                  No events scheduled. Create your first event to get started.
-                </p>
-                <Button onClick={() => window.location.href = '/calendar'}>
-                  Create Event
+                <Button size="sm" onClick={() => window.location.href = '/calendar'}>
+                  View Details
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="md:col-span-3">
-          <CardHeader>
-            <CardTitle>Recent Players</CardTitle>
-            <CardDescription>New players and updates</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {stats.recentPlayers.length > 0 ? (
-              <div className="space-y-4">
-                {stats.recentPlayers.map((player) => (
-                  <div key={player.id} className="flex items-center">
-                    <Avatar className="h-9 w-9">
-                      <AvatarFallback className="bg-puma-blue-100 text-puma-blue-500">
-                        {player.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="ml-3">
-                      <div className="font-medium">{player.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {player.status === 'new' ? 'Added' : 'Updated'} {new Date(player.date).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <div className="ml-auto text-xs bg-puma-green-100 text-puma-green-600 px-2 py-1 rounded-full">
-                      {player.status === 'new' ? 'New' : 'Updated'}
-                    </div>
+              
+              <div className="pt-2 space-y-2">
+                {stats.nextEvent.time && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Start Time</span>
+                    <span className="font-medium">{formatTime(stats.nextEvent.time)}</span>
                   </div>
-                ))}
+                )}
+                {stats.nextEvent.location && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Location</span>
+                    <span className="font-medium">{stats.nextEvent.location}</span>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">No Recent Activity</h3>
-                <p className="text-muted-foreground text-sm">
-                  No new players or updates in the last 30 days.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Upcoming Events</h3>
+              <p className="text-muted-foreground mb-4">
+                No events scheduled. Create your first event to get started.
+              </p>
+              <Button onClick={() => window.location.href = '/calendar'}>
+                Create Event
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

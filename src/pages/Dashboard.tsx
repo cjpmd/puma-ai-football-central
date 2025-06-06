@@ -2,21 +2,39 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { TeamOverview } from "@/components/dashboard/TeamOverview";
 import { UpcomingEvents } from "@/components/dashboard/UpcomingEvents";
-import { PlayerList } from "@/components/dashboard/PlayerList";
 import { ProtectedComponent } from "@/components/auth/ProtectedComponent";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthorization } from "@/contexts/AuthorizationContext";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Trophy, Shirt, UserPlus, BarChart3 } from "lucide-react";
+import { Users, Trophy, Shirt, UserPlus, BarChart3, Timer } from "lucide-react";
+import { ResultsSummary } from "@/components/analytics/ResultsSummary";
+import { useQuery } from '@tanstack/react-query';
+import { playersService } from '@/services/playersService';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState } from 'react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { teams, user, profile } = useAuth();
   const { canManageUsers, canManageTeams, canManageClubs, canViewAnalytics } = useAuthorization();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
   
   const hasTeams = teams.length > 0;
+
+  // Fetch active players for team stats
+  const { data: players = [] } = useQuery({
+    queryKey: ['active-players', selectedTeamId],
+    queryFn: () => selectedTeamId ? playersService.getActivePlayersByTeamId(selectedTeamId) : [],
+    enabled: !!selectedTeamId,
+  });
+
+  // Calculate team statistics
+  const teamStats = {
+    totalGames: players.reduce((sum, player) => sum + (player.matchStats?.totalGames || 0), 0),
+    totalMinutes: players.reduce((sum, player) => sum + (player.matchStats?.totalMinutes || 0), 0),
+  };
 
   return (
     <DashboardLayout>
@@ -114,15 +132,67 @@ const Dashboard = () => {
 
         {hasTeams ? (
           <>
+            {/* Team Selection */}
+            {teams.length > 1 && (
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-semibold">Team Analytics</h2>
+                <div className="min-w-[250px]">
+                  <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Results Summary */}
+            <ResultsSummary selectedTeamId={selectedTeamId} />
+
+            {/* Team Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <BarChart3 className="h-4 w-4" />
+                    Total Games
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-2xl font-bold">{teamStats.totalGames}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Across all players
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <Timer className="h-4 w-4" />
+                    Total Minutes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="text-2xl font-bold">{teamStats.totalMinutes}</div>
+                  <div className="text-xs text-muted-foreground">
+                    Playing time
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+            
             <TeamOverview />
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="md:col-span-2">
-                <UpcomingEvents />
-              </div>
-              <div className="md:col-span-1">
-                <PlayerList />
-              </div>
+            <div className="grid grid-cols-1 gap-6">
+              <UpcomingEvents />
             </div>
           </>
         ) : (
