@@ -1496,6 +1496,7 @@ export type Database = {
           manager_name: string | null
           manager_phone: string | null
           name: string
+          name_display_option: string | null
           performance_categories: string[] | null
           season_end: string
           season_start: string
@@ -1515,6 +1516,7 @@ export type Database = {
           manager_name?: string | null
           manager_phone?: string | null
           name: string
+          name_display_option?: string | null
           performance_categories?: string[] | null
           season_end: string
           season_start: string
@@ -1534,6 +1536,7 @@ export type Database = {
           manager_name?: string | null
           manager_phone?: string | null
           name?: string
+          name_display_option?: string | null
           performance_categories?: string[] | null
           season_end?: string
           season_start?: string

@@ -172,7 +172,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .single();
 
       if (error) throw error;
-      setNameDisplayOption(data?.name_display_option || 'surname');
+      setNameDisplayOption((data?.name_display_option as NameDisplayOption) || 'surname');
     } catch (error) {
       console.error('Error loading team name display setting:', error);
     }
