@@ -42,8 +42,12 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, name, invitationCode, role }: InvitationEmailRequest = await req.json();
     console.log(`Sending invitation to ${email} for role ${role}`);
 
-    const appUrl = Deno.env.get("APP_URL") || "https://pdarngodvrzehnpvdrii.supabase.co";
-    const invitationUrl = `${appUrl}/auth?invitation=${invitationCode}`;
+    // Fix the URL construction to prevent double slashes
+    const appUrl = Deno.env.get("APP_URL") || "https://puma-ai.co.uk";
+    const cleanAppUrl = appUrl.replace(/\/+$/, ''); // Remove trailing slashes
+    const invitationUrl = `${cleanAppUrl}/auth?invitation=${invitationCode}`;
+    
+    console.log("Constructed invitation URL:", invitationUrl);
 
     const emailResponse = await resend.emails.send({
       from: "Puma AI <team@puma-ai.co.uk>",
