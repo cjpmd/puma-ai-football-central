@@ -130,8 +130,16 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2 text-lg">
               {player.name || 'Unnamed Player'}
-              {isCaptain && <Crown className="h-4 w-4 text-yellow-600" title="Captain" />}
-              {isPOTM && <Trophy className="h-4 w-4 text-gold-600" title="Player of the Match" />}
+              {isCaptain && (
+                <span title="Captain">
+                  <Crown className="h-4 w-4 text-yellow-600" />
+                </span>
+              )}
+              {isPOTM && (
+                <span title="Player of the Match">
+                  <Trophy className="h-4 w-4 text-gold-600" />
+                </span>
+              )}
               {hasAlerts && <AlertTriangle className="h-4 w-4 text-orange-500" />}
               {!inactive && <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(player.availability)}`} />}
               {getPerformanceIcon()}
