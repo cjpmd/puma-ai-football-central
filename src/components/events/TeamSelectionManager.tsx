@@ -719,15 +719,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     
     // Create a simple pitch layout with GK at the bottom
     const rows = [];
-    let playerIndex = 0;
     
-    // Group positions by typical rows for display - GK at bottom, then defenders, midfield, attack at top
+    // Group positions by typical rows for display - Attack at top, then Midfield, Defence, GK at bottom
     const positionRows = {
       'Attack': positions.filter(pos => pos.startsWith('ST') || pos.startsWith('F')),
       'Midfield': positions.filter(pos => pos.startsWith('M') || pos.startsWith('AM')),
       'Defence': positions.filter(pos => pos.startsWith('D')),
       'GK': ['GK']
     };
+
+    // Create a mapping of position to player based on original formation order
+    const positionToPlayer: Record<string, string> = {};
+    positions.forEach((position, index) => {
+      if (assignedPlayers[index]) {
+        positionToPlayer[position] = assignedPlayers[index];
+      }
+    });
     
     return (
       <div className="bg-green-100 p-3 rounded-lg border-2 border-green-300 min-h-[200px]">
@@ -743,10 +750,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               <div key={rowName} className="flex justify-center">
                 <div className="flex gap-1 flex-wrap justify-center">
                   {rowPositions.map((position) => {
-                    const playerId = assignedPlayers[playerIndex];
+                    const playerId = positionToPlayer[position];
                     const playerName = playerId ? getPlayerSurname(playerId) : 'Empty';
                     const isCaptain = playerId === captainId;
-                    playerIndex++;
                     
                     return (
                       <div
