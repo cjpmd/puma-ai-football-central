@@ -39,7 +39,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: player.kit_sizes || {},
+      kit_sizes: (player.kit_sizes as Record<string, string>) || {},
       createdAt: player.created_at,
       updatedAt: player.updated_at
     }));
@@ -83,7 +83,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: player.kit_sizes || {},
+      kit_sizes: (player.kit_sizes as Record<string, string>) || {},
       createdAt: player.created_at,
       updatedAt: player.updated_at
     }));
@@ -127,7 +127,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: player.kit_sizes || {},
+      kit_sizes: (player.kit_sizes as Record<string, string>) || {},
       createdAt: player.created_at,
       updatedAt: player.updated_at
     }));
@@ -192,7 +192,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: data.kit_sizes || {},
+      kit_sizes: (data.kit_sizes as Record<string, string>) || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -253,7 +253,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: data.kit_sizes || {},
+      kit_sizes: (data.kit_sizes as Record<string, string>) || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -303,7 +303,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: data.kit_sizes || {},
+      kit_sizes: (data.kit_sizes as Record<string, string>) || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -353,7 +353,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
-      kit_sizes: data.kit_sizes || {},
+      kit_sizes: (data.kit_sizes as Record<string, string>) || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };

@@ -4,20 +4,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
-import { Edit, Users, TrendingUp, TrendingDown, Minus, AlertTriangle } from 'lucide-react';
+import { Edit, Users, TrendingUp, TrendingDown, Minus, AlertTriangle, UserMinus, ArrowRightLeft, Trash2, RotateCcw } from 'lucide-react';
 
 interface PlayerCardProps {
   player: Player;
-  onEdit: (player: Player) => void;
-  onManageParents: (player: Player) => void;
+  onEdit?: (player: Player) => void;
+  onManageParents?: (player: Player) => void;
   showSubscription?: boolean;
+  inactive?: boolean;
+  onLeave?: (player: Player) => void;
+  onTransfer?: (player: Player) => void;
+  onManageAttributes?: (player: Player) => void;
+  onManageObjectives?: (player: Player) => void;
+  onManageComments?: (player: Player) => void;
+  onViewStats?: (player: Player) => void;
+  onViewHistory?: (player: Player) => void;
+  onResurrect?: (player: Player) => void;
+  onDelete?: (player: Player) => void;
 }
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
   onEdit,
   onManageParents,
-  showSubscription = true
+  showSubscription = true,
+  inactive = false,
+  onLeave,
+  onTransfer,
+  onManageAttributes,
+  onManageObjectives,
+  onManageComments,
+  onViewStats,
+  onViewHistory,
+  onResurrect,
+  onDelete
 }) => {
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
@@ -90,45 +110,101 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const hasAlerts = missingInfoAlerts.length > 0;
 
   return (
-    <Card className={`hover:shadow-lg transition-shadow ${hasAlerts ? 'border-orange-200 bg-orange-50' : ''}`}>
+    <Card className={`hover:shadow-lg transition-shadow ${hasAlerts ? 'border-orange-200 bg-orange-50' : ''} ${inactive ? 'opacity-75' : ''}`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2 text-lg">
               {player.name || 'Unnamed Player'}
               {hasAlerts && <AlertTriangle className="h-4 w-4 text-orange-500" />}
-              <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(player.availability)}`} />
+              {!inactive && <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(player.availability)}`} />}
               {getPerformanceIcon()}
             </CardTitle>
             <CardDescription>
               #{player.squadNumber || 'No Number'} • {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield'}
+              {inactive && ' • Left Team'}
             </CardDescription>
           </div>
           <div className="flex gap-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onManageParents(player)}
-              className="h-8 w-8 p-0"
-              title="Manage Parents"
-            >
-              <Users className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onEdit(player)}
-              className="h-8 w-8 p-0"
-              title="Edit Player"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            {inactive ? (
+              <>
+                {onResurrect && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onResurrect(player)}
+                    className="h-8 w-8 p-0"
+                    title="Return to Squad"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+                {onDelete && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDelete(player)}
+                    className="h-8 w-8 p-0 text-red-600"
+                    title="Delete Player"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            ) : (
+              <>
+                {onManageParents && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onManageParents(player)}
+                    className="h-8 w-8 p-0"
+                    title="Manage Parents"
+                  >
+                    <Users className="h-4 w-4" />
+                  </Button>
+                )}
+                {onTransfer && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onTransfer(player)}
+                    className="h-8 w-8 p-0"
+                    title="Transfer Player"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                {onLeave && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onLeave(player)}
+                    className="h-8 w-8 p-0"
+                    title="Mark as Left"
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </Button>
+                )}
+                {onEdit && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onEdit(player)}
+                    className="h-8 w-8 p-0"
+                    title="Edit Player"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
           </div>
         </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {hasAlerts && (
+          {hasAlerts && !inactive && (
             <div className="p-2 bg-orange-100 border border-orange-200 rounded text-sm">
               <div className="font-medium text-orange-800 mb-1">Action Required:</div>
               <ul className="text-orange-700 text-xs space-y-1">
@@ -171,6 +247,61 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               <span className="text-sm font-medium">
                 {player.matchStats.playerOfTheMatchCount}
               </span>
+            </div>
+          )}
+
+          {inactive && player.leaveDate && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Left:</span>
+              <span className="text-sm font-medium">
+                {new Date(player.leaveDate).toLocaleDateString()}
+              </span>
+            </div>
+          )}
+
+          {/* Action buttons for additional functionality */}
+          {!inactive && (
+            <div className="flex flex-wrap gap-1 pt-2">
+              {onManageAttributes && (
+                <Button variant="outline" size="sm" onClick={() => onManageAttributes(player)} className="text-xs">
+                  Attributes
+                </Button>
+              )}
+              {onManageObjectives && (
+                <Button variant="outline" size="sm" onClick={() => onManageObjectives(player)} className="text-xs">
+                  Objectives
+                </Button>
+              )}
+              {onManageComments && (
+                <Button variant="outline" size="sm" onClick={() => onManageComments(player)} className="text-xs">
+                  Comments
+                </Button>
+              )}
+              {onViewStats && (
+                <Button variant="outline" size="sm" onClick={() => onViewStats(player)} className="text-xs">
+                  Stats
+                </Button>
+              )}
+              {onViewHistory && (
+                <Button variant="outline" size="sm" onClick={() => onViewHistory(player)} className="text-xs">
+                  History
+                </Button>
+              )}
+            </div>
+          )}
+
+          {inactive && (
+            <div className="flex flex-wrap gap-1 pt-2">
+              {onViewStats && (
+                <Button variant="outline" size="sm" onClick={() => onViewStats(player)} className="text-xs">
+                  Stats
+                </Button>
+              )}
+              {onViewHistory && (
+                <Button variant="outline" size="sm" onClick={() => onViewHistory(player)} className="text-xs">
+                  History
+                </Button>
+              )}
             </div>
           )}
         </div>
