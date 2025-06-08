@@ -42,7 +42,7 @@ export const MultiRoleDashboard = () => {
       { id: 'overview', label: 'Overview', icon: BarChart3 }
     ];
 
-    if (userRole === 'staff' || userRole === 'admin') {
+    if (userRole === 'staff') {
       tabs.push(
         { id: 'teams', label: 'Teams', icon: Trophy },
         { id: 'players', label: 'Players', icon: Users },
