@@ -12,8 +12,29 @@ import { SimplifiedResultsSummary } from './SimplifiedResultsSummary';
 import { Users, Calendar, Trophy, BarChart3 } from 'lucide-react';
 
 export const MultiRoleDashboard = () => {
-  const { user, teams, userRole } = useAuth();
+  const { user, teams, profile } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Derive user role from profile roles
+  const getUserRole = () => {
+    if (!profile?.roles || profile.roles.length === 0) return 'player';
+    
+    // Check for staff/admin roles first
+    const staffRoles = ['admin', 'team_manager', 'team_assistant_manager', 'team_coach', 'team_helper', 'club_admin', 'club_chair', 'club_secretary', 'global_admin'];
+    if (profile.roles.some(role => staffRoles.includes(role))) {
+      return 'staff';
+    }
+    
+    // Check for parent role
+    if (profile.roles.includes('parent')) {
+      return 'parent';
+    }
+    
+    // Default to player
+    return 'player';
+  };
+
+  const userRole = getUserRole();
 
   // Determine available tabs based on user role
   const getAvailableTabs = () => {
@@ -64,11 +85,11 @@ export const MultiRoleDashboard = () => {
                         <div>
                           <h4 className="font-medium">{team.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {team.category} • {team.ageGroup}
+                            {team.ageGroup}
                           </p>
                         </div>
                         <Badge variant="secondary">
-                          {team.players?.length || 0} players
+                          Active
                         </Badge>
                       </div>
                     ))}
@@ -99,7 +120,7 @@ export const MultiRoleDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <SimplifiedResultsSummary />
+                <SimplifiedResultsSummary selectedTeamId={teams?.[0]?.id || ''} />
               </CardContent>
             </Card>
           </div>
@@ -109,7 +130,7 @@ export const MultiRoleDashboard = () => {
         return (
           <div className="space-y-6">
             {teams?.map((team) => (
-              <TeamOverview key={team.id} team={team} />
+              <TeamOverview key={team.id} />
             ))}
           </div>
         );
@@ -117,16 +138,7 @@ export const MultiRoleDashboard = () => {
       case 'players':
         return (
           <div className="space-y-6">
-            {teams?.map((team) => (
-              <Card key={team.id}>
-                <CardHeader>
-                  <CardTitle>{team.name} Squad</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PlayerList team={team} />
-                </CardContent>
-              </Card>
-            ))}
+            <PlayerList />
           </div>
         );
 
