@@ -1,4 +1,3 @@
-
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,6 +104,112 @@ const SubscriptionManagement = () => {
           </div>
         </div>
 
+        {/* Player Subscription Overview */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-semibold">Player Subscription Types</h2>
+          
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Full Squad
+                </CardTitle>
+                <CardDescription>
+                  Complete access to all team features
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Match selection eligibility
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Performance tracking
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Training sessions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Match statistics
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Training Only
+                </CardTitle>
+                <CardDescription>
+                  Access to training sessions only
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Training sessions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Basic performance tracking
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    Match selection eligibility
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    Match statistics
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Trialist
+                </CardTitle>
+                <CardDescription>
+                  Free trial period - no payment required
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-2 text-sm">
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full" />
+                    Training sessions
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                    Limited match selection
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-yellow-500 rounded-full" />
+                    Basic performance tracking
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-red-500 rounded-full" />
+                    Full match statistics
+                  </li>
+                </ul>
+                <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                  <strong>Free for trial period</strong> - Convert to paid subscription for full access
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {/* Team Subscriptions */}
         {teams.length > 0 && (
           <div className="space-y-4">
@@ -192,77 +297,6 @@ const SubscriptionManagement = () => {
             </div>
           </div>
         )}
-
-        {/* Player Subscription Overview */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Player Subscription Types</h2>
-          
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="h-5 w-5" />
-                  Full Squad
-                </CardTitle>
-                <CardDescription>
-                  Complete access to all team features
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Match selection eligibility
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Performance tracking
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Training sessions
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Match statistics
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Training Only
-                </CardTitle>
-                <CardDescription>
-                  Access to training sessions only
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Training sessions
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full" />
-                    Basic performance tracking
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full" />
-                    Match selection eligibility
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-red-500 rounded-full" />
-                    Match statistics
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       </div>
     </DashboardLayout>
   );

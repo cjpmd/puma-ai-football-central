@@ -33,7 +33,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
     name: '',
     role: 'player' as 'staff' | 'parent' | 'player',
     teamId: prefilledData?.teamId || teams[0]?.id || '',
-    subscriptionType: 'full_squad' as 'full_squad' | 'training'
+    subscriptionType: 'full_squad' as 'full_squad' | 'training' | 'trialist'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -149,10 +149,14 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
                 <SelectContent>
                   <SelectItem value="full_squad">Full Squad</SelectItem>
                   <SelectItem value="training">Training Only</SelectItem>
+                  <SelectItem value="trialist">Trialist (Free)</SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                The invited person will need to set up this subscription type.
+                {formData.subscriptionType === 'trialist' 
+                  ? 'Free trial period - no payment required during setup.'
+                  : 'The invited person will need to set up this subscription type.'
+                }
               </p>
             </div>
           )}

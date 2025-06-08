@@ -29,14 +29,24 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     squadNumber: player?.squadNumber || 0,
     type: player?.type || 'outfield' as 'outfield' | 'goalkeeper',
     availability: player?.availability || 'green' as 'amber' | 'green' | 'red',
-    subscriptionType: player?.subscriptionType || 'full_squad' as 'full_squad' | 'training',
+    subscriptionType: player?.subscriptionType || 'full_squad' as 'full_squad' | 'training' | 'trialist',
     kit_sizes: player?.kit_sizes || {},
     nameOnShirt: player?.kit_sizes?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const fullName = `${formData.firstName} ${formData.surname}`.trim();
+    
+    // Allow empty first name - use surname only if needed
+    const fullName = formData.firstName ? 
+      `${formData.firstName} ${formData.surname}`.trim() : 
+      formData.surname.trim();
+      
+    if (!fullName) {
+      alert('Please provide at least a surname for the player');
+      return;
+    }
+      
     onSubmit({
       name: fullName,
       dateOfBirth: formData.dateOfBirth,
@@ -61,12 +71,12 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="firstName">First Name *</Label>
+            <Label htmlFor="firstName">First Name</Label>
             <Input
               id="firstName"
               value={formData.firstName}
               onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              required
+              placeholder="Optional"
             />
           </div>
 
@@ -88,26 +98,24 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
             <Input
               id="dateOfBirth"
               type="date"
               value={formData.dateOfBirth}
               onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="squadNumber">Squad Number *</Label>
+            <Label htmlFor="squadNumber">Squad Number</Label>
             <Input
               id="squadNumber"
               type="number"
-              min="1"
+              min="0"
               max="99"
               value={formData.squadNumber}
               onChange={(e) => setFormData({ ...formData, squadNumber: parseInt(e.target.value) || 0 })}
-              required
             />
           </div>
 
@@ -151,6 +159,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
               <SelectContent>
                 <SelectItem value="full_squad">Full Squad</SelectItem>
                 <SelectItem value="training">Training Only</SelectItem>
+                <SelectItem value="trialist">Trialist (Free)</SelectItem>
               </SelectContent>
             </Select>
           </div>

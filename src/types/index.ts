@@ -1,3 +1,4 @@
+
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -12,7 +13,7 @@ export type UserRole =
   | "global_admin";
 
 export type SubscriptionType = "free" | "premium" | "pro" | "analytics_plus";
-export type PlayerSubscriptionType = "full_squad" | "training";
+export type PlayerSubscriptionType = "full_squad" | "training" | "trialist";
 export type SubscriptionStatus = "active" | "inactive" | "pending" | "paused";
 
 export type User = {

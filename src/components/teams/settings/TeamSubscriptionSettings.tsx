@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Team, PlayerSubscriptionType, SubscriptionStatus } from '@/types';
-import { Calendar, Users, PoundSterling, TrendingUp, Pause, Play, X } from 'lucide-react';
+import { Calendar, Users, PoundSterling, TrendingUp, Pause, Play, X, Save } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface TeamSubscriptionSettingsProps {
   team: Team;
@@ -20,8 +21,11 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
   const [subscriptionSettings, setSubscriptionSettings] = useState({
     fullSquadValue: 25,
     trainingValue: 15,
+    trialistValue: 0, // Free for trialists
     currency: 'GBP'
   });
+
+  const [isSaving, setIsSaving] = useState(false);
 
   // Mock subscription data - would come from database
   const mockSubscriptions = [
@@ -30,7 +34,7 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
       playerName: 'John Smith',
       type: 'full_squad' as PlayerSubscriptionType,
       status: 'active' as SubscriptionStatus,
-      value: 25,
+      value: subscriptionSettings.fullSquadValue,
       startDate: '2024-01-01',
       parentName: 'Sarah Smith'
     },
@@ -39,15 +43,42 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
       playerName: 'Emma Jones',
       type: 'training' as PlayerSubscriptionType,
       status: 'paused' as SubscriptionStatus,
-      value: 15,
+      value: subscriptionSettings.trainingValue,
       startDate: '2024-01-15',
       parentName: 'Mike Jones'
+    },
+    {
+      id: '3',
+      playerName: 'Tom Wilson',
+      type: 'trialist' as PlayerSubscriptionType,
+      status: 'active' as SubscriptionStatus,
+      value: 0,
+      startDate: '2024-02-01',
+      parentName: 'Lisa Wilson'
     }
   ];
 
   const totalMonthlyIncome = mockSubscriptions
     .filter(sub => sub.status === 'active')
     .reduce((total, sub) => total + sub.value, 0);
+
+  const handleSaveSettings = async () => {
+    setIsSaving(true);
+    try {
+      // Here you would save to the database
+      // For now, just show a success message
+      toast.success('Subscription settings saved successfully');
+      
+      // Update the team object with new subscription settings
+      onUpdate({
+        subscriptionSettings: subscriptionSettings
+      });
+    } catch (error) {
+      toast.error('Failed to save subscription settings');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const getStatusColor = (status: SubscriptionStatus) => {
     switch (status) {
@@ -56,6 +87,15 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
       case "inactive": return 'bg-red-500';
       case "pending": return 'bg-blue-500';
       default: return 'bg-gray-500';
+    }
+  };
+
+  const getSubscriptionTypeLabel = (type: PlayerSubscriptionType) => {
+    switch (type) {
+      case 'full_squad': return 'Full Squad';
+      case 'training': return 'Training Only';
+      case 'trialist': return 'Trialist';
+      default: return type;
     }
   };
 
@@ -69,35 +109,69 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
             Subscription Pricing
           </CardTitle>
           <CardDescription>
-            Set the monthly subscription rates for different player types
+            Set the monthly subscription rates for different player types. These will apply to all teams in your club.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="fullSquadValue">Full Squad Subscription (£/month)</Label>
               <Input
                 id="fullSquadValue"
                 type="number"
+                min="0"
+                step="0.01"
                 value={subscriptionSettings.fullSquadValue}
                 onChange={(e) => setSubscriptionSettings(prev => ({ 
                   ...prev, 
                   fullSquadValue: Number(e.target.value) 
                 }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Includes match selection, training, and full performance tracking
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="trainingValue">Training Only Subscription (£/month)</Label>
               <Input
                 id="trainingValue"
                 type="number"
+                min="0"
+                step="0.01"
                 value={subscriptionSettings.trainingValue}
                 onChange={(e) => setSubscriptionSettings(prev => ({ 
                   ...prev, 
                   trainingValue: Number(e.target.value) 
                 }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Training sessions only, no match selection
+              </p>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="trialistValue">Trialist Subscription (£/month)</Label>
+              <Input
+                id="trialistValue"
+                type="number"
+                value={0}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Free trial period - no payment required
+              </p>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <Button 
+              onClick={handleSaveSettings} 
+              disabled={isSaving}
+              className="bg-puma-blue-500 hover:bg-puma-blue-600"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save Settings'}
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -111,7 +185,7 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600">£{totalMonthlyIncome}</p>
               <p className="text-sm text-muted-foreground">Monthly Income</p>
@@ -119,6 +193,10 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
             <div className="text-center">
               <p className="text-2xl font-bold">{mockSubscriptions.filter(s => s.status === 'active').length}</p>
               <p className="text-sm text-muted-foreground">Active Subscriptions</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold">{mockSubscriptions.filter(s => s.type === 'trialist').length}</p>
+              <p className="text-sm text-muted-foreground">Trialists</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold">{mockSubscriptions.length}</p>
@@ -147,29 +225,34 @@ export const TeamSubscriptionSettings: React.FC<TeamSubscriptionSettingsProps> =
                   <div className="flex items-center gap-2">
                     <h4 className="font-medium">{subscription.playerName}</h4>
                     <Badge variant="outline" className="capitalize">
-                      {subscription.type.replace('_', ' ')}
+                      {getSubscriptionTypeLabel(subscription.type)}
                     </Badge>
                     <div className={`w-2 h-2 rounded-full ${getStatusColor(subscription.status)}`} />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Parent: {subscription.parentName} • £{subscription.value}/month
+                    Parent: {subscription.parentName} • 
+                    {subscription.value > 0 ? ` £${subscription.value}/month` : ' Free (Trialist)'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  {subscription.status === 'active' ? (
-                    <Button variant="outline" size="sm">
-                      <Pause className="h-4 w-4 mr-1" />
-                      Pause
-                    </Button>
-                  ) : (
-                    <Button variant="outline" size="sm">
-                      <Play className="h-4 w-4 mr-1" />
-                      Resume
-                    </Button>
+                  {subscription.type !== 'trialist' && (
+                    <>
+                      {subscription.status === 'active' ? (
+                        <Button variant="outline" size="sm">
+                          <Pause className="h-4 w-4 mr-1" />
+                          Pause
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm">
+                          <Play className="h-4 w-4 mr-1" />
+                          Resume
+                        </Button>
+                      )}
+                    </>
                   )}
                   <Button variant="outline" size="sm">
                     <X className="h-4 w-4 mr-1" />
-                    Cancel
+                    {subscription.type === 'trialist' ? 'Remove' : 'Cancel'}
                   </Button>
                 </div>
               </div>

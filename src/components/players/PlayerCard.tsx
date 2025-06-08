@@ -76,7 +76,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     }
   }, [player.id, inactive]);
 
-  // Check for missing required data
+  // Check for missing required data - make first name optional
   const getMissingData = () => {
     const missing = [];
     if (!player.name || player.name.trim() === '') missing.push('Name');
@@ -90,6 +90,24 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   
   // Check subscription status (mock for now - will be replaced with Stripe integration)
   const hasActiveSubscription = player.subscriptionStatus === 'active';
+
+  const getSubscriptionTypeLabel = (subscriptionType?: string) => {
+    switch (subscriptionType) {
+      case 'full_squad': return 'Full Squad';
+      case 'training': return 'Training Only';
+      case 'trialist': return 'Trialist';
+      default: return 'Full Squad';
+    }
+  };
+
+  const getSubscriptionTypeBadgeVariant = (subscriptionType?: string) => {
+    switch (subscriptionType) {
+      case 'full_squad': return 'default';
+      case 'training': return 'secondary';
+      case 'trialist': return 'outline';
+      default: return 'default';
+    }
+  };
 
   const renderPerformanceIndicator = () => {
     if (inactive) return null;
@@ -270,7 +288,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   </AlertDescription>
                 </Alert>
               )}
-              {!hasActiveSubscription && (
+              {!hasActiveSubscription && player.subscriptionType !== 'trialist' && (
                 <Alert className="border-red-200 bg-red-50">
                   <CreditCard className="h-3 w-3 text-red-600" />
                   <AlertDescription className="text-xs text-red-800">
@@ -288,10 +306,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           {/* Performance and Subscription */}
           <div className="flex items-center justify-between">
             <Badge 
-              variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}
+              variant={getSubscriptionTypeBadgeVariant(player.subscriptionType)}
               className="text-xs"
             >
-              {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
+              {getSubscriptionTypeLabel(player.subscriptionType)}
             </Badge>
             {renderPerformanceIndicator()}
           </div>
