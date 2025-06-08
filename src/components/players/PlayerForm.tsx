@@ -37,13 +37,15 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Allow empty first name - use surname only if needed
-    const fullName = formData.firstName ? 
-      `${formData.firstName} ${formData.surname}`.trim() : 
-      formData.surname.trim();
-      
+    // Build name from available parts - both are now optional
+    const nameParts = [];
+    if (formData.firstName?.trim()) nameParts.push(formData.firstName.trim());
+    if (formData.surname?.trim()) nameParts.push(formData.surname.trim());
+    
+    const fullName = nameParts.join(' ');
+    
     if (!fullName) {
-      alert('Please provide at least a surname for the player');
+      alert('Please provide at least a first name or surname for the player');
       return;
     }
       
@@ -81,7 +83,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="surname">Surname *</Label>
+            <Label htmlFor="surname">Surname</Label>
             <Input
               id="surname"
               value={formData.surname}
@@ -90,10 +92,10 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
                 setFormData({ 
                   ...formData, 
                   surname, 
-                  nameOnShirt: surname // Auto-update name on shirt to surname
+                  nameOnShirt: surname || formData.firstName // Auto-update name on shirt
                 });
               }}
-              required
+              placeholder="Optional"
             />
           </div>
 

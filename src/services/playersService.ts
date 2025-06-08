@@ -23,7 +23,7 @@ export const playersService = {
       type: player.type as "outfield" | "goalkeeper",
       teamId: player.team_id,
       availability: player.availability as "amber" | "green" | "red",
-      subscriptionType: player.subscription_type as "full_squad" | "training",
+      subscriptionType: player.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: player.subscription_status as "active" | "inactive" | "pending",
       status: player.status as "active" | "inactive",
       leaveDate: player.leave_date,
@@ -39,6 +39,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: player.kit_sizes || {},
       createdAt: player.created_at,
       updatedAt: player.updated_at
     }));
@@ -66,7 +67,7 @@ export const playersService = {
       type: player.type as "outfield" | "goalkeeper",
       teamId: player.team_id,
       availability: player.availability as "amber" | "green" | "red",
-      subscriptionType: player.subscription_type as "full_squad" | "training",
+      subscriptionType: player.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: player.subscription_status as "active" | "inactive" | "pending",
       status: player.status as "active" | "inactive",
       leaveDate: player.leave_date,
@@ -82,6 +83,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: player.kit_sizes || {},
       createdAt: player.created_at,
       updatedAt: player.updated_at
     }));
@@ -109,7 +111,7 @@ export const playersService = {
       type: player.type as "outfield" | "goalkeeper",
       teamId: player.team_id,
       availability: player.availability as "amber" | "green" | "red",
-      subscriptionType: player.subscription_type as "full_squad" | "training",
+      subscriptionType: player.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: player.subscription_status as "active" | "inactive" | "pending",
       status: player.status as "active" | "inactive",
       leaveDate: player.leave_date,
@@ -125,6 +127,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: player.kit_sizes || {},
       createdAt: player.created_at,
       updatedAt: player.updated_at
     }));
@@ -153,7 +156,8 @@ export const playersService = {
           totalMinutes: 0,
           minutesByPosition: {},
           recentGames: []
-        }
+        },
+        kit_sizes: playerData.kit_sizes || {}
       }])
       .select()
       .single();
@@ -172,7 +176,7 @@ export const playersService = {
       type: data.type as "outfield" | "goalkeeper",
       teamId: data.team_id,
       availability: data.availability as "amber" | "green" | "red",
-      subscriptionType: data.subscription_type as "full_squad" | "training",
+      subscriptionType: data.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: data.subscription_status as "active" | "inactive" | "pending",
       status: data.status as "active" | "inactive",
       leaveDate: data.leave_date,
@@ -188,6 +192,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: data.kit_sizes || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -211,6 +216,7 @@ export const playersService = {
         objectives: playerData.objectives,
         comments: playerData.comments,
         match_stats: playerData.matchStats,
+        kit_sizes: playerData.kit_sizes,
         updated_at: new Date().toISOString()
       })
       .eq('id', playerId)
@@ -231,7 +237,7 @@ export const playersService = {
       type: data.type as "outfield" | "goalkeeper",
       teamId: data.team_id,
       availability: data.availability as "amber" | "green" | "red",
-      subscriptionType: data.subscription_type as "full_squad" | "training",
+      subscriptionType: data.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: data.subscription_status as "active" | "inactive" | "pending",
       status: data.status as "active" | "inactive",
       leaveDate: data.leave_date,
@@ -247,6 +253,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: data.kit_sizes || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -280,7 +287,7 @@ export const playersService = {
       type: data.type as "outfield" | "goalkeeper",
       teamId: data.team_id,
       availability: data.availability as "amber" | "green" | "red",
-      subscriptionType: data.subscription_type as "full_squad" | "training",
+      subscriptionType: data.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: data.subscription_status as "active" | "inactive" | "pending",
       status: data.status as "active" | "inactive",
       leaveDate: data.leave_date,
@@ -296,6 +303,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: data.kit_sizes || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -329,7 +337,7 @@ export const playersService = {
       type: data.type as "outfield" | "goalkeeper",
       teamId: data.team_id,
       availability: data.availability as "amber" | "green" | "red",
-      subscriptionType: data.subscription_type as "full_squad" | "training",
+      subscriptionType: data.subscription_type as "full_squad" | "training" | "trialist",
       subscriptionStatus: data.subscription_status as "active" | "inactive" | "pending",
       status: data.status as "active" | "inactive",
       leaveDate: data.leave_date,
@@ -345,6 +353,7 @@ export const playersService = {
         minutesByPosition: {} as Record<Position, number>,
         recentGames: []
       },
+      kit_sizes: data.kit_sizes || {},
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
