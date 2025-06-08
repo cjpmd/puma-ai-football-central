@@ -717,16 +717,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     const positions = getPositionsForFormation(formation, event.game_format as GameFormat);
     const assignedPlayers = selectedPlayers.slice(0, positions.length);
     
-    // Create a simple pitch layout
+    // Create a simple pitch layout with GK at the bottom
     const rows = [];
     let playerIndex = 0;
     
-    // Group positions by typical rows for display
+    // Group positions by typical rows for display - GK at bottom, then defenders, midfield, attack at top
     const positionRows = {
-      'GK': ['GK'],
-      'Defence': positions.filter(pos => pos.startsWith('D')),
+      'Attack': positions.filter(pos => pos.startsWith('ST') || pos.startsWith('F')),
       'Midfield': positions.filter(pos => pos.startsWith('M') || pos.startsWith('AM')),
-      'Attack': positions.filter(pos => pos.startsWith('ST') || pos.startsWith('F'))
+      'Defence': positions.filter(pos => pos.startsWith('D')),
+      'GK': ['GK']
     };
     
     return (

@@ -213,7 +213,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
       playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
-      kitSelection: formData.kitSelection
+      kit_selection: formData.kitSelection
     };
 
     onSubmit(eventData);
