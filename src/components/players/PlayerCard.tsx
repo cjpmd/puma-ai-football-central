@@ -116,7 +116,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     const minutesByPosition = player.matchStats?.minutesByPosition || {};
     return Object.entries(minutesByPosition).map(([position, minutes]) => ({
       position,
-      minutes
+      minutes: Number(minutes) || 0
     }));
   };
 
