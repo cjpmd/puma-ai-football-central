@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
-import { Edit, Users, TrendingUp, TrendingDown, Minus, AlertTriangle, UserMinus, ArrowRightLeft, Trash2, RotateCcw } from 'lucide-react';
+import { Edit, Users, TrendingUp, TrendingDown, Minus, AlertTriangle, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy } from 'lucide-react';
 
 interface PlayerCardProps {
   player: Player;
@@ -39,6 +39,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   onResurrect,
   onDelete
 }) => {
+  const [showSettings, setShowSettings] = useState(false);
+
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
       case 'green': return 'bg-green-500';
@@ -109,6 +111,18 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const missingInfoAlerts = getMissingInfoAlerts();
   const hasAlerts = missingInfoAlerts.length > 0;
 
+  // Calculate total minutes by position
+  const getTotalMinutesByPosition = () => {
+    const minutesByPosition = player.matchStats?.minutesByPosition || {};
+    return Object.entries(minutesByPosition).map(([position, minutes]) => ({
+      position,
+      minutes
+    }));
+  };
+
+  const isCaptain = player.matchStats?.captainGames > 0;
+  const isPOTM = player.matchStats?.playerOfTheMatchCount > 0;
+
   return (
     <Card className={`hover:shadow-lg transition-shadow ${hasAlerts ? 'border-orange-200 bg-orange-50' : ''} ${inactive ? 'opacity-75' : ''}`}>
       <CardHeader className="pb-2">
@@ -116,6 +130,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2 text-lg">
               {player.name || 'Unnamed Player'}
+              {isCaptain && <Crown className="h-4 w-4 text-yellow-600" title="Captain" />}
+              {isPOTM && <Trophy className="h-4 w-4 text-gold-600" title="Player of the Match" />}
               {hasAlerts && <AlertTriangle className="h-4 w-4 text-orange-500" />}
               {!inactive && <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(player.availability)}`} />}
               {getPerformanceIcon()}
@@ -153,39 +169,15 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               </>
             ) : (
               <>
-                {onManageParents && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onManageParents(player)}
-                    className="h-8 w-8 p-0"
-                    title="Manage Parents"
-                  >
-                    <Users className="h-4 w-4" />
-                  </Button>
-                )}
-                {onTransfer && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onTransfer(player)}
-                    className="h-8 w-8 p-0"
-                    title="Transfer Player"
-                  >
-                    <ArrowRightLeft className="h-4 w-4" />
-                  </Button>
-                )}
-                {onLeave && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onLeave(player)}
-                    className="h-8 w-8 p-0"
-                    title="Mark as Left"
-                  >
-                    <UserMinus className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSettings(!showSettings)}
+                  className="h-8 w-8 p-0"
+                  title="Settings"
+                >
+                  <Settings className="h-4 w-4" />
+                </Button>
                 {onEdit && (
                   <Button
                     variant="ghost"
@@ -235,12 +227,36 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           </div>
           
           <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Minutes:</span>
+            <span className="text-sm text-muted-foreground">Total Minutes:</span>
             <span className="text-sm font-medium">
               {player.matchStats?.totalMinutes || 0}
             </span>
           </div>
+
+          {/* Minutes by Position */}
+          {getTotalMinutesByPosition().length > 0 && (
+            <div className="space-y-1">
+              <span className="text-sm text-muted-foreground">Minutes by Position:</span>
+              {getTotalMinutesByPosition().map(({ position, minutes }) => (
+                <div key={position} className="flex justify-between items-center text-xs">
+                  <span className="text-muted-foreground capitalize">{position}:</span>
+                  <span>{minutes}m</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Captain Games */}
+          {player.matchStats?.captainGames > 0 && (
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">Captain Games:</span>
+              <span className="text-sm font-medium">
+                {player.matchStats.captainGames}
+              </span>
+            </div>
+          )}
           
+          {/* Player of the Match */}
           {player.matchStats?.playerOfTheMatchCount > 0 && (
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">POTM:</span>
@@ -259,37 +275,58 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             </div>
           )}
 
-          {/* Action buttons for additional functionality */}
-          {!inactive && (
-            <div className="flex flex-wrap gap-1 pt-2">
-              {onManageAttributes && (
-                <Button variant="outline" size="sm" onClick={() => onManageAttributes(player)} className="text-xs">
-                  Attributes
-                </Button>
-              )}
-              {onManageObjectives && (
-                <Button variant="outline" size="sm" onClick={() => onManageObjectives(player)} className="text-xs">
-                  Objectives
-                </Button>
-              )}
-              {onManageComments && (
-                <Button variant="outline" size="sm" onClick={() => onManageComments(player)} className="text-xs">
-                  Comments
-                </Button>
-              )}
-              {onViewStats && (
-                <Button variant="outline" size="sm" onClick={() => onViewStats(player)} className="text-xs">
-                  Stats
-                </Button>
-              )}
-              {onViewHistory && (
-                <Button variant="outline" size="sm" onClick={() => onViewHistory(player)} className="text-xs">
-                  History
-                </Button>
-              )}
+          {/* Settings Panel */}
+          {showSettings && !inactive && (
+            <div className="border-t pt-3 mt-3">
+              <div className="grid grid-cols-2 gap-2">
+                {onManageParents && (
+                  <Button variant="outline" size="sm" onClick={() => onManageParents(player)} className="text-xs">
+                    <Users className="h-3 w-3 mr-1" />
+                    Parents
+                  </Button>
+                )}
+                {onManageAttributes && (
+                  <Button variant="outline" size="sm" onClick={() => onManageAttributes(player)} className="text-xs">
+                    Attributes
+                  </Button>
+                )}
+                {onManageObjectives && (
+                  <Button variant="outline" size="sm" onClick={() => onManageObjectives(player)} className="text-xs">
+                    Objectives
+                  </Button>
+                )}
+                {onManageComments && (
+                  <Button variant="outline" size="sm" onClick={() => onManageComments(player)} className="text-xs">
+                    Comments
+                  </Button>
+                )}
+                {onViewStats && (
+                  <Button variant="outline" size="sm" onClick={() => onViewStats(player)} className="text-xs">
+                    Stats
+                  </Button>
+                )}
+                {onViewHistory && (
+                  <Button variant="outline" size="sm" onClick={() => onViewHistory(player)} className="text-xs">
+                    History
+                  </Button>
+                )}
+                {onTransfer && (
+                  <Button variant="outline" size="sm" onClick={() => onTransfer(player)} className="text-xs">
+                    <ArrowRightLeft className="h-3 w-3 mr-1" />
+                    Transfer
+                  </Button>
+                )}
+                {onLeave && (
+                  <Button variant="outline" size="sm" onClick={() => onLeave(player)} className="text-xs text-red-600">
+                    <UserMinus className="h-3 w-3 mr-1" />
+                    Leave
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 
+          {/* Inactive Player Actions */}
           {inactive && (
             <div className="flex flex-wrap gap-1 pt-2">
               {onViewStats && (
