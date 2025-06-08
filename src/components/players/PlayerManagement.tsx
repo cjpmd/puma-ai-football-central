@@ -21,6 +21,7 @@ import { PlayerObjectivesModal } from './PlayerObjectivesModal';
 import { PlayerCommentsModal } from './PlayerCommentsModal';
 import { PlayerStatsModal } from './PlayerStatsModal';
 import { PlayerHistoryModal } from './PlayerHistoryModal';
+import { UserInvitationModal } from '../users/UserInvitationModal';
 
 interface PlayerManagementProps {
   team: Team;
@@ -40,7 +41,9 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false);
   const [isStatsModalOpen, setIsStatsModalOpen] = useState(false);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [createdPlayerId, setCreatedPlayerId] = useState<string | null>(null);
 
   // Fetch active players
   const { data: activePlayers = [], isLoading: isActiveLoading } = useQuery({
@@ -62,7 +65,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       setIsPlayerDialogOpen(false);
       toast({
         title: 'Player Added',
-        description: 'Player has been successfully added to the squad.',
+        description: 'Player has been successfully added. Now invite them or their parent to complete the setup.',
       });
     },
     onError: (error: any) => {
@@ -180,18 +183,46 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     },
   });
 
-  const handleCreatePlayer = (playerData: Partial<Player>) => {
+  const handleCreatePlayer = async (playerData: Partial<Player>) => {
     if (selectedPlayer) {
       updatePlayerMutation.mutate({ 
         id: selectedPlayer.id, 
         data: playerData
       });
     } else {
-      createPlayerMutation.mutate({
-        ...playerData,
-        teamId: team.id
-      });
+      try {
+        const newPlayer = await playersService.createPlayer({
+          ...playerData,
+          teamId: team.id
+        });
+        
+        // Store the created player ID and open invitation modal
+        setCreatedPlayerId(newPlayer.id);
+        setIsPlayerDialogOpen(false);
+        setIsInvitationModalOpen(true);
+        
+        queryClient.invalidateQueries({ queryKey: ['active-players'] });
+        toast({
+          title: 'Player Added',
+          description: 'Player has been successfully added. Now invite them or their parent to complete the setup.',
+        });
+      } catch (error: any) {
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to add player',
+          variant: 'destructive',
+        });
+      }
     }
+  };
+
+  const handleInvitationSent = () => {
+    setIsInvitationModalOpen(false);
+    setCreatedPlayerId(null);
+    toast({
+      title: 'Invitation Sent',
+      description: 'The invitation has been sent successfully.',
+    });
   };
 
   const handleEditPlayer = (player: Player) => {
@@ -552,6 +583,22 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
           onClose={() => {
             setIsHistoryModalOpen(false);
             setSelectedPlayer(null);
+          }}
+        />
+      )}
+      
+      {/* Invitation Modal for newly created players */}
+      {createdPlayerId && (
+        <UserInvitationModal
+          isOpen={isInvitationModalOpen}
+          onClose={() => {
+            setIsInvitationModalOpen(false);
+            setCreatedPlayerId(null);
+          }}
+          onInviteSent={handleInvitationSent}
+          prefilledData={{
+            teamId: team.id,
+            playerId: createdPlayerId
           }}
         />
       )}

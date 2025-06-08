@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,10 +19,13 @@ import {
   Minus,
   Crown,
   Trophy,
-  Brain
+  Brain,
+  AlertTriangle,
+  CreditCard
 } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface PlayerCardProps {
   player: Player;
@@ -74,6 +76,21 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     }
   }, [player.id, inactive]);
 
+  // Check for missing required data
+  const getMissingData = () => {
+    const missing = [];
+    if (!player.name || player.name.trim() === '') missing.push('Name');
+    if (!player.dateOfBirth) missing.push('Date of Birth');
+    if (!player.squadNumber || player.squadNumber === 0) missing.push('Squad Number');
+    return missing;
+  };
+
+  const missingData = getMissingData();
+  const hasIncompleteData = missingData.length > 0;
+  
+  // Check subscription status (mock for now - will be replaced with Stripe integration)
+  const hasActiveSubscription = player.subscriptionStatus === 'active';
+
   const renderPerformanceIndicator = () => {
     if (inactive) return null;
 
@@ -122,20 +139,28 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
 
   return (
-    <Card className={`h-[340px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
+    <Card className={`h-[380px] flex flex-col ${inactive ? 'opacity-60' : ''}`}>
       <CardHeader className="flex-shrink-0 pb-2">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1">
-              <CardTitle className="text-sm">{player.name}</CardTitle>
-              <Badge variant="outline" className="text-xs">
-                #{player.squadNumber}
-              </Badge>
+              <CardTitle className="text-sm">
+                {player.name || 'Unnamed Player'}
+              </CardTitle>
+              {player.squadNumber > 0 && (
+                <Badge variant="outline" className="text-xs">
+                  #{player.squadNumber}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{player.type === 'goalkeeper' ? 'GK' : 'Outfield'}</span>
-              <span>•</span>
-              <span>Age {age}</span>
+              {player.dateOfBirth && (
+                <>
+                  <span>•</span>
+                  <span>Age {age}</span>
+                </>
+              )}
             </div>
           </div>
           
@@ -233,6 +258,28 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Alerts for missing data and subscription */}
+          {(hasIncompleteData || !hasActiveSubscription) && (
+            <div className="space-y-2 mt-2">
+              {hasIncompleteData && (
+                <Alert className="border-orange-200 bg-orange-50">
+                  <AlertTriangle className="h-3 w-3 text-orange-600" />
+                  <AlertDescription className="text-xs text-orange-800">
+                    Missing: {missingData.join(', ')}
+                  </AlertDescription>
+                </Alert>
+              )}
+              {!hasActiveSubscription && (
+                <Alert className="border-red-200 bg-red-50">
+                  <CreditCard className="h-3 w-3 text-red-600" />
+                  <AlertDescription className="text-xs text-red-800">
+                    Subscription required
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
         </div>
       </CardHeader>
 

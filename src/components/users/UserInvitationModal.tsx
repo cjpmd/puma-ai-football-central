@@ -13,20 +13,27 @@ interface UserInvitationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onInviteSent: () => void;
+  prefilledData?: {
+    teamId?: string;
+    playerId?: string;
+    staffId?: string;
+  };
 }
 
 export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
   isOpen,
   onClose,
-  onInviteSent
+  onInviteSent,
+  prefilledData
 }) => {
   const { teams } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     name: '',
-    role: 'staff' as 'staff' | 'parent' | 'player',
-    teamId: teams[0]?.id || ''
+    role: 'player' as 'staff' | 'parent' | 'player',
+    teamId: prefilledData?.teamId || teams[0]?.id || '',
+    subscriptionType: 'full_squad' as 'full_squad' | 'training'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -38,7 +45,9 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
         email: formData.email,
         name: formData.name,
         role: formData.role,
-        teamId: formData.teamId || undefined
+        teamId: formData.teamId || undefined,
+        playerId: prefilledData?.playerId,
+        staffId: prefilledData?.staffId
       };
 
       await userInvitationService.inviteUser(inviteData);
@@ -48,8 +57,9 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
       setFormData({
         email: '',
         name: '',
-        role: 'staff',
-        teamId: teams[0]?.id || ''
+        role: 'player',
+        teamId: prefilledData?.teamId || teams[0]?.id || '',
+        subscriptionType: 'full_squad'
       });
     } catch (error) {
       console.error('Error sending invitation:', error);
@@ -63,8 +73,19 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Invite User</DialogTitle>
+          <DialogTitle>
+            {prefilledData?.playerId ? 'Invite Player or Parent' : 'Invite User'}
+          </DialogTitle>
         </DialogHeader>
+        
+        {prefilledData?.playerId && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              Invite the player themselves or their parent to complete the player setup and subscription.
+            </p>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Name</Label>
@@ -72,6 +93,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
               id="name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Full name"
               required
             />
           </div>
@@ -83,6 +105,7 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
               type="email"
               value={formData.email}
               onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="Email address"
               required
             />
           </div>
@@ -97,14 +120,44 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="parent">Parent</SelectItem>
-                <SelectItem value="player">Player</SelectItem>
+                {prefilledData?.playerId ? (
+                  <>
+                    <SelectItem value="player">Player (Self)</SelectItem>
+                    <SelectItem value="parent">Parent/Guardian</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="parent">Parent</SelectItem>
+                    <SelectItem value="player">Player</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {teams.length > 0 && (
+          {prefilledData?.playerId && (
+            <div className="space-y-2">
+              <Label htmlFor="subscriptionType">Required Subscription Type</Label>
+              <Select
+                value={formData.subscriptionType}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, subscriptionType: value as any }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="full_squad">Full Squad</SelectItem>
+                  <SelectItem value="training">Training Only</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The invited person will need to set up this subscription type.
+              </p>
+            </div>
+          )}
+
+          {teams.length > 0 && !prefilledData?.teamId && (
             <div className="space-y-2">
               <Label htmlFor="team">Team</Label>
               <Select
