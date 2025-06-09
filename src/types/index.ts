@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -148,24 +147,28 @@ export type MatchStats = {
 export type Player = {
   id: string;
   name: string;
-  dateOfBirth: string;
-  squadNumber: number;
-  type: "outfield" | "goalkeeper";
-  teamId: string;
-  attributes: PlayerAttribute[];
-  objectives: PlayerObjective[];
-  comments: PlayerComment[];
-  matchStats: MatchStats;
-  availability: "amber" | "green" | "red";
-  parentId?: string;
-  subscriptionType?: PlayerSubscriptionType;
-  subscriptionStatus?: SubscriptionStatus;
-  status?: "active" | "inactive"; // Player status (active or left the team)
-  leaveDate?: string; // Date when player left the team
-  leaveComments?: string; // Comments about player leaving
-  kit_sizes?: Record<string, string>; // Added kit_sizes property
-  createdAt: string;
-  updatedAt: string;
+  dateOfBirth?: string;
+  squadNumber?: number;
+  position?: string;
+  type?: 'goalkeeper' | 'outfield';
+  subscriptionType?: 'full_squad' | 'training' | 'trialist';
+  availability?: 'green' | 'amber' | 'red';
+  team_id: string;
+  attributes?: PlayerAttribute[];
+  kit_sizes?: KitSizes;
+  matchStats?: {
+    totalGames: number;
+    totalMinutes: number;
+    captainGames: number;
+    playerOfTheMatchCount: number;
+    minutesByPosition: Record<string, number>;
+    performanceCategoryStats?: Record<string, any>;
+    recentGames?: any[];
+  };
+  leaveDate?: string;
+  photoUrl?: string; // New field for player photos
+  created_at?: string;
+  updated_at?: string;
 };
 
 export type Parent = {
@@ -364,4 +367,9 @@ export type Profile = {
   coaching_badges: any[];
   created_at: string;
   updated_at: string;
+};
+
+export type KitSizes = {
+  size: string;
+  quantity: number;
 };
