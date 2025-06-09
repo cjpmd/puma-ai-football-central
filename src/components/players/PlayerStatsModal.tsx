@@ -21,7 +21,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 interface PlayerStatsModalProps {
-  player: Player;
+  player: Player | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -34,6 +34,12 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const queryClient = useQueryClient();
+
+  // Don't render the modal if there's no player
+  if (!player) {
+    return null;
+  }
+
   const { matchStats } = player;
 
   // Filter out matches with "Unknown" opponent
