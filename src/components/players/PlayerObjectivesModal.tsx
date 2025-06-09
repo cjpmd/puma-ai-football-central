@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 
 interface PlayerObjectivesModalProps {
-  player: Player;
+  player: Player | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (objectives: PlayerObjective[]) => void;
@@ -24,7 +25,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
   onClose,
   onSave
 }) => {
-  const [objectives, setObjectives] = useState<PlayerObjective[]>(player.objectives || []);
+  const [objectives, setObjectives] = useState<PlayerObjective[]>(player?.objectives || []);
   const [showAddForm, setShowAddForm] = useState(false);
 
   const [newObjective, setNewObjective] = useState<Partial<PlayerObjective>>({
@@ -36,6 +37,11 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
     createdAt: new Date().toISOString(),
     createdBy: 'Current User' // This would be replaced with actual user name
   });
+
+  // Don't render the modal if there's no player
+  if (!player) {
+    return null;
+  }
 
   const handleAddObjective = () => {
     const id = `obj-${Date.now()}`;
