@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Player, Team, PlayerAttribute } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -25,13 +26,12 @@ import { playersService } from '@/services/playersService';
 import { PlayerCard } from './PlayerCard';
 import { Edit, Plus, Trash2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ManagePlayerParents } from './ManagePlayerParents';
-import { ManagePlayerAttributes } from './ManagePlayerAttributes';
-import { ManagePlayerObjectives } from './ManagePlayerObjectives';
-import { ManagePlayerComments } from './ManagePlayerComments';
-import { ViewPlayerStats } from './ViewPlayerStats';
-import { ViewPlayerHistory } from './ViewPlayerHistory';
-import { ConfirmDeleteDialog } from './ConfirmDeleteDialog';
+import { PlayerParentModal } from './PlayerParentModal';
+import { PlayerAttributesModal } from './PlayerAttributesModal';
+import { PlayerObjectivesModal } from './PlayerObjectivesModal';
+import { PlayerCommentsModal } from './PlayerCommentsModal';
+import { PlayerStatsModal } from './PlayerStatsModal';
+import { PlayerHistoryModal } from './PlayerHistoryModal';
 import { supabase } from '@/integrations/supabase/client';
 
 interface PlayerManagementProps {
@@ -89,7 +89,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     refetch();
   }, [team.id, refetch]);
 
-  const createPlayerMutation = useMutation(playersService.createPlayer, {
+  const createPlayerMutation = useMutation({
+    mutationFn: playersService.createPlayer,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['players', team.id] });
       setOpen(false);
@@ -117,7 +118,9 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     },
   });
 
-  const updatePlayerMutation = useMutation(playersService.updatePlayer, {
+  const updatePlayerMutation = useMutation({
+    mutationFn: ({ id, ...data }: { id: string } & Partial<Player>) => 
+      playersService.updatePlayer(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['players', team.id] });
       setOpen(false);
@@ -145,7 +148,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     },
   });
 
-  const deletePlayerMutation = useMutation(playersService.deletePlayer, {
+  const deletePlayerMutation = useMutation({
+    mutationFn: playersService.deletePlayer,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['players', team.id] });
       setIsDeleteConfirmationOpen(false);
@@ -233,7 +237,9 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const handleLeaveTeam = async (player: Player) => {
     try {
       setIsLoading(true);
-      await playersService.leaveTeam(player.id);
+      await playersService.updatePlayer(player.id, { 
+        leave_date: new Date().toISOString().split('T')[0] 
+      });
       await refetch();
       toast({
         title: "Player Left Team",
@@ -256,7 +262,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       setIsLoading(true);
       const newTeamId = prompt(`Enter the Team ID to transfer ${player.name} to:`);
       if (newTeamId) {
-        await playersService.transferPlayer(player.id, newTeamId);
+        await playersService.updatePlayer(player.id, { team_id: newTeamId });
         await refetch();
         toast({
           title: "Player Transferred",
@@ -266,7 +272,6 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         toast({
           title: "Transfer Cancelled",
           description: "No Team ID provided. Transfer cancelled.",
-          variant: "warning",
         });
       }
     } catch (error) {
@@ -284,7 +289,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const handleResurrectPlayer = async (player: Player) => {
     try {
       setIsLoading(true);
-      await playersService.resurrectPlayer(player.id);
+      await playersService.updatePlayer(player.id, { leave_date: null });
       await refetch();
       toast({
         title: "Player Resurrected",
@@ -325,22 +330,13 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     try {
       setIsLoading(true);
       
-      // Create form data for file upload
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('playerId', player.id);
-      
-      // For now, we'll create a simple blob URL as a placeholder
-      // In a real implementation, you'd upload to your storage service
+      // Create a blob URL for immediate display
       const photoUrl = URL.createObjectURL(file);
-      
-      // Update player with new photo URL
-      const updatedPlayer = { ...player, photoUrl };
       
       // Update the player in the database
       const { error } = await supabase
         .from('players')
-        .update({ photo_url: photoUrl })
+        .update({ photoUrl: photoUrl })
         .eq('id', player.id);
 
       if (error) throw error;
@@ -532,52 +528,65 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
           </div>
         </TabsContent>
 
-        <ManagePlayerParents
+        <PlayerParentModal
           open={isParentModalOpen}
           onOpenChange={setIsParentModalOpen}
           player={playerForParents}
           refetch={refetch}
         />
 
-        <ManagePlayerAttributes
+        <PlayerAttributesModal
           open={isAttributeModalOpen}
           onOpenChange={setIsAttributeModalOpen}
           player={playerForAttributes}
           refetch={refetch}
         />
 
-        <ManagePlayerObjectives
+        <PlayerObjectivesModal
           open={isObjectivesModalOpen}
           onOpenChange={setIsObjectivesModalOpen}
           player={playerForObjectives}
           refetch={refetch}
         />
 
-        <ManagePlayerComments
+        <PlayerCommentsModal
           open={isCommentsModalOpen}
           onOpenChange={setIsCommentsModalOpen}
           player={playerForComments}
           refetch={refetch}
         />
 
-        <ViewPlayerStats
+        <PlayerStatsModal
           open={isStatsModalOpen}
           onOpenChange={setIsStatsModalOpen}
           player={playerForStats}
         />
 
-        <ViewPlayerHistory
+        <PlayerHistoryModal
           open={isHistoryModalOpen}
           onOpenChange={setIsHistoryModalOpen}
           player={playerForHistory}
         />
 
-        <ConfirmDeleteDialog
-          open={isDeleteConfirmationOpen}
-          onOpenChange={setIsDeleteConfirmationOpen}
-          itemName={playerToDelete?.name}
-          onConfirm={confirmDeletePlayer}
-        />
+        {/* Simple delete confirmation dialog */}
+        <Dialog open={isDeleteConfirmationOpen} onOpenChange={setIsDeleteConfirmationOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Delete</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete {playerToDelete?.name}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsDeleteConfirmationOpen(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDeletePlayer}>
+                Delete
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </Tabs>
     </div>
   );
