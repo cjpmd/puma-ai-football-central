@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -16,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { getPlayerMatchHistory } from '@/utils/performanceUtils';
 
 interface PlayerHistoryModalProps {
-  player: Player;
+  player: Player | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -28,6 +27,11 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
 }) => {
   const { teams } = useAuth();
   const [teamNames, setTeamNames] = useState<Record<string, string>>({});
+  
+  // Don't render the modal if there's no player
+  if (!player) {
+    return null;
+  }
   
   // Get transfer history
   const { data: transfers = [], isLoading: isTransfersLoading } = useQuery({
