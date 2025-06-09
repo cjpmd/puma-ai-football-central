@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,7 +30,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     availability: player?.availability || 'green' as 'amber' | 'green' | 'red',
     subscriptionType: player?.subscriptionType || 'full_squad' as 'full_squad' | 'training' | 'trialist',
     kit_sizes: player?.kit_sizes || {},
-    nameOnShirt: player?.kit_sizes?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
+    nameOnShirt: (player?.kit_sizes as any)?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -65,7 +64,14 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   };
 
   const handleKitDetailsUpdate = (kitDetails: Record<string, string>) => {
-    setFormData(prev => ({ ...prev, kit_sizes: kitDetails }));
+    setFormData(prev => ({ 
+      ...prev, 
+      kit_sizes: { 
+        ...prev.kit_sizes,
+        ...kitDetails,
+        nameOnShirt: prev.nameOnShirt
+      } 
+    }));
   };
 
   return (

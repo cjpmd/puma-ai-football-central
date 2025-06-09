@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,18 +29,18 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
   onEdit,
   onManageParents,
-  showSubscription = true,
-  inactive = false,
-  onLeave,
-  onTransfer,
   onManageAttributes,
   onManageObjectives,
   onManageComments,
   onViewStats,
   onViewHistory,
+  onLeave,
+  onTransfer,
   onResurrect,
   onDelete,
-  onUpdatePhoto
+  onUpdatePhoto,
+  inactive = false,
+  showSubscription = true
 }) => {
   const [showSettings, setShowSettings] = useState(false);
 
@@ -139,6 +138,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       .slice(0, 2);
   };
 
+  const displayName = player.kit_sizes?.nameOnShirt || player.name || 'No Name';
+
   return (
     <Card className={`hover:shadow-lg transition-shadow h-[300px] flex flex-col ${inactive ? 'opacity-75' : ''}`}>
       <CardHeader className="pb-2 flex-shrink-0 p-3">
@@ -147,7 +148,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             {/* Player Photo */}
             <div className="relative flex-shrink-0">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={player.photoUrl} alt={player.name} />
+                <AvatarImage src={player.photoUrl} alt={displayName} />
                 <AvatarFallback className="text-xs">
                   {player.name ? getInitials(player.name) : 'PL'}
                 </AvatarFallback>
@@ -168,7 +169,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             {/* Player Info */}
             <div className="flex-1 min-w-0">
               <CardTitle className="flex items-center gap-1 text-sm font-bold leading-tight">
-                <span className="truncate text-xs">{player.name || 'Unnamed Player'}</span>
+                <span className="truncate text-xs">{displayName}</span>
                 <span className="text-sm font-bold flex-shrink-0">#{player.squadNumber || 'No Number'}</span>
                 {hasAlerts && !inactive && (
                   <div className="flex gap-1 flex-shrink-0">

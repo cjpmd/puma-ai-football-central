@@ -238,7 +238,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     try {
       setIsLoading(true);
       await playersService.updatePlayer(player.id, { 
-        leave_date: new Date().toISOString().split('T')[0] 
+        leaveDate: new Date().toISOString().split('T')[0] 
       });
       await refetch();
       toast({
@@ -289,7 +289,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const handleResurrectPlayer = async (player: Player) => {
     try {
       setIsLoading(true);
-      await playersService.updatePlayer(player.id, { leave_date: null });
+      await playersService.updatePlayer(player.id, { leaveDate: null });
       await refetch();
       toast({
         title: "Player Resurrected",
@@ -334,13 +334,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       const photoUrl = URL.createObjectURL(file);
       
       // Update the player in the database
-      const { error } = await supabase
-        .from('players')
-        .update({ photoUrl: photoUrl })
-        .eq('id', player.id);
-
-      if (error) throw error;
-
+      await playersService.updatePlayer(player.id, { photoUrl });
+      
       // Refresh players list
       await refetch();
       
@@ -529,43 +524,57 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         </TabsContent>
 
         <PlayerParentModal
-          open={isParentModalOpen}
-          onOpenChange={setIsParentModalOpen}
           player={playerForParents}
-          refetch={refetch}
+          isOpen={isParentModalOpen}
+          onClose={() => setIsParentModalOpen(false)}
         />
 
         <PlayerAttributesModal
-          open={isAttributeModalOpen}
-          onOpenChange={setIsAttributeModalOpen}
           player={playerForAttributes}
-          refetch={refetch}
+          isOpen={isAttributeModalOpen}
+          onClose={() => setIsAttributeModalOpen(false)}
+          onSave={(attributes) => {
+            if (playerForAttributes) {
+              playersService.updatePlayer(playerForAttributes.id, { attributes });
+              refetch();
+            }
+          }}
         />
 
         <PlayerObjectivesModal
-          open={isObjectivesModalOpen}
-          onOpenChange={setIsObjectivesModalOpen}
           player={playerForObjectives}
-          refetch={refetch}
+          isOpen={isObjectivesModalOpen}
+          onClose={() => setIsObjectivesModalOpen(false)}
+          onSave={(objectives) => {
+            if (playerForObjectives) {
+              playersService.updatePlayer(playerForObjectives.id, { objectives });
+              refetch();
+            }
+          }}
         />
 
         <PlayerCommentsModal
-          open={isCommentsModalOpen}
-          onOpenChange={setIsCommentsModalOpen}
           player={playerForComments}
-          refetch={refetch}
+          isOpen={isCommentsModalOpen}
+          onClose={() => setIsCommentsModalOpen(false)}
+          onSave={(comments) => {
+            if (playerForComments) {
+              playersService.updatePlayer(playerForComments.id, { comments });
+              refetch();
+            }
+          }}
         />
 
         <PlayerStatsModal
-          open={isStatsModalOpen}
-          onOpenChange={setIsStatsModalOpen}
           player={playerForStats}
+          isOpen={isStatsModalOpen}
+          onClose={() => setIsStatsModalOpen(false)}
         />
 
         <PlayerHistoryModal
-          open={isHistoryModalOpen}
-          onOpenChange={setIsHistoryModalOpen}
           player={playerForHistory}
+          isOpen={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
         />
 
         {/* Simple delete confirmation dialog */}

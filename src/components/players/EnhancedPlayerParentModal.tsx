@@ -299,7 +299,7 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
           onClose={() => setShowInviteModal(false)}
           onInviteSent={handleInviteSent}
           prefilledData={{
-            teamId: player.teamId,
+            teamId: player.team_id,
             playerId: player.id
           }}
         />

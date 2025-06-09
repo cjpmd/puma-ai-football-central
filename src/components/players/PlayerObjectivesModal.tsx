@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
 }) => {
   const [objectives, setObjectives] = useState<PlayerObjective[]>(player.objectives || []);
   const [showAddForm, setShowAddForm] = useState(false);
+
   const [newObjective, setNewObjective] = useState<Partial<PlayerObjective>>({
     title: '',
     description: '',

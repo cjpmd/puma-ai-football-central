@@ -144,6 +144,13 @@ export type MatchStats = {
   }[];
 };
 
+export type KitSizes = {
+  size?: string;
+  quantity?: number;
+  nameOnShirt?: string;
+  [key: string]: any; // Allow additional properties
+};
+
 export type Player = {
   id: string;
   name: string;
@@ -154,7 +161,10 @@ export type Player = {
   subscriptionType?: 'full_squad' | 'training' | 'trialist';
   availability?: 'green' | 'amber' | 'red';
   team_id: string;
+  teamId?: string; // Allow both for compatibility
   attributes?: PlayerAttribute[];
+  objectives?: PlayerObjective[]; // Added this property
+  comments?: PlayerComment[]; // Added this property
   kit_sizes?: KitSizes;
   matchStats?: {
     totalGames: number;
@@ -167,6 +177,9 @@ export type Player = {
   };
   leaveDate?: string;
   photoUrl?: string; // New field for player photos
+  subscriptionStatus?: SubscriptionStatus; // Added this property
+  status?: string; // Added this property
+  leaveComments?: string; // Added this property
   created_at?: string;
   updated_at?: string;
 };
@@ -367,9 +380,4 @@ export type Profile = {
   coaching_badges: any[];
   created_at: string;
   updated_at: string;
-};
-
-export type KitSizes = {
-  size: string;
-  quantity: number;
 };
