@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Player, Team, PlayerAttribute } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -523,59 +522,90 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
           </div>
         </TabsContent>
 
-        <PlayerParentModal
-          player={playerForParents}
-          isOpen={isParentModalOpen}
-          onClose={() => setIsParentModalOpen(false)}
-        />
+        {/* Only render modals when there's a player selected */}
+        {playerForParents && (
+          <PlayerParentModal
+            player={playerForParents}
+            isOpen={isParentModalOpen}
+            onClose={() => {
+              setIsParentModalOpen(false);
+              setPlayerForParents(null);
+            }}
+          />
+        )}
 
-        <PlayerAttributesModal
-          player={playerForAttributes}
-          isOpen={isAttributeModalOpen}
-          onClose={() => setIsAttributeModalOpen(false)}
-          onSave={(attributes) => {
-            if (playerForAttributes) {
-              playersService.updatePlayer(playerForAttributes.id, { attributes });
-              refetch();
-            }
-          }}
-        />
+        {playerForAttributes && (
+          <PlayerAttributesModal
+            player={playerForAttributes}
+            isOpen={isAttributeModalOpen}
+            onClose={() => {
+              setIsAttributeModalOpen(false);
+              setPlayerForAttributes(null);
+            }}
+            onSave={(attributes) => {
+              if (playerForAttributes) {
+                playersService.updatePlayer(playerForAttributes.id, { attributes });
+                refetch();
+              }
+            }}
+          />
+        )}
 
-        <PlayerObjectivesModal
-          player={playerForObjectives}
-          isOpen={isObjectivesModalOpen}
-          onClose={() => setIsObjectivesModalOpen(false)}
-          onSave={(objectives) => {
-            if (playerForObjectives) {
-              playersService.updatePlayer(playerForObjectives.id, { objectives });
-              refetch();
-            }
-          }}
-        />
+        {playerForObjectives && (
+          <PlayerObjectivesModal
+            player={playerForObjectives}
+            isOpen={isObjectivesModalOpen}
+            onClose={() => {
+              setIsObjectivesModalOpen(false);
+              setPlayerForObjectives(null);
+            }}
+            onSave={(objectives) => {
+              if (playerForObjectives) {
+                playersService.updatePlayer(playerForObjectives.id, { objectives });
+                refetch();
+              }
+            }}
+          />
+        )}
 
-        <PlayerCommentsModal
-          player={playerForComments}
-          isOpen={isCommentsModalOpen}
-          onClose={() => setIsCommentsModalOpen(false)}
-          onSave={(comments) => {
-            if (playerForComments) {
-              playersService.updatePlayer(playerForComments.id, { comments });
-              refetch();
-            }
-          }}
-        />
+        {playerForComments && (
+          <PlayerCommentsModal
+            player={playerForComments}
+            isOpen={isCommentsModalOpen}
+            onClose={() => {
+              setIsCommentsModalOpen(false);
+              setPlayerForComments(null);
+            }}
+            onSave={(comments) => {
+              if (playerForComments) {
+                playersService.updatePlayer(playerForComments.id, { comments });
+                refetch();
+              }
+            }}
+          />
+        )}
 
-        <PlayerStatsModal
-          player={playerForStats}
-          isOpen={isStatsModalOpen}
-          onClose={() => setIsStatsModalOpen(false)}
-        />
+        {playerForStats && (
+          <PlayerStatsModal
+            player={playerForStats}
+            isOpen={isStatsModalOpen}
+            onClose={() => {
+              setIsStatsModalOpen(false);
+              setPlayerForStats(null);
+            }}
+          />
+        )}
 
-        <PlayerHistoryModal
-          player={playerForHistory}
-          isOpen={isHistoryModalOpen}
-          onClose={() => setIsHistoryModalOpen(false)}
-        />
+        {playerForHistory && (
+          <PlayerHistoryModal
+            player={playerForHistory}
+            isOpen={isHistoryModalOpen}
+            onClose={() => {
+              setIsHistoryModalOpen(false);
+              setPlayerForHistory(null);
+            }}
+          />
+        )}
 
         {/* Simple delete confirmation dialog */}
         <Dialog open={isDeleteConfirmationOpen} onOpenChange={setIsDeleteConfirmationOpen}>
