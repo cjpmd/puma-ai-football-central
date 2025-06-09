@@ -10,7 +10,7 @@ import { formatDate } from '@/lib/utils';
 import { PlusCircle, Trash } from 'lucide-react';
 
 interface PlayerCommentsModalProps {
-  player: Player;
+  player: Player | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (comments: PlayerComment[]) => void;
@@ -22,8 +22,13 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
   onClose,
   onSave
 }) => {
-  const [comments, setComments] = useState<PlayerComment[]>(player.comments || []);
+  const [comments, setComments] = useState<PlayerComment[]>(player?.comments || []);
   const [newComment, setNewComment] = useState('');
+
+  // Don't render the modal if there's no player
+  if (!player) {
+    return null;
+  }
 
   const handleAddComment = () => {
     if (newComment.trim()) {
