@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import { Users, Mail, Plus, Edit, Trash2 } from 'lucide-react';
 interface EnhancedPlayerParentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  player: Player;
+  player: Player | null;
   onUpdate: () => void;
 }
 
@@ -37,12 +38,14 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
   });
 
   useEffect(() => {
-    if (isOpen && player.id) {
+    if (isOpen && player?.id) {
       loadParents();
     }
-  }, [isOpen, player.id]);
+  }, [isOpen, player?.id]);
 
   const loadParents = async () => {
+    if (!player?.id) return;
+    
     try {
       setIsLoading(true);
       const parentData = await playersService.getParentsByPlayerId(player.id);
@@ -57,6 +60,8 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
 
   const handleAddParent = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!player?.id) return;
+    
     try {
       setIsLoading(true);
       await playersService.createParent({
@@ -107,6 +112,11 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
     loadParents();
     onUpdate();
   };
+
+  // Don't render anything if player is null
+  if (!player) {
+    return null;
+  }
 
   return (
     <>
@@ -283,15 +293,17 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
       </Dialog>
 
       {/* User Invitation Modal */}
-      <UserInvitationModal
-        isOpen={showInviteModal}
-        onClose={() => setShowInviteModal(false)}
-        onInviteSent={handleInviteSent}
-        prefilledData={{
-          teamId: player.teamId,
-          playerId: player.id
-        }}
-      />
+      {player && (
+        <UserInvitationModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          onInviteSent={handleInviteSent}
+          prefilledData={{
+            teamId: player.teamId,
+            playerId: player.id
+          }}
+        />
+      )}
     </>
   );
 };

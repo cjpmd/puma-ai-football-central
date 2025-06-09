@@ -505,7 +505,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
           setShowParentModal(false);
           setSelectedPlayer(null);
         }}
-        player={selectedPlayer!}
+        player={selectedPlayer}
         onUpdate={refreshPlayers}
       />
       
