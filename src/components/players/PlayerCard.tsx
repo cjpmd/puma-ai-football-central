@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Player } from '@/types';
-import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Target } from 'lucide-react';
+import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Brain } from 'lucide-react';
 
 interface PlayerCardProps {
   player: Player;
@@ -78,6 +79,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const getMissingInfoAlerts = () => {
     const alerts = [];
     
+    // Check if name is missing or only contains whitespace
     if (!player.name || player.name.trim().length === 0) {
       alerts.push({ icon: User, message: 'Missing player name' });
     }
@@ -118,13 +120,13 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   const topPositions = getTotalMinutesByPosition();
 
   return (
-    <Card className={`hover:shadow-lg transition-shadow h-[440px] flex flex-col ${inactive ? 'opacity-75' : ''}`}>
+    <Card className={`hover:shadow-lg transition-shadow h-[400px] flex flex-col ${inactive ? 'opacity-75' : ''}`}>
       <CardHeader className="pb-3 flex-shrink-0">
         <div className="flex justify-between items-start">
           <div className="flex-1 min-w-0">
-            <CardTitle className="flex items-center gap-2 text-lg font-bold leading-tight">
-              <span className="truncate">{player.name || 'Unnamed Player'}</span>
-              <span className="text-xl font-bold flex-shrink-0">#{player.squadNumber || 'No Number'}</span>
+            <CardTitle className="flex items-center gap-2 text-base font-bold leading-tight">
+              <span className="truncate text-sm">{player.name || 'Unnamed Player'}</span>
+              <span className="text-lg font-bold flex-shrink-0">#{player.squadNumber || 'No Number'}</span>
               {hasAlerts && !inactive && (
                 <div className="flex gap-1 flex-shrink-0">
                   {missingInfoAlerts.map((alert, index) => {
@@ -139,7 +141,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               )}
             </CardTitle>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 {player.type === 'goalkeeper' ? 'GK' : 'Outfield'} • Age {player.dateOfBirth ? new Date().getFullYear() - new Date(player.dateOfBirth).getFullYear() : 0}
               </span>
               {!inactive && <div className={`w-2 h-2 rounded-full ${getAvailabilityColor(player.availability)}`} />}
@@ -173,25 +175,83 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                 )}
               </>
             ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSettings(!showSettings)}
-                className="h-8 w-8 p-0"
-                title="Settings"
-              >
-                <Settings className="h-4 w-4" />
-              </Button>
+              <Popover open={showSettings} onOpenChange={setShowSettings}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="grid gap-1">
+                    {onEdit && (
+                      <Button variant="ghost" size="sm" onClick={() => {onEdit(player); setShowSettings(false);}} className="justify-start text-xs">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Player
+                      </Button>
+                    )}
+                    {onManageParents && (
+                      <Button variant="ghost" size="sm" onClick={() => {onManageParents(player); setShowSettings(false);}} className="justify-start text-xs">
+                        <Users className="h-4 w-4 mr-2" />
+                        Manage Parents
+                      </Button>
+                    )}
+                    {onManageAttributes && (
+                      <Button variant="ghost" size="sm" onClick={() => {onManageAttributes(player); setShowSettings(false);}} className="justify-start text-xs">
+                        <Brain className="h-4 w-4 mr-2" />
+                        Manage Attributes
+                      </Button>
+                    )}
+                    {onManageObjectives && (
+                      <Button variant="ghost" size="sm" onClick={() => {onManageObjectives(player); setShowSettings(false);}} className="justify-start text-xs">
+                        Manage Objectives
+                      </Button>
+                    )}
+                    {onManageComments && (
+                      <Button variant="ghost" size="sm" onClick={() => {onManageComments(player); setShowSettings(false);}} className="justify-start text-xs">
+                        Manage Comments
+                      </Button>
+                    )}
+                    {onViewStats && (
+                      <Button variant="ghost" size="sm" onClick={() => {onViewStats(player); setShowSettings(false);}} className="justify-start text-xs">
+                        <BarChart3 className="h-4 w-4 mr-2" />
+                        View Statistics
+                      </Button>
+                    )}
+                    {onViewHistory && (
+                      <Button variant="ghost" size="sm" onClick={() => {onViewHistory(player); setShowSettings(false);}} className="justify-start text-xs">
+                        View History
+                      </Button>
+                    )}
+                    {onTransfer && (
+                      <Button variant="ghost" size="sm" onClick={() => {onTransfer(player); setShowSettings(false);}} className="justify-start text-xs">
+                        <ArrowRightLeft className="h-4 w-4 mr-2" />
+                        Transfer Player
+                      </Button>
+                    )}
+                    {onLeave && (
+                      <Button variant="ghost" size="sm" onClick={() => {onLeave(player); setShowSettings(false);}} className="justify-start text-xs text-red-600">
+                        <UserMinus className="h-4 w-4 mr-2" />
+                        Leave Team
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
             )}
           </div>
         </div>
       </CardHeader>
       
-      <CardContent className="flex-1 flex flex-col space-y-3">
+      <CardContent className="flex-1 flex flex-col space-y-3 pb-4">
         {/* Subscription Badge - Fixed Position */}
         <div className="h-6 flex items-center">
           {showSubscription && !inactive && (
-            <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+            <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs">
               {getSubscriptionLabel(player.subscriptionType || 'full_squad')}
             </Badge>
           )}
@@ -200,12 +260,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         {/* Stats Grid - Fixed Position */}
         <div className="grid grid-cols-2 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold">{player.matchStats?.totalGames || 0}</div>
-            <div className="text-sm text-muted-foreground">Games</div>
+            <div className="text-xl font-bold">{player.matchStats?.totalGames || 0}</div>
+            <div className="text-xs text-muted-foreground">Games</div>
           </div>
           <div>
-            <div className="text-2xl font-bold">{player.matchStats?.totalMinutes || 0}</div>
-            <div className="text-sm text-muted-foreground">Minutes</div>
+            <div className="text-xl font-bold">{player.matchStats?.totalMinutes || 0}</div>
+            <div className="text-xs text-muted-foreground">Minutes</div>
           </div>
         </div>
 
@@ -214,22 +274,22 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           {isCaptain && (
             <div className="flex items-center gap-1 text-yellow-600">
               <Crown className="h-4 w-4" />
-              <span className="text-sm font-medium">{player.matchStats?.captainGames}</span>
+              <span className="text-xs font-medium">{player.matchStats?.captainGames}</span>
             </div>
           )}
           {isPOTM && (
             <div className="flex items-center gap-1 text-yellow-600">
               <Trophy className="h-4 w-4" />
-              <span className="text-sm font-medium">{player.matchStats?.playerOfTheMatchCount}</span>
+              <span className="text-xs font-medium">{player.matchStats?.playerOfTheMatchCount}</span>
             </div>
           )}
         </div>
 
         {/* Top Positions - Fixed Height Area */}
-        <div className="h-12 text-center">
+        <div className="h-10 text-center">
           {topPositions.length > 0 && (
             <>
-              <div className="text-sm font-medium mb-1">Top Positions</div>
+              <div className="text-xs font-medium mb-1">Top Positions</div>
               <div className="text-xs text-muted-foreground">
                 {topPositions.map(({ position, minutes }, index) => (
                   <span key={position}>
@@ -244,63 +304,43 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
         {/* Leave Date for Inactive Players */}
         {inactive && player.leaveDate && (
-          <div className="text-sm text-muted-foreground text-center">
+          <div className="text-xs text-muted-foreground text-center">
             Left: {new Date(player.leaveDate).toLocaleDateString()}
           </div>
         )}
 
-        {/* Main Action Buttons - Fixed Position */}
-        {!inactive && (
-          <div className="flex gap-2 mt-auto">
-            {onViewStats && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onViewStats(player)}
-                className="flex-1 text-xs"
-              >
-                <BarChart3 className="h-4 w-4 mr-1" />
-                Stats
-              </Button>
-            )}
-            {onManageAttributes && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onManageAttributes(player)}
-                className="flex-1 text-xs"
-              >
-                <Target className="h-4 w-4 mr-1" />
-                Attributes
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Settings Panel - Expandable */}
-        {showSettings && !inactive && (
-          <div className="border-t pt-3 mt-3">
-            <div className="grid grid-cols-2 gap-2">
-              {onEdit && (
-                <Button variant="outline" size="sm" onClick={() => onEdit(player)} className="text-xs">
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
+        {/* Main Action Buttons - Fixed Position at Bottom */}
+        <div className="mt-auto">
+          {!inactive ? (
+            <div className="flex gap-2">
+              {onViewStats && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onViewStats(player)}
+                  className="flex-1 text-xs"
+                >
+                  <BarChart3 className="h-4 w-4 mr-1" />
+                  Stats
                 </Button>
               )}
-              {onManageParents && (
-                <Button variant="outline" size="sm" onClick={() => onManageParents(player)} className="text-xs">
-                  <Users className="h-3 w-3 mr-1" />
-                  Parents
+              {onManageAttributes && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onManageAttributes(player)}
+                  className="flex-1 text-xs"
+                >
+                  <Brain className="h-4 w-4 mr-1" />
+                  Attributes
                 </Button>
               )}
-              {onManageObjectives && (
-                <Button variant="outline" size="sm" onClick={() => onManageObjectives(player)} className="text-xs">
-                  Objectives
-                </Button>
-              )}
-              {onManageComments && (
-                <Button variant="outline" size="sm" onClick={() => onManageComments(player)} className="text-xs">
-                  Comments
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1">
+              {onViewStats && (
+                <Button variant="outline" size="sm" onClick={() => onViewStats(player)} className="text-xs">
+                  Stats
                 </Button>
               )}
               {onViewHistory && (
@@ -308,37 +348,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   History
                 </Button>
               )}
-              {onTransfer && (
-                <Button variant="outline" size="sm" onClick={() => onTransfer(player)} className="text-xs">
-                  <ArrowRightLeft className="h-3 w-3 mr-1" />
-                  Transfer
-                </Button>
-              )}
-              {onLeave && (
-                <Button variant="outline" size="sm" onClick={() => onLeave(player)} className="text-xs text-red-600">
-                  <UserMinus className="h-3 w-3 mr-1" />
-                  Leave
-                </Button>
-              )}
             </div>
-          </div>
-        )}
-
-        {/* Inactive Player Actions - Fixed Position */}
-        {inactive && (
-          <div className="flex flex-wrap gap-1 mt-auto">
-            {onViewStats && (
-              <Button variant="outline" size="sm" onClick={() => onViewStats(player)} className="text-xs">
-                Stats
-              </Button>
-            )}
-            {onViewHistory && (
-              <Button variant="outline" size="sm" onClick={() => onViewHistory(player)} className="text-xs">
-                History
-              </Button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </CardContent>
     </Card>
   );
