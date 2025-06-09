@@ -15,7 +15,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { PlusCircle, UserMinus, ArrowRightLeft, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { PlayerParentModal } from './PlayerParentModal';
+import { EnhancedPlayerParentModal } from './EnhancedPlayerParentModal';
 import { PlayerAttributesModal } from './PlayerAttributesModal';
 import { PlayerObjectivesModal } from './PlayerObjectivesModal';
 import { PlayerCommentsModal } from './PlayerCommentsModal';
@@ -44,6 +44,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [isInvitationModalOpen, setIsInvitationModalOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [createdPlayerId, setCreatedPlayerId] = useState<string | null>(null);
+  const [showParentModal, setShowParentModal] = useState(false);
 
   // Fetch active players
   const { data: activePlayers = [], isLoading: isActiveLoading } = useQuery({
@@ -268,7 +269,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
   const handleManageParents = (player: Player) => {
     setSelectedPlayer(player);
-    setIsParentModalOpen(true);
+    setShowParentModal(true);
   };
 
   const handleManageAttributes = (player: Player) => {
@@ -299,7 +300,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const isLoading = isActiveLoading || isInactiveLoading;
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
+    <div className="space-y-6">
       <div className="flex justify-between items-center flex-shrink-0">
         <div>
           <h2 className="text-2xl font-bold">{team.name} Squad</h2>
@@ -492,16 +493,15 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       </Dialog>
       
       {/* Parent Management Modal */}
-      {selectedPlayer && (
-        <PlayerParentModal
-          player={selectedPlayer}
-          isOpen={isParentModalOpen}
-          onClose={() => {
-            setIsParentModalOpen(false);
-            setSelectedPlayer(null);
-          }}
-        />
-      )}
+      <EnhancedPlayerParentModal
+        isOpen={showParentModal}
+        onClose={() => {
+          setShowParentModal(false);
+          setSelectedPlayer(null);
+        }}
+        player={selectedPlayer!}
+        onUpdate={refreshPlayers}
+      />
       
       {/* Player Attributes Modal */}
       {selectedPlayer && (

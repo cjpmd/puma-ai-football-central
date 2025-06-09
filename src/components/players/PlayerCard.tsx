@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
-import { Edit, Users, TrendingUp, TrendingDown, Minus, AlertTriangle, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Target } from 'lucide-react';
+import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Target } from 'lucide-react';
 
 interface PlayerCardProps {
   player: Player;
@@ -74,25 +74,25 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     }
   };
 
-  // Check for missing critical information
+  // Check for missing critical information with specific icons
   const getMissingInfoAlerts = () => {
     const alerts = [];
     
     if (!player.name || player.name.trim().length === 0) {
-      alerts.push('Missing player name');
+      alerts.push({ icon: User, message: 'Missing player name' });
     }
     
     if (!player.dateOfBirth) {
-      alerts.push('Missing date of birth');
+      alerts.push({ icon: Calendar, message: 'Missing date of birth' });
     }
     
     if (!player.squadNumber || player.squadNumber === 0) {
-      alerts.push('Missing squad number');
+      alerts.push({ icon: Hash, message: 'Missing squad number' });
     }
     
     const kitSizes = player.kit_sizes || {};
     if (Object.keys(kitSizes).length === 0 || !kitSizes.nameOnShirt) {
-      alerts.push('Missing kit information');
+      alerts.push({ icon: Shirt, message: 'Missing kit information' });
     }
     
     return alerts;
@@ -119,16 +119,23 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   return (
     <Card className={`hover:shadow-lg transition-shadow ${inactive ? 'opacity-75' : ''}`}>
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             <CardTitle className="flex items-center gap-2 text-xl font-bold">
               {player.name || 'Unnamed Player'}
               <span className="text-2xl font-bold">#{player.squadNumber || 'No Number'}</span>
               {hasAlerts && !inactive && (
-                <span title={`Missing: ${missingInfoAlerts.join(', ')}`}>
-                  <AlertTriangle className="h-5 w-5 text-orange-500" />
-                </span>
+                <div className="flex gap-1">
+                  {missingInfoAlerts.map((alert, index) => {
+                    const IconComponent = alert.icon;
+                    return (
+                      <span key={index} title={alert.message}>
+                        <IconComponent className="h-4 w-4 text-orange-500" />
+                      </span>
+                    );
+                  })}
+                </div>
               )}
             </CardTitle>
             <div className="flex items-center gap-2 mt-1">
@@ -180,30 +187,27 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3">
         {showSubscription && !inactive && (
           <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
             {getSubscriptionLabel(player.subscriptionType || 'full_squad')}
           </Badge>
         )}
 
-        <div>
-          <h3 className="font-semibold text-lg mb-3">Match Statistics</h3>
-          <div className="grid grid-cols-2 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold">{player.matchStats?.totalGames || 0}</div>
-              <div className="text-sm text-muted-foreground">Games</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold">{player.matchStats?.totalMinutes || 0}</div>
-              <div className="text-sm text-muted-foreground">Minutes</div>
-            </div>
+        <div className="grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div className="text-2xl font-bold">{player.matchStats?.totalGames || 0}</div>
+            <div className="text-sm text-muted-foreground">Games</div>
+          </div>
+          <div>
+            <div className="text-2xl font-bold">{player.matchStats?.totalMinutes || 0}</div>
+            <div className="text-sm text-muted-foreground">Minutes</div>
           </div>
         </div>
 
         {/* Captain and POTM badges */}
         {(isCaptain || isPOTM) && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-center">
             {isCaptain && (
               <div className="flex items-center gap-1 text-yellow-600">
                 <Crown className="h-4 w-4" />
@@ -211,7 +215,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               </div>
             )}
             {isPOTM && (
-              <div className="flex items-center gap-1 text-gold-600">
+              <div className="flex items-center gap-1 text-yellow-600">
                 <Trophy className="h-4 w-4" />
                 <span className="text-sm font-medium">{player.matchStats?.playerOfTheMatchCount}</span>
               </div>
@@ -219,23 +223,23 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           </div>
         )}
 
-        {/* Top Positions */}
+        {/* Top Positions - condensed to one line */}
         {topPositions.length > 0 && (
-          <div>
-            <h3 className="font-semibold mb-2">Top Positions</h3>
-            <div className="space-y-1">
-              {topPositions.map(({ position, minutes }) => (
-                <div key={position} className="flex justify-between text-sm">
-                  <span className="font-medium uppercase">{position}</span>
-                  <span className="text-muted-foreground">{minutes}m</span>
-                </div>
+          <div className="text-center">
+            <div className="text-sm font-medium mb-1">Top Positions</div>
+            <div className="text-xs text-muted-foreground">
+              {topPositions.map(({ position, minutes }, index) => (
+                <span key={position}>
+                  {index > 0 && ' • '}
+                  <span className="font-medium uppercase">{position}</span> {minutes}m
+                </span>
               ))}
             </div>
           </div>
         )}
 
         {inactive && player.leaveDate && (
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-muted-foreground text-center">
             Left: {new Date(player.leaveDate).toLocaleDateString()}
           </div>
         )}
