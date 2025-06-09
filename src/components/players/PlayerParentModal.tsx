@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface PlayerParentModalProps {
-  player: Player;
+  player: Player | null;
   isOpen: boolean;
   onClose: () => void;
 }
@@ -30,30 +30,32 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     name: '',
     email: '',
     phone: '',
-    playerId: player.id,
-    subscriptionType: player.subscriptionType || 'full_squad',
+    playerId: player?.id || '',
+    subscriptionType: player?.subscriptionType || 'full_squad',
     subscriptionStatus: 'active'
   });
 
-  // Fetch parents for this player
+  // Only fetch parents if we have a valid player
   const { data: parents = [], isLoading, refetch } = useQuery({
-    queryKey: ['parents', player.id],
-    queryFn: () => playersService.getParentsByPlayerId(player.id),
-    enabled: isOpen,
+    queryKey: ['parents', player?.id],
+    queryFn: () => player?.id ? playersService.getParentsByPlayerId(player.id) : Promise.resolve([]),
+    enabled: isOpen && !!player?.id,
   });
 
   // Mutations
   const createParentMutation = useMutation({
     mutationFn: playersService.createParent,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      if (player?.id) {
+        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      }
       setShowAddForm(false);
       setFormData({
         name: '',
         email: '',
         phone: '',
-        playerId: player.id,
-        subscriptionType: player.subscriptionType || 'full_squad',
+        playerId: player?.id || '',
+        subscriptionType: player?.subscriptionType || 'full_squad',
         subscriptionStatus: 'active'
       });
       toast({
@@ -74,7 +76,9 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     mutationFn: ({ id, data }: { id: string; data: Partial<Parent> }) => 
       playersService.updateParent(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      if (player?.id) {
+        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      }
       toast({
         title: 'Parent Updated',
         description: 'Parent details have been updated.',
@@ -92,7 +96,9 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
   const deleteParentMutation = useMutation({
     mutationFn: playersService.deleteParent,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      if (player?.id) {
+        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      }
       toast({
         title: 'Parent Removed',
         description: 'Parent has been removed from the player.',
@@ -110,7 +116,9 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
   const regenerateLinkCodeMutation = useMutation({
     mutationFn: playersService.regenerateParentLinkCode,
     onSuccess: (linkCode) => {
-      queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      if (player?.id) {
+        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      }
       toast({
         title: 'Link Code Regenerated',
         description: `New link code: ${linkCode}`,
@@ -131,7 +139,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (formData.name && formData.email && player.id) {
+    if (formData.name && formData.email && player?.id) {
       createParentMutation.mutate({
         ...formData,
         playerId: player.id
@@ -153,20 +161,25 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     });
   };
 
-  // Reset the form when modal is closed
+  // Reset the form when modal is closed or player changes
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !player) {
       setShowAddForm(false);
       setFormData({
         name: '',
         email: '',
         phone: '',
-        playerId: player.id,
-        subscriptionType: player.subscriptionType || 'full_squad',
+        playerId: player?.id || '',
+        subscriptionType: player?.subscriptionType || 'full_squad',
         subscriptionStatus: 'active'
       });
     }
-  }, [isOpen, player.id, player.subscriptionType]);
+  }, [isOpen, player]);
+
+  // Don't render the modal if there's no player
+  if (!player) {
+    return null;
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
