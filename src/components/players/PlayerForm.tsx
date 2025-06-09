@@ -198,7 +198,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         player={{ 
           id: player?.id || 'temp', 
           team_id: teamId, 
-          kit_sizes: { ...formData.kit_sizes, nameOnShirt: formData.nameOnShirt }
+          kit_sizes: { ...formData.kit_sizes, nameOnShirt: formData.nameOnShirt } as Record<string, string>
         }} 
         onUpdate={handleKitDetailsUpdate} 
       />

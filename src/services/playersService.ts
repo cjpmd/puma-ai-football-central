@@ -1,4 +1,3 @@
-
 import { Player, Parent, PlayerTransfer, AttributeHistory, KitSizes } from '@/types';
 
 const mockPlayers: Player[] = [
@@ -33,6 +32,14 @@ export const playersService = {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
     return mockPlayers.filter(player => player.team_id === teamId);
+  },
+
+  async getActivePlayersByTeamId(teamId: string): Promise<Player[]> {
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return mockPlayers.filter(player => 
+      player.team_id === teamId && !player.leaveDate
+    );
   },
 
   async createPlayer(playerData: Partial<Player>): Promise<Player> {

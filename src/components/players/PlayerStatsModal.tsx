@@ -110,7 +110,13 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               {stats?.minutesByPosition && (
                 <div className="mt-3">
                   <p className="text-sm text-muted-foreground mb-2">Positions:</p>
-                  {renderPositionsPlayed(stats.minutesByPosition)}
+                  <div className="flex flex-wrap gap-1">
+                    {Object.entries(stats.minutesByPosition).map(([position, minutes]) => (
+                      <Badge key={position} variant="outline" className="text-xs">
+                        {position}: {minutes}m
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
