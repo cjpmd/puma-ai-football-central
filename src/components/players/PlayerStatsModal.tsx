@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -36,27 +37,27 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const { matchStats } = player;
 
   // Filter out matches with "Unknown" opponent
-  const filteredRecentGames = (matchStats.recentGames || []).filter(game => 
+  const filteredRecentGames = (matchStats?.recentGames || []).filter(game => 
     game.opponent && game.opponent.toLowerCase() !== 'unknown'
   );
 
   // Get top 5 positions by minutes played
-  const topPositions = Object.entries(matchStats.minutesByPosition || {})
-    .sort((a, b) => b[1] - a[1])
+  const topPositions = Object.entries(matchStats?.minutesByPosition || {})
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
     .slice(0, 5)
-    .map(([pos, minutes]) => ({ position: pos, minutes }));
+    .map(([pos, minutes]) => ({ position: pos, minutes: minutes as number }));
 
   // Calculate average minutes per game
-  const avgMinutesPerGame = matchStats.totalGames > 0 ? 
-    Math.round(matchStats.totalMinutes / matchStats.totalGames) : 0;
+  const avgMinutesPerGame = (matchStats?.totalGames || 0) > 0 ? 
+    Math.round((matchStats?.totalMinutes || 0) / (matchStats?.totalGames || 1)) : 0;
 
   // Calculate captain percentage
-  const captainPercentage = matchStats.totalGames > 0 ? 
-    Math.round((matchStats.captainGames / matchStats.totalGames) * 100) : 0;
+  const captainPercentage = (matchStats?.totalGames || 0) > 0 ? 
+    Math.round(((matchStats?.captainGames || 0) / (matchStats?.totalGames || 1)) * 100) : 0;
 
   // Calculate POTM percentage
-  const potmPercentage = matchStats.totalGames > 0 ? 
-    Math.round((matchStats.playerOfTheMatchCount / matchStats.totalGames) * 100) : 0;
+  const potmPercentage = (matchStats?.totalGames || 0) > 0 ? 
+    Math.round(((matchStats?.playerOfTheMatchCount || 0) / (matchStats?.totalGames || 1)) * 100) : 0;
 
   const renderPositionsPlayed = (minutesByPosition: Record<string, number>) => {
     if (!minutesByPosition || Object.keys(minutesByPosition).length === 0) {
@@ -111,7 +112,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 <div className="mt-3">
                   <p className="text-sm text-muted-foreground mb-2">Positions:</p>
                   <div className="flex flex-wrap gap-1">
-                    {Object.entries(stats.minutesByPosition).map(([position, minutes]) => (
+                    {Object.entries(stats.minutesByPosition as Record<string, number>).map(([position, minutes]) => (
                       <Badge key={position} variant="outline" className="text-xs">
                         {position}: {minutes}m
                       </Badge>
@@ -213,7 +214,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="text-2xl font-bold">{matchStats.totalGames}</div>
+                  <div className="text-2xl font-bold">{matchStats?.totalGames || 0}</div>
                 </CardContent>
               </Card>
               
@@ -225,7 +226,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="text-2xl font-bold">{matchStats.totalMinutes}</div>
+                  <div className="text-2xl font-bold">{matchStats?.totalMinutes || 0}</div>
                   <div className="text-xs text-muted-foreground">
                     {avgMinutesPerGame} avg per game
                   </div>
@@ -240,7 +241,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="text-2xl font-bold">{matchStats.captainGames}</div>
+                  <div className="text-2xl font-bold">{matchStats?.captainGames || 0}</div>
                   <div className="text-xs text-muted-foreground">
                     {captainPercentage}% of games
                   </div>
@@ -255,7 +256,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="text-2xl font-bold">{matchStats.playerOfTheMatchCount}</div>
+                  <div className="text-2xl font-bold">{matchStats?.playerOfTheMatchCount || 0}</div>
                   <div className="text-xs text-muted-foreground">
                     {potmPercentage}% of games
                   </div>
@@ -276,8 +277,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 {topPositions.length > 0 ? (
                   <div className="space-y-3">
                     {topPositions.map(({ position, minutes }, index) => {
-                      const percentage = matchStats.totalMinutes > 0 ? 
-                        Math.round((minutes / matchStats.totalMinutes) * 100) : 0;
+                      const percentage = (matchStats?.totalMinutes || 0) > 0 ? 
+                        Math.round((minutes / (matchStats?.totalMinutes || 1)) * 100) : 0;
                       
                       return (
                         <div key={position} className="flex items-center justify-between p-3 border rounded">
@@ -317,7 +318,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {matchStats.performanceCategoryStats && Object.keys(matchStats.performanceCategoryStats).length > 0 ? (
+                {matchStats?.performanceCategoryStats && Object.keys(matchStats.performanceCategoryStats).length > 0 ? (
                   renderCategoryStats(matchStats.performanceCategoryStats)
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
@@ -365,7 +366,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           <TableCell>
                             {game.performanceCategory ? (
                               <Badge variant="secondary" className="text-xs">
-                                {game.performanceCategory}
+                                {String(game.performanceCategory)}
                               </Badge>
                             ) : (
                               <span className="text-muted-foreground text-xs">No Category</span>
@@ -386,7 +387,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           <TableCell>
                             <div className="flex flex-wrap gap-1">
                               {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 ? (
-                                Object.entries(game.minutesByPosition).map(([position, minutes]) => (
+                                Object.entries(game.minutesByPosition as Record<string, number>).map(([position, minutes]) => (
                                   <Badge key={position} variant="outline" className="text-xs">
                                     {position}: {minutes}m
                                   </Badge>

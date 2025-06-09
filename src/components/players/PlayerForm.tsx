@@ -55,7 +55,7 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       type: formData.type,
       availability: formData.availability,
       subscriptionType: formData.subscriptionType,
-      teamId,
+      team_id: teamId,
       kit_sizes: {
         ...formData.kit_sizes,
         nameOnShirt: formData.nameOnShirt
@@ -198,7 +198,10 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         player={{ 
           id: player?.id || 'temp', 
           team_id: teamId, 
-          kit_sizes: { ...formData.kit_sizes, nameOnShirt: formData.nameOnShirt } as Record<string, string>
+          kit_sizes: Object.fromEntries(
+            Object.entries({ ...formData.kit_sizes, nameOnShirt: formData.nameOnShirt })
+              .map(([key, value]) => [key, String(value)])
+          )
         }} 
         onUpdate={handleKitDetailsUpdate} 
       />
