@@ -13,7 +13,7 @@ import { DEFAULT_PLAYER_ATTRIBUTES } from '@/types/team';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface PlayerAttributesModalProps {
-  player: Player;
+  player: Player | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (attributes: PlayerAttribute[]) => void;
@@ -27,11 +27,11 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [attributes, setAttributes] = useState<PlayerAttribute[]>([]);
-  const [activeTab, setActiveTab] = useState<string>(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
+  const [activeTab, setActiveTab] = useState<string>(player?.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
   
   // Initialize attributes when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && player) {
       // If player has attributes, use those
       if (player.attributes && player.attributes.length > 0) {
         setAttributes([...player.attributes]);
@@ -91,8 +91,16 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
         
         setAttributes(defaultAttributes);
       }
+      
+      // Set active tab based on player type
+      setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
     }
-  }, [isOpen, player.attributes, player.type]);
+  }, [isOpen, player]);
+
+  // Don't render the modal if there's no player
+  if (!player) {
+    return null;
+  }
 
   const getAttributesByGroup = (group: string) => {
     return attributes.filter(attr => attr.group === group);
