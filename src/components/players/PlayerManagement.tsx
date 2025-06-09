@@ -65,7 +65,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isParentModalOpen, setIsParentModalOpen] = useState(false);
   const [playerForParents, setPlayerForParents] = useState<Player | null>(null);
-  const [isAttributeModalOpen, setIsAttributeModalOpen] useState(false);
+  const [isAttributeModalOpen, setIsAttributeModalOpen] = useState(false);
   const [playerForAttributes, setPlayerForAttributes] = useState<Player | null>(null);
   const [isObjectivesModalOpen, setIsObjectivesModalOpen] = useState(false);
   const [playerForObjectives, setPlayerForObjectives] = useState<Player | null>(null);
