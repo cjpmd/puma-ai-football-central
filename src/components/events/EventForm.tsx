@@ -274,7 +274,10 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           <Label htmlFor="kitSelection">Kit Selection</Label>
           <Select
             value={formData.kitSelection}
-            onValueChange={(value: 'home' | 'away' | 'training') => setFormData(prev => ({ ...prev, kitSelection: value }))}
+            onValueChange={(value: 'home' | 'away' | 'training') => {
+              console.log('Kit selection changed to:', value);
+              setFormData(prev => ({ ...prev, kitSelection: value }));
+            }}
           >
             <SelectTrigger>
               <SelectValue />

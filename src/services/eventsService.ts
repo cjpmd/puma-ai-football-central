@@ -20,6 +20,7 @@ export interface CreateEventData {
   };
   player_of_match_id?: string;
   game_format?: string;
+  kit_selection?: 'home' | 'away' | 'training';
 }
 
 export interface UpdateEventData extends CreateEventData {
@@ -92,7 +93,16 @@ export const eventsService = {
     return data as DatabaseEvent;
   },
 
-  async deleteEvent(eventId: string): Promise<void> {
+  async deleteEvent(eventId: string, eventTitle?: string): Promise<void> {
+    // Show confirmation dialog
+    const confirmMessage = eventTitle 
+      ? `Are you sure you want to delete the event "${eventTitle}"? This action cannot be undone.`
+      : 'Are you sure you want to delete this event? This action cannot be undone.';
+    
+    if (!window.confirm(confirmMessage)) {
+      throw new Error('Event deletion cancelled by user');
+    }
+
     // First delete any related event_player_stats
     const { error: statsError } = await supabase
       .from('event_player_stats')
