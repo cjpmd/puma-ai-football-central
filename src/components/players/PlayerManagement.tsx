@@ -58,6 +58,12 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     queryFn: () => playersService.getInactivePlayersByTeamId(team.id),
   });
 
+  // Function to refresh players data
+  const refreshPlayers = () => {
+    queryClient.invalidateQueries({ queryKey: ['active-players'] });
+    queryClient.invalidateQueries({ queryKey: ['inactive-players'] });
+  };
+
   // Mutation for creating players
   const createPlayerMutation = useMutation({
     mutationFn: playersService.createPlayer,
