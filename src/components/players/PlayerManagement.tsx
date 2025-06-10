@@ -807,5 +807,3 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 };
 
 export default PlayerManagement;
-
-}
