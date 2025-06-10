@@ -244,25 +244,41 @@ export const playersService = {
     }
 
     // Transform database records to match PlayerTransfer interface
-    return (data || []).map(transfer => ({
-      id: transfer.id,
-      playerId: transfer.player_id,
-      fromTeamId: transfer.from_team_id,
-      toTeamId: transfer.to_team_id,
-      transferDate: transfer.transfer_date,
-      status: transfer.status as "pending" | "accepted" | "rejected",
-      dataTransferOptions: {
-        full: transfer.data_transfer_options?.full || false,
-        attributes: transfer.data_transfer_options?.attributes || false,
-        comments: transfer.data_transfer_options?.comments || false,
-        objectives: transfer.data_transfer_options?.objectives || false,
-        events: transfer.data_transfer_options?.events || false,
-      },
-      requestedBy: transfer.requested_by,
-      acceptedBy: transfer.accepted_by,
-      createdAt: transfer.created_at,
-      updatedAt: transfer.updated_at
-    }));
+    return (data || []).map(transfer => {
+      // Safely parse data_transfer_options as it might be null or a string
+      let dataTransferOptions = {
+        full: false,
+        attributes: false,
+        comments: false,
+        objectives: false,
+        events: false,
+      };
+
+      if (transfer.data_transfer_options && typeof transfer.data_transfer_options === 'object') {
+        const options = transfer.data_transfer_options as any;
+        dataTransferOptions = {
+          full: options.full || false,
+          attributes: options.attributes || false,
+          comments: options.comments || false,
+          objectives: options.objectives || false,
+          events: options.events || false,
+        };
+      }
+
+      return {
+        id: transfer.id,
+        playerId: transfer.player_id,
+        fromTeamId: transfer.from_team_id,
+        toTeamId: transfer.to_team_id,
+        transferDate: transfer.transfer_date,
+        status: transfer.status as "pending" | "accepted" | "rejected",
+        dataTransferOptions,
+        requestedBy: transfer.requested_by,
+        acceptedBy: transfer.accepted_by,
+        createdAt: transfer.created_at,
+        updatedAt: transfer.updated_at
+      };
+    });
   },
 
   async getAttributeHistory(playerId: string, attributeName: string): Promise<AttributeHistory[]> {
