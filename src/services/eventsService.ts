@@ -78,9 +78,15 @@ export const eventsService = {
     const { id, ...updateData } = eventData;
     console.log('Updating event with data:', updateData);
     
+    // Ensure kit_selection is properly included in the update
+    const cleanUpdateData = {
+      ...updateData,
+      updated_at: new Date().toISOString()
+    };
+    
     const { data, error } = await supabase
       .from('events')
-      .update(updateData)
+      .update(cleanUpdateData)
       .eq('id', id)
       .select()
       .single();

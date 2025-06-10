@@ -1,276 +1,183 @@
-import { Player, Parent, PlayerTransfer, AttributeHistory, KitSizes } from '@/types';
 
-const mockPlayers: Player[] = [
-  {
-    id: '1',
-    name: 'John Smith',
-    dateOfBirth: '2010-05-15',
-    squadNumber: 10,
-    type: 'outfield',
-    team_id: 'team1',
-    availability: 'green',
-    subscriptionType: 'full_squad',
-    attributes: [],
-    objectives: [],
-    comments: [],
-    kit_sizes: { nameOnShirt: 'SMITH' },
-    matchStats: {
-      totalGames: 12,
-      totalMinutes: 880,
-      captainGames: 3,
-      playerOfTheMatchCount: 2,
-      minutesByPosition: { 'MC': 500, 'AMC': 380 },
-      recentGames: []
-    },
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '2',
-    name: 'Emma Johnson',
-    dateOfBirth: '2011-03-22',
-    squadNumber: 7,
-    type: 'outfield',
-    team_id: 'team1',
-    availability: 'green',
-    subscriptionType: 'full_squad',
-    attributes: [],
-    objectives: [],
-    comments: [],
-    kit_sizes: { nameOnShirt: 'JOHNSON' },
-    matchStats: {
-      totalGames: 10,
-      totalMinutes: 720,
-      captainGames: 1,
-      playerOfTheMatchCount: 1,
-      minutesByPosition: { 'RW': 400, 'LW': 320 },
-      recentGames: []
-    },
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '3',
-    name: 'Michael Brown',
-    dateOfBirth: '2010-08-14',
-    squadNumber: 1,
-    type: 'goalkeeper',
-    team_id: 'team1',
-    availability: 'amber',
-    subscriptionType: 'full_squad',
-    attributes: [],
-    objectives: [],
-    comments: [],
-    kit_sizes: { nameOnShirt: 'BROWN' },
-    matchStats: {
-      totalGames: 8,
-      totalMinutes: 720,
-      captainGames: 0,
-      playerOfTheMatchCount: 3,
-      minutesByPosition: { 'GK': 720 },
-      recentGames: []
-    },
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '4',
-    name: 'Sarah Wilson',
-    dateOfBirth: '2011-12-05',
-    squadNumber: 15,
-    type: 'outfield',
-    team_id: 'team1',
-    availability: 'red',
-    subscriptionType: 'training',
-    attributes: [],
-    objectives: [],
-    comments: [],
-    kit_sizes: { nameOnShirt: 'WILSON' },
-    matchStats: {
-      totalGames: 5,
-      totalMinutes: 300,
-      captainGames: 0,
-      playerOfTheMatchCount: 0,
-      minutesByPosition: { 'LB': 180, 'RB': 120 },
-      recentGames: []
-    },
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  },
-  {
-    id: '5',
-    name: 'David Martinez',
-    dateOfBirth: '2010-11-30',
-    squadNumber: 8,
-    type: 'outfield',
-    team_id: 'team1',
-    availability: 'green',
-    subscriptionType: 'full_squad',
-    leaveDate: '2024-12-01',
-    attributes: [],
-    objectives: [],
-    comments: [],
-    kit_sizes: { nameOnShirt: 'MARTINEZ' },
-    matchStats: {
-      totalGames: 15,
-      totalMinutes: 1200,
-      captainGames: 2,
-      playerOfTheMatchCount: 4,
-      minutesByPosition: { 'CM': 800, 'CDM': 400 },
-      recentGames: []
-    },
-    created_at: '2024-01-01T00:00:00Z',
-    updated_at: '2024-01-01T00:00:00Z'
-  }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { Player, Parent, PlayerTransfer, AttributeHistory } from '@/types';
 
 export const playersService = {
   async getPlayersByTeamId(teamId: string): Promise<Player[]> {
     console.log('Getting players for team ID:', teamId);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
     
-    // Return players for any team ID to ensure we always have data
-    const teamPlayers = mockPlayers.map(player => ({
-      ...player,
-      team_id: teamId // Update team_id to match the requested team
-    }));
-    
-    console.log('Returning players:', teamPlayers);
-    return teamPlayers;
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('team_id', teamId)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching players:', error);
+      throw error;
+    }
+
+    console.log('Returning players:', data);
+    return (data || []) as Player[];
   },
 
   async getActivePlayersByTeamId(teamId: string): Promise<Player[]> {
     console.log('Getting active players for team ID:', teamId);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 500));
     
-    const teamPlayers = mockPlayers
-      .filter(player => !player.leaveDate)
-      .map(player => ({
-        ...player,
-        team_id: teamId // Update team_id to match the requested team
-      }));
-    
-    console.log('Returning active players:', teamPlayers);
-    return teamPlayers;
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('team_id', teamId)
+      .is('leave_date', null)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching active players:', error);
+      throw error;
+    }
+
+    console.log('Returning active players:', data);
+    return (data || []) as Player[];
   },
 
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log('Creating player:', playerData);
     
-    const newPlayer: Player = {
-      id: `player-${Date.now()}`,
-      name: playerData.name || '',
-      dateOfBirth: playerData.dateOfBirth,
-      squadNumber: playerData.squadNumber || 0,
-      type: playerData.type || 'outfield',
-      team_id: playerData.team_id || '',
-      availability: playerData.availability || 'green',
-      subscriptionType: playerData.subscriptionType || 'full_squad',
-      attributes: [],
-      objectives: [],
-      comments: [],
-      kit_sizes: playerData.kit_sizes || {},
-      matchStats: {
-        totalGames: 0,
-        totalMinutes: 0,
-        captainGames: 0,
-        playerOfTheMatchCount: 0,
-        minutesByPosition: {},
-        recentGames: []
-      },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    const { data, error } = await supabase
+      .from('players')
+      .insert([{
+        name: playerData.name,
+        date_of_birth: playerData.dateOfBirth,
+        squad_number: playerData.squadNumber,
+        position: playerData.position,
+        type: playerData.type,
+        team_id: playerData.team_id,
+        availability: playerData.availability,
+        subscription_type: playerData.subscriptionType,
+        kit_sizes: playerData.kit_sizes || {}
+      }])
+      .select()
+      .single();
 
-    mockPlayers.push(newPlayer);
-    return newPlayer;
+    if (error) {
+      console.error('Error creating player:', error);
+      throw error;
+    }
+
+    return data as Player;
   },
 
   async getAllPlayers(): Promise<Player[]> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockPlayers;
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching all players:', error);
+      throw error;
+    }
+
+    return (data || []) as Player[];
   },
 
   async getInactivePlayers(teamId: string): Promise<Player[]> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return mockPlayers.filter(player => 
-      player.team_id === teamId && player.leaveDate
-    );
+    const { data, error } = await supabase
+      .from('players')
+      .select('*')
+      .eq('team_id', teamId)
+      .not('leave_date', 'is', null)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching inactive players:', error);
+      throw error;
+    }
+
+    return (data || []) as Player[];
   },
 
   async updatePlayer(playerId: string, updates: Partial<Player>): Promise<Player> {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log('Updating player:', playerId, updates);
     
-    const playerIndex = mockPlayers.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) {
-      throw new Error('Player not found');
-    }
-
     // Handle database field mappings
-    const dbUpdates: any = { ...updates };
-    if (updates.team_id) {
-      dbUpdates.team_id = updates.team_id;
-    }
-    if (updates.subscriptionStatus) {
-      dbUpdates.subscription_status = updates.subscriptionStatus;
-    }
-    if (updates.status) {
-      dbUpdates.status = updates.status;
-    }
-    if (updates.leaveDate) {
-      dbUpdates.leave_date = updates.leaveDate;
-    }
-    if (updates.objectives) {
-      dbUpdates.objectives = updates.objectives;
-    }
-    if (updates.comments) {
-      dbUpdates.comments = updates.comments;
+    const dbUpdates: any = {};
+    
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.dateOfBirth !== undefined) dbUpdates.date_of_birth = updates.dateOfBirth;
+    if (updates.squadNumber !== undefined) dbUpdates.squad_number = updates.squadNumber;
+    if (updates.position !== undefined) dbUpdates.position = updates.position;
+    if (updates.type !== undefined) dbUpdates.type = updates.type;
+    if (updates.team_id !== undefined) dbUpdates.team_id = updates.team_id;
+    if (updates.availability !== undefined) dbUpdates.availability = updates.availability;
+    if (updates.subscriptionType !== undefined) dbUpdates.subscription_type = updates.subscriptionType;
+    if (updates.leaveDate !== undefined) dbUpdates.leave_date = updates.leaveDate;
+    if (updates.kit_sizes !== undefined) dbUpdates.kit_sizes = updates.kit_sizes;
+    if (updates.attributes !== undefined) dbUpdates.attributes = updates.attributes;
+    if (updates.objectives !== undefined) dbUpdates.objectives = updates.objectives;
+    if (updates.comments !== undefined) dbUpdates.comments = updates.comments;
+    if (updates.photoUrl !== undefined) dbUpdates.photo_url = updates.photoUrl;
+
+    const { data, error } = await supabase
+      .from('players')
+      .update(dbUpdates)
+      .eq('id', playerId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating player:', error);
+      throw error;
     }
 
-    mockPlayers[playerIndex] = {
-      ...mockPlayers[playerIndex],
-      ...updates,
-      updated_at: new Date().toISOString()
-    };
-
-    return mockPlayers[playerIndex];
+    return data as Player;
   },
 
   async deletePlayer(playerId: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 300));
+    console.log('Deleting player:', playerId);
     
-    const playerIndex = mockPlayers.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) {
-      throw new Error('Player not found');
-    }
+    const { error } = await supabase
+      .from('players')
+      .delete()
+      .eq('id', playerId);
 
-    mockPlayers.splice(playerIndex, 1);
+    if (error) {
+      console.error('Error deleting player:', error);
+      throw error;
+    }
   },
 
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return [
-      {
-        id: `parent-${playerId}`,
-        name: 'Parent Name',
-        email: 'parent@example.com',
-        phone: '123-456-7890',
-        playerId,
-        linkCode: 'ABC123',
-        subscriptionType: 'full_squad',
-        subscriptionStatus: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ];
+    const { data, error } = await supabase
+      .from('user_players')
+      .select(`
+        *,
+        profiles (*)
+      `)
+      .eq('player_id', playerId)
+      .eq('relationship', 'parent');
+
+    if (error) {
+      console.error('Error fetching parents:', error);
+      throw error;
+    }
+
+    return (data || []).map(item => ({
+      id: item.profiles.id,
+      name: item.profiles.name,
+      email: item.profiles.email,
+      phone: item.profiles.phone,
+      playerId: playerId,
+      linkCode: '',
+      subscriptionType: 'full_squad',
+      subscriptionStatus: 'active',
+      createdAt: item.created_at,
+      updatedAt: item.updated_at
+    })) as Parent[];
   },
 
   async createParent(parentData: Partial<Parent>): Promise<Parent> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
+    // This would typically involve creating a user invitation
     const newParent: Parent = {
       id: `parent-${Date.now()}`,
       name: parentData.name || '',
@@ -288,8 +195,6 @@ export const playersService = {
   },
 
   async updateParent(parentId: string, updates: Partial<Parent>): Promise<Parent> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
     // Mock update - in real implementation, this would update the database
     return {
       id: parentId,
@@ -306,57 +211,42 @@ export const playersService = {
   },
 
   async deleteParent(parentId: string): Promise<void> {
-    await new Promise(resolve => setTimeout(resolve, 300));
     // Mock deletion
   },
 
   async regenerateParentLinkCode(parentId: string): Promise<string> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
     const newLinkCode = `LINK-${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
     return newLinkCode;
   },
 
   async getTransferHistory(playerId: string): Promise<PlayerTransfer[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return [
-      {
-        id: `transfer-${playerId}`,
-        playerId,
-        fromTeamId: 'old-team',
-        toTeamId: 'new-team',
-        transferDate: '2024-01-15',
-        status: 'accepted',
-        dataTransferOptions: {
-          full: true,
-          attributes: true,
-          comments: true,
-          objectives: true,
-          events: true
-        },
-        requestedBy: 'manager-id',
-        acceptedBy: 'admin-id',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    ];
+    const { data, error } = await supabase
+      .from('player_transfers')
+      .select('*')
+      .eq('player_id', playerId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching transfer history:', error);
+      return [];
+    }
+
+    return (data || []) as PlayerTransfer[];
   },
 
   async getAttributeHistory(playerId: string, attributeName: string): Promise<AttributeHistory[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    return [
-      {
-        id: `attr-history-${playerId}`,
-        playerId,
-        attributeName,
-        attributeGroup: 'technical',
-        value: 7,
-        recordedDate: '2024-01-15',
-        recordedBy: 'coach-id',
-        createdAt: new Date().toISOString()
-      }
-    ];
+    const { data, error } = await supabase
+      .from('player_attribute_history')
+      .select('*')
+      .eq('player_id', playerId)
+      .eq('attribute_name', attributeName)
+      .order('recorded_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching attribute history:', error);
+      return [];
+    }
+
+    return (data || []) as AttributeHistory[];
   }
 };

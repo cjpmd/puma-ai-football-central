@@ -23,17 +23,14 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting send-invitation-email function");
     
-    // Check for the Resend API key with the correct environment variable name
-    const resendApiKey = Deno.env.get("puma_ai_api_key_Resend") || 
-                        Deno.env.get("RESEND_API_KEY") || 
-                        Deno.env.get("Onboarding") ||
-                        Deno.env.get("Supabase_Integration");
+    // Get the Resend API key from environment variables
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     
     console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
     
     if (!resendApiKey) {
-      console.error("No Resend API key found in environment variables");
-      throw new Error("Resend API key not configured. Please check Supabase secrets.");
+      console.error("RESEND_API_KEY not found in environment variables");
+      throw new Error("RESEND_API_KEY not configured. Please add your Resend API key to Supabase secrets.");
     }
 
     console.log("Resend API key found, initializing Resend client");
@@ -42,7 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, name, invitationCode, role }: InvitationEmailRequest = await req.json();
     console.log(`Sending invitation to ${email} for role ${role}`);
 
-    // Fix the URL construction to prevent double slashes
+    // Get the app URL from environment variables
     const appUrl = Deno.env.get("APP_URL") || "https://puma-ai.co.uk";
     const cleanAppUrl = appUrl.replace(/\/+$/, ''); // Remove trailing slashes
     const invitationUrl = `${cleanAppUrl}/auth?invitation=${invitationCode}`;
@@ -50,7 +47,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Constructed invitation URL:", invitationUrl);
 
     const emailResponse = await resend.emails.send({
-      from: "Puma AI <team@puma-ai.co.uk>",
+      from: "Puma AI <noreply@puma-ai.co.uk>",
       to: [email],
       subject: `You've been invited to join Puma AI as ${role}`,
       html: `
