@@ -23,7 +23,7 @@ import { toast } from "@/components/ui/use-toast"
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { PlayerCard } from './PlayerCard';
-import { Edit, Plus, Trash2 } from 'lucide-react';
+import { Edit, Plus, Trash2, ArrowUpDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlayerParentModal } from './PlayerParentModal';
 import { PlayerAttributesModal } from './PlayerAttributesModal';
@@ -47,6 +47,9 @@ interface PlayerForm {
   availability: 'green' | 'amber' | 'red';
 }
 
+type SortField = 'name' | 'squadNumber' | 'subscriptionType';
+type SortOrder = 'asc' | 'desc';
+
 export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [open, setOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -61,6 +64,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     availability: 'green',
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [isLoading, setIsLoading] = useState(false);
   const [isParentModalOpen, setIsParentModalOpen] = useState(false);
   const [playerForParents, setPlayerForParents] = useState<Player | null>(null);
@@ -325,14 +330,57 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     }
   };
 
-  // Fix the filtering logic and add safety checks
-  const filteredPlayers = (players || [])
-    .filter(player => player && player.leaveDate === null)
-    .filter(player => player.name && player.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
-  const inactivePlayers = (players || [])
-    .filter(player => player && player.leaveDate !== null)
-    .filter(player => player.name && player.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  const sortPlayers = (playerList: Player[]) => {
+    return [...playerList].sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortField) {
+        case 'name':
+          aValue = a.name.toLowerCase();
+          bValue = b.name.toLowerCase();
+          break;
+        case 'squadNumber':
+          aValue = a.squadNumber || 0;
+          bValue = b.squadNumber || 0;
+          break;
+        case 'subscriptionType':
+          aValue = a.subscriptionType || '';
+          bValue = b.subscriptionType || '';
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  };
+
+  // Fix the filtering logic and add safety checks
+  const filteredPlayers = sortPlayers(
+    (players || [])
+      .filter(player => player && player.leaveDate === null)
+      .filter(player => player.name && player.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
+  const inactivePlayers = sortPlayers(
+    (players || [])
+      .filter(player => player && player.leaveDate !== null)
+      .filter(player => player.name && player.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   console.log('Filtered players:', filteredPlayers);
   console.log('Inactive players:', inactivePlayers);
@@ -341,11 +389,54 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     try {
       setIsLoading(true);
       
-      // Create a blob URL for immediate display
-      const photoUrl = URL.createObjectURL(file);
+      // Validate file type and size
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: "Invalid File Type",
+          description: "Please select an image file.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File Too Large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Create a unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${player.id}-${Date.now()}.${fileExt}`;
       
-      // Update the player in the database
-      await playersService.updatePlayer(player.id, { photoUrl });
+      // Upload to Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('player-photos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        toast({
+          title: "Upload Failed",
+          description: "Failed to upload photo. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('player-photos')
+        .getPublicUrl(fileName);
+      
+      // Update the player record with the photo URL
+      await playersService.updatePlayer(player.id, { photoUrl: publicUrl });
       
       // Refresh players list
       await refetch();
@@ -510,13 +601,45 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         </TabsList>
         
         <TabsContent value="active" className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <Input
               type="search"
               placeholder="Search players..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
             />
+            
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Sort by:</Label>
+              <Button
+                variant={sortField === 'name' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('name')}
+                className="flex items-center gap-1"
+              >
+                Name
+                <ArrowUpDown className="h-3 w-3" />
+              </Button>
+              <Button
+                variant={sortField === 'squadNumber' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('squadNumber')}
+                className="flex items-center gap-1"
+              >
+                Squad #
+                <ArrowUpDown className="h-3 w-3" />
+              </Button>
+              <Button
+                variant={sortField === 'subscriptionType' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => handleSort('subscriptionType')}
+                className="flex items-center gap-1"
+              >
+                Subscription
+                <ArrowUpDown className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
           
           {filteredPlayers.length === 0 ? (
@@ -684,3 +807,5 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 };
 
 export default PlayerManagement;
+
+}

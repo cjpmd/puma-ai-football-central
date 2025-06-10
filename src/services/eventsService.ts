@@ -78,11 +78,30 @@ export const eventsService = {
     const { id, ...updateData } = eventData;
     console.log('Updating event with data:', updateData);
     
-    // Ensure kit_selection is properly included in the update
+    // Ensure all fields are properly included in the update
     const cleanUpdateData = {
-      ...updateData,
+      team_id: updateData.team_id,
+      title: updateData.title,
+      description: updateData.description,
+      date: updateData.date,
+      start_time: updateData.start_time,
+      end_time: updateData.end_time,
+      location: updateData.location,
+      notes: updateData.notes,
+      event_type: updateData.event_type,
+      opponent: updateData.opponent,
+      is_home: updateData.is_home,
+      scores: updateData.scores,
+      player_of_match_id: updateData.player_of_match_id,
+      game_format: updateData.game_format,
+      kit_selection: updateData.kit_selection, // Explicitly include kit_selection
+      coach_notes: updateData.coach_notes,
+      staff_notes: updateData.staff_notes,
+      training_notes: updateData.training_notes,
       updated_at: new Date().toISOString()
     };
+    
+    console.log('Clean update data with kit_selection:', cleanUpdateData);
     
     const { data, error } = await supabase
       .from('events')
@@ -95,7 +114,7 @@ export const eventsService = {
       console.error('Error updating event:', error);
       throw error;
     }
-    console.log('Event updated successfully:', data);
+    console.log('Event updated successfully with kit_selection:', data);
     return data as DatabaseEvent;
   },
 
