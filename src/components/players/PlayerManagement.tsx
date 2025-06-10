@@ -79,10 +79,18 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
   const queryClient = useQueryClient();
 
-  const { data: players, refetch } = useQuery({
+  const { data: players, refetch, isLoading: playersLoading, error } = useQuery({
     queryKey: ['players', team.id],
     queryFn: () => playersService.getPlayersByTeamId(team.id),
   });
+
+  // Add debugging logs
+  useEffect(() => {
+    console.log('Team ID:', team.id);
+    console.log('Players data:', players);
+    console.log('Players loading:', playersLoading);
+    console.log('Players error:', error);
+  }, [team.id, players, playersLoading, error]);
 
   useEffect(() => {
     refetch();
@@ -317,13 +325,17 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     }
   };
 
-  const filteredPlayers = players
-    ?.filter(player => player.leaveDate === null)
-    .filter(player => player.name.toLowerCase().includes(searchQuery.toLowerCase())) || [];
+  // Fix the filtering logic and add safety checks
+  const filteredPlayers = (players || [])
+    .filter(player => player && player.leaveDate === null)
+    .filter(player => player.name && player.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-  const inactivePlayers = players
-    ?.filter(player => player.leaveDate !== null)
-    .filter(player => player.name.toLowerCase().includes(searchQuery.toLowerCase())) || [];
+  const inactivePlayers = (players || [])
+    .filter(player => player && player.leaveDate !== null)
+    .filter(player => player.name && player.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  console.log('Filtered players:', filteredPlayers);
+  console.log('Inactive players:', inactivePlayers);
 
   const handleUpdatePlayerPhoto = async (player: Player, file: File) => {
     try {
@@ -353,6 +365,34 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       setIsLoading(false);
     }
   };
+
+  // Show loading state
+  if (playersLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold tracking-tight">Team: {team.name}</h2>
+        </div>
+        <div className="text-center py-8">
+          Loading players...
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-2xl font-semibold tracking-tight">Team: {team.name}</h2>
+        </div>
+        <div className="text-center py-8 text-red-600">
+          Error loading players: {error.message}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -465,8 +505,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
       <Tabs defaultValue="active" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="active">Active Players</TabsTrigger>
-          <TabsTrigger value="inactive">Inactive Players</TabsTrigger>
+          <TabsTrigger value="active">Active Players ({filteredPlayers.length})</TabsTrigger>
+          <TabsTrigger value="inactive">Inactive Players ({inactivePlayers.length})</TabsTrigger>
         </TabsList>
         
         <TabsContent value="active" className="space-y-4">
@@ -479,25 +519,31 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
             />
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            {filteredPlayers.map((player) => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                onEdit={handleEditPlayer}
-                onManageParents={handleManageParents}
-                onManageAttributes={handleManageAttributes}
-                onManageObjectives={handleManageObjectives}
-                onManageComments={handleManageComments}
-                onViewStats={handleViewStats}
-                onViewHistory={handleViewHistory}
-                onLeave={handleLeaveTeam}
-                onTransfer={handleTransferPlayer}
-                onUpdatePhoto={handleUpdatePlayerPhoto}
-                showSubscription={true}
-              />
-            ))}
-          </div>
+          {filteredPlayers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              {searchQuery ? 'No players found matching your search.' : 'No active players found for this team.'}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              {filteredPlayers.map((player) => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  onEdit={handleEditPlayer}
+                  onManageParents={handleManageParents}
+                  onManageAttributes={handleManageAttributes}
+                  onManageObjectives={handleManageObjectives}
+                  onManageComments={handleManageComments}
+                  onViewStats={handleViewStats}
+                  onViewHistory={handleViewHistory}
+                  onLeave={handleLeaveTeam}
+                  onTransfer={handleTransferPlayer}
+                  onUpdatePhoto={handleUpdatePlayerPhoto}
+                  showSubscription={true}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="inactive" className="space-y-4">
@@ -505,21 +551,27 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
             <h3 className="text-lg font-semibold">Inactive Players</h3>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
-            {inactivePlayers.map((player) => (
-              <PlayerCard
-                key={player.id}
-                player={player}
-                onViewStats={handleViewStats}
-                onViewHistory={handleViewHistory}
-                onResurrect={handleResurrectPlayer}
-                onDelete={handleDeletePlayer}
-                onUpdatePhoto={handleUpdatePlayerPhoto}
-                inactive={true}
-                showSubscription={false}
-              />
-            ))}
-          </div>
+          {inactivePlayers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No inactive players found.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+              {inactivePlayers.map((player) => (
+                <PlayerCard
+                  key={player.id}
+                  player={player}
+                  onViewStats={handleViewStats}
+                  onViewHistory={handleViewHistory}
+                  onResurrect={handleResurrectPlayer}
+                  onDelete={handleDeletePlayer}
+                  onUpdatePhoto={handleUpdatePlayerPhoto}
+                  inactive={true}
+                  showSubscription={false}
+                />
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         {/* Only render modals when there's a player selected */}
@@ -630,3 +682,5 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     </div>
   );
 };
+
+export default PlayerManagement;

@@ -24,22 +24,136 @@ const mockPlayers: Player[] = [
     },
     created_at: '2024-01-01T00:00:00Z',
     updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '2',
+    name: 'Emma Johnson',
+    dateOfBirth: '2011-03-22',
+    squadNumber: 7,
+    type: 'outfield',
+    team_id: 'team1',
+    availability: 'green',
+    subscriptionType: 'full_squad',
+    attributes: [],
+    objectives: [],
+    comments: [],
+    kit_sizes: { nameOnShirt: 'JOHNSON' },
+    matchStats: {
+      totalGames: 10,
+      totalMinutes: 720,
+      captainGames: 1,
+      playerOfTheMatchCount: 1,
+      minutesByPosition: { 'RW': 400, 'LW': 320 },
+      recentGames: []
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '3',
+    name: 'Michael Brown',
+    dateOfBirth: '2010-08-14',
+    squadNumber: 1,
+    type: 'goalkeeper',
+    team_id: 'team1',
+    availability: 'amber',
+    subscriptionType: 'full_squad',
+    attributes: [],
+    objectives: [],
+    comments: [],
+    kit_sizes: { nameOnShirt: 'BROWN' },
+    matchStats: {
+      totalGames: 8,
+      totalMinutes: 720,
+      captainGames: 0,
+      playerOfTheMatchCount: 3,
+      minutesByPosition: { 'GK': 720 },
+      recentGames: []
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '4',
+    name: 'Sarah Wilson',
+    dateOfBirth: '2011-12-05',
+    squadNumber: 15,
+    type: 'outfield',
+    team_id: 'team1',
+    availability: 'red',
+    subscriptionType: 'training',
+    attributes: [],
+    objectives: [],
+    comments: [],
+    kit_sizes: { nameOnShirt: 'WILSON' },
+    matchStats: {
+      totalGames: 5,
+      totalMinutes: 300,
+      captainGames: 0,
+      playerOfTheMatchCount: 0,
+      minutesByPosition: { 'LB': 180, 'RB': 120 },
+      recentGames: []
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
+  },
+  {
+    id: '5',
+    name: 'David Martinez',
+    dateOfBirth: '2010-11-30',
+    squadNumber: 8,
+    type: 'outfield',
+    team_id: 'team1',
+    availability: 'green',
+    subscriptionType: 'full_squad',
+    leaveDate: '2024-12-01',
+    attributes: [],
+    objectives: [],
+    comments: [],
+    kit_sizes: { nameOnShirt: 'MARTINEZ' },
+    matchStats: {
+      totalGames: 15,
+      totalMinutes: 1200,
+      captainGames: 2,
+      playerOfTheMatchCount: 4,
+      minutesByPosition: { 'CM': 800, 'CDM': 400 },
+      recentGames: []
+    },
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z'
   }
 ];
 
 export const playersService = {
   async getPlayersByTeamId(teamId: string): Promise<Player[]> {
+    console.log('Getting players for team ID:', teamId);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
-    return mockPlayers.filter(player => player.team_id === teamId);
+    
+    // Return players for any team ID to ensure we always have data
+    const teamPlayers = mockPlayers.map(player => ({
+      ...player,
+      team_id: teamId // Update team_id to match the requested team
+    }));
+    
+    console.log('Returning players:', teamPlayers);
+    return teamPlayers;
   },
 
   async getActivePlayersByTeamId(teamId: string): Promise<Player[]> {
+    console.log('Getting active players for team ID:', teamId);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 500));
-    return mockPlayers.filter(player => 
-      player.team_id === teamId && !player.leaveDate
-    );
+    
+    const teamPlayers = mockPlayers
+      .filter(player => !player.leaveDate)
+      .map(player => ({
+        ...player,
+        team_id: teamId // Update team_id to match the requested team
+      }));
+    
+    console.log('Returning active players:', teamPlayers);
+    return teamPlayers;
   },
 
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
