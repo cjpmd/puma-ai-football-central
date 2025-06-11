@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -143,10 +142,10 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     });
   };
 
-  const handleSavePlayStyle = (player: Player, playStyle: string) => {
+  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { playStyle }
+      data: { playStyle: playStyles }
     });
   };
 

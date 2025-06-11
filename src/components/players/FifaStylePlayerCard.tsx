@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -230,7 +231,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const hasAlerts = missingInfoAlerts.length > 0;
   const isCaptain = player.matchStats?.captainGames > 0;
   const captainCount = player.matchStats?.captainGames || 0;
-  const potmCount = player.matchStats?.potmGames || 0;
+  const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
   const displayName = player.kit_sizes?.nameOnShirt || player.name || 'No Name';
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
