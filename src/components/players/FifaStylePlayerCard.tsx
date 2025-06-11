@@ -52,10 +52,47 @@ const cardDesigns = {
   }
 };
 
-const playStyles = [
-  "Aerial", "Rapid", "Technical", "Trickster", "Finesse Shot", 
-  "Power Shot", "Intercept", "Pace Merchant", "Playmaker", 
-  "Target Man", "Poacher", "Defensive", "Box-to-Box"
+const playStylesWithIcons = [
+  { value: "Aerial", label: "Aerial", icon: "⚡" },
+  { value: "Rapid", label: "Rapid", icon: "🏃" },
+  { value: "Technical", label: "Technical", icon: "🎯" },
+  { value: "Trickster", label: "Trickster", icon: "✨" },
+  { value: "Finesse Shot", label: "Finesse Shot", icon: "🎨" },
+  { value: "Power Shot", label: "Power Shot", icon: "💥" },
+  { value: "Intercept", label: "Intercept", icon: "🛡️" },
+  { value: "Pace Merchant", label: "Pace Merchant", icon: "⚡" },
+  { value: "Playmaker", label: "Playmaker", icon: "🎪" },
+  { value: "Target Man", label: "Target Man", icon: "🎯" },
+  { value: "Poacher", label: "Poacher", icon: "🦅" },
+  { value: "Defensive", label: "Defensive", icon: "🛡️" },
+  { value: "Box-to-Box", label: "Box-to-Box", icon: "🔄" },
+  { value: "Press Proven", label: "Press Proven", icon: "💪" },
+  { value: "First Touch", label: "First Touch", icon: "👟" },
+  { value: "Flair", label: "Flair", icon: "🌟" },
+  { value: "Block", label: "Block", icon: "🚫" },
+  { value: "Bruiser", label: "Bruiser", icon: "💀" },
+  { value: "Jockey", label: "Jockey", icon: "🏇" },
+  { value: "Slide Tackle", label: "Slide Tackle", icon: "⚔️" },
+  { value: "Anticipate", label: "Anticipate", icon: "👁️" },
+  { value: "Acrobatic", label: "Acrobatic", icon: "🤸" },
+  { value: "Trivela", label: "Trivela", icon: "🌀" },
+  { value: "Relentless", label: "Relentless", icon: "🔥" },
+  { value: "Quick Step", label: "Quick Step", icon: "👟" },
+  { value: "Long Throw", label: "Long Throw", icon: "🏹" },
+  { value: "Far Throw", label: "Far Throw", icon: "🎯" },
+  { value: "Footwork", label: "Footwork", icon: "👣" },
+  { value: "Cross Claimer", label: "Cross Claimer", icon: "🙌" },
+  { value: "Rush Out", label: "Rush Out", icon: "🏃" },
+  { value: "Far Reach", label: "Far Reach", icon: "🤲" },
+  { value: "Dead Ball", label: "Dead Ball", icon: "⚽" },
+  { value: "Chip Shot", label: "Chip Shot", icon: "🎾" },
+  { value: "Power Header", label: "Power Header", icon: "💥" },
+  { value: "Low Driven Shot", label: "Low Driven Shot", icon: "⬇️" },
+  { value: "Pinged Pass", label: "Pinged Pass", icon: "📍" },
+  { value: "Incisive Pass", label: "Incisive Pass", icon: "🗡️" },
+  { value: "Long Ball Pass", label: "Long Ball Pass", icon: "🏈" },
+  { value: "Tiki Taka", label: "Tiki Taka", icon: "🔄" },
+  { value: "Whipped Pass", label: "Whipped Pass", icon: "🌪️" }
 ];
 
 export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
@@ -123,7 +160,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
   const updateStat = (key: string, value: string) => {
     const numValue = Math.min(99, Math.max(0, parseInt(value) || 0));
-    setFunStats(prev => ({ ...prev, [key]: numValue }));
+    const updatedStats = { ...funStats, [key]: numValue };
+    setFunStats(updatedStats);
+    
+    // Save immediately when value changes
+    if (onSaveFunStats) {
+      onSaveFunStats(player, updatedStats);
+    }
   };
 
   const isGoalkeeper = player.type === 'goalkeeper';
@@ -166,12 +209,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
   };
 
-  const handleSaveStats = () => {
-    if (onSaveFunStats) {
-      onSaveFunStats(player, funStats);
-    }
-  };
-
   const handleSavePlayStyle = (style: string) => {
     setPlayStyle(style);
     if (onSavePlayStyle) {
@@ -197,6 +234,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
   };
 
+  const getPlayStyleIcon = (styleValue: string) => {
+    const style = playStylesWithIcons.find(s => s.value === styleValue);
+    return style ? style.icon : "";
+  };
+
   return (
     <div className="w-[280px] h-[420px] perspective-1000 mx-auto">
       <div
@@ -205,7 +247,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         }`}
       >
         {/* Front of Card */}
-        <div className={`absolute w-full h-full backface-hidden rounded-2xl bg-gradient-to-br ${currentDesign.bgGradient} ${currentDesign.border} border-2 ${currentDesign.shadow} shadow-xl`}>
+        <div className={`absolute w-full h-full backface-hidden rounded-2xl bg-gradient-to-br ${currentDesign.bgGradient} ${currentDesign.border} border-2 ${currentDesign.shadow} shadow-xl overflow-hidden`}>
+          {/* Card Background Pattern */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/30 via-transparent to-black/20"></div>
+            <div className="absolute top-4 right-4 w-16 h-16 border border-white/30 rounded-full"></div>
+            <div className="absolute bottom-4 left-4 w-12 h-12 border border-white/30 rounded-full"></div>
+          </div>
+
           {/* Settings Button */}
           <Button
             variant="ghost"
@@ -237,7 +286,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          <div className={`p-4 h-full flex flex-col ${currentDesign.textColor}`}>
+          <div className={`p-4 h-full flex flex-col ${currentDesign.textColor} relative z-10`}>
             {/* Header */}
             <div className="text-center mb-2">
               <h3 className="text-lg font-bold truncate">{displayName}</h3>
@@ -288,10 +337,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               )}
             </div>
 
-            {/* FIFA Stats */}
-            <div className="grid grid-cols-3 gap-1 mb-3 flex-1">
+            {/* FIFA Stats - Single Row Layout */}
+            <div className="flex justify-between items-center mb-3 px-2">
               {funStatLabels.map(stat => (
-                <div key={stat.key} className="text-center">
+                <div key={stat.key} className="text-center flex-1">
                   <div className="text-xs font-semibold mb-1">{stat.key}</div>
                   <Input
                     type="number"
@@ -299,7 +348,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     max={99}
                     value={funStats[stat.key] || ''}
                     onChange={(e) => updateStat(stat.key, e.target.value)}
-                    onBlur={handleSaveStats}
                     className="w-full text-center text-xs h-7 bg-white/80 border-0 text-black font-bold"
                     placeholder="--"
                   />
@@ -307,16 +355,26 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ))}
             </div>
 
-            {/* Play Style */}
+            {/* Play Style with Icon */}
             <div className="mb-2">
               <Select value={playStyle} onValueChange={handleSavePlayStyle}>
-                <SelectTrigger className="w-full h-7 text-xs bg-white/80 border-0 text-black">
-                  <SelectValue placeholder="Play Style" />
+                <SelectTrigger className="w-full h-8 text-xs bg-white/80 border-0 text-black">
+                  <SelectValue placeholder="Play Style">
+                    {playStyle && (
+                      <div className="flex items-center gap-1">
+                        <span>{getPlayStyleIcon(playStyle)}</span>
+                        <span>{playStyle}</span>
+                      </div>
+                    )}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
-                  {playStyles.map(style => (
-                    <SelectItem key={style} value={style} className="text-xs">
-                      {style}
+                  {playStylesWithIcons.map(style => (
+                    <SelectItem key={style.value} value={style.value} className="text-xs">
+                      <div className="flex items-center gap-2">
+                        <span>{style.icon}</span>
+                        <span>{style.label}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
