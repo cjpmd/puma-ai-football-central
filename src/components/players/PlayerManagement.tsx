@@ -145,7 +145,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { playStyle: playStyles }
+      data: { playStyle: JSON.stringify(playStyles) }
     });
   };
 
