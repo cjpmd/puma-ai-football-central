@@ -45,7 +45,7 @@ const cardDesigns = {
   },
   special: {
     name: "Special",
-    bgGradient: "from-purple-500 via-pink-500 to-red-500",
+    bgImage: "url('/lovable-uploads/e312db4c-9834-4d19-8b74-abf4e871c7c1.png')",
     border: "border-purple-400",
     textColor: "text-white",
     shadow: "shadow-purple-500/50",
@@ -108,11 +108,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onSaveCardDesign
 }) => {
   const [flipped, setFlipped] = useState(false);
-  const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldRare");
+  const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "special");
   const [funStats, setFunStats] = useState(player.funStats || {});
   const [playStyle, setPlayStyle] = useState(player.playStyle || "");
 
-  const currentDesign = cardDesigns[selectedDesign as keyof typeof cardDesigns] || cardDesigns.goldRare;
+  const currentDesign = cardDesigns[selectedDesign as keyof typeof cardDesigns] || cardDesigns.special;
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string) => {
@@ -239,35 +239,41 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     return style ? style.icon : "";
   };
 
+  const cardStyle = currentDesign.bgImage 
+    ? { 
+        backgroundImage: currentDesign.bgImage,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      }
+    : {};
+
   return (
-    <div className="w-[280px] h-[420px] perspective-1000 mx-auto">
+    <div className="w-[300px] h-[450px] perspective-1000 mx-auto">
       <div
         className={`relative w-full h-full transform-style-preserve-3d transition-transform duration-700 ${
           flipped ? 'rotate-y-180' : ''
         }`}
       >
         {/* Front of Card */}
-        <div className={`absolute w-full h-full backface-hidden rounded-2xl bg-gradient-to-br ${currentDesign.bgGradient} ${currentDesign.border} border-2 ${currentDesign.shadow} shadow-xl overflow-hidden`}>
-          {/* Card Background Pattern */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/30 via-transparent to-black/20"></div>
-            <div className="absolute top-4 right-4 w-16 h-16 border border-white/30 rounded-full"></div>
-            <div className="absolute bottom-4 left-4 w-12 h-12 border border-white/30 rounded-full"></div>
-          </div>
-
+        <div 
+          className={`absolute w-full h-full backface-hidden rounded-2xl ${
+            currentDesign.bgImage ? '' : `bg-gradient-to-br ${currentDesign.bgGradient}`
+          } ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`}
+          style={cardStyle}
+        >
           {/* Settings Button */}
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setFlipped(true)}
-            className="absolute top-2 right-2 w-8 h-8 p-0 bg-black/20 hover:bg-black/30 rounded-full z-10"
+            className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
           >
             <Settings className="h-4 w-4 text-white" />
           </Button>
 
           {/* Alerts */}
           {hasAlerts && (
-            <div className="absolute top-2 left-2 flex gap-1 z-10">
+            <div className="absolute top-3 left-3 flex gap-1 z-20">
               {missingInfoAlerts.slice(0, 2).map((alert, index) => {
                 const IconComponent = alert.icon;
                 return (
@@ -281,33 +287,58 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
           {/* Captain Badge */}
           {isCaptain && (
-            <div className="absolute top-2 left-1/2 transform -translate-x-1/2 z-10">
-              <Crown className="h-5 w-5 text-yellow-300" />
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20">
+              <Crown className="h-6 w-6 text-yellow-300 drop-shadow-lg" />
             </div>
           )}
 
           <div className={`p-4 h-full flex flex-col ${currentDesign.textColor} relative z-10`}>
+            {/* Position Badges (Left Side) */}
+            <div className="absolute left-2 top-16 space-y-2">
+              {topPositions.slice(0, 3).map((pos, idx) => (
+                <div key={pos.position} className="bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
+                  {pos.position}
+                  <div className="text-[10px] opacity-90">++</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Position Icons (Left Side Below Badges) */}
+            <div className="absolute left-2 top-48 space-y-2">
+              <div className="bg-pink-500 text-white p-2 rounded-md shadow-lg">
+                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                  <div className="text-xs">⚽</div>
+                </div>
+              </div>
+              <div className="bg-pink-500 text-white p-2 rounded-md shadow-lg">
+                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
+                  <div className="text-xs">👟</div>
+                </div>
+              </div>
+            </div>
+
             {/* Header */}
-            <div className="text-center mb-2">
-              <h3 className="text-lg font-bold truncate">{displayName}</h3>
-              <div className="flex items-center justify-center gap-2 text-sm">
-                <span className="text-2xl font-bold">#{player.squadNumber || 'XX'}</span>
-                <Badge variant="secondary" className="text-xs">
-                  {getSubscriptionLabel(player.subscriptionType || 'full_squad')}
-                </Badge>
+            <div className="text-center mb-3 pt-8">
+              <div className="text-xs font-bold mb-1 bg-black/20 backdrop-blur-sm px-2 py-1 rounded">
+                LM ++
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm p-1 rounded-full w-8 h-8 mx-auto mb-2 flex items-center justify-center">
+                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
+                  <span className="text-orange-500 text-xs font-bold">○</span>
+                </div>
               </div>
             </div>
 
             {/* Player Photo */}
-            <div className="relative mx-auto mb-3">
-              <Avatar className="h-20 w-20 border-2 border-white/50">
+            <div className="relative mx-auto mb-4">
+              <Avatar className="h-24 w-24 border-3 border-white/70 shadow-lg">
                 <AvatarImage src={player.photoUrl} alt={displayName} />
-                <AvatarFallback className="text-sm bg-white/20">
+                <AvatarFallback className="text-lg bg-white/30 text-white font-bold">
                   {player.name ? getInitials(player.name) : 'PL'}
                 </AvatarFallback>
               </Avatar>
               {onUpdatePhoto && (
-                <label className="absolute -bottom-1 -right-1 bg-white/80 text-gray-800 rounded-full p-1 cursor-pointer hover:bg-white transition-colors">
+                <label className="absolute -bottom-1 -right-1 bg-white/90 text-gray-800 rounded-full p-1 cursor-pointer hover:bg-white transition-colors shadow-lg">
                   <Camera className="h-3 w-3" />
                   <input
                     type="file"
@@ -319,47 +350,71 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               )}
             </div>
 
-            {/* Player Info */}
-            <div className="text-center text-xs mb-3 space-y-1">
-              <div>{isGoalkeeper ? 'Goalkeeper' : 'Outfield'} • Age {age}</div>
-              <div className="flex justify-center gap-3">
-                <span>Games: {player.matchStats?.totalGames || 0}</span>
-                <span>Mins: {player.matchStats?.totalMinutes || 0}</span>
-              </div>
-              {topPositions.length > 0 && (
-                <div className="text-xs">
-                  {topPositions.map((pos, idx) => (
-                    <span key={pos.position} className="mr-2">
-                      {pos.position}: {pos.minutes}m
-                    </span>
-                  ))}
-                </div>
-              )}
+            {/* Player Name */}
+            <div className="text-center mb-4">
+              <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
+                {displayName}
+              </h1>
             </div>
 
-            {/* FIFA Stats - Single Row Layout */}
-            <div className="flex justify-between items-center mb-3 px-2">
+            {/* FIFA Stats */}
+            <div className="flex justify-between items-center mb-4 bg-black/20 backdrop-blur-sm rounded-lg p-3">
               {funStatLabels.map(stat => (
                 <div key={stat.key} className="text-center flex-1">
-                  <div className="text-xs font-semibold mb-1">{stat.key}</div>
+                  <div className="text-white text-xs font-bold mb-1">{stat.key}</div>
                   <Input
                     type="number"
                     min={0}
                     max={99}
                     value={funStats[stat.key] || ''}
                     onChange={(e) => updateStat(stat.key, e.target.value)}
-                    className="w-full text-center text-xs h-7 bg-white/80 border-0 text-black font-bold"
+                    className="w-12 text-center text-lg h-8 bg-white/90 border-0 text-black font-bold rounded"
                     placeholder="--"
                   />
                 </div>
               ))}
             </div>
 
-            {/* Play Style with Icon */}
-            <div className="mb-2">
+            {/* Play Style Badge */}
+            <div className="flex justify-center mb-4">
+              <div className="bg-pink-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
+                <span>{getPlayStyleIcon(playStyle)}</span>
+                <span>{playStyle || 'No Style'}</span>
+              </div>
+            </div>
+
+            {/* Bottom Info */}
+            <div className="mt-auto">
+              <div className="flex justify-between items-center text-white text-sm">
+                <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded">#{player.squadNumber || 'XX'}</span>
+                <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded">Age {age}</span>
+                <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded">{isGoalkeeper ? 'GK' : 'OUT'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Back of Card */}
+        <div className="absolute w-full h-full backface-hidden rotate-y-180 rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl">
+          <div className="p-4 h-full flex flex-col text-white">
+            {/* Back Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFlipped(false)}
+              className="absolute top-2 right-2 w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+
+            <h2 className="text-xl font-bold mb-6 text-center">Player Settings</h2>
+
+            {/* Play Style Selector */}
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-2 block">Play Style</label>
               <Select value={playStyle} onValueChange={handleSavePlayStyle}>
-                <SelectTrigger className="w-full h-8 text-xs bg-white/80 border-0 text-black">
-                  <SelectValue placeholder="Play Style">
+                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white">
+                  <SelectValue placeholder="Select play style">
                     {playStyle && (
                       <div className="flex items-center gap-1">
                         <span>{getPlayStyleIcon(playStyle)}</span>
@@ -380,34 +435,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Team Badge */}
-            {team?.logoUrl && (
-              <div className="flex justify-center mt-auto">
-                <img
-                  src={team.logoUrl}
-                  alt="Team Badge"
-                  className="w-8 h-8 object-contain opacity-80"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Back of Card */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180 rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl">
-          <div className="p-4 h-full flex flex-col text-white">
-            {/* Back Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFlipped(false)}
-              className="absolute top-2 right-2 w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-
-            <h2 className="text-xl font-bold mb-6 text-center">Player Settings</h2>
 
             {/* Settings Options */}
             <div className="space-y-3 mb-6">
