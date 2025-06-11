@@ -24,19 +24,22 @@ export const playersService = {
       teamId: player.team_id,
       squadNumber: player.squad_number,
       dateOfBirth: player.date_of_birth,
-      subscriptionType: player.subscription_type as any,
-      subscriptionStatus: player.subscription_status as any,
-      kitSizes: player.kit_sizes,
-      matchStats: player.match_stats,
+      subscriptionType: player.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: player.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kitSizes: player.kit_sizes as any,
+      matchStats: player.match_stats as any,
       leaveDate: player.leave_date,
       leaveComments: player.leave_comments,
       cardDesignId: player.card_design_id,
-      funStats: player.fun_stats,
+      funStats: player.fun_stats as Record<string, number>,
       playStyle: player.play_style,
       createdAt: player.created_at,
       updatedAt: player.updated_at,
       type: player.type as 'goalkeeper' | 'outfield',
-      availability: player.availability as 'green' | 'amber' | 'red'
+      availability: player.availability as 'green' | 'amber' | 'red',
+      attributes: (player.attributes as any) || [],
+      objectives: (player.objectives as any) || [],
+      comments: (player.comments as any) || []
     }));
 
     console.log('Players fetched successfully:', players);
@@ -56,7 +59,7 @@ export const playersService = {
       subscription_type: playerData.subscriptionType,
       subscription_status: playerData.subscriptionStatus,
       availability: playerData.availability,
-      kit_sizes: playerData.kitSizes || playerData.kit_sizes,
+      kit_sizes: playerData.kit_sizes || (playerData as any).kitSizes,
       attributes: playerData.attributes,
       objectives: playerData.objectives,
       comments: playerData.comments,
@@ -82,19 +85,22 @@ export const playersService = {
       teamId: data.team_id,
       squadNumber: data.squad_number,
       dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type as any,
-      subscriptionStatus: data.subscription_status as any,
-      kitSizes: data.kit_sizes,
-      matchStats: data.match_stats,
+      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kitSizes: data.kit_sizes as any,
+      matchStats: data.match_stats as any,
       leaveDate: data.leave_date,
       leaveComments: data.leave_comments,
       cardDesignId: data.card_design_id,
-      funStats: data.fun_stats,
+      funStats: data.fun_stats as Record<string, number>,
       playStyle: data.play_style,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       type: data.type as 'goalkeeper' | 'outfield',
-      availability: data.availability as 'green' | 'amber' | 'red'
+      availability: data.availability as 'green' | 'amber' | 'red',
+      attributes: (data.attributes as any) || [],
+      objectives: (data.objectives as any) || [],
+      comments: (data.comments as any) || []
     };
 
     console.log('Player created successfully:', player);
@@ -114,7 +120,9 @@ export const playersService = {
     if (playerData.subscriptionType !== undefined) dbData.subscription_type = playerData.subscriptionType;
     if (playerData.subscriptionStatus !== undefined) dbData.subscription_status = playerData.subscriptionStatus;
     if (playerData.availability !== undefined) dbData.availability = playerData.availability;
-    if (playerData.kitSizes !== undefined) dbData.kit_sizes = playerData.kitSizes;
+    if (playerData.kit_sizes !== undefined || (playerData as any).kitSizes !== undefined) {
+      dbData.kit_sizes = playerData.kit_sizes || (playerData as any).kitSizes;
+    }
     if (playerData.attributes !== undefined) dbData.attributes = playerData.attributes;
     if (playerData.objectives !== undefined) dbData.objectives = playerData.objectives;
     if (playerData.comments !== undefined) dbData.comments = playerData.comments;
@@ -140,19 +148,22 @@ export const playersService = {
       teamId: data.team_id,
       squadNumber: data.squad_number,
       dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type as any,
-      subscriptionStatus: data.subscription_status as any,
-      kitSizes: data.kit_sizes,
-      matchStats: data.match_stats,
+      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kitSizes: data.kit_sizes as any,
+      matchStats: data.match_stats as any,
       leaveDate: data.leave_date,
       leaveComments: data.leave_comments,
       cardDesignId: data.card_design_id,
-      funStats: data.fun_stats,
+      funStats: data.fun_stats as Record<string, number>,
       playStyle: data.play_style,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       type: data.type as 'goalkeeper' | 'outfield',
-      availability: data.availability as 'green' | 'amber' | 'red'
+      availability: data.availability as 'green' | 'amber' | 'red',
+      attributes: (data.attributes as any) || [],
+      objectives: (data.objectives as any) || [],
+      comments: (data.comments as any) || []
     };
 
     console.log('Player updated successfully:', player);
@@ -200,19 +211,22 @@ export const playersService = {
       teamId: data.team_id,
       squadNumber: data.squad_number,
       dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type as any,
-      subscriptionStatus: data.subscription_status as any,
-      kitSizes: data.kit_sizes,
-      matchStats: data.match_stats,
+      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kitSizes: data.kit_sizes as any,
+      matchStats: data.match_stats as any,
       leaveDate: data.leave_date,
       leaveComments: data.leave_comments,
       cardDesignId: data.card_design_id,
-      funStats: data.fun_stats,
+      funStats: data.fun_stats as Record<string, number>,
       playStyle: data.play_style,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       type: data.type as 'goalkeeper' | 'outfield',
-      availability: data.availability as 'green' | 'amber' | 'red'
+      availability: data.availability as 'green' | 'amber' | 'red',
+      attributes: (data.attributes as any) || [],
+      objectives: (data.objectives as any) || [],
+      comments: (data.comments as any) || []
     };
 
     console.log('Player fetched by ID:', player);
@@ -238,8 +252,8 @@ export const playersService = {
       ...parent,
       playerId: parent.player_id,
       linkCode: parent.link_code,
-      subscriptionType: parent.subscription_type as any,
-      subscriptionStatus: parent.subscription_status as any,
+      subscriptionType: parent.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: parent.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
       createdAt: parent.created_at,
       updatedAt: parent.updated_at
     }));
@@ -275,8 +289,8 @@ export const playersService = {
       ...data,
       playerId: data.player_id,
       linkCode: data.link_code,
-      subscriptionType: data.subscription_type as any,
-      subscriptionStatus: data.subscription_status as any,
+      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -311,8 +325,8 @@ export const playersService = {
       ...data,
       playerId: data.player_id,
       linkCode: data.link_code,
-      subscriptionType: data.subscription_type as any,
-      subscriptionStatus: data.subscription_status as any,
+      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
+      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -382,7 +396,13 @@ export const playersService = {
       fromTeamId: transfer.from_team_id,
       toTeamId: transfer.to_team_id,
       transferDate: transfer.transfer_date,
-      dataTransferOptions: transfer.data_transfer_options,
+      dataTransferOptions: (transfer.data_transfer_options as any) || {
+        full: false,
+        attributes: false,
+        comments: false,
+        objectives: false,
+        events: false
+      },
       requestedBy: transfer.requested_by,
       acceptedBy: transfer.accepted_by,
       createdAt: transfer.created_at,
