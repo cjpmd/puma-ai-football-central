@@ -70,38 +70,23 @@ const cardDesigns: Record<string, CardDesign> = {
   }
 };
 
+// Updated play styles based on your uploaded image
 const playStylesWithIcons = [
-  // Attacker Focused
-  { value: "Sniper", label: "Sniper", icon: "🎯", category: "attacker" },
-  { value: "Finisher", label: "Finisher", icon: "✅", category: "attacker" },
-  { value: "Deadeye", label: "Deadeye", icon: "👁️", category: "attacker" },
-  { value: "Marksman", label: "Marksman", icon: "🎯", category: "attacker" },
-  { value: "Hawk", label: "Hawk", icon: "🦅", category: "attacker" },
-  
-  // Midfielder Focused
-  { value: "Artist", label: "Artist", icon: "🎨", category: "midfielder" },
-  { value: "Architect", label: "Architect", icon: "📐", category: "midfielder" },
-  { value: "Powerhouse", label: "Powerhouse", icon: "🐂", category: "midfielder" },
-  { value: "Maestro", label: "Maestro", icon: "🧠", category: "midfielder" },
-  { value: "Engine", label: "Engine", icon: "⚙️", category: "midfielder" },
-  
-  // Defender Focused
-  { value: "Sentinel", label: "Sentinel", icon: "🛡️", category: "defender" },
-  { value: "Guardian", label: "Guardian", icon: "⚔️", category: "defender" },
-  { value: "Gladiator", label: "Gladiator", icon: "🏛️", category: "defender" },
-  { value: "Backbone", label: "Backbone", icon: "🏛️", category: "defender" },
-  { value: "Anchor", label: "Anchor", icon: "⚓", category: "defender" },
-  
-  // Special
-  { value: "Hunter", label: "Hunter", icon: "🦁", category: "special" },
-  { value: "Catalyst", label: "Catalyst", icon: "⚡", category: "special" },
-  { value: "Shadow", label: "Shadow", icon: "👤", category: "special" },
-  
-  // Goalkeeper Focused
-  { value: "Wall", label: "Wall", icon: "🧱", category: "goalkeeper" },
-  { value: "Shield", label: "Shield", icon: "🛡️", category: "goalkeeper" },
-  { value: "Cat", label: "Cat", icon: "🐱", category: "goalkeeper" },
-  { value: "Glove", label: "Glove", icon: "🥅", category: "goalkeeper" }
+  { value: "finisher", label: "Finisher", icon: "🎯", category: "attacker" },
+  { value: "clinical", label: "Clinical", icon: "✅", category: "attacker" },
+  { value: "speedster", label: "Speedster", icon: "💨", category: "attacker" },
+  { value: "trickster", label: "Trickster", icon: "🌟", category: "attacker" },
+  { value: "playmaker", label: "Playmaker", icon: "🎨", category: "midfielder" },
+  { value: "engine", label: "Engine", icon: "⚙️", category: "midfielder" },
+  { value: "maestro", label: "Maestro", icon: "🧠", category: "midfielder" },
+  { value: "workhorse", label: "Workhorse", icon: "💪", category: "midfielder" },
+  { value: "guardian", label: "Guardian", icon: "🛡️", category: "defender" },
+  { value: "interceptor", label: "Interceptor", icon: "⚔️", category: "defender" },
+  { value: "rock", label: "Rock", icon: "🗿", category: "defender" },
+  { value: "sweeper", label: "Sweeper", icon: "🧹", category: "defender" },
+  { value: "reflexes", label: "Reflexes", icon: "🥅", category: "goalkeeper" },
+  { value: "commander", label: "Commander", icon: "👑", category: "goalkeeper" },
+  { value: "wall", label: "Wall", icon: "🧱", category: "goalkeeper" }
 ];
 
 export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
@@ -120,7 +105,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "special");
   const [funStats, setFunStats] = useState(player.funStats || {});
   const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
-    Array.isArray(player.playStyle) ? player.playStyle : player.playStyle ? [player.playStyle] : []
+    Array.isArray(player.playStyle) ? player.playStyle : 
+    (player.playStyle ? JSON.parse(player.playStyle || '[]') : [])
   );
 
   const currentDesign = cardDesigns[selectedDesign] || cardDesigns.special;
@@ -271,15 +257,15 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     : {};
 
   return (
-    <div className="w-[300px] h-[450px] perspective-1000 mx-auto">
+    <div className="w-[300px] h-[450px] perspective-[1000px] mx-auto">
       <div
-        className={`relative w-full h-full transform-style-preserve-3d transition-transform duration-700 ${
-          flipped ? 'rotate-y-180' : ''
+        className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
+          flipped ? '[transform:rotateY(180deg)]' : ''
         }`}
       >
         {/* Front of Card */}
         <div 
-          className={`absolute w-full h-full backface-hidden rounded-2xl ${
+          className={`absolute w-full h-full [backface-visibility:hidden] rounded-2xl ${
             hasBackgroundImage(currentDesign) ? '' : `bg-gradient-to-br ${currentDesign.bgGradient}`
           } ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`}
           style={cardStyle}
@@ -370,20 +356,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </h1>
             </div>
 
-            {/* FIFA Stats */}
-            <div className="flex justify-between items-center mb-4 bg-black/20 backdrop-blur-sm rounded-lg p-3">
+            {/* FIFA Stats - Simplified without backgrounds */}
+            <div className="flex justify-between items-center mb-4 px-2">
               {funStatLabels.map(stat => (
                 <div key={stat.key} className="text-center flex-1">
-                  <div className="text-white text-xs font-bold mb-1">{stat.key}</div>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={99}
-                    value={funStats[stat.key] || ''}
-                    onChange={(e) => updateStat(stat.key, e.target.value)}
-                    className="w-12 text-center text-lg h-8 bg-white/90 border-0 text-black font-bold rounded"
-                    placeholder="--"
-                  />
+                  <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
+                  <div className="text-white text-lg font-bold drop-shadow-md">
+                    {funStats[stat.key] || '--'}
+                  </div>
                 </div>
               ))}
             </div>
@@ -391,25 +371,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             {/* Play Style Icons */}
             <div className="flex justify-center mb-4 gap-2">
               {selectedPlayStyles.map((style, index) => (
-                <div key={index} className="bg-white/20 backdrop-blur-sm rounded-full p-2 text-xl">
+                <div key={index} className="text-2xl drop-shadow-lg">
                   {getPlayStyleIcon(style)}
                 </div>
               ))}
             </div>
 
-            {/* Bottom Info */}
+            {/* Bottom Info - No backgrounds, just text */}
             <div className="mt-auto">
-              <div className="flex justify-between items-center text-white text-sm">
-                <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded">#{player.squadNumber || 'XX'}</span>
-                <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded">Age {age}</span>
-                <span className="bg-black/30 backdrop-blur-sm px-2 py-1 rounded">{isGoalkeeper ? 'GK' : 'OUT'}</span>
+              <div className="flex justify-between items-center text-white text-sm font-bold">
+                <span className="drop-shadow-md">#{player.squadNumber || 'XX'}</span>
+                <span className="drop-shadow-md">Age {age}</span>
+                <span className="drop-shadow-md">{isGoalkeeper ? 'GK' : 'OUT'}</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* Back of Card */}
-        <div className="absolute w-full h-full backface-hidden rotate-y-180 rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl">
+        <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl">
           <div className="p-4 h-full flex flex-col text-white overflow-y-auto">
             {/* Back Button */}
             <Button
@@ -439,6 +419,27 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <span className="mr-1">{style.icon}</span>
                     <span className="truncate">{style.label}</span>
                   </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Fun Stats Editor */}
+            <div className="mb-4">
+              <label className="text-sm font-medium mb-2 block">Edit Stats</label>
+              <div className="grid grid-cols-3 gap-2">
+                {funStatLabels.map(stat => (
+                  <div key={stat.key} className="text-center">
+                    <div className="text-xs mb-1">{stat.key}</div>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={99}
+                      value={funStats[stat.key] || ''}
+                      onChange={(e) => updateStat(stat.key, e.target.value)}
+                      className="w-full text-center h-8 bg-white/10 border-white/20 text-white"
+                      placeholder="--"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
