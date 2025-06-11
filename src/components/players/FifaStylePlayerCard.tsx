@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt } from 'lucide-react';
+import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award } from 'lucide-react';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -16,7 +16,7 @@ interface FifaStylePlayerCardProps {
   onRemoveFromSquad?: (player: Player) => void;
   onUpdatePhoto?: (player: Player, file: File) => void;
   onSaveFunStats?: (player: Player, stats: Record<string, number>) => void;
-  onSavePlayStyle?: (player: Player, playStyle: string) => void;
+  onSavePlayStyle?: (player: Player, playStyles: string[]) => void;
   onSaveCardDesign?: (player: Player, designId: string) => void;
 }
 
@@ -70,46 +70,37 @@ const cardDesigns: Record<string, CardDesign> = {
 };
 
 const playStylesWithIcons = [
-  { value: "Aerial", label: "Aerial", icon: "⚡" },
-  { value: "Rapid", label: "Rapid", icon: "🏃" },
-  { value: "Technical", label: "Technical", icon: "🎯" },
-  { value: "Trickster", label: "Trickster", icon: "✨" },
-  { value: "Finesse Shot", label: "Finesse Shot", icon: "🎨" },
-  { value: "Power Shot", label: "Power Shot", icon: "💥" },
-  { value: "Intercept", label: "Intercept", icon: "🛡️" },
-  { value: "Pace Merchant", label: "Pace Merchant", icon: "⚡" },
-  { value: "Playmaker", label: "Playmaker", icon: "🎪" },
-  { value: "Target Man", label: "Target Man", icon: "🎯" },
-  { value: "Poacher", label: "Poacher", icon: "🦅" },
-  { value: "Defensive", label: "Defensive", icon: "🛡️" },
-  { value: "Box-to-Box", label: "Box-to-Box", icon: "🔄" },
-  { value: "Press Proven", label: "Press Proven", icon: "💪" },
-  { value: "First Touch", label: "First Touch", icon: "👟" },
-  { value: "Flair", label: "Flair", icon: "🌟" },
-  { value: "Block", label: "Block", icon: "🚫" },
-  { value: "Bruiser", label: "Bruiser", icon: "💀" },
-  { value: "Jockey", label: "Jockey", icon: "🏇" },
-  { value: "Slide Tackle", label: "Slide Tackle", icon: "⚔️" },
-  { value: "Anticipate", label: "Anticipate", icon: "👁️" },
-  { value: "Acrobatic", label: "Acrobatic", icon: "🤸" },
-  { value: "Trivela", label: "Trivela", icon: "🌀" },
-  { value: "Relentless", label: "Relentless", icon: "🔥" },
-  { value: "Quick Step", label: "Quick Step", icon: "👟" },
-  { value: "Long Throw", label: "Long Throw", icon: "🏹" },
-  { value: "Far Throw", label: "Far Throw", icon: "🎯" },
-  { value: "Footwork", label: "Footwork", icon: "👣" },
-  { value: "Cross Claimer", label: "Cross Claimer", icon: "🙌" },
-  { value: "Rush Out", label: "Rush Out", icon: "🏃" },
-  { value: "Far Reach", label: "Far Reach", icon: "🤲" },
-  { value: "Dead Ball", label: "Dead Ball", icon: "⚽" },
-  { value: "Chip Shot", label: "Chip Shot", icon: "🎾" },
-  { value: "Power Header", label: "Power Header", icon: "💥" },
-  { value: "Low Driven Shot", label: "Low Driven Shot", icon: "⬇️" },
-  { value: "Pinged Pass", label: "Pinged Pass", icon: "📍" },
-  { value: "Incisive Pass", label: "Incisive Pass", icon: "🗡️" },
-  { value: "Long Ball Pass", label: "Long Ball Pass", icon: "🏈" },
-  { value: "Tiki Taka", label: "Tiki Taka", icon: "🔄" },
-  { value: "Whipped Pass", label: "Whipped Pass", icon: "🌪️" }
+  // Attacker Focused
+  { value: "Sniper", label: "Sniper", icon: "🎯", category: "attacker" },
+  { value: "Finisher", label: "Finisher", icon: "✅", category: "attacker" },
+  { value: "Deadeye", label: "Deadeye", icon: "👁️", category: "attacker" },
+  { value: "Marksman", label: "Marksman", icon: "🎯", category: "attacker" },
+  { value: "Hawk", label: "Hawk", icon: "🦅", category: "attacker" },
+  
+  // Midfielder Focused
+  { value: "Artist", label: "Artist", icon: "🎨", category: "midfielder" },
+  { value: "Architect", label: "Architect", icon: "📐", category: "midfielder" },
+  { value: "Powerhouse", label: "Powerhouse", icon: "🐂", category: "midfielder" },
+  { value: "Maestro", label: "Maestro", icon: "🧠", category: "midfielder" },
+  { value: "Engine", label: "Engine", icon: "⚙️", category: "midfielder" },
+  
+  // Defender Focused
+  { value: "Sentinel", label: "Sentinel", icon: "🛡️", category: "defender" },
+  { value: "Guardian", label: "Guardian", icon: "⚔️", category: "defender" },
+  { value: "Gladiator", label: "Gladiator", icon: "🏛️", category: "defender" },
+  { value: "Backbone", label: "Backbone", icon: "🏛️", category: "defender" },
+  { value: "Anchor", label: "Anchor", icon: "⚓", category: "defender" },
+  
+  // Special
+  { value: "Hunter", label: "Hunter", icon: "🦁", category: "special" },
+  { value: "Catalyst", label: "Catalyst", icon: "⚡", category: "special" },
+  { value: "Shadow", label: "Shadow", icon: "👤", category: "special" },
+  
+  // Goalkeeper Focused
+  { value: "Wall", label: "Wall", icon: "🧱", category: "goalkeeper" },
+  { value: "Shield", label: "Shield", icon: "🛡️", category: "goalkeeper" },
+  { value: "Cat", label: "Cat", icon: "🐱", category: "goalkeeper" },
+  { value: "Glove", label: "Glove", icon: "🥅", category: "goalkeeper" }
 ];
 
 export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
@@ -127,7 +118,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const [flipped, setFlipped] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "special");
   const [funStats, setFunStats] = useState(player.funStats || {});
-  const [playStyle, setPlayStyle] = useState(player.playStyle || "");
+  const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
+    Array.isArray(player.playStyle) ? player.playStyle : player.playStyle ? [player.playStyle] : []
+  );
 
   const currentDesign = cardDesigns[selectedDesign] || cardDesigns.special;
 
@@ -153,10 +146,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     return age;
   };
 
-  // Get top 3 positions with minutes
+  // Get top 3 positions with minutes (excluding SUB)
   const getTopPositions = () => {
     const minutesByPosition = player.matchStats?.minutesByPosition || {};
     return Object.entries(minutesByPosition)
+      .filter(([position]) => position !== 'SUB')
       .map(([position, minutes]) => ({
         position,
         minutes: Number(minutes) || 0
@@ -195,6 +189,22 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
   };
 
+  const togglePlayStyle = (styleValue: string) => {
+    let newStyles;
+    if (selectedPlayStyles.includes(styleValue)) {
+      newStyles = selectedPlayStyles.filter(s => s !== styleValue);
+    } else if (selectedPlayStyles.length < 3) {
+      newStyles = [...selectedPlayStyles, styleValue];
+    } else {
+      return; // Max 3 styles
+    }
+    
+    setSelectedPlayStyles(newStyles);
+    if (onSavePlayStyle) {
+      onSavePlayStyle(player, newStyles);
+    }
+  };
+
   const isGoalkeeper = player.type === 'goalkeeper';
   const funStatLabels = isGoalkeeper
     ? [
@@ -219,6 +229,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const missingInfoAlerts = getMissingInfoAlerts();
   const hasAlerts = missingInfoAlerts.length > 0;
   const isCaptain = player.matchStats?.captainGames > 0;
+  const captainCount = player.matchStats?.captainGames || 0;
+  const potmCount = player.matchStats?.potmGames || 0;
   const displayName = player.kit_sizes?.nameOnShirt || player.name || 'No Name';
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -235,13 +247,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
   };
 
-  const handleSavePlayStyle = (style: string) => {
-    setPlayStyle(style);
-    if (onSavePlayStyle) {
-      onSavePlayStyle(player, style);
-    }
-  };
-
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -249,15 +254,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       .join('')
       .toUpperCase()
       .slice(0, 2);
-  };
-
-  const getSubscriptionLabel = (type: string) => {
-    switch (type) {
-      case 'full_squad': return 'Full Squad';
-      case 'training': return 'Training';
-      case 'trialist': return 'Trialist';
-      default: return type;
-    }
   };
 
   const getPlayStyleIcon = (styleValue: string) => {
@@ -311,16 +307,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          {/* Captain Badge */}
+          {/* Captain Badge with Count */}
           {isCaptain && (
-            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20">
-              <Crown className="h-6 w-6 text-yellow-300 drop-shadow-lg" />
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-yellow-500/90 rounded-full px-2 py-1">
+              <Crown className="h-4 w-4 text-white" />
+              <span className="text-white text-xs font-bold">{captainCount}</span>
+            </div>
+          )}
+
+          {/* POTM Badge with Count */}
+          {potmCount > 0 && (
+            <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-purple-500/90 rounded-full px-2 py-1">
+              <Award className="h-4 w-4 text-white" />
+              <span className="text-white text-xs font-bold">{potmCount}</span>
             </div>
           )}
 
           <div className={`p-4 h-full flex flex-col ${currentDesign.textColor} relative z-10`}>
             {/* Position Badges (Left Side) */}
-            <div className="absolute left-2 top-16 space-y-2">
+            <div className="absolute left-2 top-16 space-y-1">
               {topPositions.slice(0, 3).map((pos, idx) => (
                 <div key={pos.position} className="bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
                   {pos.position}
@@ -329,29 +334,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ))}
             </div>
 
-            {/* Position Icons (Left Side Below Badges) */}
-            <div className="absolute left-2 top-48 space-y-2">
-              <div className="bg-pink-500 text-white p-2 rounded-md shadow-lg">
-                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                  <div className="text-xs">⚽</div>
-                </div>
-              </div>
-              <div className="bg-pink-500 text-white p-2 rounded-md shadow-lg">
-                <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-                  <div className="text-xs">👟</div>
-                </div>
-              </div>
-            </div>
-
             {/* Header */}
             <div className="text-center mb-3 pt-8">
               <div className="text-xs font-bold mb-1 bg-black/20 backdrop-blur-sm px-2 py-1 rounded">
                 LM ++
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm p-1 rounded-full w-8 h-8 mx-auto mb-2 flex items-center justify-center">
-                <div className="w-6 h-6 bg-white rounded-full flex items-center justify-center">
-                  <span className="text-orange-500 text-xs font-bold">○</span>
-                </div>
               </div>
             </div>
 
@@ -401,12 +387,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ))}
             </div>
 
-            {/* Play Style Badge */}
-            <div className="flex justify-center mb-4">
-              <div className="bg-pink-500 text-white px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1">
-                <span>{getPlayStyleIcon(playStyle)}</span>
-                <span>{playStyle || 'No Style'}</span>
-              </div>
+            {/* Play Style Icons */}
+            <div className="flex justify-center mb-4 gap-2">
+              {selectedPlayStyles.map((style, index) => (
+                <div key={index} className="bg-white/20 backdrop-blur-sm rounded-full p-2 text-xl">
+                  {getPlayStyleIcon(style)}
+                </div>
+              ))}
             </div>
 
             {/* Bottom Info */}
@@ -422,52 +409,46 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
         {/* Back of Card */}
         <div className="absolute w-full h-full backface-hidden rotate-y-180 rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl">
-          <div className="p-4 h-full flex flex-col text-white">
+          <div className="p-4 h-full flex flex-col text-white overflow-y-auto">
             {/* Back Button */}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setFlipped(false)}
-              className="absolute top-2 right-2 w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full"
+              className="absolute top-2 right-2 w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full z-10"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
 
-            <h2 className="text-xl font-bold mb-6 text-center">Player Settings</h2>
+            <h2 className="text-lg font-bold mb-4 text-center pr-10">Player Settings</h2>
 
             {/* Play Style Selector */}
             <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">Play Style</label>
-              <Select value={playStyle} onValueChange={handleSavePlayStyle}>
-                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white">
-                  <SelectValue placeholder="Select play style">
-                    {playStyle && (
-                      <div className="flex items-center gap-1">
-                        <span>{getPlayStyleIcon(playStyle)}</span>
-                        <span>{playStyle}</span>
-                      </div>
-                    )}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {playStylesWithIcons.map(style => (
-                    <SelectItem key={style.value} value={style.value} className="text-xs">
-                      <div className="flex items-center gap-2">
-                        <span>{style.icon}</span>
-                        <span>{style.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium mb-2 block">Play Styles (Max 3)</label>
+              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                {playStylesWithIcons.map(style => (
+                  <Button
+                    key={style.value}
+                    variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePlayStyle(style.value)}
+                    disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                    className="text-xs p-2 h-auto justify-start"
+                  >
+                    <span className="mr-1">{style.icon}</span>
+                    <span className="truncate">{style.label}</span>
+                  </Button>
+                ))}
+              </div>
             </div>
 
             {/* Settings Options */}
-            <div className="space-y-3 mb-6">
+            <div className="space-y-2 mb-4 flex-1">
               {onEdit && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-8"
                   onClick={() => onEdit(player)}
                 >
                   Edit Player Info
@@ -477,7 +458,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               {onSetCaptain && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-8"
                   onClick={() => onSetCaptain(player)}
                 >
                   {isCaptain ? 'Remove Captain' : 'Set as Captain'}
@@ -487,7 +469,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               {onManageParents && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-8"
                   onClick={() => onManageParents(player)}
                 >
                   Manage Parents
@@ -497,7 +480,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               {onRemoveFromSquad && (
                 <Button
                   variant="outline"
-                  className="w-full justify-start text-red-400 border-red-400/50 hover:bg-red-400/10"
+                  size="sm"
+                  className="w-full justify-start text-red-400 border-red-400/50 hover:bg-red-400/10 h-8"
                   onClick={() => onRemoveFromSquad(player)}
                 >
                   Remove from Squad
@@ -506,10 +490,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
 
             {/* Card Design Selector */}
-            <div className="mt-auto">
+            <div>
               <label className="text-sm font-medium mb-2 block">Card Design</label>
               <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white">
+                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
