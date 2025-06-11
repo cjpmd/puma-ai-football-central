@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Player, Team, PlayerAttribute } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ import { toast } from "@/components/ui/use-toast"
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { PlayerCard } from './PlayerCard';
+import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { Edit, Plus, Trash2, ArrowUpDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PlayerParentModal } from './PlayerParentModal';
