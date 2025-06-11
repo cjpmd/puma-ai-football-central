@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Parent, PlayerTransfer, AttributeHistory } from '@/types';
 
@@ -26,6 +25,7 @@ export const playersService = {
       dateOfBirth: player.date_of_birth,
       subscriptionType: player.subscription_type as 'full_squad' | 'training' | 'trialist',
       subscriptionStatus: player.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kit_sizes: (player.kit_sizes as any) || {},
       kitSizes: (player.kit_sizes as any) || {},
       matchStats: (player.match_stats as any) || {},
       leaveDate: player.leave_date,
@@ -59,7 +59,7 @@ export const playersService = {
       subscription_type: playerData.subscriptionType,
       subscription_status: playerData.subscriptionStatus,
       availability: playerData.availability,
-      kit_sizes: playerData.kit_sizes || playerData.kitSizes,
+      kit_sizes: playerData.kit_sizes || (playerData as any).kitSizes,
       attributes: playerData.attributes,
       objectives: playerData.objectives,
       comments: playerData.comments,
@@ -87,6 +87,7 @@ export const playersService = {
       dateOfBirth: data.date_of_birth,
       subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
       subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kit_sizes: (data.kit_sizes as any) || {},
       kitSizes: (data.kit_sizes as any) || {},
       matchStats: (data.match_stats as any) || {},
       leaveDate: data.leave_date,
@@ -120,8 +121,8 @@ export const playersService = {
     if (playerData.subscriptionType !== undefined) dbData.subscription_type = playerData.subscriptionType;
     if (playerData.subscriptionStatus !== undefined) dbData.subscription_status = playerData.subscriptionStatus;
     if (playerData.availability !== undefined) dbData.availability = playerData.availability;
-    if (playerData.kit_sizes !== undefined || playerData.kitSizes !== undefined) {
-      dbData.kit_sizes = playerData.kit_sizes || playerData.kitSizes;
+    if (playerData.kit_sizes !== undefined || (playerData as any).kitSizes !== undefined) {
+      dbData.kit_sizes = playerData.kit_sizes || (playerData as any).kitSizes;
     }
     if (playerData.attributes !== undefined) dbData.attributes = playerData.attributes;
     if (playerData.objectives !== undefined) dbData.objectives = playerData.objectives;
@@ -150,6 +151,7 @@ export const playersService = {
       dateOfBirth: data.date_of_birth,
       subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
       subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kit_sizes: (data.kit_sizes as any) || {},
       kitSizes: (data.kit_sizes as any) || {},
       matchStats: (data.match_stats as any) || {},
       leaveDate: data.leave_date,
@@ -213,6 +215,7 @@ export const playersService = {
       dateOfBirth: data.date_of_birth,
       subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
       subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+      kit_sizes: (data.kit_sizes as any) || {},
       kitSizes: (data.kit_sizes as any) || {},
       matchStats: (data.match_stats as any) || {},
       leaveDate: data.leave_date,
@@ -233,7 +236,6 @@ export const playersService = {
     return player;
   },
 
-  // Parent management methods
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
     console.log('Fetching parents for player:', playerId);
     
@@ -375,7 +377,6 @@ export const playersService = {
     return data.link_code;
   },
 
-  // Transfer history methods
   async getTransferHistory(playerId: string): Promise<PlayerTransfer[]> {
     console.log('Fetching transfer history for player:', playerId);
     
@@ -414,7 +415,6 @@ export const playersService = {
     return transfers;
   },
 
-  // Attribute history methods
   async getAttributeHistory(playerId: string, attributeName: string): Promise<AttributeHistory[]> {
     console.log('Fetching attribute history for player:', playerId, 'attribute:', attributeName);
     
