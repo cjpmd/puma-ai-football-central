@@ -983,9 +983,11 @@ export type Database = {
         Row: {
           attributes: Json | null
           availability: string
+          card_design_id: string | null
           comments: Json | null
           created_at: string
           date_of_birth: string
+          fun_stats: Json | null
           id: string
           kit_sizes: Json | null
           leave_comments: string | null
@@ -996,6 +998,7 @@ export type Database = {
           objectives: Json | null
           parent_id: string | null
           performance_category_id: string | null
+          play_style: string | null
           squad_number: number
           status: string | null
           subscription_status: string | null
@@ -1007,9 +1010,11 @@ export type Database = {
         Insert: {
           attributes?: Json | null
           availability?: string
+          card_design_id?: string | null
           comments?: Json | null
           created_at?: string
           date_of_birth: string
+          fun_stats?: Json | null
           id?: string
           kit_sizes?: Json | null
           leave_comments?: string | null
@@ -1020,6 +1025,7 @@ export type Database = {
           objectives?: Json | null
           parent_id?: string | null
           performance_category_id?: string | null
+          play_style?: string | null
           squad_number: number
           status?: string | null
           subscription_status?: string | null
@@ -1031,9 +1037,11 @@ export type Database = {
         Update: {
           attributes?: Json | null
           availability?: string
+          card_design_id?: string | null
           comments?: Json | null
           created_at?: string
           date_of_birth?: string
+          fun_stats?: Json | null
           id?: string
           kit_sizes?: Json | null
           leave_comments?: string | null
@@ -1044,6 +1052,7 @@ export type Database = {
           objectives?: Json | null
           parent_id?: string | null
           performance_category_id?: string | null
+          play_style?: string | null
           squad_number?: number
           status?: string | null
           subscription_status?: string | null

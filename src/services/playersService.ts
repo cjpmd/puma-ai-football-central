@@ -35,7 +35,8 @@ export const playersService = {
       playStyle: player.play_style,
       createdAt: player.created_at,
       updatedAt: player.updated_at,
-      type: player.type as 'goalkeeper' | 'outfield'
+      type: player.type as 'goalkeeper' | 'outfield',
+      availability: player.availability as 'green' | 'amber' | 'red'
     }));
 
     console.log('Players fetched successfully:', players);
@@ -49,8 +50,8 @@ export const playersService = {
     const dbData = {
       name: playerData.name,
       team_id: playerData.team_id || playerData.teamId,
-      squad_number: playerData.squadNumber || playerData.squad_number,
-      date_of_birth: playerData.dateOfBirth || playerData.date_of_birth,
+      squad_number: playerData.squadNumber,
+      date_of_birth: playerData.dateOfBirth,
       type: playerData.type,
       subscription_type: playerData.subscriptionType,
       subscription_status: playerData.subscriptionStatus,
@@ -81,8 +82,8 @@ export const playersService = {
       teamId: data.team_id,
       squadNumber: data.squad_number,
       dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as any,
+      subscriptionStatus: data.subscription_status as any,
       kitSizes: data.kit_sizes,
       matchStats: data.match_stats,
       leaveDate: data.leave_date,
@@ -92,7 +93,8 @@ export const playersService = {
       playStyle: data.play_style,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      type: data.type as 'goalkeeper' | 'outfield'
+      type: data.type as 'goalkeeper' | 'outfield',
+      availability: data.availability as 'green' | 'amber' | 'red'
     };
 
     console.log('Player created successfully:', player);
@@ -138,8 +140,8 @@ export const playersService = {
       teamId: data.team_id,
       squadNumber: data.squad_number,
       dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as any,
+      subscriptionStatus: data.subscription_status as any,
       kitSizes: data.kit_sizes,
       matchStats: data.match_stats,
       leaveDate: data.leave_date,
@@ -149,7 +151,8 @@ export const playersService = {
       playStyle: data.play_style,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      type: data.type as 'goalkeeper' | 'outfield'
+      type: data.type as 'goalkeeper' | 'outfield',
+      availability: data.availability as 'green' | 'amber' | 'red'
     };
 
     console.log('Player updated successfully:', player);
@@ -197,8 +200,8 @@ export const playersService = {
       teamId: data.team_id,
       squadNumber: data.squad_number,
       dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as any,
+      subscriptionStatus: data.subscription_status as any,
       kitSizes: data.kit_sizes,
       matchStats: data.match_stats,
       leaveDate: data.leave_date,
@@ -208,7 +211,8 @@ export const playersService = {
       playStyle: data.play_style,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      type: data.type as 'goalkeeper' | 'outfield'
+      type: data.type as 'goalkeeper' | 'outfield',
+      availability: data.availability as 'green' | 'amber' | 'red'
     };
 
     console.log('Player fetched by ID:', player);
@@ -271,8 +275,8 @@ export const playersService = {
       ...data,
       playerId: data.player_id,
       linkCode: data.link_code,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as any,
+      subscriptionStatus: data.subscription_status as any,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -307,8 +311,8 @@ export const playersService = {
       ...data,
       playerId: data.player_id,
       linkCode: data.link_code,
-      subscriptionType: data.subscription_type,
-      subscriptionStatus: data.subscription_status,
+      subscriptionType: data.subscription_type as any,
+      subscriptionStatus: data.subscription_status as any,
       createdAt: data.created_at,
       updatedAt: data.updated_at
     };
@@ -382,7 +386,8 @@ export const playersService = {
       requestedBy: transfer.requested_by,
       acceptedBy: transfer.accepted_by,
       createdAt: transfer.created_at,
-      updatedAt: transfer.updated_at
+      updatedAt: transfer.updated_at,
+      status: transfer.status as 'pending' | 'accepted' | 'rejected'
     }));
 
     console.log('Transfer history fetched successfully:', transfers);
