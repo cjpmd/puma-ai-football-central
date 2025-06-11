@@ -1,3 +1,4 @@
+
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -180,6 +181,9 @@ export type Player = {
   subscriptionStatus?: SubscriptionStatus; // Added this property
   status?: string; // Added this property
   leaveComments?: string; // Added this property
+  cardDesignId?: string; // Added for FIFA-style card designs
+  funStats?: Record<string, number>; // Added for FIFA-style fun stats
+  playStyle?: string; // Added for FIFA-style play styles
   created_at?: string;
   updated_at?: string;
 };
