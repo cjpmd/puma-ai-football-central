@@ -104,9 +104,30 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const [flipped, setFlipped] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "special");
   const [funStats, setFunStats] = useState(player.funStats || {});
+  
+  // Safe parsing of playStyle field
+  const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
+    if (!playStyleData) return [];
+    
+    // If it's already an array, return it
+    if (Array.isArray(playStyleData)) return playStyleData;
+    
+    // If it's a string, try to parse as JSON first
+    if (typeof playStyleData === 'string') {
+      try {
+        const parsed = JSON.parse(playStyleData);
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        // If JSON parsing fails, treat as a single play style
+        return [playStyleData];
+      }
+    }
+    
+    return [];
+  };
+
   const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
-    Array.isArray(player.playStyle) ? player.playStyle : 
-    (player.playStyle ? JSON.parse(player.playStyle || '[]') : [])
+    parsePlayStyles(player.playStyle)
   );
 
   const currentDesign = cardDesigns[selectedDesign] || cardDesigns.special;
