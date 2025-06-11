@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -21,7 +20,25 @@ interface FifaStylePlayerCardProps {
   onSaveCardDesign?: (player: Player, designId: string) => void;
 }
 
-const cardDesigns = {
+type CardDesignGradient = {
+  name: string;
+  bgGradient: string;
+  border: string;
+  textColor: string;
+  shadow: string;
+};
+
+type CardDesignImage = {
+  name: string;
+  bgImage: string;
+  border: string;
+  textColor: string;
+  shadow: string;
+};
+
+type CardDesign = CardDesignGradient | CardDesignImage;
+
+const cardDesigns: Record<string, CardDesign> = {
   goldRare: {
     name: "Gold Rare",
     bgGradient: "from-yellow-400 via-amber-500 to-yellow-600",
@@ -112,7 +129,16 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const [funStats, setFunStats] = useState(player.funStats || {});
   const [playStyle, setPlayStyle] = useState(player.playStyle || "");
 
-  const currentDesign = cardDesigns[selectedDesign as keyof typeof cardDesigns] || cardDesigns.special;
+  const currentDesign = cardDesigns[selectedDesign] || cardDesigns.special;
+
+  // Type guard functions
+  const hasBackgroundImage = (design: CardDesign): design is CardDesignImage => {
+    return 'bgImage' in design;
+  };
+
+  const hasBackgroundGradient = (design: CardDesign): design is CardDesignGradient => {
+    return 'bgGradient' in design;
+  };
 
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string) => {
@@ -239,7 +265,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     return style ? style.icon : "";
   };
 
-  const cardStyle = currentDesign.bgImage 
+  const cardStyle = hasBackgroundImage(currentDesign) 
     ? { 
         backgroundImage: currentDesign.bgImage,
         backgroundSize: 'cover',
@@ -257,7 +283,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         {/* Front of Card */}
         <div 
           className={`absolute w-full h-full backface-hidden rounded-2xl ${
-            currentDesign.bgImage ? '' : `bg-gradient-to-br ${currentDesign.bgGradient}`
+            hasBackgroundImage(currentDesign) ? '' : `bg-gradient-to-br ${currentDesign.bgGradient}`
           } ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`}
           style={cardStyle}
         >
