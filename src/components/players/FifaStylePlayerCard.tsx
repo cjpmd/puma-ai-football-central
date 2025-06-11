@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -6,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award } from 'lucide-react';
+import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus } from 'lucide-react';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -19,6 +18,13 @@ interface FifaStylePlayerCardProps {
   onSaveFunStats?: (player: Player, stats: Record<string, number>) => void;
   onSavePlayStyle?: (player: Player, playStyles: string[]) => void;
   onSaveCardDesign?: (player: Player, designId: string) => void;
+  onManageAttributes?: (player: Player) => void;
+  onManageObjectives?: (player: Player) => void;
+  onManageComments?: (player: Player) => void;
+  onViewStats?: (player: Player) => void;
+  onViewHistory?: (player: Player) => void;
+  onTransferPlayer?: (player: Player) => void;
+  onLeaveTeam?: (player: Player) => void;
 }
 
 type CardDesignGradient = {
@@ -70,15 +76,15 @@ const cardDesigns: Record<string, CardDesign> = {
   }
 };
 
-// Updated play styles based on your uploaded image
+// Updated play styles with your preferred icons
 const playStylesWithIcons = [
   { value: "finisher", label: "Finisher", icon: "🎯", category: "attacker" },
   { value: "clinical", label: "Clinical", icon: "✅", category: "attacker" },
-  { value: "speedster", label: "Speedster", icon: "💨", category: "attacker" },
-  { value: "trickster", label: "Trickster", icon: "🌟", category: "attacker" },
-  { value: "playmaker", label: "Playmaker", icon: "🎨", category: "midfielder" },
+  { value: "speedster", label: "Speedster", icon: "⚡", category: "attacker" },
+  { value: "trickster", label: "Trickster", icon: "🔮", category: "attacker" },
+  { value: "playmaker", label: "Playmaker", icon: "🎭", category: "midfielder" },
   { value: "engine", label: "Engine", icon: "⚙️", category: "midfielder" },
-  { value: "maestro", label: "Maestro", icon: "🧠", category: "midfielder" },
+  { value: "maestro", label: "Maestro", icon: "🎩", category: "midfielder" },
   { value: "workhorse", label: "Workhorse", icon: "💪", category: "midfielder" },
   { value: "guardian", label: "Guardian", icon: "🛡️", category: "defender" },
   { value: "interceptor", label: "Interceptor", icon: "⚔️", category: "defender" },
@@ -99,7 +105,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onUpdatePhoto,
   onSaveFunStats,
   onSavePlayStyle,
-  onSaveCardDesign
+  onSaveCardDesign,
+  onManageAttributes,
+  onManageObjectives,
+  onManageComments,
+  onViewStats,
+  onViewHistory,
+  onTransferPlayer,
+  onLeaveTeam
 }) => {
   const [flipped, setFlipped] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "special");
@@ -283,6 +296,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
           flipped ? '[transform:rotateY(180deg)]' : ''
         }`}
+        style={{ transformStyle: 'preserve-3d' }}
       >
         {/* Front of Card */}
         <div 
@@ -377,7 +391,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </h1>
             </div>
 
-            {/* FIFA Stats - Simplified without backgrounds */}
+            {/* FIFA Stats - Clean display without backgrounds */}
             <div className="flex justify-between items-center mb-4 px-2">
               {funStatLabels.map(stat => (
                 <div key={stat.key} className="text-center flex-1">
@@ -398,7 +412,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ))}
             </div>
 
-            {/* Bottom Info - No backgrounds, just text */}
+            {/* Bottom Info - Clean text display */}
             <div className="mt-auto">
               <div className="flex justify-between items-center text-white text-sm font-bold">
                 <span className="drop-shadow-md">#{player.squadNumber || 'XX'}</span>
@@ -410,7 +424,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         </div>
 
         {/* Back of Card */}
-        <div className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl">
+        <div 
+          className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl"
+          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+        >
           <div className="p-4 h-full flex flex-col text-white overflow-y-auto">
             {/* Back Button */}
             <Button
@@ -422,111 +439,193 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <ArrowLeft className="h-4 w-4" />
             </Button>
 
-            <h2 className="text-lg font-bold mb-4 text-center pr-10">Player Settings</h2>
+            <h2 className="text-lg font-bold mb-4 text-center pr-10">Player Management</h2>
 
-            {/* Play Style Selector */}
-            <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">Play Styles (Max 3)</label>
-              <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                {playStylesWithIcons.map(style => (
-                  <Button
-                    key={style.value}
-                    variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => togglePlayStyle(style.value)}
-                    disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                    className="text-xs p-2 h-auto justify-start"
-                  >
-                    <span className="mr-1">{style.icon}</span>
-                    <span className="truncate">{style.label}</span>
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Fun Stats Editor */}
-            <div className="mb-4">
-              <label className="text-sm font-medium mb-2 block">Edit Stats</label>
-              <div className="grid grid-cols-3 gap-2">
-                {funStatLabels.map(stat => (
-                  <div key={stat.key} className="text-center">
-                    <div className="text-xs mb-1">{stat.key}</div>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={99}
-                      value={funStats[stat.key] || ''}
-                      onChange={(e) => updateStat(stat.key, e.target.value)}
-                      className="w-full text-center h-8 bg-white/10 border-white/20 text-white"
-                      placeholder="--"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Settings Options */}
-            <div className="space-y-2 mb-4 flex-1">
+            {/* Main Actions - Matching your reference image */}
+            <div className="space-y-2 mb-4">
               {onEdit && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-8"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
                   onClick={() => onEdit(player)}
                 >
-                  Edit Player Info
+                  <User className="h-4 w-4 mr-3" />
+                  Edit Player
                 </Button>
               )}
               
-              {onSetCaptain && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-8"
-                  onClick={() => onSetCaptain(player)}
-                >
-                  {isCaptain ? 'Remove Captain' : 'Set as Captain'}
-                </Button>
-              )}
-
               {onManageParents && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-8"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
                   onClick={() => onManageParents(player)}
                 >
+                  <Users className="h-4 w-4 mr-3" />
                   Manage Parents
                 </Button>
               )}
 
-              {onRemoveFromSquad && (
+              {onManageAttributes && (
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full justify-start text-red-400 border-red-400/50 hover:bg-red-400/10 h-8"
-                  onClick={() => onRemoveFromSquad(player)}
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                  onClick={() => onManageAttributes(player)}
                 >
-                  Remove from Squad
+                  <Brain className="h-4 w-4 mr-3" />
+                  Manage Attributes
+                </Button>
+              )}
+
+              {onManageObjectives && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                  onClick={() => onManageObjectives(player)}
+                >
+                  <Target className="h-4 w-4 mr-3" />
+                  Manage Objectives
+                </Button>
+              )}
+
+              {onManageComments && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                  onClick={() => onManageComments(player)}
+                >
+                  <MessageSquare className="h-4 w-4 mr-3" />
+                  Manage Comments
+                </Button>
+              )}
+
+              {onViewStats && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                  onClick={() => onViewStats(player)}
+                >
+                  <BarChart3 className="h-4 w-4 mr-3" />
+                  View Statistics
+                </Button>
+              )}
+
+              {onViewHistory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                  onClick={() => onViewHistory(player)}
+                >
+                  <Calendar className="h-4 w-4 mr-3" />
+                  View History
+                </Button>
+              )}
+
+              {onTransferPlayer && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                  onClick={() => onTransferPlayer(player)}
+                >
+                  <UserMinus className="h-4 w-4 mr-3" />
+                  Transfer Player
                 </Button>
               )}
             </div>
 
-            {/* Card Design Selector */}
-            <div>
-              <label className="text-sm font-medium mb-2 block">Card Design</label>
-              <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-8">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(cardDesigns).map(([id, design]) => (
-                    <SelectItem key={id} value={id}>
-                      {design.name}
-                    </SelectItem>
+            {/* Dangerous Actions */}
+            <div className="space-y-2 mb-4 border-t border-white/20 pt-4">
+              {onSetCaptain && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-yellow-400 border-yellow-400/50 hover:bg-yellow-400/10 h-10"
+                  onClick={() => onSetCaptain(player)}
+                >
+                  <Crown className="h-4 w-4 mr-3" />
+                  {isCaptain ? 'Remove Captain' : 'Set as Captain'}
+                </Button>
+              )}
+
+              {onLeaveTeam && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full justify-start text-red-400 border-red-400/50 hover:bg-red-400/10 h-10"
+                  onClick={() => onLeaveTeam(player)}
+                >
+                  <UserMinus className="h-4 w-4 mr-3" />
+                  Leave Team
+                </Button>
+              )}
+            </div>
+
+            {/* Quick Settings Section */}
+            <div className="space-y-4 flex-1">
+              {/* Play Style Selector */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Play Styles (Max 3)</label>
+                <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto">
+                  {playStylesWithIcons.map(style => (
+                    <Button
+                      key={style.value}
+                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => togglePlayStyle(style.value)}
+                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                      className="text-xs p-1 h-8 justify-start"
+                    >
+                      <span className="mr-1">{style.icon}</span>
+                      <span className="truncate">{style.label}</span>
+                    </Button>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
+
+              {/* Fun Stats Editor */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">FIFA Stats</label>
+                <div className="grid grid-cols-3 gap-1">
+                  {funStatLabels.map(stat => (
+                    <div key={stat.key} className="text-center">
+                      <div className="text-xs mb-1">{stat.key}</div>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={funStats[stat.key] || ''}
+                        onChange={(e) => updateStat(stat.key, e.target.value)}
+                        className="w-full text-center h-8 bg-white/10 border-white/20 text-white text-xs"
+                        placeholder="--"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card Design Selector */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Card Design</label>
+                <Select value={selectedDesign} onValueChange={handleSaveDesign}>
+                  <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(cardDesigns).map(([id, design]) => (
+                      <SelectItem key={id} value={id}>
+                        {design.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </div>
