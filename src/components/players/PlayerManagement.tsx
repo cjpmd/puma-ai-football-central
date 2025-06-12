@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -111,14 +112,6 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     setShowParentModal(true);
   };
 
-  const handleSetCaptain = (player: Player) => {
-    // Implementation for setting captain
-    toast({
-      title: 'Captain Set',
-      description: `${player.name} has been set as captain.`,
-    });
-  };
-
   const handleRemoveFromSquad = (player: Player) => {
     // Implementation for removing from squad
     toast({
@@ -219,7 +212,6 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   team={team}
                   onEdit={handleEditPlayer}
                   onManageParents={handleManageParents}
-                  onSetCaptain={handleSetCaptain}
                   onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
                   onSaveFunStats={handleSaveFunStats}
