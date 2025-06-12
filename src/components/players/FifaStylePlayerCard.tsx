@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw } from 'lucide-react';
+import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit } from 'lucide-react';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -213,7 +213,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     let newStyles;
     if (selectedPlayStyles.includes(styleValue)) {
       newStyles = selectedPlayStyles.filter(s => s !== styleValue);
-    } else if (selectedPlayStyles.length < 3) {
+    } else if (selectedPlayStyles.length < 3) {  // Fixed: should be < 3, not <= 2
       newStyles = [...selectedPlayStyles, styleValue];
     } else {
       return; // Max 3 styles
@@ -294,7 +294,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     return (
       <div className="w-[300px] h-[450px] mx-auto">
         <div className="w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden">
-          <div className="h-full flex flex-col text-white">
+          <div className="h-full flex flex-col">
             {/* Header with Back Button */}
             <div className="p-4 border-b border-gray-700 flex items-center justify-between bg-gray-800">
               <h2 className="text-lg font-bold text-white">Player Management</h2>
@@ -310,20 +310,20 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
             {/* Scrollable Content */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Player Actions - Icons Only */}
+              {/* Player Actions - All 9 buttons in 3x3 grid */}
               <div className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-300 mb-2">Player Actions</h3>
                 
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {onEdit && (
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onEdit(player)}
                       title="Edit Player"
                     >
-                      <User className="h-5 w-5" />
+                      <Edit className="h-5 w-5" />
                     </Button>
                   )}
                   
@@ -331,7 +331,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onManageParents(player)}
                       title="Manage Parents"
                     >
@@ -343,7 +343,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onManageAttributes(player)}
                       title="Manage Attributes"
                     >
@@ -355,7 +355,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onManageObjectives(player)}
                       title="Manage Objectives"
                     >
@@ -367,7 +367,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onManageComments(player)}
                       title="Manage Comments"
                     >
@@ -379,7 +379,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onViewStats(player)}
                       title="View Statistics"
                     >
@@ -391,7 +391,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onViewHistory(player)}
                       title="View History"
                     >
@@ -403,7 +403,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white"
+                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
                       onClick={() => onTransferPlayer(player)}
                       title="Transfer Player"
                     >
@@ -415,7 +415,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full h-12 border-red-400/50 hover:bg-red-400/10 text-red-400"
+                      className="w-full h-12 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent"
                       onClick={() => onLeaveTeam(player)}
                       title="Leave Team"
                     >
@@ -446,6 +446,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                         {style.icon}
                       </Button>
                     ))}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Selected: {selectedPlayStyles.length}/3
                   </div>
                 </div>
 
