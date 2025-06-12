@@ -213,7 +213,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     let newStyles;
     if (selectedPlayStyles.includes(styleValue)) {
       newStyles = selectedPlayStyles.filter(s => s !== styleValue);
-    } else if (selectedPlayStyles.length < 3) {  // Fixed: should be < 3, not <= 2
+    } else if (selectedPlayStyles.length < 3) {
       newStyles = [...selectedPlayStyles, styleValue];
     } else {
       return; // Max 3 styles
@@ -308,131 +308,111 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </Button>
             </div>
 
-            {/* Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {/* Player Actions - All 9 buttons in 3x3 grid */}
+            {/* Content - No scrolling, fixed layout */}
+            <div className="flex-1 p-4 space-y-4">
+              {/* Player Actions - All 9 buttons in 3x3 grid with smaller buttons */}
               <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-gray-300 mb-2">Player Actions</h3>
+                <h3 className="text-sm font-semibold text-white mb-2">Player Actions</h3>
                 
-                <div className="grid grid-cols-3 gap-2">
-                  {onEdit && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onEdit(player)}
-                      title="Edit Player"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </Button>
-                  )}
+                <div className="grid grid-cols-3 gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onEdit?.(player)}
+                    title="Edit Player"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
                   
-                  {onManageParents && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onManageParents(player)}
-                      title="Manage Parents"
-                    >
-                      <Users className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onManageParents?.(player)}
+                    title="Manage Parents"
+                  >
+                    <Users className="h-4 w-4" />
+                  </Button>
 
-                  {onManageAttributes && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onManageAttributes(player)}
-                      title="Manage Attributes"
-                    >
-                      <Brain className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onManageAttributes?.(player)}
+                    title="Manage Attributes"
+                  >
+                    <Brain className="h-4 w-4" />
+                  </Button>
 
-                  {onManageObjectives && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onManageObjectives(player)}
-                      title="Manage Objectives"
-                    >
-                      <Target className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onManageObjectives?.(player)}
+                    title="Manage Objectives"
+                  >
+                    <Target className="h-4 w-4" />
+                  </Button>
 
-                  {onManageComments && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onManageComments(player)}
-                      title="Manage Comments"
-                    >
-                      <MessageSquare className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onManageComments?.(player)}
+                    title="Manage Comments"
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
 
-                  {onViewStats && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onViewStats(player)}
-                      title="View Statistics"
-                    >
-                      <BarChart3 className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onViewStats?.(player)}
+                    title="View Statistics"
+                  >
+                    <BarChart3 className="h-4 w-4" />
+                  </Button>
 
-                  {onViewHistory && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onViewHistory(player)}
-                      title="View History"
-                    >
-                      <Calendar className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onViewHistory?.(player)}
+                    title="View History"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
 
-                  {onTransferPlayer && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-white/20 hover:bg-white/10 text-white bg-transparent"
-                      onClick={() => onTransferPlayer(player)}
-                      title="Transfer Player"
-                    >
-                      <RefreshCw className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-white/20 hover:bg-white/10 text-white bg-transparent"
+                    onClick={() => onTransferPlayer?.(player)}
+                    title="Transfer Player"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </Button>
 
-                  {onLeaveTeam && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full h-12 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent"
-                      onClick={() => onLeaveTeam(player)}
-                      title="Leave Team"
-                    >
-                      <UserMinus className="h-5 w-5" />
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full h-10 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent"
+                    onClick={() => onLeaveTeam?.(player)}
+                    title="Leave Team"
+                  >
+                    <UserMinus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
 
-              {/* Quick Settings Section */}
+              {/* Settings without "Quick Settings" title */}
               <div className="space-y-4 border-t border-white/20 pt-4">
-                <h3 className="text-sm font-semibold text-gray-300 mb-2">Quick Settings</h3>
-                
                 {/* Play Style Selector - Icons only */}
                 <div>
                   <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
-                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto">
+                  <div className="grid grid-cols-5 gap-1 max-h-20 overflow-y-auto">
                     {playStylesWithIcons.map(style => (
                       <Button
                         key={style.value}
@@ -440,7 +420,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                         size="sm"
                         onClick={() => togglePlayStyle(style.value)}
                         disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                        className="text-lg p-2 h-10 w-10"
+                        className="text-sm p-1 h-8 w-8"
                         title={style.label}
                       >
                         {style.icon}
@@ -455,7 +435,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 {/* Fun Stats Editor */}
                 <div>
                   <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1">
                     {funStatLabels.map(stat => (
                       <div key={stat.key} className="text-center">
                         <div className="text-xs mb-1 text-white">{stat.key}</div>
@@ -465,7 +445,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                           max={99}
                           value={funStats[stat.key] || ''}
                           onChange={(e) => updateStat(stat.key, e.target.value)}
-                          className="w-full text-center h-8 bg-white/10 border-white/20 text-white text-xs"
+                          className="w-full text-center h-6 bg-white/10 border-white/20 text-white text-xs"
                           placeholder="--"
                         />
                       </div>
@@ -477,7 +457,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 <div>
                   <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
                   <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                    <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-8">
+                    <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-6">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
