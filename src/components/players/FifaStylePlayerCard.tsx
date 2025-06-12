@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -291,19 +292,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     : {};
 
   return (
-    <div className="w-[300px] h-[450px] perspective-[1000px] mx-auto">
+    <div className="w-[300px] h-[450px] perspective-1000 mx-auto">
       <div
-        className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
-          flipped ? '[transform:rotateY(180deg)]' : ''
+        className={`relative w-full h-full transition-transform duration-700 preserve-3d ${
+          flipped ? 'rotate-y-180' : ''
         }`}
-        style={{ transformStyle: 'preserve-3d' }}
+        style={{ 
+          transformStyle: 'preserve-3d',
+          perspective: '1000px'
+        }}
       >
         {/* Front of Card */}
         <div 
-          className={`absolute w-full h-full [backface-visibility:hidden] rounded-2xl ${
+          className={`absolute inset-0 w-full h-full backface-hidden rounded-2xl ${
             hasBackgroundImage(currentDesign) ? '' : `bg-gradient-to-br ${currentDesign.bgGradient}`
           } ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`}
-          style={cardStyle}
+          style={{
+            ...cardStyle,
+            backfaceVisibility: 'hidden'
+          }}
         >
           {/* Settings Button */}
           <Button
@@ -403,7 +410,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ))}
             </div>
 
-            {/* Play Style Icons */}
+            {/* Play Style Icons - Just the icons */}
             <div className="flex justify-center mb-4 gap-2">
               {selectedPlayStyles.map((style, index) => (
                 <div key={index} className="text-2xl drop-shadow-lg">
@@ -425,206 +432,219 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
         {/* Back of Card */}
         <div 
-          className="absolute w-full h-full [backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl"
-          style={{ backfaceVisibility: 'hidden', transform: 'rotateY(180deg)' }}
+          className="absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden"
+          style={{ 
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)'
+          }}
         >
-          <div className="p-4 h-full flex flex-col text-white overflow-y-auto">
-            {/* Back Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFlipped(false)}
-              className="absolute top-2 right-2 w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full z-10"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-
-            <h2 className="text-lg font-bold mb-4 text-center pr-10">Player Management</h2>
-
-            {/* Main Actions - Matching your reference image */}
-            <div className="space-y-2 mb-4">
-              {onEdit && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onEdit(player)}
-                >
-                  <User className="h-4 w-4 mr-3" />
-                  Edit Player
-                </Button>
-              )}
-              
-              {onManageParents && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onManageParents(player)}
-                >
-                  <Users className="h-4 w-4 mr-3" />
-                  Manage Parents
-                </Button>
-              )}
-
-              {onManageAttributes && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onManageAttributes(player)}
-                >
-                  <Brain className="h-4 w-4 mr-3" />
-                  Manage Attributes
-                </Button>
-              )}
-
-              {onManageObjectives && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onManageObjectives(player)}
-                >
-                  <Target className="h-4 w-4 mr-3" />
-                  Manage Objectives
-                </Button>
-              )}
-
-              {onManageComments && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onManageComments(player)}
-                >
-                  <MessageSquare className="h-4 w-4 mr-3" />
-                  Manage Comments
-                </Button>
-              )}
-
-              {onViewStats && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onViewStats(player)}
-                >
-                  <BarChart3 className="h-4 w-4 mr-3" />
-                  View Statistics
-                </Button>
-              )}
-
-              {onViewHistory && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onViewHistory(player)}
-                >
-                  <Calendar className="h-4 w-4 mr-3" />
-                  View History
-                </Button>
-              )}
-
-              {onTransferPlayer && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
-                  onClick={() => onTransferPlayer(player)}
-                >
-                  <UserMinus className="h-4 w-4 mr-3" />
-                  Transfer Player
-                </Button>
-              )}
+          <div className="h-full flex flex-col text-white">
+            {/* Header with Back Button */}
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-bold">Player Management</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setFlipped(false)}
+                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
             </div>
 
-            {/* Dangerous Actions */}
-            <div className="space-y-2 mb-4 border-t border-white/20 pt-4">
-              {onSetCaptain && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-yellow-400 border-yellow-400/50 hover:bg-yellow-400/10 h-10"
-                  onClick={() => onSetCaptain(player)}
-                >
-                  <Crown className="h-4 w-4 mr-3" />
-                  {isCaptain ? 'Remove Captain' : 'Set as Captain'}
-                </Button>
-              )}
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {/* Main Actions */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-gray-300 mb-2">Player Actions</h3>
+                
+                {onEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onEdit(player)}
+                  >
+                    <User className="h-4 w-4 mr-3" />
+                    Edit Player
+                  </Button>
+                )}
+                
+                {onManageParents && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onManageParents(player)}
+                  >
+                    <Users className="h-4 w-4 mr-3" />
+                    Manage Parents
+                  </Button>
+                )}
 
-              {onLeaveTeam && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full justify-start text-red-400 border-red-400/50 hover:bg-red-400/10 h-10"
-                  onClick={() => onLeaveTeam(player)}
-                >
-                  <UserMinus className="h-4 w-4 mr-3" />
-                  Leave Team
-                </Button>
-              )}
-            </div>
+                {onManageAttributes && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onManageAttributes(player)}
+                  >
+                    <Brain className="h-4 w-4 mr-3" />
+                    Manage Attributes
+                  </Button>
+                )}
 
-            {/* Quick Settings Section */}
-            <div className="space-y-4 flex-1">
-              {/* Play Style Selector */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Play Styles (Max 3)</label>
-                <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto">
-                  {playStylesWithIcons.map(style => (
-                    <Button
-                      key={style.value}
-                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => togglePlayStyle(style.value)}
-                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                      className="text-xs p-1 h-8 justify-start"
-                    >
-                      <span className="mr-1">{style.icon}</span>
-                      <span className="truncate">{style.label}</span>
-                    </Button>
-                  ))}
-                </div>
+                {onManageObjectives && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onManageObjectives(player)}
+                  >
+                    <Target className="h-4 w-4 mr-3" />
+                    Manage Objectives
+                  </Button>
+                )}
+
+                {onManageComments && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onManageComments(player)}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-3" />
+                    Manage Comments
+                  </Button>
+                )}
+
+                {onViewStats && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onViewStats(player)}
+                  >
+                    <BarChart3 className="h-4 w-4 mr-3" />
+                    View Statistics
+                  </Button>
+                )}
+
+                {onViewHistory && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onViewHistory(player)}
+                  >
+                    <Calendar className="h-4 w-4 mr-3" />
+                    View History
+                  </Button>
+                )}
+
+                {onTransferPlayer && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-white border-white/20 hover:bg-white/10 h-10"
+                    onClick={() => onTransferPlayer(player)}
+                  >
+                    <UserMinus className="h-4 w-4 mr-3" />
+                    Transfer Player
+                  </Button>
+                )}
               </div>
 
-              {/* Fun Stats Editor */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">FIFA Stats</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {funStatLabels.map(stat => (
-                    <div key={stat.key} className="text-center">
-                      <div className="text-xs mb-1">{stat.key}</div>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={99}
-                        value={funStats[stat.key] || ''}
-                        onChange={(e) => updateStat(stat.key, e.target.value)}
-                        className="w-full text-center h-8 bg-white/10 border-white/20 text-white text-xs"
-                        placeholder="--"
-                      />
-                    </div>
-                  ))}
-                </div>
+              {/* Team Actions */}
+              <div className="space-y-2 border-t border-white/20 pt-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-2">Team Actions</h3>
+                
+                {onSetCaptain && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-yellow-400 border-yellow-400/50 hover:bg-yellow-400/10 h-10"
+                    onClick={() => onSetCaptain(player)}
+                  >
+                    <Crown className="h-4 w-4 mr-3" />
+                    Set as Captain
+                  </Button>
+                )}
+
+                {onLeaveTeam && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start text-red-400 border-red-400/50 hover:bg-red-400/10 h-10"
+                    onClick={() => onLeaveTeam(player)}
+                  >
+                    <UserMinus className="h-4 w-4 mr-3" />
+                    Leave Team
+                  </Button>
+                )}
               </div>
 
-              {/* Card Design Selector */}
-              <div>
-                <label className="text-sm font-medium mb-2 block">Card Design</label>
-                <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                  <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(cardDesigns).map(([id, design]) => (
-                      <SelectItem key={id} value={id}>
-                        {design.name}
-                      </SelectItem>
+              {/* Quick Settings Section */}
+              <div className="space-y-4 border-t border-white/20 pt-4">
+                <h3 className="text-sm font-semibold text-gray-300 mb-2">Quick Settings</h3>
+                
+                {/* Play Style Selector - Icons only */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Play Styles (Max 3) - Icons Only</label>
+                  <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto">
+                    {playStylesWithIcons.map(style => (
+                      <Button
+                        key={style.value}
+                        variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => togglePlayStyle(style.value)}
+                        disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                        className="text-lg p-2 h-10 w-10"
+                        title={style.label}
+                      >
+                        {style.icon}
+                      </Button>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
+
+                {/* Fun Stats Editor */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">FIFA Stats</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {funStatLabels.map(stat => (
+                      <div key={stat.key} className="text-center">
+                        <div className="text-xs mb-1">{stat.key}</div>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={funStats[stat.key] || ''}
+                          onChange={(e) => updateStat(stat.key, e.target.value)}
+                          className="w-full text-center h-8 bg-white/10 border-white/20 text-white text-xs"
+                          placeholder="--"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Card Design Selector */}
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Card Design</label>
+                  <Select value={selectedDesign} onValueChange={handleSaveDesign}>
+                    <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(cardDesigns).map(([id, design]) => (
+                        <SelectItem key={id} value={id}>
+                          {design.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
