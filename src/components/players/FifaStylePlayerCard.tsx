@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit } from 'lucide-react';
+import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit, X, AlertTriangle } from 'lucide-react';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -25,6 +25,7 @@ interface FifaStylePlayerCardProps {
   onViewHistory?: (player: Player) => void;
   onTransferPlayer?: (player: Player) => void;
   onLeaveTeam?: (player: Player) => void;
+  onClose?: () => void;
 }
 
 type CardDesignImage = {
@@ -65,6 +66,20 @@ const cardDesigns: Record<string, CardDesign> = {
     border: "border-pink-400",
     textColor: "text-pink-900",
     shadow: "shadow-pink-500/50",
+  },
+  redCrystal: {
+    name: "Red Crystal",
+    bgImage: "url('/lovable-uploads/f930e1ff-b50a-437b-94f8-a51a79bf9fac.png')",
+    border: "border-red-400",
+    textColor: "text-red-900",
+    shadow: "shadow-red-500/50",
+  },
+  galaxyGems: {
+    name: "Galaxy Gems",
+    bgImage: "url('/lovable-uploads/f10817a5-248b-4981-8539-e72f55ca861a.png')",
+    border: "border-purple-400",
+    textColor: "text-purple-900",
+    shadow: "shadow-purple-500/50",
   }
 };
 
@@ -103,7 +118,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onViewStats,
   onViewHistory,
   onTransferPlayer,
-  onLeaveTeam
+  onLeaveTeam,
+  onClose
 }) => {
   const [flipped, setFlipped] = useState(false);
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
@@ -174,19 +190,30 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   // Check for missing critical information
   const getMissingInfoAlerts = () => {
     const alerts = [];
-    if (!player.name || player.name.trim().length === 0) {
+    
+    // Check for missing name (first name or surname)
+    const fullName = player.name || '';
+    const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+    
+    if (nameParts.length === 0) {
       alerts.push({ icon: User, message: 'Missing player name' });
+    } else if (nameParts.length === 1) {
+      alerts.push({ icon: User, message: 'Missing first name or surname' });
     }
+    
     if (!player.dateOfBirth) {
       alerts.push({ icon: Calendar, message: 'Missing date of birth' });
     }
+    
     if (!player.squadNumber || player.squadNumber === 0) {
       alerts.push({ icon: Hash, message: 'Missing squad number' });
     }
+    
     const kitSizes = player.kit_sizes || {};
     if (Object.keys(kitSizes).length === 0 || !kitSizes.nameOnShirt) {
       alerts.push({ icon: Shirt, message: 'Missing kit information' });
     }
+    
     return alerts;
   };
 
@@ -285,9 +312,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       <div className="w-[300px] h-[450px] mx-auto">
         <div className="w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden">
           <div className="h-full flex flex-col">
-            {/* Header with Back Button */}
+            {/* Header with Back Button and Close Button */}
             <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800">
-              <h2 className="text-lg font-bold text-white">Player Management</h2>
               <Button
                 variant="ghost"
                 size="sm"
@@ -296,6 +322,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
+              <h2 className="text-lg font-bold text-white">Player Management</h2>
+              {onClose && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
 
             {/* Content - Compact layout */}
@@ -309,7 +346,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onEdit && onEdit(player)}
+                    onClick={() => onEdit?.(player)}
                     title="Edit Player"
                   >
                     <Edit className="h-3 w-3" />
@@ -319,7 +356,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageParents && onManageParents(player)}
+                    onClick={() => onManageParents?.(player)}
                     title="Manage Parents"
                   >
                     <Users className="h-3 w-3" />
@@ -329,7 +366,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageAttributes && onManageAttributes(player)}
+                    onClick={() => onManageAttributes?.(player)}
                     title="Manage Attributes"
                   >
                     <Brain className="h-3 w-3" />
@@ -339,7 +376,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageObjectives && onManageObjectives(player)}
+                    onClick={() => onManageObjectives?.(player)}
                     title="Manage Objectives"
                   >
                     <Target className="h-3 w-3" />
@@ -349,7 +386,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageComments && onManageComments(player)}
+                    onClick={() => onManageComments?.(player)}
                     title="Manage Comments"
                   >
                     <MessageSquare className="h-3 w-3" />
@@ -359,7 +396,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewStats && onViewStats(player)}
+                    onClick={() => onViewStats?.(player)}
                     title="View Statistics"
                   >
                     <BarChart3 className="h-3 w-3" />
@@ -369,7 +406,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewHistory && onViewHistory(player)}
+                    onClick={() => onViewHistory?.(player)}
                     title="View History"
                   >
                     <Calendar className="h-3 w-3" />
@@ -379,7 +416,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onTransferPlayer && onTransferPlayer(player)}
+                    onClick={() => onTransferPlayer?.(player)}
                     title="Transfer Player"
                   >
                     <RefreshCw className="h-3 w-3" />
@@ -389,7 +426,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
-                    onClick={() => onLeaveTeam && onLeaveTeam(player)}
+                    onClick={() => onLeaveTeam?.(player)}
                     title="Leave Team"
                   >
                     <UserMinus className="h-3 w-3" />
@@ -481,13 +518,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           <Settings className="h-4 w-4 text-white" />
         </Button>
 
-        {/* Alerts */}
+        {/* Close Button */}
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+          >
+            <X className="h-4 w-4 text-white" />
+          </Button>
+        )}
+
+        {/* Missing Info Alerts */}
         {hasAlerts && (
-          <div className="absolute top-3 left-3 flex gap-1 z-20">
-            {missingInfoAlerts.slice(0, 2).map((alert, index) => {
+          <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
+            {missingInfoAlerts.slice(0, 3).map((alert, index) => {
               const IconComponent = alert.icon;
               return (
-                <div key={index} title={alert.message} className="bg-orange-500 rounded-full p-1">
+                <div key={index} title={alert.message} className="bg-orange-500/90 rounded-full p-1">
                   <IconComponent className="h-3 w-3 text-white" />
                 </div>
               );
@@ -516,16 +565,16 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           {topPositions.length > 0 && (
             <div className="absolute left-2 top-16 space-y-1">
               {topPositions.map((pos, idx) => (
-                <div key={pos.position} className="bg-pink-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg">
+                <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
                   {pos.display}
                 </div>
               ))}
             </div>
           )}
 
-          {/* Player Photo - Made larger */}
-          <div className="relative mx-auto mb-6 mt-8">
-            <Avatar className="h-32 w-32 border-3 border-white/70 shadow-lg">
+          {/* Player Photo - Made larger and positioned higher */}
+          <div className="relative mx-auto mb-4 mt-4">
+            <Avatar className="h-36 w-36 border-3 border-white/70 shadow-lg">
               <AvatarImage src={player.photoUrl} alt={displayName} />
               <AvatarFallback className="text-2xl bg-white/30 text-white font-bold">
                 {player.name ? getInitials(player.name) : 'PL'}
@@ -545,14 +594,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           </div>
 
           {/* Player Name - Lowered position */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-4">
             <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
               {displayName}
             </h1>
           </div>
 
           {/* FIFA Stats - Lowered position */}
-          <div className="flex justify-between items-center mb-6 px-2">
+          <div className="flex justify-between items-center mb-4 px-2">
             {funStatLabels.map(stat => (
               <div key={stat.key} className="text-center flex-1">
                 <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
@@ -572,13 +621,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             ))}
           </div>
 
-          {/* Bottom Info - Enhanced styling for better visibility */}
+          {/* Bottom Info - Enhanced styling for better visibility with darker text and white outlines */}
           <div className="mt-auto">
             <div className="flex justify-between items-center text-sm font-bold">
               <span 
                 className="text-gray-800 drop-shadow-md"
                 style={{
-                  textShadow: '1px 1px 0 white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white'
+                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
                 }}
               >
                 #{player.squadNumber || 'XX'}
@@ -586,7 +635,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <span 
                 className="text-gray-800 drop-shadow-md"
                 style={{
-                  textShadow: '1px 1px 0 white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white'
+                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
                 }}
               >
                 Age {age}
@@ -594,7 +643,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <span 
                 className="text-gray-800 drop-shadow-md"
                 style={{
-                  textShadow: '1px 1px 0 white, -1px -1px 0 white, 1px -1px 0 white, -1px 1px 0 white'
+                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
                 }}
               >
                 {isGoalkeeper ? 'GK' : 'OUTFIELD'}
