@@ -104,11 +104,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const cardDesign = player.cardDesignId || 'goldRare';
 
   return (
-    <div className="relative w-64 h-96 perspective-1000">
-      <div className={`relative w-full h-full transition-transform duration-700 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+    <div className="relative w-64 h-96 fifa-card-container">
+      <div className={`relative w-full h-full transition-transform duration-700 fifa-card-inner ${isFlipped ? 'fifa-card-flipped' : ''}`}>
         
         {/* Front of Card */}
-        <div className="absolute inset-0 w-full h-full backface-hidden">
+        <div className="absolute inset-0 w-full h-full fifa-card-face fifa-card-front">
           <Card className="w-full h-full bg-gradient-to-b from-amber-400 via-yellow-500 to-amber-600 border-2 border-amber-700 shadow-2xl overflow-hidden">
             {/* Close Button - Front */}
             <Button
@@ -132,14 +132,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             </div>
 
-            {/* Player Image Area (Top 2/3) */}
-            <div className="relative h-48 flex items-center justify-center bg-gradient-to-b from-transparent to-black/20">
+            {/* Player Image Area */}
+            <div className="relative h-48 flex items-center justify-center">
               <div className="w-32 h-32 bg-gray-300 rounded-full flex items-center justify-center">
                 <User className="h-16 w-16 text-gray-500" />
               </div>
             </div>
 
-            {/* Player Info Area (Bottom 1/3 with dark background) */}
+            {/* Player Info Area */}
             <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white p-4">
               <div className="text-center mb-2">
                 <h3 className="text-lg font-bold truncate">{player.name}</h3>
@@ -200,7 +200,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         </div>
 
         {/* Back of Card */}
-        <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
+        <div className="absolute inset-0 w-full h-full fifa-card-face fifa-card-back">
           <Card className="w-full h-full bg-gradient-to-b from-slate-600 via-slate-700 to-slate-800 border-2 border-slate-500 shadow-2xl text-white">
             {/* Close Button - Back */}
             <Button
@@ -323,21 +323,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           </Card>
         </div>
       </div>
-
-      <style jsx>{`
-        .perspective-1000 {
-          perspective: 1000px;
-        }
-        .preserve-3d {
-          transform-style: preserve-3d;
-        }
-        .backface-hidden {
-          backface-visibility: hidden;
-        }
-        .rotate-y-180 {
-          transform: rotateY(180deg);
-        }
-      `}</style>
     </div>
   );
 };

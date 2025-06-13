@@ -105,6 +105,27 @@
   100% { opacity: 1; }
 }
 
+/* FIFA Card 3D styles */
+.fifa-card-container {
+  perspective: 1000px;
+}
+
+.fifa-card-inner {
+  transform-style: preserve-3d;
+}
+
+.fifa-card-face {
+  backface-visibility: hidden;
+}
+
+.fifa-card-back {
+  transform: rotateY(180deg);
+}
+
+.fifa-card-flipped {
+  transform: rotateY(180deg);
+}
+
 @layer components {
   .player-availability-amber {
     @apply border-puma-amber border-2;
