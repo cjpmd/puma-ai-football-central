@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +18,9 @@ import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModa
 import { PlayerCommentsModal } from '@/components/players/PlayerCommentsModal';
 import { PlayerStatsModal } from '@/components/players/PlayerStatsModal';
 import { PlayerHistoryModal } from '@/components/players/PlayerHistoryModal';
+import { PlayerTransferForm } from '@/components/players/PlayerTransferForm';
+import { PlayerLeaveForm } from '@/components/players/PlayerLeaveForm';
+import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
 
@@ -32,6 +34,7 @@ const PlayerManagementTab = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [performanceTrends, setPerformanceTrends] = useState<Map<string, PerformanceTrend>>(new Map());
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
@@ -85,6 +88,25 @@ const PlayerManagementTab = () => {
     },
   });
 
+  // Remove player mutation
+  const removePlayerMutation = useMutation({
+    mutationFn: (playerId: string) => playersService.removePlayerFromSquad(playerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+      toast({
+        title: 'Player Removed',
+        description: 'Player has been removed from the squad.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove player',
+        variant: 'destructive',
+      });
+    },
+  });
+
   // Filter players based on search and subscription type
   const filteredPlayers = players.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,6 +136,83 @@ const PlayerManagementTab = () => {
       data: updatedData
     });
     handleModalClose();
+  };
+
+  // FIFA Card specific handlers
+  const handleEditPlayer = (player: Player) => {
+    console.log('Edit player clicked:', player);
+    // TODO: Implement edit player functionality
+    toast({
+      title: 'Edit Player',
+      description: 'Edit player functionality coming soon...',
+    });
+  };
+
+  const handleManageParents = (player: Player) => {
+    handleModalOpen('parents', player);
+  };
+
+  const handleRemoveFromSquad = (player: Player) => {
+    if (window.confirm(`Are you sure you want to remove ${player.name} from the squad?`)) {
+      removePlayerMutation.mutate(player.id);
+    }
+  };
+
+  const handleUpdatePhoto = async (player: Player, file: File) => {
+    // TODO: Implement photo upload
+    toast({
+      title: 'Photo Upload',
+      description: 'Photo upload functionality coming soon...',
+    });
+  };
+
+  const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { funStats: stats }
+    });
+  };
+
+  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { playStyle: JSON.stringify(playStyles) }
+    });
+  };
+
+  const handleSaveCardDesign = (player: Player, designId: string) => {
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { cardDesignId: designId }
+    });
+  };
+
+  const handleManageAttributes = (player: Player) => {
+    handleModalOpen('attributes', player);
+  };
+
+  const handleManageObjectives = (player: Player) => {
+    handleModalOpen('objectives', player);
+  };
+
+  const handleManageComments = (player: Player) => {
+    handleModalOpen('comments', player);
+  };
+
+  const handleViewStats = (player: Player) => {
+    handleModalOpen('stats', player);
+  };
+
+  const handleViewHistory = (player: Player) => {
+    handleModalOpen('history', player);
+  };
+
+  const handleTransferPlayer = (player: Player) => {
+    handleModalOpen('transfer', player);
+  };
+
+  const handleLeaveTeam = (player: Player) => {
+    handleModalOpen('leave', player);
   };
 
   const renderPerformanceIcon = (playerId: string) => {
@@ -181,22 +280,40 @@ const PlayerManagementTab = () => {
               Comprehensive player data management and analytics
             </p>
           </div>
-          {teams.length > 1 && (
-            <div className="min-w-[250px]">
-              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-4">
+            <div className="flex rounded-lg border p-1">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+              >
+                Table
+              </Button>
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+              >
+                Cards
+              </Button>
             </div>
-          )}
+            {teams.length > 1 && (
+              <div className="min-w-[250px]">
+                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
         </div>
 
         <Card>
@@ -238,114 +355,140 @@ const PlayerManagementTab = () => {
                 </Badge>
               </div>
 
-              <div className="border rounded-lg">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Player</TableHead>
-                      <TableHead>Squad #</TableHead>
-                      <TableHead>Subscription</TableHead>
-                      <TableHead>Games</TableHead>
-                      <TableHead>Minutes</TableHead>
-                      <TableHead>Top Positions</TableHead>
-                      <TableHead>Performance</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPlayers.map((player) => (
-                      <TableRow key={player.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{player.name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}
-                            </p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            #{player.squadNumber}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}
-                          >
-                            {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
-                        <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
-                        <TableCell>
-                          {renderTopPositions(player)}
-                        </TableCell>
-                        <TableCell>
-                          {renderPerformanceIcon(player.id)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleModalOpen('parents', player)}
-                              className="h-8 w-8 p-0"
-                              title="Manage Parents"
-                            >
-                              <Users className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleModalOpen('attributes', player)}
-                              className="h-8 w-8 p-0"
-                              title="Manage Attributes"
-                            >
-                              <Brain className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleModalOpen('objectives', player)}
-                              className="h-8 w-8 p-0"
-                              title="Manage Objectives"
-                            >
-                              <Target className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleModalOpen('comments', player)}
-                              className="h-8 w-8 p-0"
-                              title="Manage Comments"
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleModalOpen('stats', player)}
-                              className="h-8 w-8 p-0"
-                              title="View Statistics"
-                            >
-                              <BarChart3 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleModalOpen('history', player)}
-                              className="h-8 w-8 p-0"
-                              title="View History"
-                            >
-                              <Calendar className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+              {viewMode === 'cards' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
+                  {filteredPlayers.map((player) => (
+                    <FifaStylePlayerCard
+                      key={player.id}
+                      player={player}
+                      team={selectedTeam}
+                      onEdit={handleEditPlayer}
+                      onManageParents={handleManageParents}
+                      onRemoveFromSquad={handleRemoveFromSquad}
+                      onUpdatePhoto={handleUpdatePhoto}
+                      onSaveFunStats={handleSaveFunStats}
+                      onSavePlayStyle={handleSavePlayStyle}
+                      onSaveCardDesign={handleSaveCardDesign}
+                      onManageAttributes={handleManageAttributes}
+                      onManageObjectives={handleManageObjectives}
+                      onManageComments={handleManageComments}
+                      onViewStats={handleViewStats}
+                      onViewHistory={handleViewHistory}
+                      onTransferPlayer={handleTransferPlayer}
+                      onLeaveTeam={handleLeaveTeam}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Player</TableHead>
+                        <TableHead>Squad #</TableHead>
+                        <TableHead>Subscription</TableHead>
+                        <TableHead>Games</TableHead>
+                        <TableHead>Minutes</TableHead>
+                        <TableHead>Top Positions</TableHead>
+                        <TableHead>Performance</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPlayers.map((player) => (
+                        <TableRow key={player.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{player.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              #{player.squadNumber}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}
+                            >
+                              {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
+                          <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
+                          <TableCell>
+                            {renderTopPositions(player)}
+                          </TableCell>
+                          <TableCell>
+                            {renderPerformanceIcon(player.id)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('parents', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Parents"
+                              >
+                                <Users className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('attributes', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Attributes"
+                              >
+                                <Brain className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('objectives', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Objectives"
+                              >
+                                <Target className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('comments', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Comments"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('stats', player)}
+                                className="h-8 w-8 p-0"
+                                title="View Statistics"
+                              >
+                                <BarChart3 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('history', player)}
+                                className="h-8 w-8 p-0"
+                                title="View History"
+                              >
+                                <Calendar className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
 
               {filteredPlayers.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
@@ -397,6 +540,38 @@ const PlayerManagementTab = () => {
               isOpen={activeModal === 'history'}
               onClose={handleModalClose}
             />
+
+            {activeModal === 'transfer' && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <PlayerTransferForm
+                    player={selectedPlayer}
+                    onSubmit={() => {
+                      handleModalClose();
+                      // Refresh data after transfer
+                      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+                    }}
+                    onCancel={handleModalClose}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'leave' && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <PlayerLeaveForm
+                    player={selectedPlayer}
+                    onSubmit={() => {
+                      handleModalClose();
+                      // Refresh data after leave
+                      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+                    }}
+                    onCancel={handleModalClose}
+                  />
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
