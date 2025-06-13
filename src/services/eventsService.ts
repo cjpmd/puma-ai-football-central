@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
+import { playerStatsService } from './playerStatsService';
 
 export interface CreateEventData {
   team_id: string;
@@ -121,11 +122,23 @@ export const eventsService = {
   async deleteEvent(eventId: string, eventTitle?: string): Promise<void> {
     // Show confirmation dialog
     const confirmMessage = eventTitle 
-      ? `Are you sure you want to delete the event "${eventTitle}"? This action cannot be undone.`
-      : 'Are you sure you want to delete this event? This action cannot be undone.';
+      ? `Are you sure you want to delete the event "${eventTitle}"? This action cannot be undone and will remove all associated player statistics.`
+      : 'Are you sure you want to delete this event? This action cannot be undone and will remove all associated player statistics.';
     
     if (!window.confirm(confirmMessage)) {
       throw new Error('Event deletion cancelled by user');
+    }
+
+    console.log(`Deleting event ${eventId} and cleaning up player stats...`);
+
+    // Get all players who have stats for this event so we can update their match_stats
+    const { data: playersWithStats, error: playersError } = await supabase
+      .from('event_player_stats')
+      .select('player_id')
+      .eq('event_id', eventId);
+
+    if (playersError) {
+      console.error('Error fetching players with stats for event:', playersError);
     }
 
     // First delete any related event_player_stats
@@ -139,6 +152,17 @@ export const eventsService = {
       throw statsError;
     }
 
+    // Delete any event selections
+    const { error: selectionsError } = await supabase
+      .from('event_selections')
+      .delete()
+      .eq('event_id', eventId);
+
+    if (selectionsError) {
+      console.error('Error deleting event selections:', selectionsError);
+      throw selectionsError;
+    }
+
     // Then delete the event
     const { error } = await supabase
       .from('events')
@@ -147,6 +171,108 @@ export const eventsService = {
 
     if (error) {
       console.error('Error deleting event:', error);
+      throw error;
+    }
+
+    // Update match stats for all affected players
+    if (playersWithStats && playersWithStats.length > 0) {
+      console.log(`Updating match stats for ${playersWithStats.length} players after event deletion`);
+      const uniquePlayerIds = [...new Set(playersWithStats.map(p => p.player_id))];
+      
+      for (const playerId of uniquePlayerIds) {
+        try {
+          await playerStatsService.updatePlayerStats(playerId);
+        } catch (error) {
+          console.error(`Error updating stats for player ${playerId}:`, error);
+        }
+      }
+    }
+
+    console.log('Event deleted successfully and player stats updated');
+  },
+
+  async cleanupDeletedEventStats(): Promise<void> {
+    try {
+      console.log('Cleaning up stats for deleted events...');
+      
+      // Find event_player_stats that reference non-existent events
+      const { data: orphanedStats, error: orphanedError } = await supabase
+        .from('event_player_stats')
+        .select(`
+          id,
+          event_id,
+          player_id,
+          events!left(id)
+        `)
+        .is('events.id', null);
+
+      if (orphanedError) {
+        console.error('Error finding orphaned stats:', orphanedError);
+        throw orphanedError;
+      }
+
+      if (orphanedStats && orphanedStats.length > 0) {
+        console.log(`Found ${orphanedStats.length} orphaned player stats`);
+        
+        // Get unique player IDs for stats update
+        const affectedPlayerIds = [...new Set(orphanedStats.map(stat => stat.player_id))];
+        
+        // Delete orphaned stats
+        const orphanedStatIds = orphanedStats.map(stat => stat.id);
+        const { error: deleteError } = await supabase
+          .from('event_player_stats')
+          .delete()
+          .in('id', orphanedStatIds);
+
+        if (deleteError) {
+          console.error('Error deleting orphaned stats:', deleteError);
+          throw deleteError;
+        }
+
+        // Update match stats for affected players
+        for (const playerId of affectedPlayerIds) {
+          try {
+            await playerStatsService.updatePlayerStats(playerId);
+          } catch (error) {
+            console.error(`Error updating stats for player ${playerId}:`, error);
+          }
+        }
+
+        console.log('Successfully cleaned up orphaned player stats');
+      } else {
+        console.log('No orphaned player stats found');
+      }
+
+      // Also clean up orphaned event selections
+      const { data: orphanedSelections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select(`
+          id,
+          event_id,
+          events!left(id)
+        `)
+        .is('events.id', null);
+
+      if (selectionsError) {
+        console.error('Error finding orphaned selections:', selectionsError);
+      } else if (orphanedSelections && orphanedSelections.length > 0) {
+        console.log(`Found ${orphanedSelections.length} orphaned event selections`);
+        
+        const orphanedSelectionIds = orphanedSelections.map(sel => sel.id);
+        const { error: deleteSelectionsError } = await supabase
+          .from('event_selections')
+          .delete()
+          .in('id', orphanedSelectionIds);
+
+        if (deleteSelectionsError) {
+          console.error('Error deleting orphaned selections:', deleteSelectionsError);
+        } else {
+          console.log('Successfully cleaned up orphaned event selections');
+        }
+      }
+
+    } catch (error) {
+      console.error('Error during cleanup:', error);
       throw error;
     }
   }

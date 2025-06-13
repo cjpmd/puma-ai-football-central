@@ -346,7 +346,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onEdit?.(player)}
+                    onClick={() => {
+                      console.log('Edit player clicked', player);
+                      if (onEdit) onEdit(player);
+                    }}
                     title="Edit Player"
                   >
                     <Edit className="h-3 w-3" />
@@ -356,7 +359,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageParents?.(player)}
+                    onClick={() => {
+                      console.log('Manage parents clicked', player);
+                      if (onManageParents) onManageParents(player);
+                    }}
                     title="Manage Parents"
                   >
                     <Users className="h-3 w-3" />
@@ -366,7 +372,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageAttributes?.(player)}
+                    onClick={() => {
+                      console.log('Manage attributes clicked', player);
+                      if (onManageAttributes) onManageAttributes(player);
+                    }}
                     title="Manage Attributes"
                   >
                     <Brain className="h-3 w-3" />
@@ -376,7 +385,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageObjectives?.(player)}
+                    onClick={() => {
+                      console.log('Manage objectives clicked', player);
+                      if (onManageObjectives) onManageObjectives(player);
+                    }}
                     title="Manage Objectives"
                   >
                     <Target className="h-3 w-3" />
@@ -386,7 +398,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageComments?.(player)}
+                    onClick={() => {
+                      console.log('Manage comments clicked', player);
+                      if (onManageComments) onManageComments(player);
+                    }}
                     title="Manage Comments"
                   >
                     <MessageSquare className="h-3 w-3" />
@@ -396,7 +411,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewStats?.(player)}
+                    onClick={() => {
+                      console.log('View stats clicked', player);
+                      if (onViewStats) onViewStats(player);
+                    }}
                     title="View Statistics"
                   >
                     <BarChart3 className="h-3 w-3" />
@@ -406,7 +424,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewHistory?.(player)}
+                    onClick={() => {
+                      console.log('View history clicked', player);
+                      if (onViewHistory) onViewHistory(player);
+                    }}
                     title="View History"
                   >
                     <Calendar className="h-3 w-3" />
@@ -416,7 +437,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onTransferPlayer?.(player)}
+                    onClick={() => {
+                      console.log('Transfer player clicked', player);
+                      if (onTransferPlayer) onTransferPlayer(player);
+                    }}
                     title="Transfer Player"
                   >
                     <RefreshCw className="h-3 w-3" />
@@ -426,7 +450,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     variant="outline"
                     size="sm"
                     className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
-                    onClick={() => onLeaveTeam?.(player)}
+                    onClick={() => {
+                      console.log('Leave team clicked', player);
+                      if (onLeaveTeam) onLeaveTeam(player);
+                    }}
                     title="Leave Team"
                   >
                     <UserMinus className="h-3 w-3" />
@@ -501,7 +528,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     );
   }
 
-  // Front of card
+  // Front of card - Updated layout with shaded bottom section
   return (
     <div className="w-[300px] h-[450px] mx-auto">
       <div 
@@ -572,17 +599,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          {/* Player Photo - Made larger and positioned higher */}
-          <div className="relative mx-auto mb-4 mt-4">
-            <Avatar className="h-36 w-36 border-3 border-white/70 shadow-lg">
+          {/* Player Photo - Larger and positioned in top two-thirds */}
+          <div className="relative mx-auto mb-2 mt-8 flex-1 flex items-center justify-center">
+            <Avatar className="h-48 w-48 border-3 border-white/70 shadow-lg">
               <AvatarImage src={player.photoUrl} alt={displayName} />
-              <AvatarFallback className="text-2xl bg-white/30 text-white font-bold">
+              <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
                 {player.name ? getInitials(player.name) : 'PL'}
               </AvatarFallback>
             </Avatar>
             {onUpdatePhoto && (
-              <label className="absolute -bottom-1 -right-1 bg-white/90 text-gray-800 rounded-full p-1 cursor-pointer hover:bg-white transition-colors shadow-lg">
-                <Camera className="h-3 w-3" />
+              <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
+                <Camera className="h-4 w-4" />
                 <input
                   type="file"
                   accept="image/*"
@@ -593,39 +620,40 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             )}
           </div>
 
-          {/* Player Name - Lowered position */}
-          <div className="text-center mb-4">
-            <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
-              {displayName}
-            </h1>
-          </div>
+          {/* Bottom Section with Shaded Background - Bottom third */}
+          <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 space-y-3">
+            {/* Player Name */}
+            <div className="text-center">
+              <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
+                {displayName}
+              </h1>
+            </div>
 
-          {/* FIFA Stats - Lowered position */}
-          <div className="flex justify-between items-center mb-4 px-2">
-            {funStatLabels.map(stat => (
-              <div key={stat.key} className="text-center flex-1">
-                <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
-                <div className="text-white text-lg font-bold drop-shadow-md">
-                  {funStats[stat.key] || '--'}
+            {/* FIFA Stats */}
+            <div className="flex justify-between items-center px-1">
+              {funStatLabels.map(stat => (
+                <div key={stat.key} className="text-center flex-1">
+                  <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
+                  <div className="text-white text-lg font-bold drop-shadow-md">
+                    {funStats[stat.key] || '--'}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
 
-          {/* Play Style Icons */}
-          <div className="flex justify-center mb-4 gap-2">
-            {selectedPlayStyles.map((style, index) => (
-              <div key={index} className="text-2xl drop-shadow-lg">
-                {getPlayStyleIcon(style)}
-              </div>
-            ))}
-          </div>
+            {/* Play Style Icons */}
+            <div className="flex justify-center gap-2">
+              {selectedPlayStyles.map((style, index) => (
+                <div key={index} className="text-2xl drop-shadow-lg">
+                  {getPlayStyleIcon(style)}
+                </div>
+              ))}
+            </div>
 
-          {/* Bottom Info - Enhanced styling for better visibility with darker text and white outlines */}
-          <div className="mt-auto">
+            {/* Bottom Info */}
             <div className="flex justify-between items-center text-sm font-bold">
               <span 
-                className="text-gray-800 drop-shadow-md"
+                className="text-gray-800"
                 style={{
                   textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
                 }}
@@ -633,7 +661,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 #{player.squadNumber || 'XX'}
               </span>
               <span 
-                className="text-gray-800 drop-shadow-md"
+                className="text-gray-800"
                 style={{
                   textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
                 }}
@@ -641,7 +669,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 Age {age}
               </span>
               <span 
-                className="text-gray-800 drop-shadow-md"
+                className="text-gray-800"
                 style={{
                   textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
                 }}

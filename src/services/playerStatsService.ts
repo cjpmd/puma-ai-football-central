@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
@@ -247,6 +248,64 @@ export const playerStatsService = {
 
     } catch (error) {
       console.error('Error cleaning up unknown opponent events:', error);
+      throw error;
+    }
+  },
+
+  async cleanupOrphanedPlayerStats(): Promise<void> {
+    try {
+      console.log('Cleaning up orphaned player stats...');
+      
+      // Find event_player_stats that reference non-existent events
+      const { data: orphanedStats, error: orphanedError } = await supabase
+        .from('event_player_stats')
+        .select(`
+          id,
+          event_id,
+          player_id,
+          events!left(id)
+        `)
+        .is('events.id', null);
+
+      if (orphanedError) {
+        console.error('Error finding orphaned stats:', orphanedError);
+        throw orphanedError;
+      }
+
+      if (orphanedStats && orphanedStats.length > 0) {
+        console.log(`Found ${orphanedStats.length} orphaned player stats`);
+        
+        // Get unique player IDs for stats update
+        const affectedPlayerIds = [...new Set(orphanedStats.map(stat => stat.player_id))];
+        
+        // Delete orphaned stats
+        const orphanedStatIds = orphanedStats.map(stat => stat.id);
+        const { error: deleteError } = await supabase
+          .from('event_player_stats')
+          .delete()
+          .in('id', orphanedStatIds);
+
+        if (deleteError) {
+          console.error('Error deleting orphaned stats:', deleteError);
+          throw deleteError;
+        }
+
+        // Update match stats for affected players
+        for (const playerId of affectedPlayerIds) {
+          try {
+            await this.updatePlayerStats(playerId);
+          } catch (error) {
+            console.error(`Error updating stats for player ${playerId}:`, error);
+          }
+        }
+
+        console.log('Successfully cleaned up orphaned player stats');
+      } else {
+        console.log('No orphaned player stats found');
+      }
+
+    } catch (error) {
+      console.error('Error during orphaned stats cleanup:', error);
       throw error;
     }
   },
