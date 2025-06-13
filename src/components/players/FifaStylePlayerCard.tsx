@@ -1,22 +1,41 @@
+
 import React, { useState } from 'react';
-import { Player, Team } from '@/types';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit, X, AlertTriangle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
+import { Player, Team } from '@/types';
+import { 
+  User, 
+  Users, 
+  Camera, 
+  Palette, 
+  MoreHorizontal,
+  Brain,
+  Target,
+  MessageSquare,
+  BarChart3,
+  Calendar,
+  ArrowLeftRight,
+  LogOut,
+  X
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface FifaStylePlayerCardProps {
   player: Player;
   team?: Team;
-  onEdit?: (player: Player) => void;
-  onManageParents?: (player: Player) => void;
-  onRemoveFromSquad?: (player: Player) => void;
-  onUpdatePhoto?: (player: Player, file: File) => void;
-  onSaveFunStats?: (player: Player, stats: Record<string, number>) => void;
-  onSavePlayStyle?: (player: Player, playStyles: string[]) => void;
-  onSaveCardDesign?: (player: Player, designId: string) => void;
+  onEdit: (player: Player) => void;
+  onManageParents: (player: Player) => void;
+  onRemoveFromSquad: (player: Player) => void;
+  onUpdatePhoto: (player: Player, file: File) => void;
+  onSaveFunStats: (player: Player, stats: Record<string, number>) => void;
+  onSavePlayStyle: (player: Player, playStyles: string[]) => void;
+  onSaveCardDesign: (player: Player, designId: string) => void;
   onManageAttributes?: (player: Player) => void;
   onManageObjectives?: (player: Player) => void;
   onManageComments?: (player: Player) => void;
@@ -24,82 +43,7 @@ interface FifaStylePlayerCardProps {
   onViewHistory?: (player: Player) => void;
   onTransferPlayer?: (player: Player) => void;
   onLeaveTeam?: (player: Player) => void;
-  onClose?: () => void;
 }
-
-type CardDesignImage = {
-  name: string;
-  bgImage: string;
-  border: string;
-  textColor: string;
-  shadow: string;
-};
-
-type CardDesign = CardDesignImage;
-
-const cardDesigns: Record<string, CardDesign> = {
-  goldBallon: {
-    name: "Gold Ballon d'Or",
-    bgImage: "url('/lovable-uploads/03f7b9d6-8512-4609-a849-1a8b690399ea.png')",
-    border: "border-yellow-400",
-    textColor: "text-yellow-900",
-    shadow: "shadow-yellow-500/50",
-  },
-  orangeStadium: {
-    name: "Orange Stadium",
-    bgImage: "url('/lovable-uploads/6cbbcb58-092a-4c48-adc4-12501ebc9a70.png')",
-    border: "border-orange-400",
-    textColor: "text-orange-900",
-    shadow: "shadow-orange-500/50",
-  },
-  blueChampions: {
-    name: "Blue Champions",
-    bgImage: "url('/lovable-uploads/d7e37207-294b-4c2a-840b-2a55234ddb3b.png')",
-    border: "border-blue-400",
-    textColor: "text-blue-900",
-    shadow: "shadow-blue-500/50",
-  },
-  pinkVortex: {
-    name: "Pink Vortex",
-    bgImage: "url('/lovable-uploads/84d0f9c8-d146-41ef-86a0-871af15c0bc1.png')",
-    border: "border-pink-400",
-    textColor: "text-pink-900",
-    shadow: "shadow-pink-500/50",
-  },
-  redCrystal: {
-    name: "Red Crystal",
-    bgImage: "url('/lovable-uploads/f930e1ff-b50a-437b-94f8-a51a79bf9fac.png')",
-    border: "border-red-400",
-    textColor: "text-red-900",
-    shadow: "shadow-red-500/50",
-  },
-  galaxyGems: {
-    name: "Galaxy Gems",
-    bgImage: "url('/lovable-uploads/f10817a5-248b-4981-8539-e72f55ca861a.png')",
-    border: "border-purple-400",
-    textColor: "text-purple-900",
-    shadow: "shadow-purple-500/50",
-  }
-};
-
-// Updated play styles with your preferred icons
-const playStylesWithIcons = [
-  { value: "finisher", label: "Finisher", icon: "🎯", category: "attacker" },
-  { value: "clinical", label: "Clinical", icon: "✅", category: "attacker" },
-  { value: "speedster", label: "Speedster", icon: "⚡", category: "attacker" },
-  { value: "trickster", label: "Trickster", icon: "🔮", category: "attacker" },
-  { value: "playmaker", label: "Playmaker", icon: "🎭", category: "midfielder" },
-  { value: "engine", label: "Engine", icon: "⚙️", category: "midfielder" },
-  { value: "maestro", label: "Maestro", icon: "🎩", category: "midfielder" },
-  { value: "workhorse", label: "Workhorse", icon: "💪", category: "midfielder" },
-  { value: "guardian", label: "Guardian", icon: "🛡️", category: "defender" },
-  { value: "interceptor", label: "Interceptor", icon: "⚔️", category: "defender" },
-  { value: "rock", label: "Rock", icon: "🗿", category: "defender" },
-  { value: "sweeper", label: "Sweeper", icon: "🧹", category: "defender" },
-  { value: "reflexes", label: "Reflexes", icon: "🥅", category: "goalkeeper" },
-  { value: "commander", label: "Commander", icon: "👑", category: "goalkeeper" },
-  { value: "wall", label: "Wall", icon: "🧱", category: "goalkeeper" }
-];
 
 export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   player,
@@ -118,540 +62,282 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onViewHistory,
   onTransferPlayer,
   onLeaveTeam,
-  onClose
 }) => {
-  const [flipped, setFlipped] = useState(false);
-  const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
-  const [funStats, setFunStats] = useState(player.funStats || {});
-  
-  // Safe parsing of playStyle field
-  const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
-    if (!playStyleData) return [];
-    
-    // If it's already an array, return it
-    if (Array.isArray(playStyleData)) return playStyleData;
-    
-    // If it's a string, try to parse as JSON first
-    if (typeof playStyleData === 'string') {
-      try {
-        const parsed = JSON.parse(playStyleData);
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        // If JSON parsing fails, treat as a single play style
-        return [playStyleData];
-      }
-    }
-    
-    return [];
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  const handleFlip = () => {
+    setIsFlipped(!isFlipped);
   };
 
-  const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
-    parsePlayStyles(player.playStyle)
-  );
-
-  const currentDesign = cardDesigns[selectedDesign] || cardDesigns.goldBallon;
-
-  // Calculate age from date of birth
-  const calculateAge = (dateOfBirth: string) => {
-    if (!dateOfBirth) return 0;
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    return age;
+  const handleClose = () => {
+    setIsFlipped(false);
   };
 
-  // Get top 3 positions with minutes (excluding SUB)
-  const getTopPositions = () => {
-    const minutesByPosition = player.matchStats?.minutesByPosition || {};
-    const filteredPositions = Object.entries(minutesByPosition)
-      .filter(([position]) => position !== 'SUB')
-      .map(([position, minutes]) => ({
-        position,
-        minutes: Number(minutes) || 0
-      }))
-      .filter(p => p.minutes > 0)
-      .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, 3);
-
-    // Add appropriate number of plus signs
-    return filteredPositions.map((pos, index) => ({
-      ...pos,
-      display: index === 0 ? `${pos.position}+++` : 
-               index === 1 ? `${pos.position}++` : 
-               `${pos.position}+`
-    }));
+  // Get overall rating (average of all attributes)
+  const getOverallRating = () => {
+    if (!player.attributes || player.attributes.length === 0) return 75;
+    const total = player.attributes.reduce((sum: number, attr: any) => sum + (attr.value || 0), 0);
+    return Math.round(total / player.attributes.length);
   };
 
-  // Check for missing critical information
-  const getMissingInfoAlerts = () => {
-    const alerts = [];
-    
-    // Check for missing name (first name or surname)
-    const fullName = player.name || '';
-    const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
-    
-    if (nameParts.length === 0) {
-      alerts.push({ icon: User, message: 'Missing player name' });
-    } else if (nameParts.length === 1) {
-      alerts.push({ icon: User, message: 'Missing first name or surname' });
-    }
-    
-    if (!player.dateOfBirth) {
-      alerts.push({ icon: Calendar, message: 'Missing date of birth' });
-    }
-    
-    if (!player.squadNumber || player.squadNumber === 0) {
-      alerts.push({ icon: Hash, message: 'Missing squad number' });
-    }
-    
-    const kitSizes = player.kit_sizes || {};
-    if (Object.keys(kitSizes).length === 0 || !kitSizes.nameOnShirt) {
-      alerts.push({ icon: Shirt, message: 'Missing kit information' });
-    }
-    
-    return alerts;
-  };
-
-  const updateStat = (key: string, value: string) => {
-    const numValue = Math.min(99, Math.max(0, parseInt(value) || 0));
-    const updatedStats = { ...funStats, [key]: numValue };
-    setFunStats(updatedStats);
-    
-    // Save immediately when value changes
-    if (onSaveFunStats) {
-      onSaveFunStats(player, updatedStats);
+  // Get play styles from player data
+  const getPlayStyles = () => {
+    if (!player.playStyle) return [];
+    try {
+      return JSON.parse(player.playStyle);
+    } catch {
+      return [];
     }
   };
 
-  const togglePlayStyle = (styleValue: string) => {
-    let newStyles;
-    if (selectedPlayStyles.includes(styleValue)) {
-      newStyles = selectedPlayStyles.filter(s => s !== styleValue);
-    } else if (selectedPlayStyles.length < 3) {
-      newStyles = [...selectedPlayStyles, styleValue];
-    } else {
-      return; // Max 3 styles
-    }
+  // Get main position
+  const getMainPosition = () => {
+    if (!player.matchStats?.minutesByPosition) return player.type === 'goalkeeper' ? 'GK' : 'MID';
     
-    setSelectedPlayStyles(newStyles);
-    if (onSavePlayStyle) {
-      onSavePlayStyle(player, newStyles);
-    }
+    const positions = Object.entries(player.matchStats.minutesByPosition);
+    if (positions.length === 0) return player.type === 'goalkeeper' ? 'GK' : 'MID';
+    
+    positions.sort((a, b) => (b[1] as number) - (a[1] as number));
+    return positions[0][0];
   };
 
-  const isGoalkeeper = player.type === 'goalkeeper';
-  const funStatLabels = isGoalkeeper
-    ? [
-        { key: "DIV", label: "Diving" },
-        { key: "HAN", label: "Handling" },
-        { key: "KIC", label: "Kicking" },
-        { key: "REF", label: "Reflexes" },
-        { key: "SPE", label: "Speed" },
-        { key: "POS", label: "Positioning" }
-      ]
-    : [
-        { key: "PAC", label: "Pace" },
-        { key: "SHO", label: "Shooting" },
-        { key: "PAS", label: "Passing" },
-        { key: "DRI", label: "Dribbling" },
-        { key: "DEF", label: "Defending" },
-        { key: "PHY", label: "Physical" }
-      ];
+  const cardDesign = player.cardDesignId || 'goldRare';
 
-  const age = calculateAge(player.dateOfBirth || '');
-  const topPositions = getTopPositions();
-  const missingInfoAlerts = getMissingInfoAlerts();
-  const hasAlerts = missingInfoAlerts.length > 0;
-  const isCaptain = player.matchStats?.captainGames > 0;
-  const captainCount = player.matchStats?.captainGames || 0;
-  const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
-  const displayName = player.kit_sizes?.nameOnShirt || player.name || 'No Name';
+  return (
+    <div className="relative w-64 h-96 perspective-1000">
+      <div className={`relative w-full h-full transition-transform duration-700 preserve-3d ${isFlipped ? 'rotate-y-180' : ''}`}>
+        
+        {/* Front of Card */}
+        <div className="absolute inset-0 w-full h-full backface-hidden">
+          <Card className="w-full h-full bg-gradient-to-b from-amber-400 via-yellow-500 to-amber-600 border-2 border-amber-700 shadow-2xl overflow-hidden">
+            {/* Close Button - Front */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              className="absolute top-2 right-2 z-20 h-6 w-6 p-0 bg-black/20 hover:bg-black/40 text-white rounded-full"
+            >
+              <X className="h-3 w-3" />
+            </Button>
 
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file && onUpdatePhoto) {
-      onUpdatePhoto(player, file);
-    }
-  };
+            {/* Card Header with Rating and Position */}
+            <div className="flex justify-between items-start p-3">
+              <div className="text-left">
+                <div className="text-2xl font-bold text-amber-900">{getOverallRating()}</div>
+                <div className="text-sm font-semibold text-amber-800">{getMainPosition()}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-amber-800">#{player.squadNumber}</div>
+                <div className="text-xs text-amber-800">{team?.name}</div>
+              </div>
+            </div>
 
-  const handleSaveDesign = (designId: string) => {
-    setSelectedDesign(designId);
-    if (onSaveCardDesign) {
-      onSaveCardDesign(player, designId);
-    }
-  };
+            {/* Player Image Area (Top 2/3) */}
+            <div className="relative h-48 flex items-center justify-center bg-gradient-to-b from-transparent to-black/20">
+              <div className="w-32 h-32 bg-gray-300 rounded-full flex items-center justify-center">
+                <User className="h-16 w-16 text-gray-500" />
+              </div>
+            </div>
 
-  const getInitials = (name: string) => {
-    return name
-      .split(' ')
-      .map(word => word[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
+            {/* Player Info Area (Bottom 1/3 with dark background) */}
+            <div className="absolute bottom-0 left-0 right-0 bg-black/80 text-white p-4">
+              <div className="text-center mb-2">
+                <h3 className="text-lg font-bold truncate">{player.name}</h3>
+                <Badge variant="outline" className="text-xs bg-white/20 border-white/30 text-white">
+                  {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training'}
+                </Badge>
+              </div>
 
-  const getPlayStyleIcon = (styleValue: string) => {
-    const style = playStylesWithIcons.find(s => s.value === styleValue);
-    return style ? style.icon : "";
-  };
+              {/* FIFA Stats */}
+              <div className="grid grid-cols-3 gap-2 text-xs mb-2">
+                <div className="text-center">
+                  <div className="font-semibold">Games</div>
+                  <div>{player.matchStats?.totalGames || 0}</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">Minutes</div>
+                  <div>{player.matchStats?.totalMinutes || 0}</div>
+                </div>
+                <div className="text-center">
+                  <div className="font-semibold">Captain</div>
+                  <div>{player.matchStats?.captainGames || 0}</div>
+                </div>
+              </div>
 
-  const cardStyle = { 
-    backgroundImage: currentDesign.bgImage,
-    backgroundSize: 'cover',
-    backgroundPosition: 'center'
-  };
+              {/* Play Styles */}
+              <div className="text-center">
+                <div className="text-xs font-semibold mb-1">Play Styles</div>
+                <div className="flex flex-wrap justify-center gap-1">
+                  {getPlayStyles().slice(0, 2).map((style: string, index: number) => (
+                    <Badge key={index} variant="secondary" className="text-xs bg-white/20 border-white/30 text-white">
+                      {style}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
 
-  if (flipped) {
-    // Back of card - management view
-    return (
-      <div className="w-[300px] h-[450px] mx-auto">
-        <div className="w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden">
-          <div className="h-full flex flex-col">
-            {/* Header with Back Button and Close Button */}
-            <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setFlipped(false)}
-                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <h2 className="text-lg font-bold text-white">Player Management</h2>
-              {onClose && (
+              {/* Action Buttons */}
+              <div className="flex justify-center mt-2 gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onClose}
-                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white"
+                  onClick={handleFlip}
+                  className="text-white hover:bg-white/20 text-xs"
                 >
-                  <X className="h-4 w-4" />
+                  Actions
                 </Button>
-              )}
-            </div>
-
-            {/* Content - Compact layout */}
-            <div className="flex-1 p-3 space-y-3 overflow-y-auto">
-              {/* Player Actions - All 9 buttons in 3x3 grid */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-white">Player Actions</h3>
-                
-                <div className="grid grid-cols-3 gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onEdit && onEdit(player)}
-                    title="Edit Player"
-                  >
-                    <Edit className="h-3 w-3" />
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageParents && onManageParents(player)}
-                    title="Manage Parents"
-                  >
-                    <Users className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageAttributes && onManageAttributes(player)}
-                    title="Manage Attributes"
-                  >
-                    <Brain className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageObjectives && onManageObjectives(player)}
-                    title="Manage Objectives"
-                  >
-                    <Target className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageComments && onManageComments(player)}
-                    title="Manage Comments"
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewStats && onViewStats(player)}
-                    title="View Statistics"
-                  >
-                    <BarChart3 className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewHistory && onViewHistory(player)}
-                    title="View History"
-                  >
-                    <Calendar className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onTransferPlayer && onTransferPlayer(player)}
-                    title="Transfer Player"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
-                    onClick={() => onLeaveTeam && onLeaveTeam(player)}
-                    title="Leave Team"
-                  >
-                    <UserMinus className="h-3 w-3" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Play Style Selector */}
-              <div className="border-t border-white/20 pt-3">
-                <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
-                <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
-                  {playStylesWithIcons.map(style => (
-                    <Button
-                      key={style.value}
-                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => togglePlayStyle(style.value)}
-                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                      className="text-sm p-1 h-6 w-6"
-                      title={style.label}
-                    >
-                      {style.icon}
-                    </Button>
-                  ))}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Selected: {selectedPlayStyles.length}/3
-                </div>
-              </div>
-
-              {/* Fun Stats Editor */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {funStatLabels.map(stat => (
-                    <div key={stat.key} className="text-center">
-                      <div className="text-xs mb-1 text-white">{stat.key}</div>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={99}
-                        value={funStats[stat.key] || ''}
-                        onChange={(e) => updateStat(stat.key, e.target.value)}
-                        className="w-full text-center h-6 bg-white/10 border-white/20 text-white text-xs"
-                        placeholder="--"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Card Design Selector */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
-                <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                  <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-6">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(cardDesigns).map(([id, design]) => (
-                      <SelectItem key={id} value={id}>
-                        {design.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(player)}
+                  className="text-white hover:bg-white/20 text-xs"
+                >
+                  Edit
+                </Button>
               </div>
             </div>
-          </div>
+          </Card>
+        </div>
+
+        {/* Back of Card */}
+        <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
+          <Card className="w-full h-full bg-gradient-to-b from-slate-600 via-slate-700 to-slate-800 border-2 border-slate-500 shadow-2xl text-white">
+            {/* Close Button - Back */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClose}
+              className="absolute top-2 right-2 z-20 h-6 w-6 p-0 bg-black/20 hover:bg-black/40 text-white rounded-full"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+
+            <div className="p-4 h-full flex flex-col">
+              <h3 className="text-lg font-bold text-center mb-4">{player.name} - Actions</h3>
+              
+              <div className="grid grid-cols-2 gap-2 flex-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onManageParents(player)}
+                  className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                >
+                  <Users className="h-4 w-4 mb-1" />
+                  <span className="text-xs">Parents</span>
+                </Button>
+
+                {onManageAttributes && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onManageAttributes(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <Brain className="h-4 w-4 mb-1" />
+                    <span className="text-xs">Attributes</span>
+                  </Button>
+                )}
+
+                {onManageObjectives && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onManageObjectives(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <Target className="h-4 w-4 mb-1" />
+                    <span className="text-xs">Objectives</span>
+                  </Button>
+                )}
+
+                {onManageComments && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onManageComments(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <MessageSquare className="h-4 w-4 mb-1" />
+                    <span className="text-xs">Comments</span>
+                  </Button>
+                )}
+
+                {onViewStats && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewStats(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <BarChart3 className="h-4 w-4 mb-1" />
+                    <span className="text-xs">Stats</span>
+                  </Button>
+                )}
+
+                {onViewHistory && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewHistory(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <Calendar className="h-4 w-4 mb-1" />
+                    <span className="text-xs">History</span>
+                  </Button>
+                )}
+
+                {onTransferPlayer && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onTransferPlayer(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <ArrowLeftRight className="h-4 w-4 mb-1" />
+                    <span className="text-xs">Transfer</span>
+                  </Button>
+                )}
+
+                {onLeaveTeam && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onLeaveTeam(player)}
+                    className="flex flex-col items-center justify-center h-16 text-white hover:bg-white/20"
+                  >
+                    <LogOut className="h-4 w-4 mb-1" />
+                    <span className="text-xs">Leave</span>
+                  </Button>
+                )}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFlip}
+                className="mt-4 border-white/30 text-white hover:bg-white/20"
+              >
+                Back to Card
+              </Button>
+            </div>
+          </Card>
         </div>
       </div>
-    );
-  }
 
-  // Front of card - Updated layout without shaded overlay
-  return (
-    <div className="w-[300px] h-[450px] mx-auto">
-      <div 
-        className={`w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden relative`}
-        style={cardStyle}
-      >
-        {/* Settings Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setFlipped(true)}
-          className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
-        >
-          <Settings className="h-4 w-4 text-white" />
-        </Button>
-
-        {/* Close Button */}
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
-          >
-            <X className="h-4 w-4 text-white" />
-          </Button>
-        )}
-
-        {/* Missing Info Alerts */}
-        {hasAlerts && (
-          <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
-            {missingInfoAlerts.slice(0, 3).map((alert, index) => {
-              const IconComponent = alert.icon;
-              return (
-                <div key={index} title={alert.message} className="bg-orange-500/90 rounded-full p-1">
-                  <IconComponent className="h-3 w-3 text-white" />
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Captain Badge with Count */}
-        {isCaptain && (
-          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-yellow-500/90 rounded-full px-2 py-1">
-            <Crown className="h-4 w-4 text-white" />
-            <span className="text-white text-xs font-bold">{captainCount}</span>
-          </div>
-        )}
-
-        {/* POTM Badge with Count */}
-        {potmCount > 0 && (
-          <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-purple-500/90 rounded-full px-2 py-1">
-            <Award className="h-4 w-4 text-white" />
-            <span className="text-white text-xs font-bold">{potmCount}</span>
-          </div>
-        )}
-
-        <div className="p-4 h-full flex flex-col relative z-10">
-          {/* Position Badges (Left Side) - Only show if positions exist and has 3+ positions */}
-          {topPositions.length >= 3 && (
-            <div className="absolute left-2 top-16 space-y-1">
-              {topPositions.map((pos, idx) => (
-                <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
-                  {pos.display}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Player Photo - Positioned in top two-thirds */}
-          <div className="relative mx-auto mb-2 mt-8 flex-1 flex items-center justify-center">
-            <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
-              <AvatarImage src={player.photoUrl} alt={displayName} />
-              <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
-                {player.name ? getInitials(player.name) : 'PL'}
-              </AvatarFallback>
-            </Avatar>
-            {onUpdatePhoto && (
-              <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
-                <Camera className="h-4 w-4" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
-
-          {/* Bottom Section with Shaded Background - Bottom third */}
-          <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 space-y-3">
-            {/* Player Name */}
-            <div className="text-center">
-              <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
-                {displayName}
-              </h1>
-            </div>
-
-            {/* FIFA Stats */}
-            <div className="flex justify-between items-center px-1">
-              {funStatLabels.map(stat => (
-                <div key={stat.key} className="text-center flex-1">
-                  <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
-                  <div className="text-white text-lg font-bold drop-shadow-md">
-                    {funStats[stat.key] || '--'}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Play Style Icons */}
-            <div className="flex justify-center gap-2">
-              {selectedPlayStyles.map((style, index) => (
-                <div key={index} className="text-2xl drop-shadow-lg">
-                  {getPlayStyleIcon(style)}
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom Info */}
-            <div className="flex justify-between items-center text-sm font-bold">
-              <span 
-                className="text-gray-800"
-                style={{
-                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                #{player.squadNumber || 'XX'}
-              </span>
-              <span 
-                className="text-gray-800"
-                style={{
-                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                Age {age}
-              </span>
-              <span 
-                className="text-gray-800"
-                style={{
-                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                {isGoalkeeper ? 'GK' : 'OUTFIELD'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+      <style jsx>{`
+        .perspective-1000 {
+          perspective: 1000px;
+        }
+        .preserve-3d {
+          transform-style: preserve-3d;
+        }
+        .backface-hidden {
+          backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+          transform: rotateY(180deg);
+        }
+      `}</style>
     </div>
   );
 };
