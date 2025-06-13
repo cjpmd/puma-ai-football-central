@@ -442,5 +442,21 @@ export const playersService = {
 
     console.log('Attribute history fetched successfully:', history);
     return history;
+  },
+
+  async removePlayerFromSquad(playerId: string): Promise<void> {
+    console.log('Removing player from squad:', playerId);
+    
+    const { error } = await supabase
+      .from('players')
+      .update({ status: 'inactive' })
+      .eq('id', playerId);
+
+    if (error) {
+      console.error('Error removing player from squad:', error);
+      throw error;
+    }
+
+    console.log('Player removed from squad successfully');
   }
 };

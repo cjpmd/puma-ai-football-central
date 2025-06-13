@@ -546,6 +546,7 @@ const PlayerManagementTab = () => {
                 <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <PlayerTransferForm
                     player={selectedPlayer}
+                    currentTeamId={selectedTeamId}
                     onSubmit={() => {
                       handleModalClose();
                       // Refresh data after transfer
