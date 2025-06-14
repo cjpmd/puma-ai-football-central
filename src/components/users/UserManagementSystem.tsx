@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2 } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -71,40 +72,51 @@ export const UserManagementSystem = () => {
       setLoading(true);
       console.log('Loading users...');
 
+      // First, let's get all users from auth.users (this requires admin privileges)
+      // Since we can't directly query auth.users, we'll work with profiles
+      // and also check for any users who might have signed up but don't have profiles yet
+
       // Get all profiles with basic info
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('*');
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Profiles found:', profiles?.length || 0);
 
       if (!profiles || profiles.length === 0) {
+        console.log('No profiles found');
         setUsers([]);
         return;
       }
 
-      // Get user-team relationships separately
+      // Get user-team relationships
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
         .select('user_id, role, team_id');
 
       if (userTeamsError) console.error('Error fetching user teams:', userTeamsError);
 
-      // Get teams data separately
+      // Get teams data
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name');
 
       if (teamsError) console.error('Error fetching teams:', teamsError);
 
-      // Get user-club relationships separately
+      // Get user-club relationships
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
         .select('user_id, role, club_id');
 
       if (userClubsError) console.error('Error fetching user clubs:', userClubsError);
 
-      // Get clubs data separately
+      // Get clubs data
       const { data: clubsData, error: clubsError } = await supabase
         .from('clubs')
         .select('id, name');
@@ -118,7 +130,7 @@ export const UserManagementSystem = () => {
 
       if (userPlayersError) console.error('Error fetching user players:', userPlayersError);
 
-      // Get players data separately
+      // Get players data
       const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('id, name, team_id');
@@ -132,7 +144,7 @@ export const UserManagementSystem = () => {
 
       if (userStaffError) console.error('Error fetching user staff:', userStaffError);
 
-      // Get staff data separately
+      // Get staff data
       const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
         .select('id, name, role, team_id');
@@ -284,18 +296,28 @@ export const UserManagementSystem = () => {
             Manage users, roles, and permissions across your organization
           </p>
         </div>
-        <Button
-          onClick={() => setShowInviteModal(true)}
-          className="bg-puma-blue-500 hover:bg-puma-blue-600"
-        >
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invite User
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={loadUsers}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+          <Button
+            onClick={() => setShowInviteModal(true)}
+            className="bg-puma-blue-500 hover:bg-puma-blue-600"
+          >
+            <UserPlus className="h-4 w-4 mr-2" />
+            Invite User
+          </Button>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="users">Active Users</TabsTrigger>
+          <TabsTrigger value="users">Active Users ({filteredUsers.length})</TabsTrigger>
           <TabsTrigger value="invitations">Invite</TabsTrigger>
           <TabsTrigger value="teams">Team</TabsTrigger>
           <TabsTrigger value="linking">Link</TabsTrigger>
@@ -448,12 +470,21 @@ export const UserManagementSystem = () => {
                 <Card className="p-8 text-center">
                   <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 mb-4">
                     {searchTerm || roleFilter !== 'all' 
                       ? 'Try adjusting your search or filter criteria.'
                       : 'No users have been added to the system yet.'
                     }
                   </p>
+                  {!searchTerm && roleFilter === 'all' && (
+                    <Button 
+                      onClick={loadUsers}
+                      variant="outline"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh User List
+                    </Button>
+                  )}
                 </Card>
               )}
             </div>
