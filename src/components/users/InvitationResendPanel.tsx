@@ -13,6 +13,7 @@ export const InvitationResendPanel: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadInvitations();
@@ -22,7 +23,9 @@ export const InvitationResendPanel: React.FC = () => {
     setIsLoading(true);
     try {
       const data = await userInvitationService.getInvitations();
-      setInvitations(data);
+      // Filter out any invitations that were deleted in this session
+      const filteredData = data.filter(inv => !deletedIds.has(inv.id));
+      setInvitations(filteredData);
     } catch (error) {
       console.error('Error loading invitations:', error);
       toast.error('Failed to load invitations');
@@ -55,6 +58,8 @@ export const InvitationResendPanel: React.FC = () => {
 
       if (error) throw error;
 
+      // Add to deleted IDs set to prevent it from coming back on refresh
+      setDeletedIds(prev => new Set(prev).add(invitation.id));
       // Remove from local state
       setInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
       toast.success(`Invitation for ${invitation.email} deleted`);
