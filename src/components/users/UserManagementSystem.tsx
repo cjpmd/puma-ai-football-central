@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -263,7 +262,7 @@ export const UserManagementSystem = () => {
     ).join(' ');
   };
 
-  const [activeTab, setActiveTab] = useState('invitations');
+  const [activeTab, setActiveTab] = useState('users');
 
   if (loading) {
     return (
@@ -295,12 +294,171 @@ export const UserManagementSystem = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="users">Active Users</TabsTrigger>
           <TabsTrigger value="invitations">Invite</TabsTrigger>
           <TabsTrigger value="teams">Team</TabsTrigger>
           <TabsTrigger value="linking">Link</TabsTrigger>
           <TabsTrigger value="open">Open</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="users" className="mt-6">
+          <div className="space-y-6">
+            {/* Search and Filter Controls */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  placeholder="Search users by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <Filter className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Filter by role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="global_admin">Global Admin</SelectItem>
+                  <SelectItem value="club_admin">Club Admin</SelectItem>
+                  <SelectItem value="team_manager">Team Manager</SelectItem>
+                  <SelectItem value="coach">Coach</SelectItem>
+                  <SelectItem value="staff">Staff</SelectItem>
+                  <SelectItem value="parent">Parent</SelectItem>
+                  <SelectItem value="player">Player</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Users List */}
+            <div className="grid gap-4">
+              {filteredUsers.map((user) => (
+                <Card key={user.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start space-x-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarFallback className="bg-puma-blue-100 text-puma-blue-800">
+                          {user.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 truncate">
+                            {user.name}
+                          </h3>
+                          {user.roles.map((role) => (
+                            <Badge
+                              key={role}
+                              className={`${getRoleColor(role)} text-white text-xs`}
+                            >
+                              {formatRoleName(role)}
+                            </Badge>
+                          ))}
+                        </div>
+                        
+                        <div className="space-y-1 text-sm text-gray-600">
+                          <div className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            <span>{user.email}</span>
+                          </div>
+                          {user.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              <span>{user.phone}</span>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>Joined {new Date(user.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+
+                        {/* Teams and Clubs */}
+                        {(user.teams.length > 0 || user.clubs.length > 0) && (
+                          <div className="mt-3 space-y-2">
+                            {user.teams.length > 0 && (
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Teams:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {user.teams.map((team) => (
+                                    <Badge key={team.id} variant="outline" className="text-xs">
+                                      {team.name} ({team.role})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {user.clubs.length > 0 && (
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Clubs:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {user.clubs.map((club) => (
+                                    <Badge key={club.id} variant="outline" className="text-xs">
+                                      {club.name} ({club.role})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Player and Staff Links */}
+                        {(user.playerLinks.length > 0 || user.staffLinks.length > 0) && (
+                          <div className="mt-3 space-y-2">
+                            {user.playerLinks.length > 0 && (
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Player Links:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {user.playerLinks.map((link) => (
+                                    <Badge key={link.id} variant="secondary" className="text-xs">
+                                      <Link2 className="h-3 w-3 mr-1" />
+                                      {link.name} ({link.relationship})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            {user.staffLinks.length > 0 && (
+                              <div>
+                                <span className="text-xs font-medium text-gray-500">Staff Links:</span>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {user.staffLinks.map((link) => (
+                                    <Badge key={link.id} variant="secondary" className="text-xs">
+                                      <Shield className="h-3 w-3 mr-1" />
+                                      {link.name} ({link.relationship})
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+
+              {filteredUsers.length === 0 && (
+                <Card className="p-8 text-center">
+                  <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                  <p className="text-gray-600">
+                    {searchTerm || roleFilter !== 'all' 
+                      ? 'Try adjusting your search or filter criteria.'
+                      : 'No users have been added to the system yet.'
+                    }
+                  </p>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
 
         <TabsContent value="invitations" className="mt-6">
           <InvitationResendPanel />
