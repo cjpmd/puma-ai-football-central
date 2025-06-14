@@ -6,12 +6,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { 
   ShieldCheck, Users, UploadCloud, Edit3, Trash2, UserMinus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, Replace, Settings2, Palette, Star, Shuffle, LogOut
-} from 'lucide-react'; // Added Trash2
+} from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { calculateAge, getInitials } from '@/lib/utils'; // Assuming getInitials is in utils
+import { calculateAge, getInitials } from '@/lib/utils';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +47,7 @@ interface FifaStylePlayerCardProps {
   onManageParents: (player: Player) => void;
   onRemoveFromSquad: (player: Player) => void;
   onUpdatePhoto: (player: Player, file: File) => void;
-  onDeletePhoto: (player: Player) => void; // New prop
+  onDeletePhoto: (player: Player) => void;
   onSaveFunStats: (player: Player, stats: Record<string, number>) => void;
   onSavePlayStyle: (player: Player, playStyles: string[]) => void;
   onSaveCardDesign: (player: Player, designId: string) => void;
@@ -67,7 +67,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onManageParents,
   onRemoveFromSquad,
   onUpdatePhoto,
-  onDeletePhoto, // Destructure new prop
+  onDeletePhoto,
   onSaveFunStats,
   onSavePlayStyle,
   onSaveCardDesign,
@@ -126,12 +126,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   
   const design = cardDesigns[player.cardDesignId || 'goldRare'] || cardDesigns.goldRare;
   const age = player.dateOfBirth ? calculateAge(new Date(player.dateOfBirth)) : 'N/A';
-  const overallRating = player.attributes?.find(attr => attr.name === 'Overall')?.value || 75; // Example: Default to 75 if not found
+  const overallRating = player.attributes?.find(attr => attr.name === 'Overall')?.value || 75;
   
   const getTopPositions = () => {
     const positions = player.matchStats?.minutesByPosition || {};
-    // Convert positions object to array
-    const positionEntries = Object.entries(positions).map(([position, minutes]) => ({ position, minutes }));
+    const positionEntries = Object.entries(positions).map(([position, minutes]) => ({ position, minutes: minutes as number }));
     const sortedPositions = positionEntries.sort((a, b) => b.minutes - a.minutes).slice(0, 3);
     return sortedPositions;
   };
@@ -144,9 +143,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           <div className="text-left">
             <p className={cn("font-bold text-2xl leading-none", design.statColor)}>{overallRating}</p>
             <p className={cn("text-sm font-medium", design.positionColor)}>{player.type === 'goalkeeper' ? 'GK' : 'OUT'}</p>
-            {team?.logo_url && (
+            {team?.logoUrl && (
               <Avatar className="h-8 w-8 mt-1 border-2 border-white/50">
-                <AvatarImage src={team.logo_url} alt={team.name} />
+                <AvatarImage src={team.logoUrl} alt={team.name} />
                 <AvatarFallback>{team.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
               </Avatar>
             )}
@@ -208,7 +207,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           ))}
         </div>
 
-        {/* Top Positions Display */}
         {topPositions.length > 0 && (
             <div className="mt-2 text-left">
                 <p className={cn("text-xs font-semibold mb-1", design.text)}>Top Positions:</p>
