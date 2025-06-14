@@ -15,7 +15,6 @@ interface UserSignupModalProps {
 }
 
 export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: UserSignupModalProps) {
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,13 +34,13 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
     setIsLoading(true);
 
     try {
-      const { data, error } = await signUp(email, password, name);
+      const { data, error } = await signUp!(email, password);
       
       if (error) {
         toast.error("Registration failed", {
           description: error.message
         });
-      } else if (data.session) {
+      } else if (data?.session) {
         // User was auto-logged in (if email confirmation is disabled in Supabase)
         toast.success("Welcome to Puma-AI!", {
           description: "Your account has been created and you are now logged in."
@@ -81,16 +80,6 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
-            <Input
-              id="name"
-              placeholder="John Smith"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input

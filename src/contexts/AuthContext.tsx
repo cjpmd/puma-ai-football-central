@@ -14,9 +14,9 @@ interface AuthContextType {
   teams: Team[];
   clubs: Club[];
   currentTeam?: Team | null;
-  signIn: (email: string) => Promise<void>;
+  signIn: (email: string) => Promise<{ error?: any }>;
   signOut: () => Promise<void>;
-  signUp?: (email: string, password: string) => Promise<void>;
+  signUp?: (email: string, password: string) => Promise<{ data?: any; error?: any }>;
   logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
@@ -89,12 +89,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(profileData);
       }
 
-      // Fetch user teams with full team data
+      // Fetch user teams with full team data - fix the ambiguous column reference
       const { data: teamsData, error: teamsError } = await supabase
         .from('user_teams')
         .select(`
           team_id,
-          teams (
+          teams:team_id (
             id,
             name,
             age_group,
@@ -143,12 +143,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
 
-      // Fetch user clubs with full club data
+      // Fetch user clubs with full club data - fix the ambiguous column reference
       const { data: clubsData, error: clubsError } = await supabase
         .from('user_clubs')
         .select(`
           club_id,
-          clubs (
+          clubs:club_id (
             id,
             name,
             reference_number,
@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: club.clubs.id,
           name: club.clubs.name,
           referenceNumber: club.clubs.reference_number,
-          subscriptionType: club.clubs.subscription_type,
+          subscriptionType: club.clubs.subscription_type || 'free',
           serialNumber: club.clubs.serial_number,
           logoUrl: club.clubs.logo_url,
           createdAt: club.clubs.created_at,
@@ -189,10 +189,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) throw error;
+      if (error) {
+        return { error };
+      }
       alert('Check your email for the login link!');
+      return {};
     } catch (error: any) {
-      alert(error.error_description || error.message);
+      return { error };
     } finally {
       setLoading(false);
     }
@@ -201,10 +204,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      return { data, error };
     } catch (error: any) {
-      throw new Error(error.error_description || error.message);
+      return { error };
     } finally {
       setLoading(false);
     }

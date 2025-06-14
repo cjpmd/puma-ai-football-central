@@ -16,7 +16,6 @@ interface UserLoginModalProps {
 
 export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: UserLoginModalProps) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
 
@@ -25,7 +24,7 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(email);
       
       if (error) {
         toast.error("Login failed", {
@@ -33,7 +32,7 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
         });
       } else {
         toast.success("Welcome back!", {
-          description: "You've successfully logged in."
+          description: "Check your email for the login link."
         });
         onLogin();
       }
@@ -60,7 +59,7 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
         <DialogHeader>
           <DialogTitle>Log in to your account</DialogTitle>
           <DialogDescription>
-            Enter your credentials to access your account.
+            Enter your email to receive a login link.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 py-4">
@@ -75,30 +74,12 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
               required
             />
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
-              <button
-                type="button"
-                className="text-sm text-puma-blue-500 hover:text-puma-blue-600"
-              >
-                Forgot password?
-              </button>
-            </div>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
           <Button
             type="submit"
             className="w-full bg-puma-blue-500 hover:bg-puma-blue-600"
             disabled={isLoading}
           >
-            {isLoading ? "Logging in..." : "Log in"}
+            {isLoading ? "Sending link..." : "Send login link"}
           </Button>
           <div className="text-center text-sm">
             <span className="text-muted-foreground">Don't have an account?</span>{" "}
