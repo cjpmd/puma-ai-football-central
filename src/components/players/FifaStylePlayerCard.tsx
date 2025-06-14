@@ -516,7 +516,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             )}
 
-            <div className="relative mx-auto mb-2 mt-4 h-60 flex items-center justify-center">
+            <div className="relative mx-auto mb-2 mt-8 h-60 flex items-center justify-center">
               <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
                 <AvatarImage src={player.photoUrl} alt={determinedDisplayName} />
                 <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
