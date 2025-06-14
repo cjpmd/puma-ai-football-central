@@ -42,12 +42,17 @@ export const ClubManagement = () => {
 
       console.log('Club created successfully:', data);
 
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('User not authenticated');
+
       // Create a user_clubs record for the current user
       const { error: userClubError } = await supabase
         .from('user_clubs')
         .insert({
-          user_id: supabase.auth.getUser().then(u => u.data.user?.id),
-          club_id: data.id
+          user_id: userData.user.id,
+          club_id: data.id,
+          role: 'admin'
         });
 
       if (userClubError) {

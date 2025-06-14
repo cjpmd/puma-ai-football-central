@@ -5,14 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { PlusCircle, Settings, Users, Shield, UserPlus, User, Copy, Edit, Trash2, Eye } from 'lucide-react';
+import { PlusCircle, Settings, Users, Shield, Copy, Edit, Trash2, Eye } from 'lucide-react';
 import { TeamForm } from '@/components/teams/TeamForm';
 import { Team } from '@/types/team';
+import { Club } from '@/types/club';
 
 export const TeamManagement = () => {
   const { teams, clubs, refreshUserData } = useAuth();
@@ -40,17 +39,13 @@ export const TeamManagement = () => {
         club_id: teamData.clubId,
         subscription_type: teamData.subscriptionType || 'free',
         game_format: teamData.gameFormat,
-        kit_icons: teamData.kitIcons,
+        kit_icons: teamData.kitIcons as any,
         logo_url: teamData.logoUrl,
         performance_categories: teamData.performanceCategories,
         manager_name: teamData.managerName,
         manager_email: teamData.managerEmail,
         manager_phone: teamData.managerPhone,
-        privacy_settings: teamData.privacySettings,
-        kit_designs: teamData.kitDesigns,
-        player_attributes: teamData.playerAttributes,
-        fa_connection: teamData.faConnection,
-        staff: teamData.staff,
+        kit_designs: teamData.kitDesigns as any,
         name_display_option: teamData.nameDisplayOption
       }).select().single();
 
@@ -58,11 +53,15 @@ export const TeamManagement = () => {
 
       console.log('Team created successfully:', data);
 
+      // Get current user ID
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('User not authenticated');
+
       // Create a user_teams record for the current user
       const { error: userTeamError } = await supabase
         .from('user_teams')
         .insert({
-          user_id: supabase.auth.getUser().then(u => u.data.user?.id),
+          user_id: userData.user.id,
           team_id: data.id,
           role: 'manager'
         });
@@ -105,17 +104,13 @@ export const TeamManagement = () => {
           club_id: teamData.clubId,
           subscription_type: teamData.subscriptionType,
           game_format: teamData.gameFormat,
-          kit_icons: teamData.kitIcons,
+          kit_icons: teamData.kitIcons as any,
           logo_url: teamData.logoUrl,
           performance_categories: teamData.performanceCategories,
           manager_name: teamData.managerName,
           manager_email: teamData.managerEmail,
           manager_phone: teamData.managerPhone,
-          privacy_settings: teamData.privacySettings,
-          kit_designs: teamData.kitDesigns,
-          player_attributes: teamData.playerAttributes,
-          fa_connection: teamData.faConnection,
-          staff: teamData.staff,
+          kit_designs: teamData.kitDesigns as any,
           name_display_option: teamData.nameDisplayOption
         })
         .eq('id', selectedTeam.id);

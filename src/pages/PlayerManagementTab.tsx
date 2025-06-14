@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -5,11 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,72 +15,27 @@ import {
   Users, 
   Plus, 
   Search, 
-  Filter, 
-  MoreHorizontal, 
-  Edit, 
-  Trash2, 
-  UserPlus,
-  Calendar,
-  Trophy,
-  Target,
-  MessageSquare,
-  History,
-  Shirt,
-  FileText,
-  Phone,
-  Mail,
-  MapPin,
-  User
+  Edit
 } from 'lucide-react';
 import { Team } from '@/types/team';
 
 // Define types and interfaces
-type PlayerStatus = 'active' | 'inactive' | 'on_leave';
-type SubscriptionType = 'full_squad' | 'training_only' | 'trialist';
-
-interface Attribute {
-  name: string;
-  value: string | number | boolean;
-}
-
-interface KitSize {
-  top: string;
-  shorts: string;
-  socks: string;
-}
-
-interface Objective {
-  id: string;
-  description: string;
-  completed: boolean;
-}
-
-interface Stat {
-  name: string;
-  value: number;
-}
-
-interface PlayerEvent {
-  id: string;
-  type: 'training' | 'match';
-  date: string;
-  notes?: string;
-}
-
-interface PlayerMedicalRecord {
-  id: string;
-  date: string;
-  description: string;
-  notes?: string;
-}
-
-interface PlayerContact {
-  type: 'email' | 'phone' | 'address' | 'emergency';
-  value: string;
-  label?: string;
-}
-
 interface Player {
+  id: string;
+  name: string;
+  date_of_birth: string;
+  type: string;
+  squad_number?: number;
+  availability: string;
+  subscription_type: string;
+  status: string;
+  team_id: string;
+  photo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface TransformedPlayer {
   id: string;
   name: string;
   dateOfBirth: string;
@@ -109,25 +62,12 @@ interface Player {
   updatedAt: string;
 }
 
-interface PlayerFormData {
-  name: string;
-  dateOfBirth: string;
-  position: string;
-  jerseyNumber?: number;
-  email?: string;
-  phone?: string;
-  address?: string;
-  emergencyContact?: string;
-  medicalInfo?: string;
-  subscriptionType: 'full_squad' | 'training_only' | 'trialist';
-}
-
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<TransformedPlayer[]>([]);
   const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<TransformedPlayer | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterPosition, setFilterPosition] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -162,7 +102,22 @@ const PlayerManagementTab = () => {
           variant: 'destructive',
         });
       } else {
-        setPlayers(data || []);
+        // Transform database players to match our interface
+        const transformedPlayers: TransformedPlayer[] = (data || []).map((player: any) => ({
+          id: player.id,
+          name: player.name,
+          dateOfBirth: player.date_of_birth,
+          position: player.type || 'outfield',
+          jerseyNumber: player.squad_number,
+          subscriptionType: player.subscription_type as 'full_squad' | 'training_only' | 'trialist',
+          joinDate: player.created_at,
+          status: player.status as 'active' | 'inactive' | 'on_leave',
+          teamId: player.team_id,
+          profileImage: player.photo_url,
+          createdAt: player.created_at,
+          updatedAt: player.updated_at
+        }));
+        setPlayers(transformedPlayers);
       }
     } catch (error) {
       console.error('Error fetching players:', error);
@@ -180,12 +135,6 @@ const PlayerManagementTab = () => {
     'Goalkeeper', 'Defender', 'Midfielder', 'Forward',
     'Centre-back', 'Full-back', 'Wing-back', 'Defensive Midfielder',
     'Central Midfielder', 'Attacking Midfielder', 'Winger', 'Striker'
-  ];
-
-  const subscriptionTypes = [
-    { value: 'full_squad', label: 'Full Squad', description: 'Complete access to all team features' },
-    { value: 'training_only', label: 'Training Only', description: 'Access to training sessions only' },
-    { value: 'trialist', label: 'Trialist', description: 'Trial period - no payment required' }
   ];
 
   const filteredPlayers = players.filter((player) => {
@@ -296,7 +245,6 @@ const PlayerManagementTab = () => {
                             : 'Add a new player to your team squad.'}
                         </DialogDescription>
                       </DialogHeader>
-                      {/* Player form would go here */}
                       <div className="space-y-4">
                         <p className="text-sm text-muted-foreground">
                           Player form implementation would go here.
@@ -373,7 +321,7 @@ const PlayerManagementTab = () => {
               </Card>
             ) : (
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {players.map((player) => (
+                {filteredPlayers.map((player) => (
                   <Card key={player.id} className="hover:shadow-lg transition-shadow">
                     <CardHeader className="pb-3">
                       <div className="flex items-center justify-between">
