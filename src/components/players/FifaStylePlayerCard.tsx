@@ -505,7 +505,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          <div className="p-4 h-full flex flex-col relative z-10">
+          <div className="p-4 h-full flex flex-col justify-end relative z-10">
             {topPositions.length > 0 && ( // Changed condition from topPositions.length >= 3
               <div className="absolute left-2 top-16 space-y-1">
                 {topPositions.map((pos) => (
@@ -516,7 +516,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             )}
 
-            <div className="relative mx-auto mb-2 mt-8 h-60 flex items-center justify-center">
+            <div className="relative mx-auto mb-2 h-60 flex items-center justify-center">
               <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
                 <AvatarImage src={player.photoUrl} alt={determinedDisplayName} />
                 <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
