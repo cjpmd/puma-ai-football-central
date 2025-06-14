@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -507,7 +505,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          <div className="p-4 h-full flex flex-col justify-end relative z-10">
+          <div className="p-4 h-full flex flex-col relative z-10">
             {topPositions.length > 0 && (
               <div className="absolute left-2 top-16 space-y-1">
                 {topPositions.map((pos) => (
@@ -518,7 +516,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             )}
 
-            <div className="relative mx-auto mb-4 h-44 flex items-center justify-center">
+            <div className="relative mx-auto mt-8 mb-4 h-44 flex items-center justify-center">
               <div className="relative h-40 w-40">
                 {/* Custom photo container with feathered border */}
                 <div 
@@ -559,7 +557,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             </div>
 
-            <div className="space-y-1">
+            <div className="space-y-3">
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
                   {determinedDisplayName}
@@ -586,7 +584,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             </div>
 
-            {/* Moved text section - now absolutely positioned at the bottom */}
+            {/* Squad number, age, and player type - moved to bottom */}
             <div className={`absolute bottom-2 left-4 right-4 grid grid-cols-3 text-sm font-bold ${currentDesign.textColor}`}>
               <span className="text-left">
                 #{player.squadNumber || 'XX'}
@@ -841,4 +839,3 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 };
 
 export default FifaStylePlayerCard;
-
