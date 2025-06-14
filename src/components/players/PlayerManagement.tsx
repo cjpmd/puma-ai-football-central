@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
-import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X } from 'lucide-react';
+import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
 import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
@@ -66,9 +66,15 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const updatePlayerMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<Player> }) => 
       playersService.updatePlayer(id, data),
-    onSuccess: () => {
+    onSuccess: (updatedPlayer) => { // updatedPlayer is the returned data from playersService.updatePlayer
       queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
-      // General success actions, specific modal closing handled by handleModalClose or PlayerForm logic
+      // Update selectedPlayer if it's the one being edited, to reflect changes immediately on the card
+      if (selectedPlayer && selectedPlayer.id === updatedPlayer.id) {
+        setSelectedPlayer(updatedPlayer);
+      }
+      if (editingPlayer && editingPlayer.id === updatedPlayer.id) {
+        setEditingPlayer(updatedPlayer); // If editing in form, update that too
+      }
       toast({
         title: 'Player Updated',
         description: 'Player information has been successfully updated.',
@@ -117,7 +123,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         id: editingPlayer.id,
         data: playerData
       }, {
-        onSuccess: () => { // Specific onSuccess for player form
+        onSuccess: (updatedPlayer) => { 
           queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
           setEditingPlayer(null);
           setShowPlayerForm(false);
@@ -142,7 +148,9 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       id: selectedPlayer.id,
       data: updatedData
     });
-    handleModalClose();
+    // Modal close is handled by the specific modal's onClose or PlayerForm logic if it's a direct edit
+    // If this is a generic update from a modal, close it:
+    // handleModalClose(); // This might be too aggressive if called from PlayerForm, for example.
   };
 
   const handleEditPlayer = (player: Player) => {
@@ -155,18 +163,11 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleManageParents for player: ${player.name}`);
     handleModalOpen('parents', player);
   };
-
+  
   const handleRemoveFromSquad = (player: Player) => {
-    // This is typically handled by the "Leave Team" flow or a specific remove button if needed.
-    // For now, let's assume it's part of "Leave Team" or similar.
-    // If there's a direct "Remove" on the card that isn't "Leave Team", it would need a specific mutation.
-    // playerService.removePlayerFromSquad(playerId) is used in PlayerManagementTab
-    // For now, this might be a bit redundant if 'Leave Team' covers it.
-    // Let's make it call the leave team modal for consistency.
     console.log(`[PlayerManagement] handleRemoveFromSquad for player: ${player.name}`);
     if (window.confirm(`Are you sure you want to remove ${player.name} from the squad? This usually means they are leaving the team.`)) {
-       // Example: use updatePlayerMutation to mark as inactive or call a specific service
-      updatePlayerMutation.mutate({ id: player.id, data: { status: 'inactive' } }); // Or a dedicated remove mutation
+      updatePlayerMutation.mutate({ id: player.id, data: { status: 'inactive' } }); 
        toast({
          title: 'Player Removed (Marked Inactive)',
          description: `${player.name} has been marked as inactive.`,
@@ -176,14 +177,52 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
     console.log(`[PlayerManagement] handleUpdatePhoto for player: ${player.name}`);
-    toast({
-      title: 'Photo Upload (Not Implemented)',
-      description: `Photo upload triggered for: ${player.name}. (Actual upload needs implementation)`,
-    });
-    // TODO: Implement actual photo upload service call and update player.photoUrl
-    // Example:
-    // const photoUrl = await playersService.uploadPlayerPhoto(player.id, file);
-    // updatePlayerMutation.mutate({ id: player.id, data: { photoUrl } });
+    if (!player || !file) {
+      toast({ title: 'Upload Error', description: 'Player or file missing.', variant: 'destructive' });
+      return;
+    }
+    try {
+      toast({ title: 'Uploading Photo...', description: `Uploading ${file.name} for ${player.name}.` });
+      const newPhotoUrl = await playersService.uploadPlayerPhoto(player.id, file);
+      
+      updatePlayerMutation.mutate({ 
+        id: player.id, 
+        data: { photoUrl: newPhotoUrl } 
+      }, {
+        onSuccess: (updatedPlayer) => {
+          queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+          // If this player is currently selected for a modal or card view, update its state
+          if (selectedPlayer && selectedPlayer.id === player.id) {
+            setSelectedPlayer(prev => prev ? { ...prev, photoUrl: newPhotoUrl } : null);
+          }
+          // Update the player in the main 'players' list if possible, or rely on query invalidation
+          const currentPlayers = queryClient.getQueryData<Player[]>(['active-players', team.id]);
+          if (currentPlayers) {
+            const updatedPlayers = currentPlayers.map(p => p.id === player.id ? { ...p, photoUrl: newPhotoUrl } : p);
+            queryClient.setQueryData(['active-players', team.id], updatedPlayers);
+          }
+
+          toast({
+            title: 'Photo Updated',
+            description: `Photo for ${player.name} has been successfully updated.`,
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: 'Photo Update Failed',
+            description: error.message || `Failed to save photo URL for ${player.name}.`,
+            variant: 'destructive',
+          });
+        }
+      });
+    } catch (error: any) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'An unexpected error occurred during photo upload.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
@@ -198,7 +237,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleSavePlayStyle for player: ${player.name}`, playStyles);
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { playStyle: JSON.stringify(playStyles) }
+      data: { playStyle: JSON.stringify(playStyles) } // Ensure playStyle is stringified if stored as JSON string in DB
     });
   };
 
@@ -309,12 +348,11 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   team={team}
                   onEdit={handleEditPlayer}
                   onManageParents={handleManageParents}
-                  onRemoveFromSquad={handleRemoveFromSquad} // This is more like an "inactive" toggle now
+                  onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
                   onSaveFunStats={handleSaveFunStats}
                   onSavePlayStyle={handleSavePlayStyle}
                   onSaveCardDesign={handleSaveCardDesign}
-                  // Add new handlers
                   onManageAttributes={handleManageAttributes}
                   onManageObjectives={handleManageObjectives}
                   onManageComments={handleManageComments}

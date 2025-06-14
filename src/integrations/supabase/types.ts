@@ -998,6 +998,7 @@ export type Database = {
           objectives: Json | null
           parent_id: string | null
           performance_category_id: string | null
+          photo_url: string | null
           play_style: string | null
           squad_number: number
           status: string | null
@@ -1025,6 +1026,7 @@ export type Database = {
           objectives?: Json | null
           parent_id?: string | null
           performance_category_id?: string | null
+          photo_url?: string | null
           play_style?: string | null
           squad_number: number
           status?: string | null
@@ -1052,6 +1054,7 @@ export type Database = {
           objectives?: Json | null
           parent_id?: string | null
           performance_category_id?: string | null
+          photo_url?: string | null
           play_style?: string | null
           squad_number?: number
           status?: string | null

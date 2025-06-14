@@ -1,13 +1,42 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Parent, PlayerTransfer, AttributeHistory } from '@/types';
 
+// Helper to transform DB player to frontend Player
+const transformPlayer = (dbPlayer: any): Player => {
+  if (!dbPlayer) return null as unknown as Player; // Should ideally throw or handle gracefully
+  return {
+    ...dbPlayer,
+    teamId: dbPlayer.team_id,
+    squadNumber: dbPlayer.squad_number,
+    dateOfBirth: dbPlayer.date_of_birth,
+    subscriptionType: dbPlayer.subscription_type as 'full_squad' | 'training' | 'trialist',
+    subscriptionStatus: dbPlayer.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
+    kit_sizes: (dbPlayer.kit_sizes as any) || {},
+    kitSizes: (dbPlayer.kit_sizes as any) || {}, // backward compatibility
+    matchStats: (dbPlayer.match_stats as any) || {},
+    leaveDate: dbPlayer.leave_date,
+    leaveComments: dbPlayer.leave_comments,
+    cardDesignId: dbPlayer.card_design_id,
+    funStats: (dbPlayer.fun_stats as Record<string, number>) || {},
+    playStyle: dbPlayer.play_style,
+    createdAt: dbPlayer.created_at,
+    updatedAt: dbPlayer.updated_at,
+    type: dbPlayer.type as 'goalkeeper' | 'outfield',
+    availability: dbPlayer.availability as 'green' | 'amber' | 'red',
+    attributes: (dbPlayer.attributes as any) || [],
+    objectives: (dbPlayer.objectives as any) || [],
+    comments: (dbPlayer.comments as any) || [],
+    photoUrl: dbPlayer.photo_url, // Added photo_url mapping
+  };
+};
+
 export const playersService = {
   async getActivePlayersByTeamId(teamId: string): Promise<Player[]> {
     console.log('Fetching active players for team:', teamId);
     
     const { data, error } = await supabase
       .from('players')
-      .select('*')
+      .select('*, photo_url') // Ensure photo_url is selected
       .eq('team_id', teamId)
       .eq('status', 'active')
       .order('squad_number', { ascending: true });
@@ -16,32 +45,8 @@ export const playersService = {
       console.error('Error fetching players:', error);
       throw error;
     }
-
-    // Transform database fields to match our TypeScript types
-    const players = (data || []).map(player => ({
-      ...player,
-      teamId: player.team_id,
-      squadNumber: player.squad_number,
-      dateOfBirth: player.date_of_birth,
-      subscriptionType: player.subscription_type as 'full_squad' | 'training' | 'trialist',
-      subscriptionStatus: player.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
-      kit_sizes: (player.kit_sizes as any) || {},
-      kitSizes: (player.kit_sizes as any) || {},
-      matchStats: (player.match_stats as any) || {},
-      leaveDate: player.leave_date,
-      leaveComments: player.leave_comments,
-      cardDesignId: player.card_design_id,
-      funStats: (player.fun_stats as Record<string, number>) || {},
-      playStyle: player.play_style,
-      createdAt: player.created_at,
-      updatedAt: player.updated_at,
-      type: player.type as 'goalkeeper' | 'outfield',
-      availability: player.availability as 'green' | 'amber' | 'red',
-      attributes: (player.attributes as any) || [],
-      objectives: (player.objectives as any) || [],
-      comments: (player.comments as any) || []
-    }));
-
+    
+    const players = (data || []).map(transformPlayer);
     console.log('Players fetched successfully:', players);
     return players;
   },
@@ -49,8 +54,7 @@ export const playersService = {
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
     console.log('Creating player:', playerData);
     
-    // Transform our TypeScript types to database field names
-    const dbData = {
+    const dbData: any = {
       name: playerData.name,
       team_id: playerData.team_id || playerData.teamId,
       squad_number: playerData.squadNumber,
@@ -65,13 +69,14 @@ export const playersService = {
       comments: playerData.comments,
       card_design_id: playerData.cardDesignId,
       fun_stats: playerData.funStats,
-      play_style: playerData.playStyle
+      play_style: playerData.playStyle,
+      photo_url: playerData.photoUrl, // Added photo_url
     };
     
     const { data, error } = await supabase
       .from('players')
       .insert([dbData])
-      .select()
+      .select('*, photo_url') // Ensure photo_url is selected
       .single();
 
     if (error) {
@@ -79,31 +84,7 @@ export const playersService = {
       throw error;
     }
 
-    // Transform back to our types
-    const player = {
-      ...data,
-      teamId: data.team_id,
-      squadNumber: data.squad_number,
-      dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
-      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
-      kit_sizes: (data.kit_sizes as any) || {},
-      kitSizes: (data.kit_sizes as any) || {},
-      matchStats: (data.match_stats as any) || {},
-      leaveDate: data.leave_date,
-      leaveComments: data.leave_comments,
-      cardDesignId: data.card_design_id,
-      funStats: (data.fun_stats as Record<string, number>) || {},
-      playStyle: data.play_style,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      type: data.type as 'goalkeeper' | 'outfield',
-      availability: data.availability as 'green' | 'amber' | 'red',
-      attributes: (data.attributes as any) || [],
-      objectives: (data.objectives as any) || [],
-      comments: (data.comments as any) || []
-    };
-
+    const player = transformPlayer(data);
     console.log('Player created successfully:', player);
     return player;
   },
@@ -111,7 +92,6 @@ export const playersService = {
   async updatePlayer(id: string, playerData: Partial<Player>): Promise<Player> {
     console.log('Updating player:', id, playerData);
     
-    // Transform our TypeScript types to database field names
     const dbData: any = {};
     
     if (playerData.name !== undefined) dbData.name = playerData.name;
@@ -130,12 +110,16 @@ export const playersService = {
     if (playerData.cardDesignId !== undefined) dbData.card_design_id = playerData.cardDesignId;
     if (playerData.funStats !== undefined) dbData.fun_stats = playerData.funStats;
     if (playerData.playStyle !== undefined) dbData.play_style = playerData.playStyle;
+    if (playerData.photoUrl !== undefined) dbData.photo_url = playerData.photoUrl; // Added photo_url
+    if (playerData.status !== undefined) dbData.status = playerData.status;
+    if (playerData.leaveDate !== undefined) dbData.leave_date = playerData.leaveDate;
+    if (playerData.leaveComments !== undefined) dbData.leave_comments = playerData.leaveComments;
 
     const { data, error } = await supabase
       .from('players')
       .update(dbData)
       .eq('id', id)
-      .select()
+      .select('*, photo_url') // Ensure photo_url is selected
       .single();
 
     if (error) {
@@ -143,31 +127,7 @@ export const playersService = {
       throw error;
     }
 
-    // Transform back to our types
-    const player = {
-      ...data,
-      teamId: data.team_id,
-      squadNumber: data.squad_number,
-      dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
-      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
-      kit_sizes: (data.kit_sizes as any) || {},
-      kitSizes: (data.kit_sizes as any) || {},
-      matchStats: (data.match_stats as any) || {},
-      leaveDate: data.leave_date,
-      leaveComments: data.leave_comments,
-      cardDesignId: data.card_design_id,
-      funStats: (data.fun_stats as Record<string, number>) || {},
-      playStyle: data.play_style,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      type: data.type as 'goalkeeper' | 'outfield',
-      availability: data.availability as 'green' | 'amber' | 'red',
-      attributes: (data.attributes as any) || [],
-      objectives: (data.objectives as any) || [],
-      comments: (data.comments as any) || []
-    };
-
+    const player = transformPlayer(data);
     console.log('Player updated successfully:', player);
     return player;
   },
@@ -193,7 +153,7 @@ export const playersService = {
     
     const { data, error } = await supabase
       .from('players')
-      .select('*')
+      .select('*, photo_url') // Ensure photo_url is selected
       .eq('id', id)
       .maybeSingle();
 
@@ -206,34 +166,41 @@ export const playersService = {
       console.log('Player not found');
       return null;
     }
-
-    // Transform database fields to match our TypeScript types
-    const player = {
-      ...data,
-      teamId: data.team_id,
-      squadNumber: data.squad_number,
-      dateOfBirth: data.date_of_birth,
-      subscriptionType: data.subscription_type as 'full_squad' | 'training' | 'trialist',
-      subscriptionStatus: data.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
-      kit_sizes: (data.kit_sizes as any) || {},
-      kitSizes: (data.kit_sizes as any) || {},
-      matchStats: (data.match_stats as any) || {},
-      leaveDate: data.leave_date,
-      leaveComments: data.leave_comments,
-      cardDesignId: data.card_design_id,
-      funStats: (data.fun_stats as Record<string, number>) || {},
-      playStyle: data.play_style,
-      createdAt: data.created_at,
-      updatedAt: data.updated_at,
-      type: data.type as 'goalkeeper' | 'outfield',
-      availability: data.availability as 'green' | 'amber' | 'red',
-      attributes: (data.attributes as any) || [],
-      objectives: (data.objectives as any) || [],
-      comments: (data.comments as any) || []
-    };
-
+    
+    const player = transformPlayer(data);
     console.log('Player fetched by ID:', player);
     return player;
+  },
+
+  async uploadPlayerPhoto(playerId: string, file: File): Promise<string> {
+    console.log(`Uploading photo for player ${playerId}:`, file.name);
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${playerId}/${Date.now()}.${fileExt}`;
+    
+    const { data, error } = await supabase.storage
+      .from('player_photos')
+      .upload(fileName, file, {
+        cacheControl: '3600', // Cache for 1 hour
+        upsert: true, // Overwrite if file already exists (e.g., re-upload)
+      });
+
+    if (error) {
+      console.error('Error uploading player photo:', error);
+      throw error;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage
+      .from('player_photos')
+      .getPublicUrl(data.path);
+
+    if (!publicUrlData || !publicUrlData.publicUrl) {
+      console.error('Error getting public URL for player photo');
+      throw new Error('Could not retrieve public URL for the uploaded photo.');
+    }
+    
+    console.log('Photo uploaded successfully. Public URL:', publicUrlData.publicUrl);
+    return publicUrlData.publicUrl;
   },
 
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
@@ -449,7 +416,7 @@ export const playersService = {
     
     const { error } = await supabase
       .from('players')
-      .update({ status: 'inactive' })
+      .update({ status: 'inactive' }) // Keep existing inactive logic, or use 'left' if that's more appropriate
       .eq('id', playerId);
 
     if (error) {
