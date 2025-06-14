@@ -41,6 +41,11 @@ const Auth = () => {
     setIsLoginModalOpen(false);
   };
 
+  const handleLoginSuccess = () => {
+    setIsLoginModalOpen(false);
+    navigate('/');
+  };
+
   const handleSignupClose = () => {
     setIsSignupModalOpen(false);
     // If we came here via invitation, go back to home when closing
@@ -90,6 +95,7 @@ const Auth = () => {
       <UserLoginModal
         isOpen={isLoginModalOpen}
         onClose={handleLoginClose}
+        onLogin={handleLoginSuccess}
       />
 
       <EnhancedSignupModal
