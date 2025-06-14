@@ -23,8 +23,10 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting send-invitation-email function");
     
-    // Get the Resend API key from environment variables
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    // Try different possible names for the Resend API key
+    const resendApiKey = Deno.env.get("RESEND_API_KEY") || 
+                        Deno.env.get("puma-ai api key Resend") ||
+                        Deno.env.get("Resend");
     
     console.log("Available environment variables:", Object.keys(Deno.env.toObject()));
     
