@@ -1,5 +1,5 @@
+
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,24 +10,16 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { PlusCircle, Settings, Users, Shield, UserPlus, User, Copy, Edit, Trash2 } from 'lucide-react';
+import { PlusCircle, Settings, Users, Shield, UserPlus, User, Copy, Edit, Trash2, Eye } from 'lucide-react';
 import { TeamForm } from '@/components/teams/TeamForm';
-import { TeamDetailsModal } from '@/components/teams/TeamDetailsModal';
-import { TeamStaffManagement } from '@/components/teams/TeamStaffManagement';
-import { TeamPlayerManagement } from '@/components/teams/TeamPlayerManagement';
-import { TeamCalendarEvents } from '@/components/teams/TeamCalendarEvents';
-import { TeamAnalytics } from '@/components/teams/TeamAnalytics';
 import { Team } from '@/types/team';
 
 export const TeamManagement = () => {
-  const { teams, refreshUserData } = useAuth();
+  const { teams, clubs, refreshUserData } = useAuth();
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [detailsTeam, setDetailsTeam] = useState<Team | null>(null);
   const [selectedTeamForView, setSelectedTeamForView] = useState<string>('');
   const { toast } = useToast();
-  const router = useRouter();
 
   // Auto-select team if only one available
   useEffect(() => {
@@ -40,7 +32,7 @@ export const TeamManagement = () => {
     try {
       console.log('Creating team with data:', teamData);
 
-      const { data, error } = await supabase.from('teams').insert([{
+      const { data, error } = await supabase.from('teams').insert({
         name: teamData.name,
         age_group: teamData.ageGroup,
         season_start: teamData.seasonStart,
@@ -60,7 +52,7 @@ export const TeamManagement = () => {
         fa_connection: teamData.faConnection,
         staff: teamData.staff,
         name_display_option: teamData.nameDisplayOption
-      }]).select().single();
+      }).select().single();
 
       if (error) throw error;
 
@@ -69,7 +61,11 @@ export const TeamManagement = () => {
       // Create a user_teams record for the current user
       const { error: userTeamError } = await supabase
         .from('user_teams')
-        .insert([{ user_id: supabase.auth.currentUser?.id, team_id: data.id }]);
+        .insert({
+          user_id: supabase.auth.getUser().then(u => u.data.user?.id),
+          team_id: data.id,
+          role: 'manager'
+        });
 
       if (userTeamError) {
         console.error('Error creating user_teams record:', userTeamError);
@@ -188,11 +184,6 @@ export const TeamManagement = () => {
     }
   };
 
-  const openDetailsModal = (team: Team, isReadOnly = false) => {
-    setDetailsTeam({ ...team, isReadOnly });
-    setIsDetailsModalOpen(true);
-  };
-
   const openEditTeamDialog = (team: Team) => {
     setSelectedTeam(team);
     setIsTeamDialogOpen(true);
@@ -307,6 +298,7 @@ export const TeamManagement = () => {
               </DialogHeader>
               <TeamForm
                 team={selectedTeam}
+                clubs={clubs}
                 onSubmit={selectedTeam ? handleUpdateTeam : handleCreateTeam}
                 onCancel={() => setIsTeamDialogOpen(false)}
               />
@@ -406,10 +398,23 @@ export const TeamManagement = () => {
                   </div>
                 </div>
 
-                <TeamStaffManagement teamId={selectedTeamForView} />
-                <TeamPlayerManagement teamId={selectedTeamForView} />
-                <TeamCalendarEvents teamId={selectedTeamForView} />
-                <TeamAnalytics teamId={selectedTeamForView} />
+                <div className="grid gap-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Team Overview</CardTitle>
+                      <CardDescription>
+                        Basic information about {teams.find(team => team.id === selectedTeamForView)?.name}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <p><strong>Age Group:</strong> {teams.find(team => team.id === selectedTeamForView)?.ageGroup}</p>
+                        <p><strong>Game Format:</strong> {teams.find(team => team.id === selectedTeamForView)?.gameFormat}</p>
+                        <p><strong>Season:</strong> {teams.find(team => team.id === selectedTeamForView)?.seasonStart} - {teams.find(team => team.id === selectedTeamForView)?.seasonEnd}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             )}
 
@@ -425,13 +430,6 @@ export const TeamManagement = () => {
             )}
           </div>
         )}
-
-        {/* Team Details Modal */}
-        <TeamDetailsModal
-          team={detailsTeam}
-          isOpen={isDetailsModalOpen}
-          onClose={() => setIsDetailsModalOpen(false)}
-        />
       </div>
     </DashboardLayout>
   );
