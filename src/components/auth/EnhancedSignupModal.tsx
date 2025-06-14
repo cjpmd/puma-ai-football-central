@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -35,10 +36,16 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
 
+  // Debug logging to see what's happening
+  console.log('EnhancedSignupModal - initialInvitationCode:', initialInvitationCode);
+  console.log('EnhancedSignupModal - invitationCode state:', invitationCode);
+  console.log('EnhancedSignupModal - invitationDetails:', invitationDetails);
+
   // Check for invitation details when invitation code is provided
   useEffect(() => {
     const fetchInvitationDetails = async () => {
       if (initialInvitationCode) {
+        console.log('Fetching invitation details for code:', initialInvitationCode);
         try {
           const { data, error } = await supabase
             .from('user_invitations')
@@ -51,12 +58,15 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             .single();
 
           if (data && !error) {
+            console.log('Invitation details found:', data);
             setInvitationDetails(data);
             setName(data.name || '');
             setEmail(data.email || '');
             setTeamName((data as any).teams?.name || '');
             setInvitationCode(initialInvitationCode);
             setSignupMethod('invitation');
+          } else {
+            console.log('No invitation details found or error:', error);
           }
         } catch (error) {
           console.error('Error fetching invitation details:', error);
@@ -241,6 +251,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
   // If we have an invitation code, show simplified invitation-only form
   if (initialInvitationCode) {
+    console.log('Rendering simplified invitation form');
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
@@ -312,6 +323,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   }
 
   // Show full tabbed interface for non-invitation signups
+  console.log('Rendering full tabbed interface');
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
