@@ -166,7 +166,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       });
     } else {
       createPlayerMutation.mutate({
-        ...playerData,
+        ...(playerData || {}),
         team_id: team.id
       });
     }
