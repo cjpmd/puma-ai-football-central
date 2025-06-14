@@ -551,29 +551,15 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 ))}
               </div>
 
-              <div className="flex justify-between items-center text-sm font-bold">
-                <span 
-                  className="text-gray-800"
-                  style={{
-                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                  }}
-                >
+              {/* Modified text section at the bottom */}
+              <div className={`grid grid-cols-3 text-sm font-bold pt-1 ${currentDesign.textColor}`}>
+                <span className="text-left pl-1">
                   #{player.squadNumber || 'XX'}
                 </span>
-                <span 
-                  className="text-gray-800"
-                  style={{
-                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                  }}
-                >
+                <span className="text-center">
                   Age {age}
                 </span>
-                <span 
-                  className="text-gray-800"
-                  style={{
-                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                  }}
-                >
+                <span className="text-right pr-1">
                   {isGoalkeeper ? 'GK' : 'OUTFIELD'}
                 </span>
               </div>
