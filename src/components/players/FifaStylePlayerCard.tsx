@@ -743,8 +743,24 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             </div>
 
+            {/* Photo Management */}
+            {onDeletePhoto && player.photoUrl && (
+              <div className="border-t border-white/20 pt-3">
+                <label className="text-sm font-medium mb-2 block text-white">Photo Management</label>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={e => handleButtonAction(e, onDeletePhoto, 'Delete Photo')}
+                  title="Delete Photo"
+                >
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  Delete Photo
+                </Button>
+              </div>
+            )}
+
             {/* Play Style Selector */}
-            {/* ... keep existing code (Play Style Selector section) ... */}
             <div className="border-t border-white/20 pt-3">
               <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
               <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
@@ -768,7 +784,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
             
             {/* Fun Stats Editor */}
-            {/* ... keep existing code (Fun Stats Editor section) ... */}
             <div>
               <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
               <div className="grid grid-cols-3 gap-1">
@@ -790,7 +805,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
 
             {/* Card Design Selector */}
-            {/* ... keep existing code (Card Design Selector section) ... */}
             <div>
               <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
               <Select value={selectedDesign} onValueChange={handleSaveDesign}>
