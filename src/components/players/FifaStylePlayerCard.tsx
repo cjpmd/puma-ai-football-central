@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -583,19 +584,19 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   </div>
                 ))}
               </div>
+            </div>
 
-              {/* Modified text section at the bottom */}
-              <div className={`grid grid-cols-3 text-sm font-bold pt-3 ${currentDesign.textColor}`}>
-                <span className="text-left pl-1">
-                  #{player.squadNumber || 'XX'}
-                </span>
-                <span className="text-center">
-                  Age {age}
-                </span>
-                <span className="text-right pr-1">
-                  {isGoalkeeper ? 'GK' : 'OUTFIELD'}
-                </span>
-              </div>
+            {/* Moved text section - now absolutely positioned at the bottom */}
+            <div className={`absolute bottom-2 left-4 right-4 grid grid-cols-3 text-sm font-bold ${currentDesign.textColor}`}>
+              <span className="text-left">
+                #{player.squadNumber || 'XX'}
+              </span>
+              <span className="text-center">
+                Age {age}
+              </span>
+              <span className="text-right">
+                {isGoalkeeper ? 'GK' : 'OUTFIELD'}
+              </span>
             </div>
           </div>
         </div>
@@ -840,3 +841,4 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 };
 
 export default FifaStylePlayerCard;
+
