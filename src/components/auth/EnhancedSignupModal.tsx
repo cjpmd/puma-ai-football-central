@@ -34,6 +34,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   const [signupMethod, setSignupMethod] = useState<'invitation' | 'linking' | 'open' | 'team_code'>('open');
   const [invitationDetails, setInvitationDetails] = useState<any>(null);
   const [teamName, setTeamName] = useState('');
+  const [invitationError, setInvitationError] = useState<string>('');
   const { toast } = useToast();
 
   console.log('EnhancedSignupModal rendered with:', { 
@@ -42,7 +43,8 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     signupMethod, 
     invitationCode,
     email,
-    name 
+    name,
+    invitationError
   });
 
   // Initialize signup method and invitation code
@@ -52,6 +54,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       console.log('Setting up for invitation signup');
       setSignupMethod('invitation');
       setInvitationCode(initialInvitationCode);
+      setInvitationError('');
     } else {
       // Reset to open if no invitation code
       setSignupMethod('open');
@@ -60,6 +63,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       setEmail('');
       setName('');
       setTeamName('');
+      setInvitationError('');
     }
   }, [initialInvitationCode]);
 
@@ -69,34 +73,69 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       if (!invitationCode) {
         console.log('No invitation code, clearing details');
         setInvitationDetails(null);
+        setInvitationError('');
         return;
       }
 
       console.log('Fetching invitation details for code:', invitationCode);
+      setInvitationError('');
       
       try {
-        const { data, error } = await supabase
+        // First check if invitation exists regardless of status
+        const { data: anyInvitation, error: anyError } = await supabase
           .from('user_invitations')
           .select(`
             *,
             teams!inner(name)
           `)
           .eq('invitation_code', invitationCode)
-          .eq('status', 'pending')
           .single();
 
-        if (data && !error) {
-          console.log('Invitation details found:', data);
-          setInvitationDetails(data);
-          setName(data.name || '');
-          setEmail(data.email || '');
-          setTeamName((data as any).teams?.name || '');
-        } else {
-          console.log('No invitation details found or error:', error);
+        console.log('Any invitation found:', anyInvitation, 'Error:', anyError);
+
+        if (anyError && anyError.code === 'PGRST116') {
+          // No invitation found at all
+          setInvitationError('Invalid invitation code - no invitation found');
           setInvitationDetails(null);
+          return;
+        }
+
+        if (anyInvitation) {
+          console.log('Invitation found with status:', anyInvitation.status);
+          
+          if (anyInvitation.status === 'accepted') {
+            setInvitationError('This invitation has already been accepted');
+            setInvitationDetails(null);
+            return;
+          }
+          
+          if (anyInvitation.status === 'expired') {
+            setInvitationError('This invitation has expired');
+            setInvitationDetails(null);
+            return;
+          }
+
+          if (new Date(anyInvitation.expires_at) < new Date()) {
+            setInvitationError('This invitation has expired');
+            setInvitationDetails(null);
+            return;
+          }
+
+          if (anyInvitation.status === 'pending') {
+            console.log('Valid pending invitation found:', anyInvitation);
+            setInvitationDetails(anyInvitation);
+            setName(anyInvitation.name || '');
+            setEmail(anyInvitation.email || '');
+            setTeamName((anyInvitation as any).teams?.name || '');
+            setInvitationError('');
+          } else {
+            setInvitationError(`Invitation status is ${anyInvitation.status}`);
+            setInvitationDetails(null);
+          }
         }
       } catch (error) {
         console.error('Error fetching invitation details:', error);
+        setInvitationError('Error loading invitation details');
         setInvitationDetails(null);
       }
     };
@@ -313,6 +352,13 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
           </TabsList>
 
           <div className="space-y-4 mt-4">
+            {/* Show invitation error if any */}
+            {signupMethod === 'invitation' && invitationError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{invitationError}</p>
+              </div>
+            )}
+
             {/* Common fields for all signup methods */}
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -436,7 +482,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
             <Button
               onClick={handleSignup}
-              disabled={isLoading}
+              disabled={isLoading || (signupMethod === 'invitation' && !!invitationError)}
               className="w-full"
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
