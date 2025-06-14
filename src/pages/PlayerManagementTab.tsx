@@ -119,11 +119,13 @@ const PlayerManagementTab = () => {
   });
 
   const handleModalOpen = (modal: string, player: Player) => {
+    console.log(`[PlayerTab] handleModalOpen: Modal "${modal}" for player "${player.name}"`);
     setSelectedPlayer(player);
     setActiveModal(modal);
   };
 
   const handleModalClose = () => {
+    console.log("[PlayerTab] handleModalClose called");
     setSelectedPlayer(null);
     setActiveModal(null);
   };
@@ -140,14 +142,18 @@ const PlayerManagementTab = () => {
 
   // FIFA Card specific handlers
   const handleEditPlayer = (player: Player) => {
+    console.log(`[PlayerTab] handleEditPlayer called for player: ${player.name}`);
     toast({
       title: 'Edit Player (handler called)',
       description: `Edit player clicked: ${player.name}`,
     });
-    // TODO: Implement edit player functionality
+    // TODO: Implement edit player functionality or open a specific modal for editing
+    // For now, let's try opening a generic modal or just logging
+    // handleModalOpen('editPlayerForm', player); // Example if you had an EditPlayerFormModal
   };
 
   const handleManageParents = (player: Player) => {
+    console.log(`[PlayerTab] handleManageParents for player: ${player.name}`);
     toast({
       title: 'Parents (handler called)',
       description: `Parents for: ${player.name}`,
@@ -156,6 +162,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleRemoveFromSquad = (player: Player) => {
+    console.log(`[PlayerTab] handleRemoveFromSquad for player: ${player.name}`);
     toast({
       title: 'Remove from Squad (handler called)',
       description: `Remove from squad: ${player.name}`,
@@ -166,6 +173,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
+    console.log(`[PlayerTab] handleUpdatePhoto for player: ${player.name}`);
     toast({
       title: 'Photo Upload (handler called)',
       description: `Photo upload triggered for: ${player.name}`,
@@ -174,6 +182,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
+    console.log(`[PlayerTab] handleSaveFunStats for player: ${player.name}`, stats);
     toast({
       title: 'Fun Stats (handler called)',
       description: `Saving fun stats for: ${player.name}`,
@@ -185,6 +194,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
+    console.log(`[PlayerTab] handleSavePlayStyle for player: ${player.name}`, playStyles);
     toast({
       title: 'Play Style (handler called)',
       description: `Saving play styles for: ${player.name}`,
@@ -196,6 +206,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleSaveCardDesign = (player: Player, designId: string) => {
+    console.log(`[PlayerTab] handleSaveCardDesign for player: ${player.name}`, designId);
     toast({
       title: 'Card Design (handler called)',
       description: `Saving card design for: ${player.name}`,
@@ -207,6 +218,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleManageAttributes = (player: Player) => {
+    console.log(`[PlayerTab] handleManageAttributes for player: ${player.name}`);
     toast({
       title: 'Attributes (handler called)',
       description: `Attributes for: ${player.name}`,
@@ -215,6 +227,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleManageObjectives = (player: Player) => {
+    console.log(`[PlayerTab] handleManageObjectives for player: ${player.name}`);
     toast({
       title: 'Objectives (handler called)',
       description: `Objectives for: ${player.name}`,
@@ -223,6 +236,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleManageComments = (player: Player) => {
+    console.log(`[PlayerTab] handleManageComments for player: ${player.name}`);
     toast({
       title: 'Comments (handler called)',
       description: `Comments for: ${player.name}`,
@@ -231,6 +245,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleViewStats = (player: Player) => {
+    console.log(`[PlayerTab] handleViewStats for player: ${player.name}`);
     toast({
       title: 'View Stats (handler called)',
       description: `Stats for: ${player.name}`,
@@ -239,6 +254,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleViewHistory = (player: Player) => {
+    console.log(`[PlayerTab] handleViewHistory for player: ${player.name}`);
     toast({
       title: 'History (handler called)',
       description: `History for: ${player.name}`,
@@ -247,6 +263,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleTransferPlayer = (player: Player) => {
+    console.log(`[PlayerTab] handleTransferPlayer for player: ${player.name}`);
     toast({
       title: 'Transfer (handler called)',
       description: `Transfer dialog for: ${player.name}`,
@@ -255,6 +272,7 @@ const PlayerManagementTab = () => {
   };
 
   const handleLeaveTeam = (player: Player) => {
+    console.log(`[PlayerTab] handleLeaveTeam for player: ${player.name}`);
     toast({
       title: 'Leave Team (handler called)',
       description: `Leave team dialog for: ${player.name}`,

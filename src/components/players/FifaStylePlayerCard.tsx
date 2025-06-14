@@ -328,16 +328,23 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     handler?: (player: Player) => void,
     actionName?: string
   ) => {
+    console.log(`[FifaCard] handleButtonAction: Action "${actionName}" for player "${player.name}". Flipped: ${flipped}`);
     e.preventDefault();
     e.stopPropagation();
     if (handler) {
+      console.log(`[FifaCard] Handler found for "${actionName}". Executing handler.`);
       handler(player);
-    } else if (toast) {
-      toast({
-        title: "No handler implemented",
-        description: `${actionName || "This action"} is not available.`,
-        variant: "destructive",
-      });
+    } else {
+      console.warn(`[FifaCard] No handler provided for action "${actionName}".`);
+      if (toast) {
+        toast({
+          title: "Action Not Implemented",
+          description: `The action "${actionName}" is not available for this player.`,
+          variant: "destructive",
+        });
+      } else {
+        console.error("[FifaCard] Toast function is not available to report unimplemented action.");
+      }
     }
   };
 
@@ -349,8 +356,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         style={{
           transformStyle: 'preserve-3d',
           transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          // Force stacking context
-          zIndex: 100,
+          zIndex: 100, // Ensure this context is high enough
           position: 'relative'
         }}
       >
@@ -379,7 +385,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             <Settings className="h-4 w-4 text-white" />
           </Button>
 
-          {/* Close Button */}
           {onClose && (
             <Button
               variant="ghost"
@@ -391,7 +396,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </Button>
           )}
 
-          {/* Missing Info Alerts */}
           {hasAlerts && (
             <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
               {missingInfoAlerts.slice(0, 3).map((alert, index) => {
@@ -405,7 +409,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          {/* Captain Badge with Count */}
           {isCaptain && (
             <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-yellow-500/90 rounded-full px-2 py-1">
               <Crown className="h-4 w-4 text-white" />
@@ -413,7 +416,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           )}
 
-          {/* POTM Badge with Count */}
           {potmCount > 0 && (
             <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-purple-500/90 rounded-full px-2 py-1">
               <Award className="h-4 w-4 text-white" />
@@ -422,10 +424,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           )}
 
           <div className="p-4 h-full flex flex-col relative z-10">
-            {/* Position Badges (Left Side) - Only show if positions exist and has 3+ positions */}
             {topPositions.length >= 3 && (
               <div className="absolute left-2 top-16 space-y-1">
-                {topPositions.map((pos, idx) => (
+                {topPositions.map((pos) => (
                   <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
                     {pos.display}
                   </div>
@@ -433,7 +434,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             )}
 
-            {/* Player Photo - Positioned in top two-thirds */}
             <div className="relative mx-auto mb-2 mt-8 flex-1 flex items-center justify-center">
               <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
                 <AvatarImage src={player.photoUrl} alt={displayName} />
@@ -454,16 +454,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               )}
             </div>
 
-            {/* Bottom Section - No shaded background, direct on card background */}
             <div className="space-y-1">
-              {/* Player Name */}
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
                   {displayName}
                 </h1>
               </div>
 
-              {/* FIFA Stats */}
               <div className="flex justify-between items-center px-1">
                 {funStatLabels.map(stat => (
                   <div key={stat.key} className="text-center flex-1">
@@ -475,7 +472,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 ))}
               </div>
 
-              {/* Play Style Icons - Reduced space */}
               <div className="flex justify-center gap-2">
                 {selectedPlayStyles.map((style, index) => (
                   <div key={index} className="text-2xl drop-shadow-lg">
@@ -484,7 +480,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 ))}
               </div>
 
-              {/* Bottom Info */}
               <div className="flex justify-between items-center text-sm font-bold">
                 <span 
                   className="text-gray-800"
@@ -518,7 +513,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         {/* Back of card - management view */}
         <div 
           className={
-            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden`
+            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden flex flex-col` // Added flex flex-col
           }
           style={{
             ...getFaceStyle("back"),
@@ -540,7 +535,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
+                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" // z-30 here
                   style={{ pointerEvents: 'auto' }}
                 >
                   <X className="h-4 w-4" />
@@ -550,7 +545,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={e => { e.preventDefault(); e.stopPropagation(); setFlipped(false); }}
-                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
+                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" // z-30 here
                 style={{ pointerEvents: 'auto' }}
                 title="Back to card front"
               >
@@ -559,13 +554,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
           </div>
 
-          {/* Content - Compact layout */}
-          <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+          {/* Content - Compact layout, ensure it's scrollable and interactive */}
+          <div className="flex-1 p-3 space-y-3 overflow-y-auto" style={{ position: 'relative', zIndex: 1 }}> {/* Added position relative and z-index */}
             {/* Player Actions - All 9 buttons in 3x3 grid */}
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-white">Player Actions</h3>
               
-              <div className="grid grid-cols-3 gap-1">
+              {/* Ensure this grid is interactive */}
+              <div 
+                className="grid grid-cols-3 gap-1"
+                style={{ position: 'relative', zIndex: 1, pointerEvents: 'auto' }} // Added styles for interactivity
+              >
                 <Button
                   variant="outline"
                   size="sm"
