@@ -383,7 +383,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const cardStyle = { 
     backgroundImage: currentDesign.bgImage,
     backgroundSize: 'cover',
-    backgroundPosition: 'center'
+    backgroundPosition: 'center 20%'
   };
 
   // Define allowed pointer events
