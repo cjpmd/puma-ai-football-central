@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -120,11 +119,11 @@ const Auth = () => {
               <TabsTrigger value="login">
                 <LogIn className="h-4 w-4 mr-2" />
                 Login
-              </Tabs-Trigger>
+              </TabsTrigger>
               <TabsTrigger value="signup">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Sign Up
-              </Tabs-Trigger>
+              </TabsTrigger>
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">
