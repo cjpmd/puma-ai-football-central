@@ -327,7 +327,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         className="relative w-full h-full transition-transform duration-700"
         style={{
           transformStyle: 'preserve-3d',
-          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          // Force stacking context
+          zIndex: 100,
+          position: 'relative'
         }}
       >
         {/* Front of card */}
@@ -338,7 +341,12 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           style={{
             ...cardStyle,
             ...getFaceStyle("front"),
-            backfaceVisibility: 'hidden'
+            backfaceVisibility: 'hidden',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%'
           }}
         >
           <Button
@@ -494,7 +502,12 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           style={{
             ...getFaceStyle("back"),
             backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)'
+            transform: 'rotateY(180deg)',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%'
           }}
         >
           {/* Header: place Back and Close Buttons at top-right like the Front */}
