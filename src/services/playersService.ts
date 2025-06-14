@@ -411,6 +411,59 @@ export const playersService = {
     return history;
   },
 
+  async deletePlayerPhoto(player: Player): Promise<Player> {
+    console.log(`Deleting photo for player ${player.id}`);
+    if (!player.photoUrl) {
+        console.log('Player has no photo to delete.');
+        return player;
+    }
+
+    try {
+        // Extract file path from URL
+        const url = new URL(player.photoUrl);
+        const pathParts = url.pathname.split('/');
+        const bucketName = 'player_photos';
+        const bucketIndex = pathParts.indexOf(bucketName);
+        if (bucketIndex === -1) {
+            throw new Error('Bucket name not found in URL path');
+        }
+        const filePath = pathParts.slice(bucketIndex + 1).join('/');
+
+        if (filePath) {
+            console.log('File path to delete from storage:', filePath);
+            // Delete from storage
+            const { error: storageError } = await supabase.storage
+                .from(bucketName)
+                .remove([filePath]);
+            
+            if (storageError) {
+                // This could happen if the file was manually deleted from storage but the URL remains on the player.
+                // We can still proceed to clear the URL from the player record.
+                console.warn('Error deleting photo from storage, but proceeding to clear URL:', storageError);
+            }
+        }
+    } catch(e) {
+        console.error('Error parsing or deleting photo from storage, proceeding to clear URL from player record', e);
+    }
+
+    // Update player record to remove photoUrl. This is the main goal.
+    const { data, error } = await supabase
+        .from('players')
+        .update({ photo_url: null })
+        .eq('id', player.id)
+        .select('*, photo_url')
+        .single();
+
+    if (error) {
+        console.error('Error updating player to remove photo URL:', error);
+        throw error;
+    }
+    
+    const updatedPlayer = transformPlayer(data);
+    console.log('Player photo URL cleared successfully:', updatedPlayer);
+    return updatedPlayer;
+  },
+
   async removePlayerFromSquad(playerId: string): Promise<void> {
     console.log('Removing player from squad:', playerId);
     

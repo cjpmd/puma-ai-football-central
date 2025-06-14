@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit, X, AlertTriangle } from 'lucide-react';
+import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit, X, AlertTriangle, Trash2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
@@ -17,6 +17,7 @@ interface FifaStylePlayerCardProps {
   onManageParents?: (player: Player) => void;
   onRemoveFromSquad?: (player: Player) => void;
   onUpdatePhoto?: (player: Player, file: File) => void;
+  onDeletePhoto?: (player: Player) => void;
   onSaveFunStats?: (player: Player, stats: Record<string, number>) => void;
   onSavePlayStyle?: (player: Player, playStyles: string[]) => void;
   onSaveCardDesign?: (player: Player, designId: string) => void;
@@ -114,6 +115,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onManageParents,
   onRemoveFromSquad,
   onUpdatePhoto,
+  onDeletePhoto,
   onSaveFunStats,
   onSavePlayStyle,
   onSaveCardDesign,
@@ -531,6 +533,15 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     className="hidden"
                   />
                 </label>
+              )}
+              {onDeletePhoto && player.photoUrl && canManageCard && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onDeletePhoto(player); }}
+                  className="absolute -bottom-2 -left-2 bg-red-600/90 text-white rounded-full p-2 cursor-pointer hover:bg-red-700 transition-colors shadow-lg"
+                  title="Delete Photo"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
               )}
             </div>
 

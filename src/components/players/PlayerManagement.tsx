@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
-import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud } from 'lucide-react';
+import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud, Trash2 } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
 import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
@@ -84,6 +84,28 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to update player',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete player photo mutation
+  const deletePlayerPhotoMutation = useMutation({
+    mutationFn: (player: Player) => playersService.deletePlayerPhoto(player),
+    onSuccess: (updatedPlayer) => {
+      queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+      if (selectedPlayer && selectedPlayer.id === updatedPlayer.id) {
+        setSelectedPlayer(prev => prev ? { ...prev, photoUrl: null } : null);
+      }
+      toast({
+        title: 'Photo Deleted',
+        description: `Photo for ${updatedPlayer.name} has been successfully deleted.`,
+      });
+    },
+    onError: (error: any, variables) => {
+      toast({
+        title: 'Error Deleting Photo',
+        description: error.message || `Failed to delete photo for ${variables.name}.`,
         variant: 'destructive',
       });
     },
@@ -225,6 +247,16 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     }
   };
 
+  const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
+    if (!playerToDeletePhoto.photoUrl) {
+      toast({ title: 'No Photo to Delete', description: 'This player does not have a photo.', variant: 'default' });
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto);
+    }
+  };
+
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
     console.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
     updatePlayerMutation.mutate({
@@ -350,6 +382,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   onManageParents={handleManageParents}
                   onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
+                  onDeletePhoto={handleDeletePlayerPhoto}
                   onSaveFunStats={handleSaveFunStats}
                   onSavePlayStyle={handleSavePlayStyle}
                   onSaveCardDesign={handleSaveCardDesign}
