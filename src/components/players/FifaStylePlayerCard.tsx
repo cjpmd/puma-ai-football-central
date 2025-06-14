@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -102,6 +102,9 @@ const playStylesWithIcons = [
   { value: "wall", label: "Wall", icon: "🧱", category: "goalkeeper" }
 ];
 
+// Create a list of valid play style values for easier filtering
+const validPlayStyleValues = playStylesWithIcons.map(s => s.value);
+
 export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   player,
   team,
@@ -123,33 +126,47 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 }) => {
   const { toast } = useToast();
   const [flipped, setFlipped] = useState(false);
-  const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
-  const [funStats, setFunStats] = useState(player.funStats || {});
   
-  // Safe parsing of playStyle field
+  // Updated parsePlayStyles function
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
-    if (!playStyleData) return [];
-    
-    // If it's already an array, return it
-    if (Array.isArray(playStyleData)) return playStyleData;
-    
-    // If it's a string, try to parse as JSON first
-    if (typeof playStyleData === 'string') {
+    let rawStyles: string[] = [];
+    if (!playStyleData) {
+      // No data, empty styles
+    } else if (Array.isArray(playStyleData)) {
+      rawStyles = playStyleData.map(s => String(s)); // Ensure all elements are strings
+    } else if (typeof playStyleData === 'string') {
       try {
         const parsed = JSON.parse(playStyleData);
-        return Array.isArray(parsed) ? parsed : [];
+        if (Array.isArray(parsed)) {
+          rawStyles = parsed.map(s => String(s)); // Ensure all elements are strings
+        } else if (typeof parsed === 'string') {
+          rawStyles = [parsed];
+        } // else, parsed is not an array or string, ignore
       } catch {
-        // If JSON parsing fails, treat as a single play style
-        return [playStyleData];
+        // If JSON parsing fails, treat as a single play style string, if not empty
+        if (playStyleData.trim().length > 0) {
+          rawStyles = [playStyleData.trim()];
+        }
       }
     }
     
-    return [];
+    // Filter for valid and unique styles from the known list, and limit to 3
+    const uniqueFilteredStyles = [...new Set(rawStyles.filter(style => validPlayStyleValues.includes(style)))];
+    return uniqueFilteredStyles.slice(0, 3);
   };
 
+  const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
+  const [funStats, setFunStats] = useState(player.funStats || {});
   const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
     parsePlayStyles(player.playStyle)
   );
+
+  // useEffect to synchronize state with player prop changes
+  useEffect(() => {
+    setSelectedPlayStyles(parsePlayStyles(player.playStyle));
+    setFunStats(player.funStats || {});
+    setSelectedDesign(player.cardDesignId || "goldBallon");
+  }, [player.playStyle, player.funStats, player.cardDesignId, player]); // Added player to ensure re-parse on player obj change
 
   const currentDesign = cardDesigns[selectedDesign] || cardDesigns.goldBallon;
 
@@ -271,7 +288,22 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const isCaptain = player.matchStats?.captainGames > 0;
   const captainCount = player.matchStats?.captainGames || 0;
   const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
-  const displayName = player.kit_sizes?.nameOnShirt || player.name || 'No Name';
+
+  // Updated displayName logic
+  let determinedDisplayName = player.name || 'No Name';
+  const nameOnShirtValue = player.kit_sizes?.nameOnShirt;
+
+  if (nameOnShirtValue && nameOnShirtValue.trim() !== "") {
+    const playerFullNameParts = player.name ? player.name.split(' ') : [];
+    // Handle cases where player.name might be just a surname or single name
+    const playerLastName = playerFullNameParts.length > 0 ? playerFullNameParts[playerFullNameParts.length - 1] : '';
+    
+    // Use nameOnShirt if it's different from the extracted last name, 
+    // OR if player.name is a single word (suggesting nameOnShirt is a deliberate choice like a nickname).
+    if (nameOnShirtValue.trim().toLowerCase() !== playerLastName.trim().toLowerCase() || playerFullNameParts.length <= 1) {
+      determinedDisplayName = nameOnShirtValue.trim();
+    }
+  }
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -436,7 +468,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
             <div className="relative mx-auto mb-2 mt-8 flex-1 flex items-center justify-center">
               <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
-                <AvatarImage src={player.photoUrl} alt={displayName} />
+                <AvatarImage src={player.photoUrl} alt={determinedDisplayName} />
                 <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
                   {player.name ? getInitials(player.name) : 'PL'}
                 </AvatarFallback>
@@ -457,7 +489,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             <div className="space-y-1">
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
-                  {displayName}
+                  {determinedDisplayName}
                 </h1>
               </div>
 
