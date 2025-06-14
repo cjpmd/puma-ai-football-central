@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { EnhancedSignupModal } from '@/components/auth/EnhancedSignupModal';
-import { InvitationSignupModal } from '@/components/auth/InvitationSignupModal';
 import { LogIn, UserPlus } from 'lucide-react';
 
 const Auth = () => {
@@ -20,40 +19,28 @@ const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<'auth' | 'invitation'>('auth');
-  const [invitationCode, setInvitationCode] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  
+  const invitationCode = searchParams.get('invitation');
 
   useEffect(() => {
-    const code = searchParams.get('invitation');
     // Only redirect to dashboard if the user is logged in AND there's no invitation code.
-    if (user && !code) {
+    if (user && !invitationCode) {
       navigate('/dashboard');
     }
-  }, [user, navigate, searchParams]);
-
-  useEffect(() => {
-    const code = searchParams.get('invitation');
-    if (code) {
-      setInvitationCode(code);
-      setView('invitation');
-    } else {
-      setView('auth');
-      setInvitationCode(null);
-    }
-  }, [searchParams]);
+  }, [user, navigate, invitationCode]);
 
   // If there's an invitation code, show the invitation signup modal and nothing else.
-  if (view === 'invitation' && invitationCode) {
+  if (invitationCode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <InvitationSignupModal
+        <EnhancedSignupModal
           isOpen={true}
           onClose={() => {
             // Navigate to the base auth page to reset state cleanly
             navigate('/auth', { replace: true });
           }}
-          invitationCode={invitationCode}
+          initialInvitationCode={invitationCode}
         />
       </div>
     );
@@ -98,47 +85,7 @@ const Auth = () => {
     }
   };
 
-  const handleBasicSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter both email and password',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Account Created!',
-        description: 'Please check your email to verify your account.',
-      });
-    } catch (error: any) {
-      console.error('Signup error:', error);
-      toast({
-        title: 'Signup Failed',
-        description: error.message || 'Failed to create account',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (user && !searchParams.get('invitation')) {
+  if (user && !invitationCode) {
     return null; // Will redirect via useEffect
   }
 
@@ -199,59 +146,18 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-4">
+              <div className="space-y-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  Account creation is by invitation only.
+                </p>
                 <Button
                   onClick={() => setShowEnhancedSignup(true)}
                   className="w-full"
                   variant="default"
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Create Account with Role Selection
+                  Have an invitation code?
                 </Button>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or quick signup
-                    </span>
-                  </div>
-                </div>
-
-                <form onSubmit={handleBasicSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Enter your email"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    disabled={isLoading}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {isLoading ? 'Creating Account...' : 'Quick Sign Up'}
-                  </Button>
-                </form>
               </div>
             </TabsContent>
           </Tabs>
@@ -261,7 +167,6 @@ const Auth = () => {
       <EnhancedSignupModal
         isOpen={showEnhancedSignup}
         onClose={() => setShowEnhancedSignup(false)}
-        initialInvitationCode=""
       />
     </div>
   );
