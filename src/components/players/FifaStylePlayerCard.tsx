@@ -485,23 +485,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             pointerEvents: flipped ? 'auto' : 'none'
           }}
         >
-          <div className="h-full flex flex-col">
-            {/* Header with Back Button and Close Button */}
-            <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setFlipped(false);
-                }}
-                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
-                style={{ pointerEvents: 'auto' }}
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <h2 className="text-lg font-bold text-white">Player Management</h2>
+          {/* Header: place Back and Close Buttons at top-right like the Front */}
+          <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
+            <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
+            {/* Right-side container for Close and Back buttons */}
+            <div className="absolute right-3 top-3 flex space-x-2">
               {onClose && (
                 <Button
                   variant="ghost"
@@ -517,167 +505,181 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   <X className="h-4 w-4" />
                 </Button>
               )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setFlipped(false);
+                }}
+                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
+                style={{ pointerEvents: 'auto' }}
+                title="Back to card front"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Content - Compact layout */}
+          <div className="flex-1 p-3 space-y-3 overflow-y-auto">
+            {/* Player Actions - All 9 buttons in 3x3 grid */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-white">Player Actions</h3>
+              
+              <div className="grid grid-cols-3 gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onEdit && onEdit(player)}
+                  title="Edit Player"
+                >
+                  <Edit className="h-3 w-3" />
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onManageParents && onManageParents(player)}
+                  title="Manage Parents"
+                >
+                  <Users className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onManageAttributes && onManageAttributes(player)}
+                  title="Manage Attributes"
+                >
+                  <Brain className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onManageObjectives && onManageObjectives(player)}
+                  title="Manage Objectives"
+                >
+                  <Target className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onManageComments && onManageComments(player)}
+                  title="Manage Comments"
+                >
+                  <MessageSquare className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onViewStats && onViewStats(player)}
+                  title="View Statistics"
+                >
+                  <BarChart3 className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onViewHistory && onViewHistory(player)}
+                  title="View History"
+                >
+                  <Calendar className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={() => onTransferPlayer && onTransferPlayer(player)}
+                  title="Transfer Player"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
+                  onClick={() => onLeaveTeam && onLeaveTeam(player)}
+                  title="Leave Team"
+                >
+                  <UserMinus className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
 
-            {/* Content - Compact layout */}
-            <div className="flex-1 p-3 space-y-3 overflow-y-auto">
-              {/* Player Actions - All 9 buttons in 3x3 grid */}
-              <div className="space-y-2">
-                <h3 className="text-sm font-semibold text-white">Player Actions</h3>
-                
-                <div className="grid grid-cols-3 gap-1">
+            {/* Play Style Selector */}
+            <div className="border-t border-white/20 pt-3">
+              <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
+              <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
+                {playStylesWithIcons.map(style => (
                   <Button
-                    variant="outline"
+                    key={style.value}
+                    variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
                     size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onEdit && onEdit(player)}
-                    title="Edit Player"
+                    onClick={() => togglePlayStyle(style.value)}
+                    disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                    className="text-sm p-1 h-6 w-6"
+                    title={style.label}
                   >
-                    <Edit className="h-3 w-3" />
+                    {style.icon}
                   </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageParents && onManageParents(player)}
-                    title="Manage Parents"
-                  >
-                    <Users className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageAttributes && onManageAttributes(player)}
-                    title="Manage Attributes"
-                  >
-                    <Brain className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageObjectives && onManageObjectives(player)}
-                    title="Manage Objectives"
-                  >
-                    <Target className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onManageComments && onManageComments(player)}
-                    title="Manage Comments"
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewStats && onViewStats(player)}
-                    title="View Statistics"
-                  >
-                    <BarChart3 className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onViewHistory && onViewHistory(player)}
-                    title="View History"
-                  >
-                    <Calendar className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                    onClick={() => onTransferPlayer && onTransferPlayer(player)}
-                    title="Transfer Player"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
-                    onClick={() => onLeaveTeam && onLeaveTeam(player)}
-                    title="Leave Team"
-                  >
-                    <UserMinus className="h-3 w-3" />
-                  </Button>
-                </div>
+                ))}
               </div>
+              <div className="text-xs text-gray-400 mt-1">
+                Selected: {selectedPlayStyles.length}/3
+              </div>
+            </div>
 
-              {/* Play Style Selector */}
-              <div className="border-t border-white/20 pt-3">
-                <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
-                <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
-                  {playStylesWithIcons.map(style => (
-                    <Button
-                      key={style.value}
-                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => togglePlayStyle(style.value)}
-                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                      className="text-sm p-1 h-6 w-6"
-                      title={style.label}
-                    >
-                      {style.icon}
-                    </Button>
+            {/* Fun Stats Editor */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
+              <div className="grid grid-cols-3 gap-1">
+                {funStatLabels.map(stat => (
+                  <div key={stat.key} className="text-center">
+                    <div className="text-xs mb-1 text-white">{stat.key}</div>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={99}
+                      value={funStats[stat.key] || ''}
+                      onChange={(e) => updateStat(stat.key, e.target.value)}
+                      className="w-full text-center h-6 bg-white/10 border-white/20 text-white text-xs"
+                      placeholder="--"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Card Design Selector */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
+              <Select value={selectedDesign} onValueChange={handleSaveDesign}>
+                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-6">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(cardDesigns).map(([id, design]) => (
+                    <SelectItem key={id} value={id}>
+                      {design.name}
+                    </SelectItem>
                   ))}
-                </div>
-                <div className="text-xs text-gray-400 mt-1">
-                  Selected: {selectedPlayStyles.length}/3
-                </div>
-              </div>
-
-              {/* Fun Stats Editor */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
-                <div className="grid grid-cols-3 gap-1">
-                  {funStatLabels.map(stat => (
-                    <div key={stat.key} className="text-center">
-                      <div className="text-xs mb-1 text-white">{stat.key}</div>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={99}
-                        value={funStats[stat.key] || ''}
-                        onChange={(e) => updateStat(stat.key, e.target.value)}
-                        className="w-full text-center h-6 bg-white/10 border-white/20 text-white text-xs"
-                        placeholder="--"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Card Design Selector */}
-              <div>
-                <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
-                <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                  <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-6">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(cardDesigns).map(([id, design]) => (
-                      <SelectItem key={id} value={id}>
-                        {design.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
