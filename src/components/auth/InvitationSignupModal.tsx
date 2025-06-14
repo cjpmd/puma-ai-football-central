@@ -28,79 +28,74 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
 
-  console.log('InvitationSignupModal - invitationCode:', invitationCode);
-  console.log('InvitationSignupModal - isOpen:', isOpen);
-
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      if (!invitationCode) {
-        console.log('No invitation code provided');
-        return;
-      }
-      
-      console.log('Fetching invitation details for code:', invitationCode);
+      if (!invitationCode || !isOpen) return;
+
+      console.log('InvitationSignupModal: Fetching details for code:', invitationCode);
       try {
-        // Simplified query - just get the invitation
         const { data: invitation, error: invitationError } = await supabase
           .from('user_invitations')
-          .select('*')
+          .select('id, name, email, team_id') // Be explicit, don't use '*'
           .eq('invitation_code', invitationCode)
           .eq('status', 'pending')
           .single();
 
         if (invitationError) {
-          console.log('Error fetching invitation:', invitationError);
+          console.error('Error fetching invitation:', invitationError);
           toast({
             title: 'Invalid Invitation',
-            description: 'The invitation code is invalid or has expired',
+            description: 'The invitation code is invalid, expired, or already used.',
             variant: 'destructive',
           });
+          onClose(); // Close modal on error
           return;
         }
 
         if (!invitation) {
-          console.log('No invitation found');
+          console.log('No pending invitation found for this code.');
           toast({
             title: 'Invalid Invitation',
-            description: 'The invitation code is invalid or has expired',
+            description: 'This invitation may be expired or already accepted.',
             variant: 'destructive',
           });
+          onClose(); // Close modal if no invitation
           return;
         }
 
-        console.log('Invitation found:', invitation);
+        console.log('Invitation data found:', invitation);
         setInvitationDetails(invitation);
         setName(invitation.name || '');
         setEmail(invitation.email || '');
 
-        // Separately fetch team name if team_id exists
         if (invitation.team_id) {
+          console.log('Fetching team name for team_id:', invitation.team_id);
           const { data: team, error: teamError } = await supabase
             .from('teams')
             .select('name')
             .eq('id', invitation.team_id)
             .single();
           
-          if (team && !teamError) {
+          if (teamError) {
+            console.error('Error fetching team name:', teamError);
+          } else if (team) {
+            console.log('Team name found:', team.name);
             setTeamName(team.name);
           }
         }
-
-        console.log('Invitation details set successfully');
       } catch (error) {
-        console.error('Error fetching invitation details:', error);
+        console.error('Error in fetchInvitationDetails:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load invitation details',
+          description: 'An unexpected error occurred while loading invitation details.',
           variant: 'destructive',
         });
+        onClose();
       }
     };
 
-    if (isOpen && invitationCode) {
-      fetchInvitationDetails();
-    }
-  }, [invitationCode, isOpen, toast]);
+    fetchInvitationDetails();
+  }, [invitationCode, isOpen, toast, onClose]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
