@@ -3,7 +3,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInvitationProcessing } from '@/hooks/useInvitationProcessing';
-import { Sidebar } from './Sidebar';
+import { Sidebar } from '@/components/ui/sidebar';
 import { Header } from './Header';
 
 interface DashboardLayoutProps {
