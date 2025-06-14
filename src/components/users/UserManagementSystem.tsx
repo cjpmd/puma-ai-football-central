@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Plus } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -66,51 +67,6 @@ export const UserManagementSystem = () => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
 
-  const createMissingProfile = async () => {
-    try {
-      console.log('Creating missing profile manually...');
-      
-      const specificUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
-      
-      // Check if the current user has global_admin role
-      if (!user || !profile?.roles?.includes('global_admin')) {
-        throw new Error('You must be a global admin to create profiles for other users');
-      }
-      
-      // Try to create the profile with default values
-      const { error: createError } = await supabase
-        .from('profiles')
-        .insert([{
-          id: specificUserId,
-          name: 'David McDonald', // Default name based on email
-          email: 'dcjpm001@gmail.com',
-          roles: ['staff'] // Default role
-        }]);
-
-      if (createError) {
-        console.error('Error creating profile:', createError);
-        throw createError;
-      }
-
-      console.log('Profile created successfully');
-      
-      // Reload users after creation
-      await loadUsers();
-      
-      toast({
-        title: 'Success',
-        description: 'Missing profile created successfully.',
-      });
-    } catch (error: any) {
-      console.error('Error creating missing profile:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to create missing profile',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const syncMissingProfiles = async () => {
     try {
       console.log('Syncing missing profiles from auth users...');
@@ -121,7 +77,7 @@ export const UserManagementSystem = () => {
         throw new Error('Not authenticated');
       }
 
-      // Get all accepted invitations
+      // Get all accepted invitations where user doesn't have a profile
       const { data: invitations, error: invError } = await supabase
         .from('user_invitations')
         .select('*')
@@ -133,6 +89,8 @@ export const UserManagementSystem = () => {
       }
 
       console.log('Found accepted invitations:', invitations);
+
+      let profilesCreated = 0;
 
       // Check if profiles exist for these users
       for (const invitation of invitations || []) {
@@ -160,44 +118,10 @@ export const UserManagementSystem = () => {
               console.error('Error creating profile:', createError);
             } else {
               console.log('Profile created successfully for:', invitation.email);
+              profilesCreated++;
             }
           } else if (existingProfile) {
             console.log('Profile already exists for:', invitation.email);
-          }
-        }
-      }
-
-      // Also try to create a profile for the specific user ID if it doesn't exist
-      const specificUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
-      const { data: specificProfile, error: specificError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('id', specificUserId)
-        .single();
-
-      if (specificError && specificError.code === 'PGRST116') {
-        // Try to find invitation for this user
-        const { data: userInvitation } = await supabase
-          .from('user_invitations')
-          .select('*')
-          .eq('accepted_by', specificUserId)
-          .single();
-          
-        if (userInvitation) {
-          console.log('Creating profile for specific user:', specificUserId);
-          const { error: createError } = await supabase
-            .from('profiles')
-            .insert([{
-              id: specificUserId,
-              name: userInvitation.name,
-              email: userInvitation.email,
-              roles: [userInvitation.role]
-            }]);
-
-          if (createError) {
-            console.error('Error creating specific profile:', createError);
-          } else {
-            console.log('Specific profile created successfully');
           }
         }
       }
@@ -207,7 +131,7 @@ export const UserManagementSystem = () => {
       
       toast({
         title: 'Sync Complete',
-        description: 'Missing user profiles have been synchronized.',
+        description: `${profilesCreated} missing user profiles have been synchronized.`,
       });
     } catch (error: any) {
       console.error('Error syncing profiles:', error);
@@ -237,27 +161,6 @@ export const UserManagementSystem = () => {
 
       console.log('Profiles found:', profiles?.length || 0);
       console.log('All profiles:', profiles);
-
-      // Check specifically for the user we're looking for
-      const specificUser = profiles?.find(p => p.id === '51e6114e-0816-4a17-93c2-c57c03bedb92');
-      if (specificUser) {
-        console.log('Found specific user in profiles:', specificUser);
-      } else {
-        console.log('Specific user NOT found in profiles');
-        
-        // Check if they have an accepted invitation
-        const { data: invitation } = await supabase
-          .from('user_invitations')
-          .select('*')
-          .eq('accepted_by', '51e6114e-0816-4a17-93c2-c57c03bedb92')
-          .single();
-          
-        if (invitation) {
-          console.log('User has accepted invitation but no profile:', invitation);
-        } else {
-          console.log('No invitation found for specific user');
-        }
-      }
 
       if (!profiles || profiles.length === 0) {
         console.log('No profiles found');
@@ -467,16 +370,6 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {profile?.roles?.includes('global_admin') && (
-            <Button
-              onClick={createMissingProfile}
-              variant="outline"
-              size="sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Missing Profile
-            </Button>
-          )}
           <Button
             onClick={syncMissingProfiles}
             variant="outline"
