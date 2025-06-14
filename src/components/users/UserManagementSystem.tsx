@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -294,12 +295,27 @@ export const UserManagementSystem = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-1">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="invitations">Invite</TabsTrigger>
+          <TabsTrigger value="teams">Team</TabsTrigger>
+          <TabsTrigger value="linking">Link</TabsTrigger>
+          <TabsTrigger value="open">Open</TabsTrigger>
         </TabsList>
 
         <TabsContent value="invitations" className="mt-6">
           <InvitationResendPanel />
+        </TabsContent>
+
+        <TabsContent value="teams" className="mt-6">
+          <DualRoleManagement />
+        </TabsContent>
+
+        <TabsContent value="linking" className="mt-6">
+          <UserLinkingPanel />
+        </TabsContent>
+
+        <TabsContent value="open" className="mt-6">
+          <BulkUserImport />
         </TabsContent>
       </Tabs>
 
