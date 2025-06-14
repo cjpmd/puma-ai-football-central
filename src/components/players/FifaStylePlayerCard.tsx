@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -518,23 +517,43 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             )}
 
             <div className="relative mx-auto mb-4 h-44 flex items-center justify-center">
-              <Avatar className="h-40 w-40 border-3 border-white/70 shadow-lg">
-                <AvatarImage src={player.photoUrl} alt={determinedDisplayName} />
-                <AvatarFallback className="text-2xl bg-white/30 text-white font-bold">
-                  {player.name ? getInitials(player.name) : 'PL'}
-                </AvatarFallback>
-              </Avatar>
-              {onUpdatePhoto && canManageCard && (
-                <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
-                  <Camera className="h-4 w-4" />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoUpload}
-                    className="hidden"
-                  />
-                </label>
-              )}
+              <div className="relative h-40 w-40">
+                {/* Custom photo container with feathered border */}
+                <div 
+                  className="h-40 w-40 rounded-full overflow-hidden border-3 border-white/70 shadow-lg"
+                  style={{
+                    background: player.photoUrl ? 'none' : 'rgba(255,255,255,0.3)',
+                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  {player.photoUrl ? (
+                    <img 
+                      src={player.photoUrl} 
+                      alt={determinedDisplayName}
+                      className="h-full w-full object-cover"
+                      style={{
+                        maskImage: 'radial-gradient(circle, black 60%, transparent 100%)',
+                        WebkitMaskImage: 'radial-gradient(circle, black 60%, transparent 100%)'
+                      }}
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-white font-bold text-2xl">
+                      {player.name ? getInitials(player.name) : 'PL'}
+                    </div>
+                  )}
+                </div>
+                {onUpdatePhoto && canManageCard && (
+                  <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
+                    <Camera className="h-4 w-4" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1">
