@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -35,56 +36,73 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
 
-  console.log('EnhancedSignupModal props:', { isOpen, initialInvitationCode });
-  console.log('Current state:', { signupMethod, invitationCode, invitationDetails });
+  console.log('EnhancedSignupModal rendered with:', { 
+    isOpen, 
+    initialInvitationCode, 
+    signupMethod, 
+    invitationCode,
+    email,
+    name 
+  });
 
-  // Set default tab to invitation if we have an invitation code
+  // Initialize signup method and invitation code
   useEffect(() => {
-    console.log('Effect 1 - checking initialInvitationCode:', initialInvitationCode);
+    console.log('Effect 1 - initialInvitationCode changed:', initialInvitationCode);
     if (initialInvitationCode) {
-      console.log('Setting signup method to invitation due to initial code:', initialInvitationCode);
+      console.log('Setting up for invitation signup');
       setSignupMethod('invitation');
       setInvitationCode(initialInvitationCode);
+    } else {
+      // Reset to open if no invitation code
+      setSignupMethod('open');
+      setInvitationCode('');
+      setInvitationDetails(null);
+      setEmail('');
+      setName('');
+      setTeamName('');
     }
   }, [initialInvitationCode]);
 
-  // Check for invitation details when invitation code is provided
+  // Fetch invitation details when we have an invitation code
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      const codeToCheck = invitationCode || initialInvitationCode;
-      console.log('Effect 2 - fetching invitation details for code:', codeToCheck);
-      if (codeToCheck) {
-        console.log('Fetching invitation details for code:', codeToCheck);
-        try {
-          const { data, error } = await supabase
-            .from('user_invitations')
-            .select(`
-              *,
-              teams!inner(name)
-            `)
-            .eq('invitation_code', codeToCheck)
-            .eq('status', 'pending')
-            .single();
+      if (!invitationCode) {
+        console.log('No invitation code, clearing details');
+        setInvitationDetails(null);
+        return;
+      }
 
-          if (data && !error) {
-            console.log('Invitation details found:', data);
-            setInvitationDetails(data);
-            setName(data.name || '');
-            setEmail(data.email || '');
-            setTeamName((data as any).teams?.name || '');
-            // Ensure we're on the invitation tab
-            setSignupMethod('invitation');
-          } else {
-            console.log('No invitation details found:', error);
-          }
-        } catch (error) {
-          console.error('Error fetching invitation details:', error);
+      console.log('Fetching invitation details for code:', invitationCode);
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_invitations')
+          .select(`
+            *,
+            teams!inner(name)
+          `)
+          .eq('invitation_code', invitationCode)
+          .eq('status', 'pending')
+          .single();
+
+        if (data && !error) {
+          console.log('Invitation details found:', data);
+          setInvitationDetails(data);
+          setName(data.name || '');
+          setEmail(data.email || '');
+          setTeamName((data as any).teams?.name || '');
+        } else {
+          console.log('No invitation details found or error:', error);
+          setInvitationDetails(null);
         }
+      } catch (error) {
+        console.error('Error fetching invitation details:', error);
+        setInvitationDetails(null);
       }
     };
 
     fetchInvitationDetails();
-  }, [invitationCode, initialInvitationCode]);
+  }, [invitationCode]);
 
   const handleSignup = async () => {
     if (!email || !password || !name) {
