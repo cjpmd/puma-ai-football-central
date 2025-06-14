@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -20,7 +21,9 @@ const Auth = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [view, setView] = useState<'auth' | 'invitation'>('auth');
+  const [invitationCode, setInvitationCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -28,16 +31,25 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
-  const invitationCode = searchParams.get('invitation');
+  useEffect(() => {
+    const code = searchParams.get('invitation');
+    if (code) {
+      setInvitationCode(code);
+      setView('invitation');
+    } else {
+      setView('auth');
+      setInvitationCode(null);
+    }
+  }, [searchParams]);
 
   // If there's an invitation code, show the invitation signup modal and nothing else.
-  if (invitationCode) {
+  if (view === 'invitation' && invitationCode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <InvitationSignupModal
           isOpen={true}
           onClose={() => {
-            navigate('/auth', { replace: true }); // remove query param from URL
+            setSearchParams({}, { replace: true }); // remove query param from URL
           }}
           invitationCode={invitationCode}
         />

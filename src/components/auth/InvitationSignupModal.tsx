@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -23,15 +22,19 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // Start loading immediately
+  const [isSigningUp, setIsSigningUp] = useState(false);
   const [invitationDetails, setInvitationDetails] = useState<any>(null);
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
+  const [isValidating, setIsValidating] = useState(true);
+  const [errorState, setErrorState] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchInvitationDetails = async () => {
       if (!invitationCode || !isOpen) return;
 
+      setIsValidating(true);
+      setErrorState(null);
       console.log('InvitationSignupModal: Fetching invitation details for code:', invitationCode);
       
       try {
@@ -41,27 +44,14 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           .select('id, name, email, team_id')
           .eq('invitation_code', invitationCode)
           .eq('status', 'pending')
-          .maybeSingle(); // Use maybeSingle to handle 0 or 1 rows without erroring
+          .maybeSingle();
 
         if (invitationError) {
-          console.error('Error fetching invitation:', invitationError);
-          toast({
-            title: 'Error',
-            description: 'An error occurred while validating your invitation.',
-            variant: 'destructive',
-          });
-          onClose();
-          return;
+          throw invitationError;
         }
 
         if (!invitation) {
-          console.log('No valid invitation found for this code.');
-          toast({
-            title: 'Invalid Invitation',
-            description: 'This invitation may be expired, used, or invalid.',
-            variant: 'destructive',
-          });
-          onClose();
+          setErrorState('This invitation may be expired, used, or invalid.');
           return;
         }
 
@@ -77,7 +67,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
             .from('teams')
             .select('name')
             .eq('id', invitation.team_id)
-            .single();
+            .maybeSingle();
           
           if (teamError) {
             console.error('Error fetching team name:', teamError);
@@ -87,21 +77,16 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
             setTeamName(team.name);
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Unexpected error in fetchInvitationDetails:', error);
-        toast({
-          title: 'Error',
-          description: 'An unexpected error occurred.',
-          variant: 'destructive',
-        });
-        onClose();
+        setErrorState('An unexpected error occurred while validating your invitation.');
       } finally {
-        setIsLoading(false);
+        setIsValidating(false);
       }
     };
 
     fetchInvitationDetails();
-  }, [invitationCode, isOpen, toast, onClose]);
+  }, [invitationCode, isOpen, toast]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +100,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
       return;
     }
 
-    setIsLoading(true);
+    setIsSigningUp(true);
 
     try {
       // Create the user account
@@ -149,7 +134,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
         variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSigningUp(false);
     }
   };
 
@@ -160,7 +145,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
     return 'Create Account';
   };
   
-  if (isLoading && !invitationDetails) {
+  if (isValidating) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
@@ -174,6 +159,22 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
       </Dialog>
     );
   }
+
+  if (errorState) {
+    return (
+     <Dialog open={isOpen} onOpenChange={onClose}>
+       <DialogContent className="max-w-md">
+         <DialogHeader>
+           <DialogTitle>Invitation Error</DialogTitle>
+         </DialogHeader>
+         <div className="flex flex-col items-center justify-center p-8 space-y-4">
+           <p className="text-center text-destructive">{errorState}</p>
+           <Button onClick={onClose} variant="outline">Close</Button>
+         </div>
+       </DialogContent>
+     </Dialog>
+   );
+ }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -234,10 +235,10 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
 
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isSigningUp}
             className="w-full"
           >
-            {isLoading ? 'Creating Account...' : 'Create Account'}
+            {isSigningUp ? 'Creating Account...' : 'Create Account'}
           </Button>
         </form>
       </DialogContent>
