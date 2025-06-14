@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -66,6 +65,80 @@ export const UserManagementSystem = () => {
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
+
+  const syncMissingProfiles = async () => {
+    try {
+      console.log('Syncing missing profiles from auth users...');
+      
+      // Get current user (must be admin to do this)
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) {
+        throw new Error('Not authenticated');
+      }
+
+      // For now, we'll create a profile for any invited user who doesn't have one
+      // This is a workaround since we can't directly access auth.users table
+      
+      // Get all pending invitations that have been accepted but user might not have profile
+      const { data: invitations, error: invError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('status', 'accepted');
+
+      if (invError) {
+        console.error('Error fetching invitations:', invError);
+        throw invError;
+      }
+
+      console.log('Found accepted invitations:', invitations);
+
+      // Check if profiles exist for these users
+      for (const invitation of invitations || []) {
+        if (invitation.accepted_by) {
+          const { data: existingProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', invitation.accepted_by)
+            .single();
+
+          if (profileError && profileError.code === 'PGRST116') {
+            // Profile doesn't exist, create it
+            console.log('Creating missing profile for user:', invitation.accepted_by);
+            
+            const { error: createError } = await supabase
+              .from('profiles')
+              .insert([{
+                id: invitation.accepted_by,
+                name: invitation.name,
+                email: invitation.email,
+                roles: [invitation.role]
+              }]);
+
+            if (createError) {
+              console.error('Error creating profile:', createError);
+            } else {
+              console.log('Profile created successfully for:', invitation.email);
+            }
+          }
+        }
+      }
+
+      // Reload users after sync
+      await loadUsers();
+      
+      toast({
+        title: 'Sync Complete',
+        description: 'Missing user profiles have been synchronized.',
+      });
+    } catch (error: any) {
+      console.error('Error syncing profiles:', error);
+      toast({
+        title: 'Sync Error',
+        description: error.message || 'Failed to sync user profiles',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const loadUsers = async () => {
     try {
@@ -297,6 +370,14 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={syncMissingProfiles}
+            variant="outline"
+            size="sm"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            Sync Profiles
+          </Button>
           <Button
             onClick={loadUsers}
             variant="outline"
