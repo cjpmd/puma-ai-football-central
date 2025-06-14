@@ -203,6 +203,56 @@ export const playersService = {
     return publicUrlData.publicUrl;
   },
 
+  async removePlayerPhoto(playerId: string): Promise<Player> {
+    console.log(`Attempting to remove photo for player ${playerId}`);
+
+    // 1. Get current player to find their photo URL
+    const player = await this.getPlayerById(playerId);
+    if (!player) {
+      console.error(`Player with ID ${playerId} not found for photo removal.`);
+      throw new Error('Player not found.');
+    }
+    if (!player.photoUrl) {
+      console.log(`Player ${playerId} has no photo to remove.`);
+      return player; // Return player as is, no changes needed
+    }
+
+    const photoUrl = player.photoUrl;
+    console.log(`Found photo URL for player ${playerId}: ${photoUrl}`);
+
+    // 2. Extract path from URL
+    const bucketName = 'player_photos'; 
+    // Example URL: https://<project-ref>.supabase.co/storage/v1/object/public/player_photos/path/to/file.jpg
+    // We need to extract "path/to/file.jpg"
+    const urlPrefix = `/storage/v1/object/public/${bucketName}/`;
+    const pathStartIndex = photoUrl.indexOf(urlPrefix);
+
+    if (pathStartIndex === -1) {
+      console.error('Invalid photo URL format, cannot extract path:', photoUrl);
+      throw new Error('Invalid photo URL format.');
+    }
+    const photoPath = photoUrl.substring(pathStartIndex + urlPrefix.length);
+    console.log(`Extracted photo path: ${photoPath}`);
+
+    // 3. Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from(bucketName)
+      .remove([photoPath]);
+
+    if (storageError) {
+      console.error('Error deleting photo from storage:', storageError);
+      // Decide if we should still update the DB. For now, let's throw.
+      throw storageError; 
+    }
+    console.log('Photo successfully deleted from storage:', photoPath);
+
+    // 4. Update player record (set photoUrl to null)
+    // Ensure a distinct object is passed to updatePlayer to avoid issues with partial updates
+    const updatedPlayer = await this.updatePlayer(playerId, { photoUrl: null });
+    console.log(`Player record updated for ${playerId}, photoUrl set to null.`);
+    return updatedPlayer;
+  },
+
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
     console.log('Fetching parents for player:', playerId);
     

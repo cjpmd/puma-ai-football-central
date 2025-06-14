@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
-import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud } from 'lucide-react';
+import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud, Trash2 } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
 import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
@@ -84,6 +84,37 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to update player',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete player photo mutation
+  const deletePlayerPhotoMutation = useMutation({
+    mutationFn: (playerId: string) => playersService.removePlayerPhoto(playerId),
+    onSuccess: (updatedPlayer) => {
+      queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+      // Update selectedPlayer if it's the one being edited, to reflect changes immediately on the card
+      if (selectedPlayer && selectedPlayer.id === updatedPlayer.id) {
+        setSelectedPlayer(updatedPlayer);
+      }
+      if (editingPlayer && editingPlayer.id === updatedPlayer.id) {
+        setEditingPlayer(updatedPlayer); // If editing in form, update that too
+      }
+      const currentPlayers = queryClient.getQueryData<Player[]>(['active-players', team.id]);
+      if (currentPlayers) {
+        const updatedPlayersList = currentPlayers.map(p => p.id === updatedPlayer.id ? updatedPlayer : p);
+        queryClient.setQueryData(['active-players', team.id], updatedPlayersList);
+      }
+      toast({
+        title: 'Photo Deleted',
+        description: 'Player photo has been successfully deleted.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error Deleting Photo',
+        description: error.message || 'Failed to delete player photo',
         variant: 'destructive',
       });
     },
@@ -225,6 +256,16 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     }
   };
 
+  const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
+    if (!playerToDeletePhoto.photoUrl) {
+      toast({ title: 'No Photo Available', description: `${playerToDeletePhoto.name} does not have a photo to delete.`, variant: 'default' });
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto.id);
+    }
+  };
+
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
     console.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
     updatePlayerMutation.mutate({
@@ -350,6 +391,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   onManageParents={handleManageParents}
                   onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
+                  onDeletePhoto={handleDeletePlayerPhoto} {/* ADDED THIS PROP */}
                   onSaveFunStats={handleSaveFunStats}
                   onSavePlayStyle={handleSavePlayStyle}
                   onSaveCardDesign={handleSaveCardDesign}
