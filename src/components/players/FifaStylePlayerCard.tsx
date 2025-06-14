@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -309,14 +310,19 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   return (
     <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
       <div 
-        className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
-          flipped ? 'rotate-y-180' : ''
-        }`}
+        className={`relative w-full h-full transition-transform duration-700`}
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+        }}
       >
         {/* Front of card */}
         <div 
-          className={`absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden backface-hidden`}
-          style={cardStyle}
+          className={`absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`}
+          style={{
+            ...cardStyle,
+            backfaceVisibility: 'hidden'
+          }}
         >
           {/* Settings Button */}
           <Button
@@ -404,7 +410,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
 
             {/* Bottom Section - No shaded background, direct on card background */}
-            <div className="space-y-2">
+            <div className="space-y-1">
               {/* Player Name */}
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
@@ -424,8 +430,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 ))}
               </div>
 
-              {/* Play Style Icons - Reduced margin-top */}
-              <div className="flex justify-center gap-2 mt-1">
+              {/* Play Style Icons - Reduced space */}
+              <div className="flex justify-center gap-2">
                 {selectedPlayStyles.map((style, index) => (
                   <div key={index} className="text-2xl drop-shadow-lg">
                     {getPlayStyleIcon(style)}
@@ -465,7 +471,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         </div>
 
         {/* Back of card - management view */}
-        <div className="absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden backface-hidden rotate-y-180">
+        <div 
+          className="absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden"
+          style={{
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)'
+          }}
+        >
           <div className="h-full flex flex-col">
             {/* Header with Back Button and Close Button */}
             <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800">
