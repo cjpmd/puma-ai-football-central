@@ -1,156 +1,368 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Users, 
-  Plus, 
-  Search, 
-  Edit
-} from 'lucide-react';
-import { Team } from '@/types/team';
-
-// Define types and interfaces
-interface Player {
-  id: string;
-  name: string;
-  date_of_birth: string;
-  type: string;
-  squad_number?: number;
-  availability: string;
-  subscription_type: string;
-  status: string;
-  team_id: string;
-  photo_url?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface TransformedPlayer {
-  id: string;
-  name: string;
-  dateOfBirth: string;
-  position: string;
-  jerseyNumber?: number;
-  email?: string;
-  phone?: string;
-  address?: string;
-  emergencyContact?: string;
-  medicalInfo?: string;
-  profileImage?: string;
-  subscriptionType: 'full_squad' | 'training_only' | 'trialist';
-  joinDate: string;
-  leaveDate?: string;
-  status: 'active' | 'inactive' | 'on_leave';
-  teamId: string;
-  parentId?: string;
-  attributes?: Record<string, any>;
-  comments?: string;
-  objectives?: string[];
-  kitSizes?: Record<string, string>;
-  stats?: Record<string, any>;
-  createdAt: string;
-  updatedAt: string;
-}
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { playersService } from '@/services/playersService';
+import { useToast } from '@/hooks/use-toast';
+import { Player } from '@/types';
+import { Search, Users, Cog, Calendar, BarChart3, MessageSquare, Target, TrendingUp, TrendingDown, Minus, Brain, Crown, Trophy, Trash2 } from 'lucide-react';
+import { PlayerParentModal } from '@/components/players/PlayerParentModal';
+import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
+import { PlayerObjectivesModal } from '@/components/players/PlayerObjectivesModal';
+import { PlayerCommentsModal } from '@/components/players/PlayerCommentsModal';
+import { PlayerStatsModal } from '@/components/players/PlayerStatsModal';
+import { PlayerHistoryModal } from '@/components/players/PlayerHistoryModal';
+import { PlayerTransferForm } from '@/components/players/PlayerTransferForm';
+import { PlayerLeaveForm } from '@/components/players/PlayerLeaveForm';
+import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
-  const [players, setPlayers] = useState<TransformedPlayer[]>([]);
-  const [isPlayerDialogOpen, setIsPlayerDialogOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<TransformedPlayer | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterPosition, setFilterPosition] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [performanceTrends, setPerformanceTrends] = useState<Map<string, PerformanceTrend>>(new Map());
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
-  const selectedTeam = teams.find(team => team.id === selectedTeamId);
+  // Fetch active players
+  const { data: players = [], isLoading } = useQuery({
+    queryKey: ['active-players', selectedTeamId],
+    queryFn: () => selectedTeamId ? playersService.getActivePlayersByTeamId(selectedTeamId) : [],
+    enabled: !!selectedTeamId,
+  });
 
+  // Load performance trends for all players
   useEffect(() => {
-    if (selectedTeamId) {
-      fetchPlayers(selectedTeamId);
-    }
-  }, [selectedTeamId]);
+    const loadPerformanceTrends = async () => {
+      if (players.length === 0) return;
+      
+      const trends = new Map<string, PerformanceTrend>();
+      
+      await Promise.all(
+        players.map(async (player) => {
+          try {
+            const trend = await calculatePerformanceTrend(player.id);
+            trends.set(player.id, trend);
+          } catch (error) {
+            console.error(`Error loading trend for player ${player.id}:`, error);
+            trends.set(player.id, 'maintaining');
+          }
+        })
+      );
+      
+      setPerformanceTrends(trends);
+    };
 
-  const handleTeamChange = (teamId: string) => {
-    setSelectedTeamId(teamId);
-  };
+    loadPerformanceTrends();
+  }, [players]);
 
-  const fetchPlayers = async (teamId: string) => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', teamId);
-
-      if (error) {
-        console.error('Error fetching players:', error);
-        toast({
-          title: 'Error fetching players',
-          description: error.message,
-          variant: 'destructive',
-        });
-      } else {
-        // Transform database players to match our interface
-        const transformedPlayers: TransformedPlayer[] = (data || []).map((player: any) => ({
-          id: player.id,
-          name: player.name,
-          dateOfBirth: player.date_of_birth,
-          position: player.type || 'outfield',
-          jerseyNumber: player.squad_number,
-          subscriptionType: player.subscription_type as 'full_squad' | 'training_only' | 'trialist',
-          joinDate: player.created_at,
-          status: player.status as 'active' | 'inactive' | 'on_leave',
-          teamId: player.team_id,
-          profileImage: player.photo_url,
-          createdAt: player.created_at,
-          updatedAt: player.updated_at
-        }));
-        setPlayers(transformedPlayers);
-      }
-    } catch (error) {
-      console.error('Error fetching players:', error);
+  // Update player mutation
+  const updatePlayerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Player> }) => 
+      playersService.updatePlayer(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
       toast({
-        title: 'Error fetching players',
-        description: 'Failed to load players. Please try again.',
+        title: 'Player Updated',
+        description: 'Player information has been successfully updated.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update player',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
+    },
+  });
+
+  // Remove player mutation
+  const removePlayerMutation = useMutation({
+    mutationFn: (playerId: string) => playersService.removePlayerFromSquad(playerId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+      toast({
+        title: 'Player Removed',
+        description: 'Player has been removed from the squad.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove player',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete player photo mutation
+  const deletePlayerPhotoMutation = useMutation({
+    mutationFn: (player: Player) => playersService.deletePlayerPhoto(player),
+    onSuccess: (updatedPlayer) => {
+      queryClient.invalidateQueries({ queryKey: ['active-players', selectedTeamId] });
+      toast({
+        title: 'Photo Deleted',
+        description: `Photo for ${updatedPlayer.name} has been successfully deleted.`,
+      });
+    },
+    onError: (error: any, variables) => {
+      toast({
+        title: 'Error Deleting Photo',
+        description: error.message || `Failed to delete photo for ${variables.name}.`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Filter players based on search and subscription type
+  const filteredPlayers = players.filter(player => {
+    const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.squadNumber?.toString().includes(searchTerm);
+    
+    const matchesSubscription = subscriptionFilter === 'all' || 
+      player.subscriptionType === subscriptionFilter;
+    
+    return matchesSearch && matchesSubscription;
+  });
+
+  const handleModalOpen = (modal: string, player: Player) => {
+    console.log(`[PlayerTab] handleModalOpen: Modal "${modal}" for player "${player.name}"`);
+    setSelectedPlayer(player);
+    setActiveModal(modal);
+  };
+
+  const handleModalClose = () => {
+    console.log("[PlayerTab] handleModalClose called");
+    setSelectedPlayer(null);
+    setActiveModal(null);
+  };
+
+  const handlePlayerUpdate = (updatedData: any) => {
+    if (!selectedPlayer) return;
+    
+    updatePlayerMutation.mutate({
+      id: selectedPlayer.id,
+      data: updatedData
+    });
+    handleModalClose();
+  };
+
+  // FIFA Card specific handlers
+  const handleEditPlayer = (player: Player) => {
+    console.log(`[PlayerTab] handleEditPlayer called for player: ${player.name}`);
+    toast({
+      title: 'Edit Player (handler called)',
+      description: `Edit player clicked: ${player.name}`,
+    });
+    // TODO: Implement edit player functionality or open a specific modal for editing
+    // For now, let's try opening a generic modal or just logging
+    // handleModalOpen('editPlayerForm', player); // Example if you had an EditPlayerFormModal
+  };
+
+  const handleManageParents = (player: Player) => {
+    console.log(`[PlayerTab] handleManageParents for player: ${player.name}`);
+    toast({
+      title: 'Parents (handler called)',
+      description: `Parents for: ${player.name}`,
+    });
+    handleModalOpen('parents', player);
+  };
+
+  const handleRemoveFromSquad = (player: Player) => {
+    console.log(`[PlayerTab] handleRemoveFromSquad for player: ${player.name}`);
+    toast({
+      title: 'Remove from Squad (handler called)',
+      description: `Remove from squad: ${player.name}`,
+    });
+    if (window.confirm(`Are you sure you want to remove ${player.name} from the squad?`)) {
+      removePlayerMutation.mutate(player.id);
     }
   };
 
-  const positions = [
-    'Goalkeeper', 'Defender', 'Midfielder', 'Forward',
-    'Centre-back', 'Full-back', 'Wing-back', 'Defensive Midfielder',
-    'Central Midfielder', 'Attacking Midfielder', 'Winger', 'Striker'
-  ];
+  const handleUpdatePhoto = async (player: Player, file: File) => {
+    console.log(`[PlayerTab] handleUpdatePhoto for player: ${player.name}`);
+    toast({
+      title: 'Photo Upload (handler called)',
+      description: `Photo upload triggered for: ${player.name}`,
+    });
+    // TODO: Implement photo upload
+  };
 
-  const filteredPlayers = players.filter((player) => {
-    const searchTermLower = searchTerm.toLowerCase();
-    const matchesSearch =
-      player.name.toLowerCase().includes(searchTermLower) ||
-      player.position.toLowerCase().includes(searchTermLower);
+  const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
+    if (!playerToDeletePhoto.photoUrl) {
+      toast({ title: 'No Photo to Delete', description: `This player does not have a photo.` });
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto);
+    }
+  };
 
-    const matchesPosition =
-      filterPosition === 'all' || player.position.toLowerCase() === filterPosition;
+  const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
+    console.log(`[PlayerTab] handleSaveFunStats for player: ${player.name}`, stats);
+    toast({
+      title: 'Fun Stats (handler called)',
+      description: `Saving fun stats for: ${player.name}`,
+    });
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { funStats: stats }
+    });
+  };
 
-    const matchesStatus =
-      filterStatus === 'all' || player.status === filterStatus;
+  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
+    console.log(`[PlayerTab] handleSavePlayStyle for player: ${player.name}`, playStyles);
+    toast({
+      title: 'Play Style (handler called)',
+      description: `Saving play styles for: ${player.name}`,
+    });
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { playStyle: JSON.stringify(playStyles) }
+    });
+  };
 
-    return matchesSearch && matchesPosition && matchesStatus;
-  });
+  const handleSaveCardDesign = (player: Player, designId: string) => {
+    console.log(`[PlayerTab] handleSaveCardDesign for player: ${player.name}`, designId);
+    toast({
+      title: 'Card Design (handler called)',
+      description: `Saving card design for: ${player.name}`,
+    });
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { cardDesignId: designId }
+    });
+  };
+
+  const handleManageAttributes = (player: Player) => {
+    console.log(`[PlayerTab] handleManageAttributes for player: ${player.name}`);
+    toast({
+      title: 'Attributes (handler called)',
+      description: `Attributes for: ${player.name}`,
+    });
+    handleModalOpen('attributes', player);
+  };
+
+  const handleManageObjectives = (player: Player) => {
+    console.log(`[PlayerTab] handleManageObjectives for player: ${player.name}`);
+    toast({
+      title: 'Objectives (handler called)',
+      description: `Objectives for: ${player.name}`,
+    });
+    handleModalOpen('objectives', player);
+  };
+
+  const handleManageComments = (player: Player) => {
+    console.log(`[PlayerTab] handleManageComments for player: ${player.name}`);
+    toast({
+      title: 'Comments (handler called)',
+      description: `Comments for: ${player.name}`,
+    });
+    handleModalOpen('comments', player);
+  };
+
+  const handleViewStats = (player: Player) => {
+    console.log(`[PlayerTab] handleViewStats for player: ${player.name}`);
+    toast({
+      title: 'View Stats (handler called)',
+      description: `Stats for: ${player.name}`,
+    });
+    handleModalOpen('stats', player);
+  };
+
+  const handleViewHistory = (player: Player) => {
+    console.log(`[PlayerTab] handleViewHistory for player: ${player.name}`);
+    toast({
+      title: 'History (handler called)',
+      description: `History for: ${player.name}`,
+    });
+    handleModalOpen('history', player);
+  };
+
+  const handleTransferPlayer = (player: Player) => {
+    console.log(`[PlayerTab] handleTransferPlayer for player: ${player.name}`);
+    toast({
+      title: 'Transfer (handler called)',
+      description: `Transfer dialog for: ${player.name}`,
+    });
+    handleModalOpen('transfer', player);
+  };
+
+  const handleLeaveTeam = (player: Player) => {
+    console.log(`[PlayerTab] handleLeaveTeam for player: ${player.name}`);
+    toast({
+      title: 'Leave Team (handler called)',
+      description: `Leave team dialog for: ${player.name}`,
+    });
+    handleModalOpen('leave', player);
+  };
+
+  const renderPerformanceIcon = (playerId: string) => {
+    const trend = performanceTrends.get(playerId);
+    if (!trend) return <Minus className="h-4 w-4 text-gray-400" />;
+    
+    switch (trend) {
+      case 'improving':
+        return <TrendingUp className="h-4 w-4 text-green-600" />;
+      case 'needs-work':
+        return <TrendingDown className="h-4 w-4 text-red-600" />;
+      case 'maintaining':
+      default:
+        return <Minus className="h-4 w-4 text-gray-600" />;
+    }
+  };
+
+  const renderTopPositions = (player: Player) => {
+    const positions = player.matchStats?.minutesByPosition || {};
+    
+    // Convert positions object to array and ensure values are numbers
+    const positionEntries = Object.entries(positions).map(([position, minutes]) => [
+      position, 
+      typeof minutes === 'number' ? minutes : 0
+    ] as [string, number]);
+    
+    const sortedPositions = positionEntries
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+    
+    if (sortedPositions.length === 0) {
+      return <span className="text-muted-foreground text-xs">No data</span>;
+    }
+    
+    return (
+      <div className="flex flex-wrap gap-1">
+        {sortedPositions.map(([position, minutes]) => (
+          <Badge key={position} variant="outline" className="text-xs">
+            {position}: {minutes}m
+          </Badge>
+        ))}
+      </div>
+    );
+  };
+
+  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6">
+          <div className="text-center py-8">Loading players...</div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -159,236 +371,304 @@ const PlayerManagementTab = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Player Management</h1>
             <p className="text-muted-foreground">
-              Manage your squad and player information
+              Comprehensive player data management and analytics
             </p>
           </div>
-
-          {teams.length > 1 && (
-            <div className="min-w-[250px]">
-              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select team" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-        </div>
-
-        {teams.length === 0 ? (
-          <Card className="border-dashed border-2 border-muted">
-            <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-              <div className="rounded-full bg-muted p-3 mb-4">
-                <Users className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-lg mb-1">No Teams Yet</h3>
-              <p className="text-muted-foreground mb-4 max-w-md">
-                You need to create a team first before you can manage players.
-              </p>
+          <div className="flex items-center gap-4">
+            <div className="flex rounded-lg border p-1">
               <Button
-                onClick={() => window.location.href = '/teams'}
-                className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                variant={viewMode === 'table' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('table')}
               >
-                Create Team
+                Table
               </Button>
-            </CardContent>
-          </Card>
-        ) : selectedTeam ? (
-          <div className="space-y-6">
-            {/* Team Header */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 flex items-center justify-center rounded-lg bg-muted">
-                      {selectedTeam.logoUrl ? (
-                        <img
-                          src={selectedTeam.logoUrl}
-                          alt={`${selectedTeam.name} logo`}
-                          className="w-10 h-10 object-contain rounded"
-                        />
-                      ) : (
-                        <Users className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div>
-                      <CardTitle>{selectedTeam.name}</CardTitle>
-                      <CardDescription>
-                        {selectedTeam.ageGroup} • {selectedTeam.gameFormat} • {players.length} players
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Dialog open={isPlayerDialogOpen} onOpenChange={setIsPlayerDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button 
-                        onClick={() => setSelectedPlayer(null)}
-                        className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Player
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-[500px]">
-                      <DialogHeader>
-                        <DialogTitle>
-                          {selectedPlayer ? 'Edit Player' : 'Add New Player'}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {selectedPlayer
-                            ? 'Update player information and settings.'
-                            : 'Add a new player to your team squad.'}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                          Player form implementation would go here.
-                        </p>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-            </Card>
-
-            {/* Search and Filters */}
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search players..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <Select value={filterPosition} onValueChange={setFilterPosition}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Positions</SelectItem>
-                      {positions.map((position) => (
-                        <SelectItem key={position} value={position.toLowerCase()}>
-                          {position}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={filterStatus} onValueChange={setFilterStatus}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="on_leave">On Leave</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Players Grid */}
-            {players.length === 0 ? (
-              <Card className="border-dashed border-2 border-muted">
-                <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-                  <div className="rounded-full bg-muted p-3 mb-4">
-                    <Users className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="font-semibold text-lg mb-1">No Players Yet</h3>
-                  <p className="text-muted-foreground mb-4 max-w-md">
-                    Start building your squad by adding your first player.
-                  </p>
-                  <Button
-                    onClick={() => setIsPlayerDialogOpen(true)}
-                    className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add First Player
-                  </Button>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                {filteredPlayers.map((player) => (
-                  <Card key={player.id} className="hover:shadow-lg transition-shadow">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            <AvatarImage src={player.profileImage} alt={player.name} />
-                            <AvatarFallback>
-                              {player.name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <CardTitle className="text-lg">{player.name}</CardTitle>
-                            <CardDescription>
-                              {player.position}
-                              {player.jerseyNumber && ` • #${player.jerseyNumber}`}
-                            </CardDescription>
-                          </div>
-                        </div>
-                        <Badge variant={player.status === 'active' ? 'default' : 'secondary'}>
-                          {player.status}
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-0">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Subscription:</span>
-                          <span className="capitalize">
-                            {player.subscriptionType.replace('_', ' ')}
-                          </span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Joined:</span>
-                          <span>{new Date(player.joinDate).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                      <div className="flex gap-2 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedPlayer(player);
-                            setIsPlayerDialogOpen(true);
-                          }}
-                          className="flex-1"
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                        >
-                          View
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+              >
+                Cards
+              </Button>
+            </div>
+            {teams.length > 1 && (
+              <div className="min-w-[250px]">
+                <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
-        ) : (
-          <div className="text-center py-8">
-            Please select a team to manage players.
-          </div>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              {selectedTeam?.name} Players
+            </CardTitle>
+            <CardDescription>
+              Manage all aspects of your players' data and performance
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input
+                    placeholder="Search players..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                
+                <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by subscription" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Players</SelectItem>
+                    <SelectItem value="full_squad">Full Squad</SelectItem>
+                    <SelectItem value="training">Training Only</SelectItem>
+                  </SelectContent>
+                </Select>
+                
+                <Badge variant="secondary">
+                  {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+
+              {viewMode === 'cards' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
+                  {filteredPlayers.map((player) => (
+                    <FifaStylePlayerCard
+                      key={player.id}
+                      player={player}
+                      team={selectedTeam}
+                      onEdit={handleEditPlayer}
+                      onManageParents={handleManageParents}
+                      onRemoveFromSquad={handleRemoveFromSquad}
+                      onUpdatePhoto={handleUpdatePhoto}
+                      onDeletePhoto={handleDeletePlayerPhoto}
+                      onSaveFunStats={handleSaveFunStats}
+                      onSavePlayStyle={handleSavePlayStyle}
+                      onSaveCardDesign={handleSaveCardDesign}
+                      onManageAttributes={handleManageAttributes}
+                      onManageObjectives={handleManageObjectives}
+                      onManageComments={handleManageComments}
+                      onViewStats={handleViewStats}
+                      onViewHistory={handleViewHistory}
+                      onTransferPlayer={handleTransferPlayer}
+                      onLeaveTeam={handleLeaveTeam}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Player</TableHead>
+                        <TableHead>Squad #</TableHead>
+                        <TableHead>Subscription</TableHead>
+                        <TableHead>Games</TableHead>
+                        <TableHead>Minutes</TableHead>
+                        <TableHead>Top Positions</TableHead>
+                        <TableHead>Performance</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredPlayers.map((player) => (
+                        <TableRow key={player.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{player.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield Player'}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">
+                              #{player.squadNumber}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={player.subscriptionType === 'full_squad' ? 'default' : 'secondary'}
+                            >
+                              {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
+                          <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
+                          <TableCell>
+                            {renderTopPositions(player)}
+                          </TableCell>
+                          <TableCell>
+                            {renderPerformanceIcon(player.id)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('parents', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Parents"
+                              >
+                                <Users className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('attributes', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Attributes"
+                              >
+                                <Brain className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('objectives', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Objectives"
+                              >
+                                <Target className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('comments', player)}
+                                className="h-8 w-8 p-0"
+                                title="Manage Comments"
+                              >
+                                <MessageSquare className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('stats', player)}
+                                className="h-8 w-8 p-0"
+                                title="View Statistics"
+                              >
+                                <BarChart3 className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleModalOpen('history', player)}
+                                className="h-8 w-8 p-0"
+                                title="View History"
+                              >
+                                <Calendar className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+
+              {filteredPlayers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchTerm || subscriptionFilter !== 'all' ? 'No players found matching your filters.' : 'No players found for this team.'}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Modals */}
+        {selectedPlayer && (
+          <>
+            <PlayerParentModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'parents'}
+              onClose={handleModalClose}
+            />
+            
+            <PlayerAttributesModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'attributes'}
+              onClose={handleModalClose}
+              onSave={(attributes) => handlePlayerUpdate({ attributes })}
+            />
+            
+            <PlayerObjectivesModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'objectives'}
+              onClose={handleModalClose}
+              onSave={(objectives) => handlePlayerUpdate({ objectives })}
+            />
+            
+            <PlayerCommentsModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'comments'}
+              onClose={handleModalClose}
+              onSave={(comments) => handlePlayerUpdate({ comments })}
+            />
+            
+            <PlayerStatsModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'stats'}
+              onClose={handleModalClose}
+            />
+            
+            <PlayerHistoryModal
+              player={selectedPlayer}
+              isOpen={activeModal === 'history'}
+              onClose={handleModalClose}
+            />
+
+            {activeModal === 'transfer' && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <PlayerTransferForm
+                    player={selectedPlayer}
+                    currentTeamId={selectedTeamId}
+                    onSubmit={() => {
+                      handleModalClose();
+                      // Refresh data after transfer
+                      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+                    }}
+                    onCancel={handleModalClose}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeModal === 'leave' && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <PlayerLeaveForm
+                    player={selectedPlayer}
+                    onSubmit={() => {
+                      handleModalClose();
+                      // Refresh data after leave
+                      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+                    }}
+                    onCancel={handleModalClose}
+                  />
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </DashboardLayout>

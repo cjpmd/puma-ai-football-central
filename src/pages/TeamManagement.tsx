@@ -5,75 +5,160 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { TeamForm } from '@/components/teams/TeamForm';
+import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
+import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { PlusCircle, Settings, Users, Shield, Copy, Edit, Trash2, Eye } from 'lucide-react';
-import { TeamForm } from '@/components/teams/TeamForm';
-import { Team } from '@/types/team';
-import { Club } from '@/types/club';
+import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
+import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
 
-export const TeamManagement = () => {
-  const { teams, clubs, refreshUserData } = useAuth();
+const TeamManagement = () => {
+  const { teams, clubs, refreshUserData, user } = useAuth();
+  const [allClubs, setAllClubs] = useState<Club[]>([]);
+  const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [selectedTeamForView, setSelectedTeamForView] = useState<string>('');
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
   const { toast } = useToast();
 
-  // Auto-select team if only one available
   useEffect(() => {
-    if (teams.length === 1 && !selectedTeamForView) {
-      setSelectedTeamForView(teams[0].id);
+    loadAllClubs();
+    loadLinkedTeams();
+  }, [clubs]);
+
+  const loadAllClubs = async () => {
+    try {
+      console.log('Loading all clubs...');
+      const { data, error } = await supabase.from('clubs').select('*');
+      
+      if (error) {
+        console.error('Error loading clubs:', error);
+        return;
+      }
+
+      console.log('Loaded clubs:', data);
+      
+      const convertedClubs: Club[] = (data || []).map(club => ({
+        id: club.id,
+        name: club.name,
+        referenceNumber: club.reference_number,
+        serialNumber: club.serial_number,
+        subscriptionType: (club.subscription_type as SubscriptionType) || 'free',
+        logoUrl: club.logo_url,
+        createdAt: club.created_at,
+        updatedAt: club.updated_at
+      }));
+
+      setAllClubs(convertedClubs);
+    } catch (error) {
+      console.error('Error in loadAllClubs:', error);
     }
-  }, [teams, selectedTeamForView]);
+  };
+
+  const loadLinkedTeams = async () => {
+    if (!clubs || clubs.length === 0) return;
+
+    try {
+      console.log('Loading linked teams for clubs...');
+      const clubIds = clubs.map(club => club.id);
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .select('*')
+        .in('club_id', clubIds)
+        .not('id', 'in', `(${teams?.map(t => t.id).join(',') || ''})`);
+
+      if (error) {
+        console.error('Error loading linked teams:', error);
+        return;
+      }
+
+      console.log('Loaded linked teams raw:', data);
+      
+      const convertedTeams: Team[] = (data || []).map(team => ({
+        id: team.id,
+        name: team.name,
+        ageGroup: team.age_group,
+        seasonStart: team.season_start,
+        seasonEnd: team.season_end,
+        clubId: team.club_id,
+        gameFormat: team.game_format as GameFormat,
+        subscriptionType: (team.subscription_type as SubscriptionType) || 'free',
+        performanceCategories: team.performance_categories || [],
+        kitIcons: typeof team.kit_icons === 'object' && team.kit_icons !== null ? 
+          team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
+          { home: '', away: '', training: '', goalkeeper: '' },
+        logoUrl: team.logo_url,
+        kitDesigns: team.kit_designs ? team.kit_designs as any : undefined,
+        managerName: team.manager_name,
+        managerEmail: team.manager_email,
+        managerPhone: team.manager_phone,
+        createdAt: team.created_at,
+        updatedAt: team.updated_at,
+        isReadOnly: true
+      }));
+
+      console.log('Converted linked teams:', convertedTeams);
+      setLinkedTeams(convertedTeams);
+    } catch (error) {
+      console.error('Error in loadLinkedTeams:', error);
+    }
+  };
 
   const handleCreateTeam = async (teamData: Partial<Team>) => {
     try {
       console.log('Creating team with data:', teamData);
-
-      const { data, error } = await supabase.from('teams').insert({
+      
+      const { data, error } = await supabase.from('teams').insert([{
         name: teamData.name,
         age_group: teamData.ageGroup,
         season_start: teamData.seasonStart,
         season_end: teamData.seasonEnd,
-        club_id: teamData.clubId,
-        subscription_type: teamData.subscriptionType || 'free',
+        club_id: teamData.clubId || null,
         game_format: teamData.gameFormat,
-        kit_icons: teamData.kitIcons as any,
+        subscription_type: teamData.subscriptionType || 'free',
+        performance_categories: teamData.performanceCategories || [],
+        kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
         logo_url: teamData.logoUrl,
-        performance_categories: teamData.performanceCategories,
+        kit_designs: ('kitDesigns' in teamData && teamData.kitDesigns) ? teamData.kitDesigns as any : null,
         manager_name: teamData.managerName,
         manager_email: teamData.managerEmail,
         manager_phone: teamData.managerPhone,
-        kit_designs: teamData.kitDesigns as any,
-        name_display_option: teamData.nameDisplayOption
-      }).select().single();
+      }]).select().single();
 
       if (error) throw error;
 
-      console.log('Team created successfully:', data);
+      if (data) {
+        const { error: userTeamError } = await supabase
+          .from('user_teams')
+          .insert({
+            user_id: user.id,
+            team_id: data.id,
+            role: 'admin'
+          });
 
-      // Get current user ID
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error('User not authenticated');
-
-      // Create a user_teams record for the current user
-      const { error: userTeamError } = await supabase
-        .from('user_teams')
-        .insert({
-          user_id: userData.user.id,
-          team_id: data.id,
-          role: 'manager'
-        });
-
-      if (userTeamError) {
-        console.error('Error creating user_teams record:', userTeamError);
-        throw userTeamError;
+        if (userTeamError) {
+          console.error('Error linking user to team:', userTeamError);
+        }
       }
 
+      if (teamData.clubId && data) {
+        const { error: linkError } = await supabase
+          .from('club_teams')
+          .insert({ club_id: teamData.clubId, team_id: data.id });
+
+        if (linkError && !linkError.message.includes('duplicate')) {
+          console.error('Error linking team to club:', linkError);
+        }
+      }
+
+      console.log('Team created successfully:', data);
       await refreshUserData();
       setIsTeamDialogOpen(false);
-
+      
       toast({
         title: 'Team created',
         description: `${teamData.name} has been created successfully.`,
@@ -93,37 +178,62 @@ export const TeamManagement = () => {
 
     try {
       console.log('Updating team with data:', teamData);
+      
+      const updateData: any = {};
+      
+      // Only include fields that are being updated
+      if ('name' in teamData) updateData.name = teamData.name;
+      if ('ageGroup' in teamData) updateData.age_group = teamData.ageGroup;
+      if ('seasonStart' in teamData) updateData.season_start = teamData.seasonStart;
+      if ('seasonEnd' in teamData) updateData.season_end = teamData.seasonEnd;
+      if ('clubId' in teamData) updateData.club_id = teamData.clubId || null;
+      if ('gameFormat' in teamData) updateData.game_format = teamData.gameFormat;
+      if ('subscriptionType' in teamData) updateData.subscription_type = teamData.subscriptionType;
+      if ('performanceCategories' in teamData) updateData.performance_categories = teamData.performanceCategories;
+      if ('kitIcons' in teamData) updateData.kit_icons = teamData.kitIcons;
+      if ('logoUrl' in teamData) updateData.logo_url = teamData.logoUrl;
+      if ('kitDesigns' in teamData) updateData.kit_designs = teamData.kitDesigns as any;
+      if ('managerName' in teamData) updateData.manager_name = teamData.managerName;
+      if ('managerEmail' in teamData) updateData.manager_email = teamData.managerEmail;
+      if ('managerPhone' in teamData) updateData.manager_phone = teamData.managerPhone;
+      
+      updateData.updated_at = new Date().toISOString();
 
       const { error } = await supabase
         .from('teams')
-        .update({
-          name: teamData.name,
-          age_group: teamData.ageGroup,
-          season_start: teamData.seasonStart,
-          season_end: teamData.seasonEnd,
-          club_id: teamData.clubId,
-          subscription_type: teamData.subscriptionType,
-          game_format: teamData.gameFormat,
-          kit_icons: teamData.kitIcons as any,
-          logo_url: teamData.logoUrl,
-          performance_categories: teamData.performanceCategories,
-          manager_name: teamData.managerName,
-          manager_email: teamData.managerEmail,
-          manager_phone: teamData.managerPhone,
-          kit_designs: teamData.kitDesigns as any,
-          name_display_option: teamData.nameDisplayOption
-        })
+        .update(updateData)
         .eq('id', selectedTeam.id);
 
       if (error) throw error;
 
+      // Handle club linking if clubId was updated
+      if ('clubId' in teamData && teamData.clubId !== selectedTeam.clubId) {
+        await supabase
+          .from('club_teams')
+          .delete()
+          .eq('team_id', selectedTeam.id);
+
+        if (teamData.clubId) {
+          const { error: linkError } = await supabase
+            .from('club_teams')
+            .insert({ club_id: teamData.clubId, team_id: selectedTeam.id });
+
+          if (linkError && !linkError.message.includes('duplicate')) {
+            console.error('Error linking team to club:', linkError);
+          }
+        }
+      }
+
+      // Update local team state
+      setSelectedTeam(prev => prev ? { ...prev, ...teamData } : null);
+
       console.log('Team updated successfully');
       await refreshUserData();
-      setIsTeamDialogOpen(false);
-
+      await loadLinkedTeams();
+      
       toast({
         title: 'Team updated',
-        description: `${teamData.name} has been updated successfully.`,
+        description: `${teamData.name || selectedTeam.name} has been updated successfully.`,
       });
     } catch (error: any) {
       console.error('Error updating team:', error);
@@ -135,48 +245,18 @@ export const TeamManagement = () => {
     }
   };
 
-  const handleDeleteTeam = async (teamId: string) => {
-    try {
-      console.log('Deleting team with ID:', teamId);
+  const openTeamSettingsModal = (team: Team, isReadOnly = false) => {
+    console.log('Opening settings for team:', team, 'Read only:', isReadOnly);
+    const teamWithReadOnly: Team = { ...team, isReadOnly };
+    setSelectedTeam(teamWithReadOnly);
+    setIsSettingsModalOpen(true);
+  };
 
-      // Delete user_teams records
-      const { error: userTeamsError } = await supabase
-        .from('user_teams')
-        .delete()
-        .eq('team_id', teamId);
-
-      if (userTeamsError) {
-        console.error('Error deleting user_teams records:', userTeamsError);
-        throw userTeamsError;
-      }
-
-      // Delete the team itself
-      const { error: teamError } = await supabase
-        .from('teams')
-        .delete()
-        .eq('id', teamId);
-
-      if (teamError) {
-        console.error('Error deleting team:', teamError);
-        throw teamError;
-      }
-
-      console.log('Team deleted successfully');
-      await refreshUserData();
-      setSelectedTeamForView(''); // Clear selected team after deletion
-
-      toast({
-        title: 'Team deleted',
-        description: 'The team has been deleted successfully.',
-      });
-    } catch (error: any) {
-      console.error('Error deleting team:', error);
-      toast({
-        title: 'Error deleting team',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
+  const openStaffModal = (team: Team, isReadOnly = false) => {
+    console.log('Opening staff modal for team:', team, 'Read only:', isReadOnly);
+    const teamWithReadOnly: Team = { ...team, isReadOnly };
+    setSelectedTeam(teamWithReadOnly);
+    setIsStaffModalOpen(true);
   };
 
   const openEditTeamDialog = (team: Team) => {
@@ -184,81 +264,120 @@ export const TeamManagement = () => {
     setIsTeamDialogOpen(true);
   };
 
-  const TeamCard = ({ team }: { team: Team }) => (
-    <Card key={team.id} className="hover:shadow-lg transition-shadow">
+  const getClubName = (clubId?: string) => {
+    console.log('Getting club name for ID:', clubId, 'Available clubs:', allClubs);
+    if (!clubId) return 'Independent';
+    
+    // First try to find in allClubs
+    const club = allClubs.find(c => c.id === clubId);
+    if (club) {
+      console.log('Found club in allClubs:', club);
+      return club.name;
+    }
+    
+    // If not found in allClubs, try to find in user's clubs
+    const userClub = clubs?.find(c => c.id === clubId);
+    if (userClub) {
+      console.log('Found club in user clubs:', userClub);
+      return userClub.name;
+    }
+    
+    console.log('Club not found, returning Unknown Club');
+    return 'Unknown Club';
+  };
+
+  const TeamCard = ({ team, isLinked = false }: { team: Team; isLinked?: boolean }) => (
+    <Card key={team.id} className={isLinked ? 'border-dashed opacity-75' : ''}>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex items-center gap-3 flex-1">
-            <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
-              {team.logoUrl ? (
-                <img
-                  src={team.logoUrl}
-                  alt={`${team.name} logo`}
-                  className="w-7 h-7 object-contain rounded"
-                />
-              ) : (
-                <Shield className="h-5 w-5 text-muted-foreground" />
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 flex items-center justify-center rounded bg-muted overflow-hidden">
+            {team.logoUrl ? (
+              <img 
+                src={team.logoUrl} 
+                alt={`${team.name} logo`}
+                className="w-full h-full object-cover rounded"
+                onError={(e) => {
+                  console.log('Logo failed to load:', team.logoUrl);
+                  const target = e.currentTarget;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) fallback.style.display = 'block';
+                }}
+                onLoad={() => {
+                  console.log('Logo loaded successfully:', team.logoUrl);
+                }}
+              />
+            ) : null}
+            <Users className={`h-5 w-5 text-muted-foreground ${team.logoUrl ? 'hidden' : ''}`} />
+          </div>
+          <div className="flex-1">
+            <CardTitle className="flex items-center gap-2">
+              {team.name}
+              {isLinked && (
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                  Linked
+                </span>
               )}
-            </div>
-            <div className="flex-1">
-              <CardTitle className="flex items-center gap-2">
-                {team.name}
-                {team.privacySettings?.showScoresToParents && (
-                  <Badge variant="secondary" className="text-xs">
-                    Scores Visible
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription>
-                Age Group: {team.ageGroup}
-              </CardDescription>
-            </div>
+            </CardTitle>
+            <CardDescription>
+              {team.ageGroup} • {team.gameFormat}
+            </CardDescription>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-3">
+        <div className="space-y-2">
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Season:</span>
             <span className="font-medium">
-              {team.seasonStart} - {team.seasonEnd}
+              {new Date(team.seasonStart).toLocaleDateString()} - {new Date(team.seasonEnd).toLocaleDateString()}
             </span>
           </div>
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Game Format:</span>
-            <span className="font-medium">{team.gameFormat}</span>
+            <span className="text-muted-foreground">Club:</span>
+            <span className="font-medium">
+              {getClubName(team.clubId)}
+            </span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Subscription:</span>
-            <Badge variant="outline" className="capitalize">
+            <span className="font-medium capitalize">
               {team.subscriptionType}
-            </Badge>
+            </span>
           </div>
+          {team.performanceCategories && team.performanceCategories.length > 0 && (
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-muted-foreground">Categories:</span>
+              <span className="font-medium">
+                {team.performanceCategories.length}
+              </span>
+            </div>
+          )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setSelectedTeamForView(team.id);
-          }}
-          className="flex-1"
+      <CardFooter className="flex justify-between">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => openStaffModal(team, isLinked)}
+          className={isLinked ? 'opacity-75' : ''}
         >
-          <Eye className="mr-2 h-4 w-4" />
-          View Details
+          <UserPlus className="mr-2 h-4 w-4" />
+          Staff {isLinked ? '(View)' : ''}
         </Button>
-        <Button
-          size="sm"
-          onClick={() => openEditTeamDialog(team)}
-          className="flex-1"
+        <Button 
+          size="sm" 
+          onClick={() => openTeamSettingsModal(team, isLinked)}
+          className={isLinked ? 'opacity-75' : ''}
         >
           <Settings className="mr-2 h-4 w-4" />
-          Settings
+          Settings {isLinked ? '(View)' : ''}
         </Button>
       </CardFooter>
     </Card>
   );
+
+  console.log('TeamManagement render - teams:', teams, 'clubs:', clubs, 'allClubs:', allClubs, 'linkedTeams:', linkedTeams);
 
   return (
     <DashboardLayout>
@@ -267,13 +386,13 @@ export const TeamManagement = () => {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Team Management</h1>
             <p className="text-muted-foreground">
-              Manage your teams, players, staff, and settings
+              Manage your teams and their settings
             </p>
           </div>
           <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
             <DialogTrigger asChild>
-              <Button
-                onClick={() => setSelectedTeam(null)}
+              <Button 
+                onClick={() => setSelectedTeam(null)} 
                 className="bg-puma-blue-500 hover:bg-puma-blue-600"
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
@@ -283,25 +402,25 @@ export const TeamManagement = () => {
             <DialogContent className="sm:max-w-[600px]">
               <DialogHeader>
                 <DialogTitle>
-                  {selectedTeam ? 'Edit Team' : 'Create New Team'}
+                  {selectedTeam && !selectedTeam.isReadOnly ? 'Edit Team' : 'Create New Team'}
                 </DialogTitle>
                 <DialogDescription>
-                  {selectedTeam
-                    ? 'Update your team details and settings.'
-                    : 'Add a new team to manage players, staff, and events.'}
+                  {selectedTeam && !selectedTeam.isReadOnly
+                    ? 'Update your team details and settings.' 
+                    : 'Add a new team to your account.'}
                 </DialogDescription>
               </DialogHeader>
-              <TeamForm
-                team={selectedTeam}
-                clubs={clubs}
-                onSubmit={selectedTeam ? handleUpdateTeam : handleCreateTeam}
+              <TeamForm 
+                team={selectedTeam && !selectedTeam.isReadOnly ? selectedTeam : null} 
+                clubs={allClubs || []}
+                onSubmit={selectedTeam && !selectedTeam.isReadOnly ? handleUpdateTeam : handleCreateTeam} 
                 onCancel={() => setIsTeamDialogOpen(false)}
               />
             </DialogContent>
           </Dialog>
         </div>
 
-        {teams.length === 0 ? (
+        {teams.length === 0 && linkedTeams.length === 0 ? (
           <Card className="border-dashed border-2 border-muted">
             <CardContent className="py-8 flex flex-col items-center justify-center text-center">
               <div className="rounded-full bg-muted p-3 mb-4">
@@ -309,10 +428,9 @@ export const TeamManagement = () => {
               </div>
               <h3 className="font-semibold text-lg mb-1">No Teams Yet</h3>
               <p className="text-muted-foreground mb-4 max-w-md">
-                You haven't created any teams yet. Start by creating your first team to manage players,
-                staff, events, and more.
+                You haven't created any teams yet. Start by creating your first team to manage players, events, and more.
               </p>
-              <Button
+              <Button 
                 onClick={() => setIsTeamDialogOpen(true)}
                 className="bg-puma-blue-500 hover:bg-puma-blue-600"
               >
@@ -323,10 +441,9 @@ export const TeamManagement = () => {
           </Card>
         ) : (
           <div className="space-y-6">
-            {/* Team Selection */}
-            {teams.length > 1 && !selectedTeamForView && (
+            {teams.length > 0 && (
               <div>
-                <h2 className="text-xl font-semibold mb-4">Select a Team</h2>
+                <h2 className="text-xl font-semibold mb-4">Your Teams</h2>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {teams.map((team) => (
                     <TeamCard key={team.id} team={team} />
@@ -335,90 +452,15 @@ export const TeamManagement = () => {
               </div>
             )}
 
-            {/* Team Details View */}
-            {selectedTeamForView && (
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setSelectedTeamForView('')}
-                    >
-                      ← Back to Teams
-                    </Button>
-                    <h2 className="text-xl font-semibold">
-                      {teams.find(team => team.id === selectedTeamForView)?.name}
-                    </h2>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const teamToDuplicate = teams.find(team => team.id === selectedTeamForView);
-                        if (teamToDuplicate) {
-                          const newTeamData = { ...teamToDuplicate, name: `${teamToDuplicate.name} Copy` };
-                          handleCreateTeam(newTeamData);
-                        }
-                      }}
-                    >
-                      <Copy className="mr-2 h-4 w-4" />
-                      Duplicate
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const teamToEdit = teams.find(team => team.id === selectedTeamForView);
-                        if (teamToEdit) {
-                          openEditTeamDialog(teamToEdit);
-                        }
-                      }}
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        if (window.confirm('Are you sure you want to delete this team?')) {
-                          handleDeleteTeam(selectedTeamForView);
-                        }
-                      }}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Team Overview</CardTitle>
-                      <CardDescription>
-                        Basic information about {teams.find(team => team.id === selectedTeamForView)?.name}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <p><strong>Age Group:</strong> {teams.find(team => team.id === selectedTeamForView)?.ageGroup}</p>
-                        <p><strong>Game Format:</strong> {teams.find(team => team.id === selectedTeamForView)?.gameFormat}</p>
-                        <p><strong>Season:</strong> {teams.find(team => team.id === selectedTeamForView)?.seasonStart} - {teams.find(team => team.id === selectedTeamForView)?.seasonEnd}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            )}
-
-            {/* Show team cards if no team selected but teams exist */}
-            {!selectedTeamForView && teams.length === 1 && (
+            {linkedTeams.length > 0 && (
               <div>
+                <h2 className="text-xl font-semibold mb-4">Linked Teams</h2>
+                <p className="text-muted-foreground mb-4">
+                  Teams linked through your club memberships (read-only access)
+                </p>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {teams.map((team) => (
-                    <TeamCard key={team.id} team={team} />
+                  {linkedTeams.map((team) => (
+                    <TeamCard key={team.id} team={team} isLinked={true} />
                   ))}
                 </div>
               </div>
@@ -426,6 +468,23 @@ export const TeamManagement = () => {
           </div>
         )}
       </div>
+
+      {selectedTeam && (
+        <>
+          <TeamSettingsModal 
+            team={selectedTeam}
+            isOpen={isSettingsModalOpen}
+            onClose={() => setIsSettingsModalOpen(false)}
+            onUpdate={handleUpdateTeam}
+          />
+          <TeamStaffModal
+            team={selectedTeam}
+            isOpen={isStaffModalOpen}
+            onClose={() => setIsStaffModalOpen(false)}
+            onUpdate={handleUpdateTeam}
+          />
+        </>
+      )}
     </DashboardLayout>
   );
 };

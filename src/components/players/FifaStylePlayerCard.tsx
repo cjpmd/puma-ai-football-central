@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';

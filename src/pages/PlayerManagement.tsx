@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Users } from 'lucide-react';
 import { PlayerManagement } from '@/components/players/PlayerManagement';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Team } from '@/types/team';
+import { Team } from '@/types';
 
 const PlayerManagementPage = () => {
   const { teams } = useAuth();

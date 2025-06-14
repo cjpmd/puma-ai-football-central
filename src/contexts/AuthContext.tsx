@@ -1,63 +1,172 @@
-
-import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Database } from '@/integrations/supabase/types';
-import { Team } from '@/types/team';
-import { Club } from '@/types/club';
-import { SubscriptionType } from '@/types/index';
+import { Team, Club, Profile } from '@/types';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
-  user: User | null;
-  profile: Database['public']['Tables']['profiles']['Row'] & { managed_player_ids?: string[] } | null;
-  session: Session | null;
-  loading: boolean;
+  user: any;
+  session: any;
+  profile: Profile | null;
   teams: Team[];
   clubs: Club[];
-  currentTeam?: Team | null;
-  signIn: (email: string) => Promise<{ data?: any; error?: any }>;
-  signOut: () => Promise<void>;
-  signUp?: (email: string, password: string) => Promise<{ data?: any; error?: any }>;
+  currentTeam: Team | null;
+  loading: boolean;
+  login: () => Promise<void>;
   logout: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ data: any; error: any }>;
+  signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] & { managed_player_ids?: string[] } | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
-  const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    const getSession = async () => {
+    let mounted = true;
+    let initializationTimeout: NodeJS.Timeout;
+
+    const initializeAuth = async () => {
       try {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadUserProfile(session.user.id);
+        console.log('Starting auth initialization...');
+        
+        // Set up auth state listener FIRST
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('Auth state changed:', event, session?.user?.id);
+          
+          if (!mounted) return;
+          
+          try {
+            if (session?.user) {
+              console.log('User session found, setting user data...');
+              setUser(session.user);
+              setSession(session);
+              
+              // Load user data without blocking
+              setTimeout(() => {
+                if (mounted) {
+                  Promise.all([
+                    fetchProfile(session.user.id),
+                    fetchTeams(session.user.id),
+                    fetchClubs(session.user.id)
+                  ]).catch(error => {
+                    console.error('Error loading user data after auth change:', error);
+                  });
+                }
+              }, 0);
+            } else {
+              console.log('No user session, clearing data...');
+              setUser(null);
+              setSession(null);
+              setTeams([]);
+              setClubs([]);
+              setProfile(null);
+            }
+          } finally {
+            if (mounted && !initialized) {
+              console.log('Auth state processed, setting loading to false');
+              setLoading(false);
+              setInitialized(true);
+            }
+          }
+        });
+
+        // Then check for existing session
+        console.log('Checking for existing session...');
+        const { data: { session: existingSession }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session error:', error);
+          throw error;
         }
-      } catch (error) {
-        console.error("Error fetching session:", error);
-      } finally {
-        setLoading(false);
+
+        if (!mounted) return;
+
+        if (existingSession?.user) {
+          console.log('Existing session found, setting initial state...');
+          setUser(existingSession.user);
+          setSession(existingSession);
+          
+          // Load user data in parallel
+          setTimeout(() => {
+            if (mounted) {
+              Promise.all([
+                fetchProfile(existingSession.user.id),
+                fetchTeams(existingSession.user.id),
+                fetchClubs(existingSession.user.id)
+              ]).catch(error => {
+                console.error('Error loading initial user data:', error);
+              }).finally(() => {
+                if (mounted && !initialized) {
+                  console.log('Initial data load complete');
+                  setLoading(false);
+                  setInitialized(true);
+                }
+              });
+            }
+          }, 0);
+        } else {
+          console.log('No existing session found');
+          if (mounted && !initialized) {
+            setLoading(false);
+            setInitialized(true);
+          }
+        }
+
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
+      } catch (error: any) {
+        console.error('Error during auth initialization:', error);
+        if (mounted) {
+          toast({
+            title: 'Authentication Error',
+            description: 'Failed to initialize authentication. Please refresh the page.',
+            variant: 'destructive',
+          });
+          if (!initialized) {
+            setLoading(false);
+            setInitialized(true);
+          }
+        }
       }
-    }
+    };
 
-    getSession();
-  }, []);
+    // Set a fallback timeout
+    initializationTimeout = setTimeout(() => {
+      if (mounted && !initialized) {
+        console.warn('Auth initialization timeout, forcing loading to false');
+        setLoading(false);
+        setInitialized(true);
+      }
+    }, 5000);
 
-  const loadUserProfile = async (userId: string) => {
+    const cleanup = initializeAuth();
+    
+    return () => {
+      mounted = false;
+      if (initializationTimeout) {
+        clearTimeout(initializationTimeout);
+      }
+      cleanup?.then(cleanupFn => cleanupFn?.());
+    };
+  }, [toast]);
+
+  const fetchProfile = async (userId: string) => {
     try {
-      console.log('Loading user profile for user:', userId);
-      setLoading(true);
-
+      console.log('Fetching profile for user:', userId);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -65,212 +174,291 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        // If profile doesn't exist, create one
-        if (profileError.code === 'PGRST116') {
-          console.log('Profile not found, creating a new one');
-          const { data: newProfileData, error: newProfileError } = await supabase
-            .from('profiles')
-            .insert([{ id: userId }])
-            .select('*')
-            .single();
-
-          if (newProfileError) {
-            console.error('Error creating new profile:', newProfileError);
-            throw newProfileError;
-          }
-
-          console.log('New profile created:', newProfileData);
-          setProfile(newProfileData);
-        } else {
-          throw profileError;
-        }
-      } else {
-        console.log('Profile data:', profileData);
-        setProfile(profileData);
+        throw profileError;
       }
 
-      // Fetch user teams with explicit column selection
+      // Transform the data to match our Profile type
+      const transformedProfile: Profile = {
+        id: profileData.id,
+        name: profileData.name,
+        email: profileData.email,
+        phone: profileData.phone,
+        roles: profileData.roles || [],
+        fa_id: profileData.fa_id,
+        coaching_badges: Array.isArray(profileData.coaching_badges) 
+          ? profileData.coaching_badges 
+          : [],
+        created_at: profileData.created_at,
+        updated_at: profileData.updated_at,
+      };
+
+      setProfile(transformedProfile);
+      console.log('Profile loaded successfully');
+    } catch (error: any) {
+      console.error('Error fetching profile:', error.message);
+      toast({
+        title: 'Profile fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchTeams = async (userId: string) => {
+    try {
+      console.log('Fetching teams for user:', userId);
       const { data: teamsData, error: teamsError } = await supabase
         .from('user_teams')
-        .select(`
-          team_id,
-          teams!user_teams_team_id_fkey (
-            id,
-            name,
-            age_group,
-            season_start,
-            season_end,
-            subscription_type,
-            game_format,
-            kit_icons,
-            logo_url,
-            performance_categories,
-            manager_name,
-            manager_email,
-            manager_phone,
-            created_at,
-            updated_at
-          )
-        `)
+        .select('team_id')
         .eq('user_id', userId);
 
       if (teamsError) {
-        console.error('Error fetching user teams:', teamsError);
-      } else {
-        const userTeams = teamsData?.map(team => ({
-          id: team.teams.id,
-          name: team.teams.name,
-          ageGroup: team.teams.age_group,
-          seasonStart: team.teams.season_start,
-          seasonEnd: team.teams.season_end,
-          subscriptionType: team.teams.subscription_type as SubscriptionType,
-          gameFormat: team.teams.game_format,
-          kitIcons: (team.teams.kit_icons as any) || { home: '', away: '', training: '', goalkeeper: '' },
-          logoUrl: team.teams.logo_url,
-          performanceCategories: team.teams.performance_categories || [],
-          managerName: team.teams.manager_name,
-          managerEmail: team.teams.manager_email,
-          managerPhone: team.teams.manager_phone,
-          createdAt: team.teams.created_at,
-          updatedAt: team.teams.updated_at
-        })) || [];
-        console.log('User teams:', userTeams);
-        setTeams(userTeams);
-        
-        // Set the first team as current team if available
-        if (userTeams.length > 0) {
-          setCurrentTeam(userTeams[0]);
-        }
+        throw teamsError;
       }
 
-      // Fetch user clubs with explicit column selection
+      if (!teamsData || teamsData.length === 0) {
+        console.log('No teams found for user');
+        setTeams([]);
+        return;
+      }
+
+      // Fetch full team details for each team_id
+      const teamDetails = await Promise.all(
+        teamsData.map(async (userTeam) => {
+          const { data: teamData, error: teamError } = await supabase
+            .from('teams')
+            .select('*')
+            .eq('id', userTeam.team_id)
+            .single();
+
+          if (teamError) {
+            console.error(`Error fetching team ${userTeam.team_id}:`, teamError);
+            return null;
+          }
+          
+          // Transform database format to TypeScript format
+          return {
+            id: teamData.id,
+            name: teamData.name,
+            ageGroup: teamData.age_group,
+            seasonStart: teamData.season_start,
+            seasonEnd: teamData.season_end,
+            clubId: teamData.club_id,
+            subscriptionType: teamData.subscription_type,
+            gameFormat: teamData.game_format,
+            kitIcons: teamData.kit_icons,
+            performanceCategories: teamData.performance_categories || [],
+            managerName: teamData.manager_name,
+            managerEmail: teamData.manager_email,
+            managerPhone: teamData.manager_phone,
+            createdAt: teamData.created_at,
+            updatedAt: teamData.updated_at,
+          } as Team;
+        })
+      );
+
+      // Filter out any null results (failed fetches)
+      const validTeams = teamDetails.filter(team => team !== null);
+      setTeams(validTeams as Team[]);
+      console.log('Teams loaded successfully:', validTeams.length);
+
+    } catch (error: any) {
+      console.error('Error fetching teams:', error.message);
+      toast({
+        title: 'Teams fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setTeams([]);
+    }
+  };
+
+  const fetchClubs = async (userId: string) => {
+    try {
+      console.log('Fetching clubs for user:', userId);
       const { data: clubsData, error: clubsError } = await supabase
         .from('user_clubs')
-        .select(`
-          club_id,
-          clubs!user_clubs_club_id_fkey (
-            id,
-            name,
-            reference_number,
-            subscription_type,
-            serial_number,
-            logo_url,
-            created_at,
-            updated_at
-          )
-        `)
+        .select('club_id')
         .eq('user_id', userId);
 
       if (clubsError) {
-        console.error('Error fetching user clubs:', clubsError);
-      } else {
-        const userClubs = clubsData?.map(club => ({
-          id: club.clubs.id,
-          name: club.clubs.name,
-          referenceNumber: club.clubs.reference_number,
-          subscriptionType: (club.clubs.subscription_type as SubscriptionType) || 'free',
-          serialNumber: club.clubs.serial_number,
-          logoUrl: club.clubs.logo_url,
-          createdAt: club.clubs.created_at,
-          updatedAt: club.clubs.updated_at
-        })) || [];
-        console.log('User clubs:', userClubs);
-        setClubs(userClubs);
+        throw clubsError;
       }
 
+      if (!clubsData || clubsData.length === 0) {
+        console.log('No clubs found for user');
+        setClubs([]);
+        return;
+      }
+
+      // Fetch full club details for each club_id
+      const clubDetails = await Promise.all(
+        clubsData.map(async (userClub) => {
+          const { data: clubData, error: clubError } = await supabase
+            .from('clubs')
+            .select('*')
+            .eq('id', userClub.club_id)
+            .single();
+
+          if (clubError) {
+            console.error(`Error fetching club ${userClub.club_id}:`, clubError);
+            return null;
+          }
+          
+          // Transform database format to TypeScript format
+          return {
+            id: clubData.id,
+            name: clubData.name,
+            referenceNumber: clubData.reference_number,
+            serialNumber: clubData.serial_number,
+            teams: [], // Will be populated separately if needed
+            subscriptionType: clubData.subscription_type,
+            officials: [],
+            facilities: [],
+            createdAt: clubData.created_at,
+            updatedAt: clubData.updated_at,
+          } as Club;
+        })
+      );
+
+      // Filter out any null results (failed fetches)
+      const validClubs = clubDetails.filter(club => club !== null);
+      setClubs(validClubs as Club[]);
+      console.log('Clubs loaded successfully:', validClubs.length);
+
     } catch (error: any) {
-      console.error('Error loading user data:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error fetching clubs:', error.message);
+      toast({
+        title: 'Clubs fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setClubs([]);
     }
   };
 
-  const signIn = async (email: string) => {
-    try {
-      setLoading(true);
-      const { error } = await supabase.auth.signInWithOtp({ email });
-      if (error) {
-        return { error };
-      }
-      alert('Check your email for the login link!');
-      return {};
-    } catch (error: any) {
-      return { error };
-    } finally {
-      setLoading(false);
-    }
+  const signIn = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    return { error };
   };
 
-  const signUp = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      return { data, error };
-    } catch (error: any) {
-      return { error };
-    } finally {
-      setLoading(false);
-    }
+  const signUp = async (email: string, password: string, name: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name: name,
+        },
+      },
+    });
+    return { data, error };
   };
 
   const signOut = async () => {
+    console.log('Starting signOut process...');
+    setLoading(true);
+    
     try {
-      setLoading(true);
-      await supabase.auth.signOut();
+      // Clear local state immediately to prevent UI issues
       setUser(null);
-      setProfile(null);
+      setSession(null);
       setTeams([]);
       setClubs([]);
-      setCurrentTeam(null);
-    } catch (error) {
-      console.error("Error signing out:", error);
+      setProfile(null);
+      
+      // Then attempt to sign out from Supabase
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Supabase signOut error:', error);
+        // Don't throw the error, as we've already cleared local state
+        toast({
+          title: 'Sign out warning',
+          description: 'Local session cleared, but there may have been an issue with the server.',
+          variant: 'destructive',
+        });
+      } else {
+        console.log('Sign out successful');
+      }
+      
+      // Navigate to home page
+      navigate('/');
+    } catch (error: any) {
+      console.error('Error during sign out:', error);
+      toast({
+        title: 'Sign out completed',
+        description: 'You have been signed out locally.',
+      });
+      
+      // Navigate regardless of error
+      navigate('/');
     } finally {
       setLoading(false);
     }
   };
 
-  // Alias for signOut to match what Header expects
-  const logout = signOut;
-
-  const refreshUserData = async () => {
-    if (user) {
-      await loadUserProfile(user.id);
+  const login = async () => {
+    setLoading(true);
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+      });
+    } catch (error: any) {
+      console.error('Error during login:', error.message);
+      toast({
+        title: 'Login failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state changed:', event, session?.user?.id);
-      
-      if (event === 'SIGNED_IN' && session) {
-        setUser(session.user);
-        await loadUserProfile(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null);
-        setProfile(null);
-        setTeams([]);
-        setClubs([]);
-        setCurrentTeam(null);
-      }
-    });
+  const logout = async () => {
+    await signOut();
+  };
 
-    return () => subscription.unsubscribe();
-  }, []);
+  const refreshUserData = async () => {
+    if (user) {
+      setLoading(true);
+      try {
+        await Promise.all([
+          fetchProfile(user.id),
+          fetchTeams(user.id),
+          fetchClubs(user.id)
+        ]);
+      } catch (error: any) {
+        console.error('Error refreshing user data:', error.message);
+        toast({
+          title: 'Refresh failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   const value: AuthContextType = {
     user,
-    profile,
     session,
-    loading,
+    profile,
     teams,
     clubs,
-    currentTeam,
+    currentTeam: teams && teams.length > 0 ? teams[0] : null, // Use first team as current team
+    loading,
+    login,
+    logout: signOut, // Use signOut for logout
     signIn,
-    signOut,
     signUp,
-    logout,
-    refreshUserData
+    signOut,
+    refreshUserData,
   };
 
   return (
@@ -282,8 +470,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
