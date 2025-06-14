@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -500,7 +501,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     );
   }
 
-  // Front of card - Updated layout without shaded overlay
+  // Front of card - Updated layout without shaded box
   return (
     <div className="w-[300px] h-[450px] mx-auto">
       <div 
@@ -592,8 +593,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             )}
           </div>
 
-          {/* Bottom Section with Shaded Background - Bottom third */}
-          <div className="bg-black/60 backdrop-blur-sm rounded-lg p-3 space-y-3">
+          {/* Bottom Section - No shaded background, direct on card background */}
+          <div className="space-y-3">
             {/* Player Name */}
             <div className="text-center">
               <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
