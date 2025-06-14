@@ -475,7 +475,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           className="absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden"
           style={{
             backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)'
+            transform: 'rotateY(180deg)',
+            pointerEvents: flipped ? 'auto' : 'none'
           }}
         >
           <div className="h-full flex flex-col">
@@ -484,8 +485,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setFlipped(false)}
-                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setFlipped(false);
+                }}
+                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
+                style={{ pointerEvents: 'auto' }}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -494,8 +500,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={onClose}
-                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onClose();
+                  }}
+                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
+                  style={{ pointerEvents: 'auto' }}
                 >
                   <X className="h-4 w-4" />
                 </Button>
