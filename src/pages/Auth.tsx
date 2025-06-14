@@ -61,12 +61,12 @@ const Auth = () => {
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-2xl font-bold">
-                {invitationCode ? 'Complete Your Invitation' : 'Welcome to Puma AI'}
+                {invitationCode ? 'Accept Your Invitation' : 'Welcome to Puma AI'}
               </CardTitle>
               <CardDescription>
                 {invitationCode 
-                  ? 'Create your account to accept the invitation'
-                  : 'Sign in to your account or create a new one'
+                  ? 'Create your account to join your team'
+                  : 'Sign in to your account or join with an invitation'
                 }
               </CardDescription>
             </CardHeader>
@@ -85,8 +85,15 @@ const Auth = () => {
                 className="w-full"
                 variant={invitationCode ? "default" : "outline"}
               >
-                {invitationCode ? 'Accept Invitation' : 'Create Account'}
+                {invitationCode ? 'Accept Invitation' : 'Join with Invitation Code'}
               </Button>
+              
+              {!invitationCode && (
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  <p>New to Puma AI?</p>
+                  <p>Ask your team administrator for an invitation code to get started.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
