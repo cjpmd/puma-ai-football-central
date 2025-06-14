@@ -23,7 +23,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Start loading immediately
   const [invitationDetails, setInvitationDetails] = useState<any>(null);
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
@@ -32,34 +32,36 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
     const fetchInvitationDetails = async () => {
       if (!invitationCode || !isOpen) return;
 
-      console.log('InvitationSignupModal: Fetching details for code:', invitationCode);
+      console.log('InvitationSignupModal: Fetching invitation details for code:', invitationCode);
+      
       try {
+        // Step 1: Fetch the invitation details
         const { data: invitation, error: invitationError } = await supabase
           .from('user_invitations')
-          .select('id, name, email, team_id') // Be explicit, don't use '*'
+          .select('id, name, email, team_id')
           .eq('invitation_code', invitationCode)
           .eq('status', 'pending')
-          .single();
+          .maybeSingle(); // Use maybeSingle to handle 0 or 1 rows without erroring
 
         if (invitationError) {
           console.error('Error fetching invitation:', invitationError);
           toast({
-            title: 'Invalid Invitation',
-            description: 'The invitation code is invalid, expired, or already used.',
+            title: 'Error',
+            description: 'An error occurred while validating your invitation.',
             variant: 'destructive',
           });
-          onClose(); // Close modal on error
+          onClose();
           return;
         }
 
         if (!invitation) {
-          console.log('No pending invitation found for this code.');
+          console.log('No valid invitation found for this code.');
           toast({
             title: 'Invalid Invitation',
-            description: 'This invitation may be expired or already accepted.',
+            description: 'This invitation may be expired, used, or invalid.',
             variant: 'destructive',
           });
-          onClose(); // Close modal if no invitation
+          onClose();
           return;
         }
 
@@ -68,6 +70,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
         setName(invitation.name || '');
         setEmail(invitation.email || '');
 
+        // Step 2: If a team_id exists, fetch the team name
         if (invitation.team_id) {
           console.log('Fetching team name for team_id:', invitation.team_id);
           const { data: team, error: teamError } = await supabase
@@ -78,19 +81,22 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           
           if (teamError) {
             console.error('Error fetching team name:', teamError);
+            // Non-critical error, we can proceed without the team name
           } else if (team) {
             console.log('Team name found:', team.name);
             setTeamName(team.name);
           }
         }
       } catch (error) {
-        console.error('Error in fetchInvitationDetails:', error);
+        console.error('Unexpected error in fetchInvitationDetails:', error);
         toast({
           title: 'Error',
-          description: 'An unexpected error occurred while loading invitation details.',
+          description: 'An unexpected error occurred.',
           variant: 'destructive',
         });
         onClose();
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -153,6 +159,21 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
     }
     return 'Create Account';
   };
+  
+  if (isLoading && !invitationDetails) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Validating Invitation...</DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center items-center p-8">
+            <p>Please wait while we check your invitation code.</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

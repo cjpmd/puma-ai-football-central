@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,8 +17,6 @@ const Auth = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showEnhancedSignup, setShowEnhancedSignup] = useState(false);
-  const [showInvitationModal, setShowInvitationModal] = useState(false);
-  const [invitationCode, setInvitationCode] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -31,27 +28,16 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
-  useEffect(() => {
-    const code = searchParams.get('invitation');
-    if (code) {
-      setInvitationCode(code);
-      setShowInvitationModal(true);
-      console.log('Auth page: Invitation code found, showing modal for code:', code);
-    } else {
-      setShowInvitationModal(false);
-      setInvitationCode('');
-    }
-  }, [searchParams]);
+  const invitationCode = searchParams.get('invitation');
 
   // If there's an invitation code, show the invitation signup modal and nothing else.
-  if (showInvitationModal) {
+  if (invitationCode) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <InvitationSignupModal
           isOpen={true}
           onClose={() => {
-            setShowInvitationModal(false);
-            navigate('/auth'); // remove query param from URL
+            navigate('/auth', { replace: true }); // remove query param from URL
           }}
           invitationCode={invitationCode}
         />
