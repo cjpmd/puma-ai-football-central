@@ -305,18 +305,21 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     backgroundPosition: 'center'
   };
 
-  // Helper: determine card face z-index and pointer events
-  const getFaceStyle = (face: "front" | "back") => {
+  // Define allowed pointer events
+  type AllowedPointerEvents = "auto" | "none";
+
+  // Updated getFaceStyle with explicit typing
+  const getFaceStyle = (face: "front" | "back"): React.CSSProperties => {
     if (face === "front") {
       return {
         zIndex: flipped ? 10 : 20,
-        pointerEvents: flipped ? "none" : "auto"
+        pointerEvents: (flipped ? "none" : "auto") as AllowedPointerEvents,
       };
     }
     // back
     return {
       zIndex: flipped ? 20 : 10,
-      pointerEvents: flipped ? "auto" : "none"
+      pointerEvents: (flipped ? "auto" : "none") as AllowedPointerEvents,
     };
   };
 
