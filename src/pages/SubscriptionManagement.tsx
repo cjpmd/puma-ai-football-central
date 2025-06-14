@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { Crown, Users, BarChart3, Calendar, Shield, Zap } from 'lucide-react';
+import { Team } from '@/types/team';
+import { Club } from '@/types/club';
 
 const SubscriptionManagement = () => {
   const { teams, clubs } = useAuth();

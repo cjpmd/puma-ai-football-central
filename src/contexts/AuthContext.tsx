@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
 import { Team } from '@/types/team';
 import { Club } from '@/types/club';
+import { SubscriptionType } from '@/types/index';
 
 interface AuthContextType {
   user: User | null;
@@ -14,7 +15,7 @@ interface AuthContextType {
   teams: Team[];
   clubs: Club[];
   currentTeam?: Team | null;
-  signIn: (email: string) => Promise<{ error?: any }>;
+  signIn: (email: string) => Promise<{ data?: any; error?: any }>;
   signOut: () => Promise<void>;
   signUp?: (email: string, password: string) => Promise<{ data?: any; error?: any }>;
   logout: () => Promise<void>;
@@ -123,9 +124,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           ageGroup: team.teams.age_group,
           seasonStart: team.teams.season_start,
           seasonEnd: team.teams.season_end,
-          subscriptionType: team.teams.subscription_type,
+          subscriptionType: team.teams.subscription_type as SubscriptionType,
           gameFormat: team.teams.game_format,
-          kitIcons: team.teams.kit_icons || { home: '', away: '', training: '', goalkeeper: '' },
+          kitIcons: (team.teams.kit_icons as any) || { home: '', away: '', training: '', goalkeeper: '' },
           logoUrl: team.teams.logo_url,
           performanceCategories: team.teams.performance_categories || [],
           managerName: team.teams.manager_name,
@@ -168,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: club.clubs.id,
           name: club.clubs.name,
           referenceNumber: club.clubs.reference_number,
-          subscriptionType: club.clubs.subscription_type || 'free',
+          subscriptionType: (club.clubs.subscription_type as SubscriptionType) || 'free',
           serialNumber: club.clubs.serial_number,
           logoUrl: club.clubs.logo_url,
           createdAt: club.clubs.created_at,

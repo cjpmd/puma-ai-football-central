@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,7 @@ import { LinkedClubCard } from '@/components/clubs/LinkedClubCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Club } from '@/types/index';
+import { Club } from '@/types/club';
 import { PlusCircle, Settings, Users, Building, Eye } from 'lucide-react';
 
 export const ClubManagement = () => {

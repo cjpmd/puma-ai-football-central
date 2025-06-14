@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Users } from 'lucide-react';
 import { PlayerManagement } from '@/components/players/PlayerManagement';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Team } from '@/types';
+import { Team } from '@/types/team';
 
 const PlayerManagementPage = () => {
   const { teams } = useAuth();
