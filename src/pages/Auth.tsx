@@ -1,238 +1,103 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { UserLoginModal } from '@/components/modals/UserLoginModal';
 import { EnhancedSignupModal } from '@/components/auth/EnhancedSignupModal';
-import { LogIn, UserPlus } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const Auth = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [showEnhancedSignup, setShowEnhancedSignup] = useState(false);
-  const { toast } = useToast();
-  const navigate = useNavigate();
-  const { user } = useAuth();
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
 
-  // Get invitation code from URL if present
+  // Get invitation code from URL
   const invitationCode = searchParams.get('invitation') || '';
 
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
-    }
-  }, [user, navigate]);
+  console.log('Auth page - invitation code from URL:', invitationCode);
 
-  // Auto-open enhanced signup if invitation code is present
   useEffect(() => {
+    // Check if user is already authenticated
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate('/');
+      }
+    };
+
+    checkAuth();
+
+    // If there's an invitation code, automatically open the signup modal
     if (invitationCode) {
-      setShowEnhancedSignup(true);
+      console.log('Opening signup modal with invitation code:', invitationCode);
+      setIsSignupModalOpen(true);
     }
-  }, [invitationCode]);
+  }, [navigate, invitationCode]);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter both email and password',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Welcome back!',
-        description: 'You have been successfully logged in.',
-      });
-      
-      navigate('/dashboard');
-    } catch (error: any) {
-      console.error('Login error:', error);
-      toast({
-        title: 'Login Failed',
-        description: error.message || 'Invalid email or password',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleLoginClose = () => {
+    setIsLoginModalOpen(false);
   };
 
-  const handleBasicSignup = async () => {
-    if (!email || !password) {
-      toast({
-        title: 'Missing Information',
-        description: 'Please enter both email and password',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/`
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: 'Account Created!',
-        description: 'Please check your email to verify your account.',
-      });
-    } catch (error: any) {
-      console.error('Signup error:', error);
-      toast({
-        title: 'Signup Failed',
-        description: error.message || 'Failed to create account',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  const handleSignupClose = () => {
+    setIsSignupModalOpen(false);
+    // If we came here via invitation, go back to home when closing
+    if (invitationCode) {
+      navigate('/');
     }
   };
-
-  if (user) {
-    return null; // Will redirect via useEffect
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Welcome</CardTitle>
-          <CardDescription className="text-center">
-            Sign in to your account or create a new one
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">
-                <LogIn className="h-4 w-4 mr-2" />
-                Login
-              </TabsTrigger>
-              <TabsTrigger value="signup">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Sign Up
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="login" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
-                <Input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                />
-              </div>
-              <Button
-                onClick={handleLogin}
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </TabsContent>
-            
-            <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-4">
+    <MainLayout>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <Card>
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl font-bold">
+                {invitationCode ? 'Complete Your Invitation' : 'Welcome to Puma AI'}
+              </CardTitle>
+              <CardDescription>
+                {invitationCode 
+                  ? 'Create your account to accept the invitation'
+                  : 'Sign in to your account or create a new one'
+                }
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!invitationCode && (
                 <Button
-                  onClick={() => setShowEnhancedSignup(true)}
+                  onClick={() => setIsLoginModalOpen(true)}
                   className="w-full"
                   variant="default"
                 >
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Create Account with Role Selection
+                  Sign In
                 </Button>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or quick signup
-                    </span>
-                  </div>
-                </div>
+              )}
+              <Button
+                onClick={() => setIsSignupModalOpen(true)}
+                className="w-full"
+                variant={invitationCode ? "default" : "outline"}
+              >
+                {invitationCode ? 'Accept Invitation' : 'Create Account'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                  />
-                </div>
-                <Button
-                  onClick={handleBasicSignup}
-                  disabled={isLoading}
-                  className="w-full"
-                  variant="outline"
-                >
-                  {isLoading ? 'Creating Account...' : 'Quick Sign Up'}
-                </Button>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      <UserLoginModal
+        isOpen={isLoginModalOpen}
+        onClose={handleLoginClose}
+      />
 
       <EnhancedSignupModal
-        isOpen={showEnhancedSignup}
-        onClose={() => setShowEnhancedSignup(false)}
+        isOpen={isSignupModalOpen}
+        onClose={handleSignupClose}
         initialInvitationCode={invitationCode}
       />
-    </div>
+    </MainLayout>
   );
 };
 

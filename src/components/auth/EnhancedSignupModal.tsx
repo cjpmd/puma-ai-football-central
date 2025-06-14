@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -36,8 +35,12 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
 
+  console.log('EnhancedSignupModal props:', { isOpen, initialInvitationCode });
+  console.log('Current state:', { signupMethod, invitationCode, invitationDetails });
+
   // Set default tab to invitation if we have an invitation code
   useEffect(() => {
+    console.log('Effect 1 - checking initialInvitationCode:', initialInvitationCode);
     if (initialInvitationCode) {
       console.log('Setting signup method to invitation due to initial code:', initialInvitationCode);
       setSignupMethod('invitation');
@@ -49,6 +52,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   useEffect(() => {
     const fetchInvitationDetails = async () => {
       const codeToCheck = invitationCode || initialInvitationCode;
+      console.log('Effect 2 - fetching invitation details for code:', codeToCheck);
       if (codeToCheck) {
         console.log('Fetching invitation details for code:', codeToCheck);
         try {
@@ -267,7 +271,10 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs value={signupMethod} onValueChange={(value) => setSignupMethod(value as any)}>
+        <Tabs value={signupMethod} onValueChange={(value) => {
+          console.log('Tab changed to:', value);
+          setSignupMethod(value as any);
+        }}>
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="invitation" className="text-xs">
               <UserPlus className="h-3 w-3 mr-1" />
