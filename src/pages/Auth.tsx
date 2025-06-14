@@ -30,16 +30,18 @@ const Auth = () => {
     }
   }, [user, navigate, invitationCode]);
 
-  // If there's an invitation code, show a debug message instead of the modal.
+  // If there's an invitation code, show the invitation signup modal and nothing else.
   if (invitationCode) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
-        <div className="bg-white p-8 rounded-lg shadow-lg text-center">
-          <h1 className="text-2xl font-bold mb-4">DEBUG: Invitation Detected</h1>
-          <p className="text-muted-foreground">If you see this, the invitation link is working correctly.</p>
-          <p className="mt-4 text-sm">Your code is:</p>
-          <p className="mt-2 font-mono bg-gray-100 p-2 rounded inline-block">{invitationCode}</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <EnhancedSignupModal
+          isOpen={true}
+          onClose={() => {
+            // Navigate to the base auth page to reset state cleanly
+            navigate('/auth', { replace: true });
+          }}
+          initialInvitationCode={invitationCode}
+        />
       </div>
     );
   }
