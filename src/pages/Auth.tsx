@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -26,10 +25,12 @@ const Auth = () => {
   const [invitationCode, setInvitationCode] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    const code = searchParams.get('invitation');
+    // Only redirect to dashboard if the user is logged in AND there's no invitation code.
+    if (user && !code) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, navigate, searchParams]);
 
   useEffect(() => {
     const code = searchParams.get('invitation');
@@ -49,7 +50,8 @@ const Auth = () => {
         <InvitationSignupModal
           isOpen={true}
           onClose={() => {
-            setSearchParams({}, { replace: true }); // remove query param from URL
+            // Navigate to the base auth page to reset state cleanly
+            navigate('/auth', { replace: true });
           }}
           invitationCode={invitationCode}
         />
@@ -136,7 +138,7 @@ const Auth = () => {
     }
   };
 
-  if (user) {
+  if (user && !searchParams.get('invitation')) {
     return null; // Will redirect via useEffect
   }
 

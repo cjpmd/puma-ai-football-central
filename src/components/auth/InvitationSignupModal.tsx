@@ -35,7 +35,6 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
 
       setIsValidating(true);
       setErrorState(null);
-      console.log('InvitationSignupModal: Fetching invitation details for code:', invitationCode);
       
       try {
         // Step 1: Fetch the invitation details
@@ -47,22 +46,22 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           .maybeSingle();
 
         if (invitationError) {
-          throw invitationError;
+          console.error('Error fetching invitation:', invitationError);
+          throw new Error('There was a problem validating your invitation.');
         }
 
         if (!invitation) {
           setErrorState('This invitation may be expired, used, or invalid.');
+          setIsValidating(false);
           return;
         }
 
-        console.log('Invitation data found:', invitation);
         setInvitationDetails(invitation);
         setName(invitation.name || '');
         setEmail(invitation.email || '');
 
         // Step 2: If a team_id exists, fetch the team name
         if (invitation.team_id) {
-          console.log('Fetching team name for team_id:', invitation.team_id);
           const { data: team, error: teamError } = await supabase
             .from('teams')
             .select('name')
@@ -73,20 +72,19 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
             console.error('Error fetching team name:', teamError);
             // Non-critical error, we can proceed without the team name
           } else if (team) {
-            console.log('Team name found:', team.name);
             setTeamName(team.name);
           }
         }
       } catch (error: any) {
         console.error('Unexpected error in fetchInvitationDetails:', error);
-        setErrorState('An unexpected error occurred while validating your invitation.');
+        setErrorState(error.message || 'An unexpected error occurred.');
       } finally {
         setIsValidating(false);
       }
     };
 
     fetchInvitationDetails();
-  }, [invitationCode, isOpen, toast]);
+  }, [invitationCode, isOpen]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
