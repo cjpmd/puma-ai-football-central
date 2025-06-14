@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit, X, AlertTriangle } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -127,6 +129,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const { toast } = useToast();
   const [flipped, setFlipped] = useState(false);
   
+  const { user, profile, loading: authLoading } = useAuth();
+  const { hasPermission, loading: authzLoading } = useAuthorization();
+  const [canManageCard, setCanManageCard] = useState(false);
+
   // Updated parsePlayStyles function
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
     let rawStyles: string[] = [];
@@ -163,10 +169,40 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
   // useEffect to synchronize state with player prop changes
   useEffect(() => {
-    setSelectedPlayStyles(parsePlayStyles(player.playStyle));
+    const parsed = parsePlayStyles(player.playStyle);
+    if (JSON.stringify(parsed) !== JSON.stringify(selectedPlayStyles)) {
+      setSelectedPlayStyles(parsed);
+    }
     setFunStats(player.funStats || {});
     setSelectedDesign(player.cardDesignId || "goldBallon");
-  }, [player.playStyle, player.funStats, player.cardDesignId, player]); // Added player to ensure re-parse on player obj change
+  }, [player.playStyle, player.funStats, player.cardDesignId, player]);
+
+  // useEffect to determine if the current user can manage this card
+  useEffect(() => {
+    if (authLoading || authzLoading) {
+      setCanManageCard(false);
+      return;
+    }
+
+    if (user && profile && player) {
+      let canManage = false;
+      if (player.user_id && profile.id === player.user_id) {
+        canManage = true;
+      } else if (profile.managed_player_ids && profile.managed_player_ids.includes(player.id)) {
+        canManage = true;
+      } else {
+        const targetTeamId = team?.id || player.team_id;
+        if (targetTeamId && hasPermission({ resource: 'players', action: 'manage', resourceId: targetTeamId })) {
+          canManage = true;
+        } else if (hasPermission({ resource: 'players', action: 'manage' })) {
+          canManage = true;
+        }
+      }
+      setCanManageCard(canManage);
+    } else {
+      setCanManageCard(false);
+    }
+  }, [user, profile, player, team, hasPermission, authLoading, authzLoading]);
 
   const currentDesign = cardDesigns[selectedDesign] || cardDesigns.goldBallon;
 
@@ -388,7 +424,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         style={{
           transformStyle: 'preserve-3d',
           transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-          zIndex: 100, // Ensure this context is high enough
+          zIndex: 100, 
           position: 'relative'
         }}
       >
@@ -408,14 +444,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             height: '100%'
           }}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setFlipped(true)}
-            className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
-          >
-            <Settings className="h-4 w-4 text-white" />
-          </Button>
+          {canManageCard && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFlipped(true)}
+              className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+              title="Manage Player Card"
+            >
+              <Settings className="h-4 w-4 text-white" />
+            </Button>
+          )}
 
           {onClose && (
             <Button
@@ -473,7 +512,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   {player.name ? getInitials(player.name) : 'PL'}
                 </AvatarFallback>
               </Avatar>
-              {onUpdatePhoto && (
+              {onUpdatePhoto && canManageCard && (
                 <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
                   <Camera className="h-4 w-4" />
                   <input
@@ -545,7 +584,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         {/* Back of card - management view */}
         <div 
           className={
-            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden flex flex-col` // Added flex flex-col
+            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden flex flex-col`
           }
           style={{
             ...getFaceStyle("back"),
@@ -567,7 +606,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" // z-30 here
+                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" 
                   style={{ pointerEvents: 'auto' }}
                 >
                   <X className="h-4 w-4" />
@@ -577,7 +616,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={e => { e.preventDefault(); e.stopPropagation(); setFlipped(false); }}
-                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" // z-30 here
+                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
                 style={{ pointerEvents: 'auto' }}
                 title="Back to card front"
               >
@@ -587,15 +626,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           </div>
 
           {/* Content - Compact layout, ensure it's scrollable and interactive */}
-          <div className="flex-1 p-3 space-y-3 overflow-y-auto" style={{ position: 'relative', zIndex: 1 }}> {/* Added position relative and z-index */}
+          <div className="flex-1 p-3 space-y-3 overflow-y-auto" style={{ position: 'relative', zIndex: 1 }}>
             {/* Player Actions - All 9 buttons in 3x3 grid */}
             <div className="space-y-2">
               <h3 className="text-sm font-semibold text-white">Player Actions</h3>
               
-              {/* Ensure this grid is interactive */}
               <div 
                 className="grid grid-cols-3 gap-1"
-                style={{ position: 'relative', zIndex: 1, pointerEvents: 'auto' }} // Added styles for interactivity
+                style={{ position: 'relative', zIndex: 1, pointerEvents: 'auto' }}
               >
                 <Button
                   variant="outline"
@@ -603,6 +641,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onEdit, 'Edit Player')}
                   title="Edit Player"
+                  disabled={!onEdit}
                 >
                   <Edit className="h-3 w-3" />
                 </Button>
@@ -613,6 +652,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onManageParents, 'Manage Parents')}
                   title="Manage Parents"
+                  disabled={!onManageParents}
                 >
                   <Users className="h-3 w-3" />
                 </Button>
@@ -623,6 +663,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onManageAttributes, 'Manage Attributes')}
                   title="Manage Attributes"
+                  disabled={!onManageAttributes}
                 >
                   <Brain className="h-3 w-3" />
                 </Button>
@@ -633,6 +674,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onManageObjectives, 'Manage Objectives')}
                   title="Manage Objectives"
+                  disabled={!onManageObjectives}
                 >
                   <Target className="h-3 w-3" />
                 </Button>
@@ -643,6 +685,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onManageComments, 'Manage Comments')}
                   title="Manage Comments"
+                  disabled={!onManageComments}
                 >
                   <MessageSquare className="h-3 w-3" />
                 </Button>
@@ -653,6 +696,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onViewStats, 'View Statistics')}
                   title="View Statistics"
+                  disabled={!onViewStats}
                 >
                   <BarChart3 className="h-3 w-3" />
                 </Button>
@@ -663,6 +707,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onViewHistory, 'View History')}
                   title="View History"
+                  disabled={!onViewHistory}
                 >
                   <Calendar className="h-3 w-3" />
                 </Button>
@@ -673,6 +718,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onTransferPlayer, 'Transfer Player')}
                   title="Transfer Player"
+                  disabled={!onTransferPlayer}
                 >
                   <RefreshCw className="h-3 w-3" />
                 </Button>
@@ -683,6 +729,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onLeaveTeam, 'Leave Team')}
                   title="Leave Team"
+                  disabled={!onLeaveTeam}
                 >
                   <UserMinus className="h-3 w-3" />
                 </Button>
