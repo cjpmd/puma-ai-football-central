@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -536,7 +537,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               )}
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-1">
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
                   {determinedDisplayName}
