@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -81,7 +80,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const primaryPosition = player.attributes?.find(attr => attr.name === 'Primary Position')?.value || 'N/A';
 
   return (
-    <Card className="w-full max-w-xs shadow-lg rounded-xl overflow-hidden relative transform transition-all hover:scale-105 bg-gradient-to-br from-gray-800 via-slate-800 to-gray-900 text-white border-slate-700">
+    <Card className="w-full max-w-xs shadow-lg rounded-xl overflow-hidden relative transform transition-all hover:scale-105 bg-slate-900 text-white border border-slate-700">
       <input
         type="file"
         id={`file-input-${player.id}`}
