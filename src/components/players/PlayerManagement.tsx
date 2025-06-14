@@ -304,7 +304,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   team={team}
                   onEdit={handleEditPlayer}
                   onManageParents={handleManageParents}
-                  onRemoveFromSquad={handleRemoveFromSquad}
+                  onRemoveFromSquad={handleRemoveFromSquad} // This is more like an "inactive" toggle now
                   onUpdatePhoto={handleUpdatePhoto}
                   onSaveFunStats={handleSaveFunStats}
                   onSavePlayStyle={handleSavePlayStyle}
@@ -355,8 +355,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         <>
           <PlayerParentModal
             player={selectedPlayer}
-            isOpen={activeModal === 'parents'} // Updated
-            onClose={handleModalClose} // Updated
+            isOpen={activeModal === 'parents'} 
+            onClose={handleModalClose} 
           />
           
           <PlayerAttributesModal
@@ -419,8 +419,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                       id: selectedPlayer.id,
                       data: { 
                         status: 'left', 
-                        leaveDate: leaveDate, // Corrected from leave_date
-                        leave_comments: leaveComments 
+                        leaveDate: leaveDate, 
+                        leaveComments: leaveComments 
                       }
                     });
                     handleModalClose();
