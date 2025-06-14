@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -19,35 +18,37 @@ const Auth = () => {
   const [showEnhancedSignup, setShowEnhancedSignup] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth(); // Use loading state
   const [searchParams] = useSearchParams();
   
   const invitationCode = searchParams.get('invitation');
-  console.log(`[Auth.tsx] Checking for invitation. Code: ${invitationCode}, Search: ${window.location.search}`);
+  console.log(`[Auth.tsx] Page loaded. Invitation code: '${invitationCode}'`);
 
   useEffect(() => {
-    // Only redirect to dashboard if the user is logged in AND there's no invitation code.
-    if (user && !invitationCode) {
+    // Wait for auth loading to finish before redirecting
+    if (!loading && user && !invitationCode) {
       console.log('[Auth.tsx] User is logged in and no invitation code, redirecting to /dashboard');
       navigate('/dashboard');
     }
-  }, [user, navigate, invitationCode]);
+  }, [user, loading, navigate, invitationCode]);
 
-  // If there's an invitation code, show the invitation signup modal and nothing else.
+  // If there's an invitation code, render the modal directly.
   if (invitationCode) {
-    console.log('[Auth.tsx] Invitation code found, rendering EnhancedSignupModal directly.');
+    console.log('[Auth.tsx] Invitation code found, rendering EnhancedSignupModal.');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <EnhancedSignupModal
           isOpen={true}
-          onClose={() => {
-            // Navigate to the base auth page to reset state cleanly
-            navigate('/auth', { replace: true });
-          }}
+          onClose={() => navigate('/auth', { replace: true })}
           initialInvitationCode={invitationCode}
         />
       </div>
     );
+  }
+
+  // Avoid rendering login form while auth state is loading or if user is logged in
+  if (loading || user) {
+    return null; // Or a loading spinner
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -91,10 +92,6 @@ const Auth = () => {
     }
   };
 
-  if (user && !invitationCode) {
-    return null; // Will redirect via useEffect
-  }
-  
   console.log('[Auth.tsx] No invitation code, rendering standard login/signup tabs.');
 
   return (
