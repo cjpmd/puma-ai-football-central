@@ -165,10 +165,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
         }
       });
     } else {
-      createPlayerMutation.mutate({
-        ...(playerData || {}),
-        team_id: team.id
-      });
+      const dataForCreation = Object.assign({}, playerData, { team_id: team.id });
+      createPlayerMutation.mutate(dataForCreation);
     }
   };
 
