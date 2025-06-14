@@ -7,6 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Player } from '@/types';
 import { PlayerKitDetails } from './PlayerKitDetails';
 import { PlayerKitTracking } from './PlayerKitTracking';
+import { UserInvitationModal } from '@/components/users/UserInvitationModal';
 
 interface PlayerFormProps {
   player?: Player | null;
@@ -33,7 +34,10 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     nameOnShirt: (player?.kit_sizes as any)?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [showInvitationModal, setShowInvitationModal] = useState(false);
+  const [createdPlayerId, setCreatedPlayerId] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Build name from available parts - both are now optional
@@ -47,8 +51,8 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       alert('Please provide at least a first name or surname for the player');
       return;
     }
-      
-    onSubmit({
+    
+    const playerData = {
       name: fullName,
       dateOfBirth: formData.dateOfBirth,
       squadNumber: formData.squadNumber,
@@ -60,7 +64,17 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         ...formData.kit_sizes,
         nameOnShirt: formData.nameOnShirt
       }
-    });
+    };
+
+    // If this is a new player (no existing player), show invitation option after creation
+    if (!player) {
+      // We need to modify the onSubmit to return the created player
+      // For now, we'll use a callback approach
+      onSubmit(playerData);
+      // Note: We'll need the parent component to trigger the invitation modal
+    } else {
+      onSubmit(playerData);
+    }
   };
 
   const handleKitDetailsUpdate = (kitDetails: Record<string, string>) => {
@@ -72,6 +86,11 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
         nameOnShirt: prev.nameOnShirt
       } 
     }));
+  };
+
+  const handleInvitationSent = () => {
+    setShowInvitationModal(false);
+    setCreatedPlayerId(null);
   };
 
   return (
@@ -210,6 +229,17 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       {player && (
         <PlayerKitTracking player={{ ...player, team_id: teamId }} />
       )}
+
+      {/* Invitation Modal */}
+      <UserInvitationModal
+        isOpen={showInvitationModal}
+        onClose={() => setShowInvitationModal(false)}
+        onInviteSent={handleInvitationSent}
+        prefilledData={{
+          teamId,
+          playerId: createdPlayerId || undefined
+        }}
+      />
     </div>
   );
 };
