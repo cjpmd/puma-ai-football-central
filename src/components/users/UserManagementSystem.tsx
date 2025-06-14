@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,11 @@ export const UserManagementSystem = () => {
       console.log('Creating missing profile manually...');
       
       const specificUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
+      
+      // Check if the current user has global_admin role
+      if (!user || !profile?.roles?.includes('global_admin')) {
+        throw new Error('You must be a global admin to create profiles for other users');
+      }
       
       // Try to create the profile with default values
       const { error: createError } = await supabase
@@ -462,14 +468,16 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={createMissingProfile}
-            variant="outline"
-            size="sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Missing Profile
-          </Button>
+          {profile?.roles?.includes('global_admin') && (
+            <Button
+              onClick={createMissingProfile}
+              variant="outline"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Missing Profile
+            </Button>
+          )}
           <Button
             onClick={syncMissingProfiles}
             variant="outline"
