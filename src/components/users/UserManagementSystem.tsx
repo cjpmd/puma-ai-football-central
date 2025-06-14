@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -66,6 +65,62 @@ export const UserManagementSystem = () => {
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
+
+  const debugSpecificUser = async () => {
+    const targetUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
+    
+    try {
+      console.log('=== DEBUGGING USER:', targetUserId, '===');
+      
+      // Check if user exists in auth.users (this will fail due to RLS, but we can try)
+      console.log('1. Checking profiles table...');
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', targetUserId);
+      
+      console.log('Profile query result:', { profileData, profileError });
+      
+      // Check invitations
+      console.log('2. Checking user_invitations...');
+      const { data: invitationData, error: invitationError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('accepted_by', targetUserId);
+      
+      console.log('Invitation query result:', { invitationData, invitationError });
+      
+      // Check all invitations for this user (by email if we can find it)
+      console.log('3. Checking all invitations...');
+      const { data: allInvitations, error: allInvError } = await supabase
+        .from('user_invitations')
+        .select('*');
+      
+      console.log('All invitations:', allInvitations);
+      
+      // Check user_teams
+      console.log('4. Checking user_teams...');
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select('*')
+        .eq('user_id', targetUserId);
+      
+      console.log('User teams query result:', { userTeamsData, userTeamsError });
+      
+      toast({
+        title: 'Debug Complete',
+        description: 'Check console for detailed debugging information',
+      });
+      
+    } catch (error: any) {
+      console.error('Debug error:', error);
+      toast({
+        title: 'Debug Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const syncMissingProfiles = async () => {
     try {
@@ -370,6 +425,17 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          {profile?.roles?.includes('global_admin') && (
+            <Button
+              onClick={debugSpecificUser}
+              variant="outline"
+              size="sm"
+              className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+            >
+              <Bug className="h-4 w-4 mr-2" />
+              Debug User
+            </Button>
+          )}
           <Button
             onClick={syncMissingProfiles}
             variant="outline"
