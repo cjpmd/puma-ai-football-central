@@ -248,6 +248,77 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     return 'Create Account';
   };
 
+  // If we have an invitation code, show simplified invitation-only form
+  if (initialInvitationCode && invitationDetails) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{getDialogTitle()}</DialogTitle>
+            <DialogDescription>
+              You've been invited to join {teamName || 'Puma AI'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                disabled
+                className="bg-gray-50"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                required
+              />
+            </div>
+
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm">Invitation Details</CardTitle>
+                <CardDescription className="text-xs">
+                  Your invitation code: {invitationCode}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Button
+              onClick={handleSignup}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show full tabbed interface for non-invitation signups
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
