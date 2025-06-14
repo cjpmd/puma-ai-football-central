@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -310,7 +309,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   return (
     <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
       <div 
-        className={`relative w-full h-full transition-transform duration-700`}
+        className="relative w-full h-full transition-transform duration-700"
         style={{
           transformStyle: 'preserve-3d',
           transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
@@ -318,10 +317,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       >
         {/* Front of card */}
         <div 
-          className={`absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`}
+          className={
+            `absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden
+            ${!flipped ? 'z-20' : 'z-10'}`
+          }
           style={{
             ...cardStyle,
-            backfaceVisibility: 'hidden'
+            backfaceVisibility: 'hidden',
+            pointerEvents: flipped ? 'none' : 'auto'
           }}
         >
           {/* Settings Button */}
@@ -472,7 +475,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
         {/* Back of card - management view */}
         <div 
-          className="absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden"
+          className={
+            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden
+            ${flipped ? 'z-20' : 'z-10'}`
+          }
           style={{
             backfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)',
