@@ -47,27 +47,42 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       if (initialInvitationCode) {
         console.log('Fetching invitation details for code:', initialInvitationCode);
         try {
-          const { data, error } = await supabase
+          // First, get the invitation
+          const { data: invitation, error: invitationError } = await supabase
             .from('user_invitations')
-            .select(`
-              *,
-              teams!inner(name)
-            `)
+            .select('*')
             .eq('invitation_code', initialInvitationCode)
             .eq('status', 'pending')
             .single();
 
-          if (data && !error) {
-            console.log('Invitation details found:', data);
-            setInvitationDetails(data);
-            setName(data.name || '');
-            setEmail(data.email || '');
-            setTeamName((data as any).teams?.name || '');
-            setInvitationCode(initialInvitationCode);
-            setSignupMethod('invitation');
-          } else {
-            console.log('No invitation details found or error:', error);
+          if (invitationError || !invitation) {
+            console.log('No invitation found or error:', invitationError);
+            return;
           }
+
+          console.log('Invitation found:', invitation);
+          
+          // Then get team name if team_id exists
+          let teamNameFromDb = '';
+          if (invitation.team_id) {
+            const { data: team, error: teamError } = await supabase
+              .from('teams')
+              .select('name')
+              .eq('id', invitation.team_id)
+              .single();
+            
+            if (team && !teamError) {
+              teamNameFromDb = team.name;
+            }
+          }
+
+          setInvitationDetails(invitation);
+          setName(invitation.name || '');
+          setEmail(invitation.email || '');
+          setTeamName(teamNameFromDb);
+          setInvitationCode(initialInvitationCode);
+          setSignupMethod('invitation');
+          console.log('Invitation details set successfully');
         } catch (error) {
           console.error('Error fetching invitation details:', error);
         }
