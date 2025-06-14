@@ -23,15 +23,3 @@ export function formatDate(date: Date | string, formatString: string = 'PPP'): s
 export function calculateAge(dateOfBirth: Date): number {
   return differenceInYears(new Date(), dateOfBirth);
 }
-
-export function getInitials(name: string): string {
-  if (!name) return '';
-  const nameParts = name.trim().split(' ').filter(Boolean);
-  if (nameParts.length === 0) return '';
-  if (nameParts.length === 1) {
-    return nameParts[0].charAt(0).toUpperCase();
-  }
-  const firstInitial = nameParts[0].charAt(0).toUpperCase();
-  const lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
-  return `${firstInitial}${lastInitial}`;
-}
