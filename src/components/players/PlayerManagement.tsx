@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -389,7 +390,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   onManageParents={handleManageParents}
                   onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
-                  onDeletePhoto={handleDeletePlayerPhoto} {/* ADDED THIS PROP */}
+                  onDeletePhoto={handleDeletePlayerPhoto}
                   onSaveFunStats={handleSaveFunStats}
                   onSavePlayStyle={handleSavePlayStyle}
                   onSaveCardDesign={handleSaveCardDesign}
