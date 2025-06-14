@@ -13,12 +13,14 @@ import { UserPlus } from 'lucide-react';
 interface EnhancedSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSignup?: () => void;
   initialInvitationCode?: string;
 }
 
 export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   isOpen,
   onClose,
+  onSignup,
   initialInvitationCode = ''
 }) => {
   const [email, setEmail] = useState('');
@@ -188,7 +190,11 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
           description: 'Your account has been created and invitation accepted!',
         });
 
-        onClose();
+        if (onSignup) {
+          onSignup();
+        } else {
+          onClose();
+        }
       }
     } catch (error: any) {
       console.error('Signup error:', error);
