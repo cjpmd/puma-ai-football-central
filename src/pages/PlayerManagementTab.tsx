@@ -140,33 +140,44 @@ const PlayerManagementTab = () => {
 
   // FIFA Card specific handlers
   const handleEditPlayer = (player: Player) => {
-    console.log('Edit player clicked:', player);
-    // TODO: Implement edit player functionality
     toast({
-      title: 'Edit Player',
-      description: 'Edit player functionality coming soon...',
+      title: 'Edit Player (handler called)',
+      description: `Edit player clicked: ${player.name}`,
     });
+    // TODO: Implement edit player functionality
   };
 
   const handleManageParents = (player: Player) => {
+    toast({
+      title: 'Parents (handler called)',
+      description: `Parents for: ${player.name}`,
+    });
     handleModalOpen('parents', player);
   };
 
   const handleRemoveFromSquad = (player: Player) => {
+    toast({
+      title: 'Remove from Squad (handler called)',
+      description: `Remove from squad: ${player.name}`,
+    });
     if (window.confirm(`Are you sure you want to remove ${player.name} from the squad?`)) {
       removePlayerMutation.mutate(player.id);
     }
   };
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
-    // TODO: Implement photo upload
     toast({
-      title: 'Photo Upload',
-      description: 'Photo upload functionality coming soon...',
+      title: 'Photo Upload (handler called)',
+      description: `Photo upload triggered for: ${player.name}`,
     });
+    // TODO: Implement photo upload
   };
 
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
+    toast({
+      title: 'Fun Stats (handler called)',
+      description: `Saving fun stats for: ${player.name}`,
+    });
     updatePlayerMutation.mutate({
       id: player.id,
       data: { funStats: stats }
@@ -174,6 +185,10 @@ const PlayerManagementTab = () => {
   };
 
   const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
+    toast({
+      title: 'Play Style (handler called)',
+      description: `Saving play styles for: ${player.name}`,
+    });
     updatePlayerMutation.mutate({
       id: player.id,
       data: { playStyle: JSON.stringify(playStyles) }
@@ -181,6 +196,10 @@ const PlayerManagementTab = () => {
   };
 
   const handleSaveCardDesign = (player: Player, designId: string) => {
+    toast({
+      title: 'Card Design (handler called)',
+      description: `Saving card design for: ${player.name}`,
+    });
     updatePlayerMutation.mutate({
       id: player.id,
       data: { cardDesignId: designId }
@@ -188,30 +207,58 @@ const PlayerManagementTab = () => {
   };
 
   const handleManageAttributes = (player: Player) => {
+    toast({
+      title: 'Attributes (handler called)',
+      description: `Attributes for: ${player.name}`,
+    });
     handleModalOpen('attributes', player);
   };
 
   const handleManageObjectives = (player: Player) => {
+    toast({
+      title: 'Objectives (handler called)',
+      description: `Objectives for: ${player.name}`,
+    });
     handleModalOpen('objectives', player);
   };
 
   const handleManageComments = (player: Player) => {
+    toast({
+      title: 'Comments (handler called)',
+      description: `Comments for: ${player.name}`,
+    });
     handleModalOpen('comments', player);
   };
 
   const handleViewStats = (player: Player) => {
+    toast({
+      title: 'View Stats (handler called)',
+      description: `Stats for: ${player.name}`,
+    });
     handleModalOpen('stats', player);
   };
 
   const handleViewHistory = (player: Player) => {
+    toast({
+      title: 'History (handler called)',
+      description: `History for: ${player.name}`,
+    });
     handleModalOpen('history', player);
   };
 
   const handleTransferPlayer = (player: Player) => {
+    toast({
+      title: 'Transfer (handler called)',
+      description: `Transfer dialog for: ${player.name}`,
+    });
     handleModalOpen('transfer', player);
   };
 
   const handleLeaveTeam = (player: Player) => {
+    toast({
+      title: 'Leave Team (handler called)',
+      description: `Leave team dialog for: ${player.name}`,
+    });
     handleModalOpen('leave', player);
   };
 
