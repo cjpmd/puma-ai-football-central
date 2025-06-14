@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -117,6 +117,137 @@ export const UserManagementSystem = () => {
       toast({
         title: 'Debug Error',
         description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const processPendingInvitations = async () => {
+    try {
+      console.log('Processing pending invitations...');
+      
+      // Get all pending invitations
+      const { data: pendingInvitations, error: invitationError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('status', 'pending');
+
+      if (invitationError) {
+        throw invitationError;
+      }
+
+      console.log('Found pending invitations:', pendingInvitations);
+
+      let processedCount = 0;
+
+      // Check each pending invitation to see if the user has signed up
+      for (const invitation of pendingInvitations || []) {
+        try {
+          // Check if a profile exists with this email
+          const { data: existingProfile, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('email', invitation.email)
+            .single();
+
+          if (existingProfile && !profileError) {
+            console.log(`Processing invitation for ${invitation.email} (User ID: ${existingProfile.id})`);
+            
+            // Update the invitation to accepted
+            const { error: updateError } = await supabase
+              .from('user_invitations')
+              .update({
+                status: 'accepted',
+                accepted_by: existingProfile.id,
+                accepted_at: new Date().toISOString()
+              })
+              .eq('id', invitation.id);
+
+            if (updateError) {
+              console.error('Error updating invitation:', updateError);
+              continue;
+            }
+
+            // Update user's profile with the role from invitation
+            const updatedRoles = Array.isArray(existingProfile.roles) 
+              ? [...new Set([...existingProfile.roles, invitation.role])]
+              : [invitation.role];
+
+            const { error: profileUpdateError } = await supabase
+              .from('profiles')
+              .update({ roles: updatedRoles })
+              .eq('id', existingProfile.id);
+
+            if (profileUpdateError) {
+              console.error('Error updating profile roles:', profileUpdateError);
+            }
+
+            // Create team association if team_id exists
+            if (invitation.team_id) {
+              const { error: teamError } = await supabase
+                .from('user_teams')
+                .insert([{
+                  user_id: existingProfile.id,
+                  team_id: invitation.team_id,
+                  role: invitation.role
+                }]);
+
+              if (teamError && teamError.code !== '23505') { // Ignore duplicate key errors
+                console.error('Error creating team association:', teamError);
+              }
+            }
+
+            // Create player association if player_id exists
+            if (invitation.player_id) {
+              const { error: playerError } = await supabase
+                .from('user_players')
+                .insert([{
+                  user_id: existingProfile.id,
+                  player_id: invitation.player_id,
+                  relationship: invitation.role === 'parent' ? 'parent' : 'self'
+                }]);
+
+              if (playerError && playerError.code !== '23505') { // Ignore duplicate key errors
+                console.error('Error creating player association:', playerError);
+              }
+            }
+
+            // Create staff association if staff_id exists
+            if (invitation.staff_id) {
+              const { error: staffError } = await supabase
+                .from('user_staff')
+                .insert([{
+                  user_id: existingProfile.id,
+                  staff_id: invitation.staff_id,
+                  relationship: 'self'
+                }]);
+
+              if (staffError && staffError.code !== '23505') { // Ignore duplicate key errors
+                console.error('Error creating staff association:', staffError);
+              }
+            }
+
+            processedCount++;
+            console.log(`Successfully processed invitation for ${invitation.email}`);
+          }
+        } catch (error) {
+          console.error(`Error processing invitation for ${invitation.email}:`, error);
+        }
+      }
+
+      // Reload users after processing
+      await loadUsers();
+      
+      toast({
+        title: 'Processing Complete',
+        description: `${processedCount} pending invitations have been processed and users can now see their team data.`,
+      });
+
+    } catch (error: any) {
+      console.error('Error processing pending invitations:', error);
+      toast({
+        title: 'Processing Error',
+        description: error.message || 'Failed to process pending invitations',
         variant: 'destructive',
       });
     }
@@ -436,6 +567,15 @@ export const UserManagementSystem = () => {
               Debug User
             </Button>
           )}
+          <Button
+            onClick={processPendingInvitations}
+            variant="outline"
+            size="sm"
+            className="bg-green-50 border-green-200 text-green-800 hover:bg-green-100"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Process Pending
+          </Button>
           <Button
             onClick={syncMissingProfiles}
             variant="outline"
