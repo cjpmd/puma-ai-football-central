@@ -551,7 +551,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onEdit, 'Edit Player')}
+                  onClick={e => handleButtonAction(e, onEdit, 'Edit Player')}
                   title="Edit Player"
                 >
                   <Edit className="h-3 w-3" />
@@ -561,7 +561,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onManageParents, 'Manage Parents')}
+                  onClick={e => handleButtonAction(e, onManageParents, 'Manage Parents')}
                   title="Manage Parents"
                 >
                   <Users className="h-3 w-3" />
@@ -571,7 +571,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onManageAttributes, 'Manage Attributes')}
+                  onClick={e => handleButtonAction(e, onManageAttributes, 'Manage Attributes')}
                   title="Manage Attributes"
                 >
                   <Brain className="h-3 w-3" />
@@ -581,7 +581,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onManageObjectives, 'Manage Objectives')}
+                  onClick={e => handleButtonAction(e, onManageObjectives, 'Manage Objectives')}
                   title="Manage Objectives"
                 >
                   <Target className="h-3 w-3" />
@@ -591,7 +591,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onManageComments, 'Manage Comments')}
+                  onClick={e => handleButtonAction(e, onManageComments, 'Manage Comments')}
                   title="Manage Comments"
                 >
                   <MessageSquare className="h-3 w-3" />
@@ -601,7 +601,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onViewStats, 'View Statistics')}
+                  onClick={e => handleButtonAction(e, onViewStats, 'View Statistics')}
                   title="View Statistics"
                 >
                   <BarChart3 className="h-3 w-3" />
@@ -611,7 +611,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onViewHistory, 'View History')}
+                  onClick={e => handleButtonAction(e, onViewHistory, 'View History')}
                   title="View History"
                 >
                   <Calendar className="h-3 w-3" />
@@ -621,7 +621,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onTransferPlayer, 'Transfer Player')}
+                  onClick={e => handleButtonAction(e, onTransferPlayer, 'Transfer Player')}
                   title="Transfer Player"
                 >
                   <RefreshCw className="h-3 w-3" />
@@ -631,7 +631,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   variant="outline"
                   size="sm"
                   className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
-                  onClick={(e) => handleButtonAction(e, onLeaveTeam, 'Leave Team')}
+                  onClick={e => handleButtonAction(e, onLeaveTeam, 'Leave Team')}
                   title="Leave Team"
                 >
                   <UserMinus className="h-3 w-3" />
@@ -705,3 +705,5 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     </div>
   );
 };
+
+export default FifaStylePlayerCard;
