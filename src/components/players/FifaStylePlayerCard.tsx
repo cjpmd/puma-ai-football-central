@@ -132,6 +132,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const { user, profile, loading: authLoading } = useAuth();
   const { hasPermission, loading: authzLoading } = useAuthorization();
   const [canManageCard, setCanManageCard] = useState(false);
+  const [isUserStaffContext, setIsUserStaffContext] = useState(false); // New state for staff context
 
   // Updated parsePlayStyles function
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
@@ -177,31 +178,39 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     setSelectedDesign(player.cardDesignId || "goldBallon");
   }, [player.playStyle, player.funStats, player.cardDesignId, player]);
 
-  // useEffect to determine if the current user can manage this card
+  // useEffect to determine if the current user can manage this card and if they are staff
   useEffect(() => {
-    if (authLoading || authzLoading) {
+    if (authLoading || authzLoading || !user || !profile || !player) {
       setCanManageCard(false);
+      setIsUserStaffContext(false); // Reset staff context
       return;
     }
 
-    if (user && profile && player) {
-      let canManage = false;
-      if (player.user_id && profile.id === player.user_id) {
-        canManage = true;
-      } else if (profile.managed_player_ids && profile.managed_player_ids.includes(player.id)) {
-        canManage = true;
-      } else {
-        const targetTeamId = team?.id || player.team_id;
-        if (targetTeamId && hasPermission({ resource: 'players', action: 'manage', resourceId: targetTeamId })) {
-          canManage = true;
-        } else if (hasPermission({ resource: 'players', action: 'manage' })) {
-          canManage = true;
-        }
-      }
-      setCanManageCard(canManage);
-    } else {
-      setCanManageCard(false);
+    let canManage = false;
+    let isStaff = false; // Local variable to determine if access is due to staff role
+
+    // Check staff permissions first
+    const targetTeamId = team?.id || player.team_id;
+    if (targetTeamId && hasPermission({ resource: 'players', action: 'manage', resourceId: targetTeamId })) {
+      canManage = true;
+      isStaff = true;
+    } else if (hasPermission({ resource: 'players', action: 'manage' })) { // Broader manage permission (e.g., club admin, global admin)
+      canManage = true;
+      isStaff = true;
     }
+
+    // If not identified as staff yet, check if player or parent
+    if (!isStaff) {
+      if (player.user_id && profile.id === player.user_id) { // Player themselves
+        canManage = true;
+      } else if (profile.managed_player_ids && profile.managed_player_ids.includes(player.id)) { // Parent/guardian
+        canManage = true;
+      }
+    }
+    
+    setCanManageCard(canManage);
+    setIsUserStaffContext(isStaff); // Set the staff context state
+
   }, [user, profile, player, team, hasPermission, authLoading, authzLoading]);
 
   const currentDesign = cardDesigns[selectedDesign] || cardDesigns.goldBallon;
@@ -584,6 +593,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           }}
         >
           {/* Header: place Back and Close Buttons at top-right like the Front */}
+          {/* ... keep existing code (back of card header with close and back buttons) ... */}
           <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
             <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
             <div className="absolute right-3 top-3 flex space-x-2">
@@ -610,7 +620,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </Button>
             </div>
           </div>
-
+          
           {/* Content - Compact layout, ensure it's scrollable and interactive */}
           <div className="flex-1 p-3 space-y-3 overflow-y-auto" style={{ position: 'relative', zIndex: 1 }}>
             {/* Player Actions - All 9 buttons in 3x3 grid */}
@@ -704,7 +714,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onTransferPlayer, 'Transfer Player')}
                   title="Transfer Player"
-                  disabled={!onTransferPlayer}
+                  disabled={!onTransferPlayer || !isUserStaffContext} // Updated condition
                 >
                   <RefreshCw className="h-3 w-3" />
                 </Button>
@@ -715,7 +725,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onLeaveTeam, 'Leave Team')}
                   title="Leave Team"
-                  disabled={!onLeaveTeam}
+                  disabled={!onLeaveTeam || !isUserStaffContext} // Updated condition
                 >
                   <UserMinus className="h-3 w-3" />
                 </Button>
@@ -723,6 +733,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
 
             {/* Play Style Selector */}
+            {/* ... keep existing code (Play Style Selector section) ... */}
             <div className="border-t border-white/20 pt-3">
               <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
               <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
@@ -744,8 +755,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 Selected: {selectedPlayStyles.length}/3
               </div>
             </div>
-
+            
             {/* Fun Stats Editor */}
+            {/* ... keep existing code (Fun Stats Editor section) ... */}
             <div>
               <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
               <div className="grid grid-cols-3 gap-1">
@@ -767,6 +779,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             </div>
 
             {/* Card Design Selector */}
+            {/* ... keep existing code (Card Design Selector section) ... */}
             <div>
               <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
               <Select value={selectedDesign} onValueChange={handleSaveDesign}>
