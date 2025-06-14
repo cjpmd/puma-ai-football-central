@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
-import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud, Trash2 } from 'lucide-react';
+import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
 import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
@@ -225,46 +225,6 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     }
   };
 
-  const handleDeletePhoto = async (player: Player) => {
-    console.log(`[PlayerManagement] handleDeletePhoto for player: ${player.name}`);
-    if (!player || !player.photoUrl) {
-      toast({ title: 'Error', description: 'Player or photo URL missing.', variant: 'destructive' });
-      return;
-    }
-    if (!window.confirm(`Are you sure you want to remove the photo for ${player.name}?`)) {
-      return;
-    }
-
-    try {
-      toast({ title: 'Deleting Photo...', description: `Removing photo for ${player.name}.` });
-      await playersService.deletePlayerPhoto(player.id, player.photoUrl);
-      
-      queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
-      // Update selectedPlayer if it's the one being edited, to reflect changes immediately on the card
-      if (selectedPlayer && selectedPlayer.id === player.id) {
-        setSelectedPlayer(prev => prev ? { ...prev, photoUrl: undefined } : null);
-      }
-      // Update the player in the main 'players' list if possible, or rely on query invalidation
-      const currentPlayers = queryClient.getQueryData<Player[]>(['active-players', team.id]);
-      if (currentPlayers) {
-        const updatedPlayers = currentPlayers.map(p => p.id === player.id ? { ...p, photoUrl: undefined } : p);
-        queryClient.setQueryData(['active-players', team.id], updatedPlayers);
-      }
-
-      toast({
-        title: 'Photo Removed',
-        description: `Photo for ${player.name} has been successfully removed.`,
-      });
-    } catch (error: any) {
-      console.error('Error deleting photo:', error);
-      toast({
-        title: 'Deletion Failed',
-        description: error.message || 'An unexpected error occurred during photo deletion.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
     console.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
     updatePlayerMutation.mutate({
@@ -390,7 +350,6 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   onManageParents={handleManageParents}
                   onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
-                  onDeletePhoto={handleDeletePhoto}
                   onSaveFunStats={handleSaveFunStats}
                   onSavePlayStyle={handleSavePlayStyle}
                   onSaveCardDesign={handleSaveCardDesign}

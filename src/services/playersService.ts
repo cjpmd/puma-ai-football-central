@@ -203,54 +203,6 @@ export const playersService = {
     return publicUrlData.publicUrl;
   },
 
-  async deletePlayerPhoto(playerId: string, photoUrl: string): Promise<Player> {
-    console.log(`Deleting photo for player ${playerId}:`, photoUrl);
-
-    // 1. Extract file path from the full URL
-    // URL format: https://<project-ref>.supabase.co/storage/v1/object/public/<bucket-name>/<file-path>
-    // We need to get the <file-path> part.
-    const bucketName = 'player_photos';
-    const urlParts = photoUrl.split('/');
-    const filePathIndex = urlParts.findIndex(part => part === bucketName);
-    
-    if (filePathIndex === -1 || filePathIndex + 1 >= urlParts.length) {
-      console.error('Could not extract file path from URL:', photoUrl);
-      throw new Error('Invalid photo URL format.');
-    }
-    const filePath = urlParts.slice(filePathIndex + 1).join('/');
-    console.log('Extracted file path for deletion:', filePath);
-
-    // 2. Delete the file from Supabase Storage
-    const { error: storageError } = await supabase.storage
-      .from(bucketName)
-      .remove([filePath]);
-
-    if (storageError) {
-      console.error('Error deleting player photo from storage:', storageError);
-      // We might still want to proceed to update the DB if the file is already gone or an orphan record
-      // For now, let's throw, but this could be made more resilient.
-      throw storageError;
-    }
-    console.log('Photo deleted from storage successfully.');
-
-    // 3. Update the player's record in the database to remove photo_url
-    const { data, error: dbError } = await supabase
-      .from('players')
-      .update({ photo_url: null })
-      .eq('id', playerId)
-      .select('*, photo_url')
-      .single();
-
-    if (dbError) {
-      console.error('Error updating player record (removing photo_url):', dbError);
-      throw dbError;
-    }
-
-    const updatedPlayer = transformPlayer(data);
-    console.log('Player record updated, photo_url removed:', updatedPlayer);
-    return updatedPlayer;
-  },
-
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
     console.log('Fetching parents for player:', playerId);
     

@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
-import { Player, Team } from '@/types';
+import { Player } from '@/types';
 import { Search, Users, Cog, Calendar, BarChart3, MessageSquare, Target, TrendingUp, TrendingDown, Minus, Brain, Crown, Trophy } from 'lucide-react';
 import { PlayerParentModal } from '@/components/players/PlayerParentModal';
 import { PlayerAttributesModal } from '@/components/players/PlayerAttributesModal';
@@ -107,26 +107,6 @@ const PlayerManagementTab = () => {
     },
   });
 
-  // Delete player photo mutation
-  const deletePlayerPhotoMutation = useMutation({
-    mutationFn: ({ playerId, photoUrl }: { playerId: string; photoUrl: string }) =>
-      playersService.deletePlayerPhoto(playerId, photoUrl),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-      toast({
-        title: 'Photo Deleted',
-        description: "Player's photo has been successfully deleted.",
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error Deleting Photo',
-        description: error.message || 'Failed to delete player photo',
-        variant: 'destructive',
-      });
-    },
-  });
-
   // Filter players based on search and subscription type
   const filteredPlayers = players.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -194,31 +174,11 @@ const PlayerManagementTab = () => {
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
     console.log(`[PlayerTab] handleUpdatePhoto for player: ${player.name}`);
-    try {
-      const photoUrl = await playersService.uploadPlayerPhoto(player.id, file);
-      updatePlayerMutation.mutate({ id: player.id, data: { photoUrl } });
-      toast({
-        title: 'Photo Uploaded',
-        description: `Photo uploaded and updated for: ${player.name}`,
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Photo Upload Failed',
-        description: error.message || `Could not upload photo for: ${player.name}`,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleDeletePhoto = async (player: Player) => {
-    console.log(`[PlayerTab] handleDeletePhoto for player: ${player.name}`);
-    if (!player.photoUrl) {
-      toast({ title: 'No Photo', description: 'This player does not have a photo to delete.' });
-      return;
-    }
-    if (window.confirm(`Are you sure you want to delete the photo for ${player.name}?`)) {
-      deletePlayerPhotoMutation.mutate({ playerId: player.id, photoUrl: player.photoUrl });
-    }
+    toast({
+      title: 'Photo Upload (handler called)',
+      description: `Photo upload triggered for: ${player.name}`,
+    });
+    // TODO: Implement photo upload
   };
 
   const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
@@ -466,12 +426,11 @@ const PlayerManagementTab = () => {
                     <FifaStylePlayerCard
                       key={player.id}
                       player={player}
-                      team={selectedTeam as Team} // Ensure team is passed as Team type
+                      team={selectedTeam}
                       onEdit={handleEditPlayer}
                       onManageParents={handleManageParents}
                       onRemoveFromSquad={handleRemoveFromSquad}
                       onUpdatePhoto={handleUpdatePhoto}
-                      onDeletePhoto={handleDeletePhoto} // Added this prop
                       onSaveFunStats={handleSaveFunStats}
                       onSavePlayStyle={handleSavePlayStyle}
                       onSaveCardDesign={handleSaveCardDesign}
