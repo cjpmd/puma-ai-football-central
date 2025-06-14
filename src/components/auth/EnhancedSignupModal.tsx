@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -39,7 +38,8 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   // Check for invitation details when invitation code is provided
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      if (initialInvitationCode) {
+      if (initialInvitationCode || invitationCode) {
+        const codeToUse = initialInvitationCode || invitationCode;
         try {
           const { data, error } = await supabase
             .from('user_invitations')
@@ -47,7 +47,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
               *,
               teams!inner(name)
             `)
-            .eq('invitation_code', initialInvitationCode)
+            .eq('invitation_code', codeToUse)
             .eq('status', 'pending')
             .single();
 
@@ -56,6 +56,8 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             setName(data.name || '');
             setEmail(data.email || '');
             setTeamName((data as any).teams?.name || '');
+            setInvitationCode(codeToUse);
+            // Auto-switch to invitation tab when invitation details are found
             setSignupMethod('invitation');
           }
         } catch (error) {
@@ -65,13 +67,13 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     };
 
     fetchInvitationDetails();
-  }, [initialInvitationCode]);
+  }, [initialInvitationCode, invitationCode]);
 
-  // Auto-set default tab based on invitation code
+  // Auto-set default tab based on invitation code - prioritize invitation if code exists
   useEffect(() => {
-    if (initialInvitationCode && invitationDetails) {
+    if (initialInvitationCode) {
       setSignupMethod('invitation');
-    } else if (!initialInvitationCode) {
+    } else if (!initialInvitationCode && !invitationDetails) {
       setSignupMethod('team_code');
     }
   }, [initialInvitationCode, invitationDetails]);
@@ -324,7 +326,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm">Invitation Code</CardTitle>
                   <CardDescription className="text-xs">
-                    Enter the invitation code you received
+                    {invitationDetails ? 'Your invitation details have been loaded' : 'Enter the invitation code you received'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -333,6 +335,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                     onChange={(e) => setInvitationCode(e.target.value)}
                     placeholder="Enter invitation code"
                     required
+                    disabled={!!invitationDetails}
                   />
                 </CardContent>
               </Card>
