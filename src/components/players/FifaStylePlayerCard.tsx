@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Player, Team } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -79,16 +80,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onTransferPlayer,
   onLeaveTeam,
 }) => {
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [funStats, setFunStats] = useState<Record<string, number>>(player.funStats || {});
-  const [playStyle, setPlayStyle] = useState<string[]>(player.playStyle ? JSON.parse(player.playStyle) : []);
-  const [cardDesignId, setCardDesignId] = useState<string>(player.cardDesignId || 'goldRare');
+  const [_photoFile, setPhotoFile] = useState<File | null>(null); // Renamed to avoid confusion if not used directly for upload trigger
+  // const [funStats, setFunStats] = useState<Record<string, number>>(player.funStats || {}); // Handled by parent
+  // const [playStyle, setPlayStyle] = useState<string[]>(player.playStyle ? JSON.parse(player.playStyle) : []); // Handled by parent
+  // const [cardDesignId, setCardDesignId] = useState<string>(player.cardDesignId || 'goldRare'); // Handled by parent
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
+      setPhotoFile(file); // Keep for potential preview if needed, actual upload via onUpdatePhoto
+      onUpdatePhoto(player, file); // Directly call the handler
     }
   };
 
@@ -96,41 +98,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     fileInputRef.current?.click();
   };
 
-  const handleFunStatChange = (statName: string, value: number) => {
-    setFunStats(prev => ({ ...prev, [statName]: value }));
-  };
+  // Fun stats, play style, and card design are now managed by parent through props
+  // and specific modals or UI elements if direct editing on card is desired later.
+  // For now, these handlers are simplified or removed if actions are only in dropdown.
 
-  const handleSaveFunStatsClick = () => {
-    onSaveFunStats(player, funStats);
-  };
-
-  const handlePlayStyleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = event.target;
-    setPlayStyle(prev => {
-      if (checked) {
-        return [...prev, value];
-      } else {
-        return prev.filter(item => item !== value);
-      }
-    });
-  };
-
-  const handleSavePlayStyleClick = () => {
-    onSavePlayStyle(player, playStyle);
-  };
-
-  const handleCardDesignChange = (designId: string) => {
-    setCardDesignId(designId);
-    onSaveCardDesign(player, designId);
-  };
-  
   const design = cardDesigns[player.cardDesignId || 'goldRare'] || cardDesigns.goldRare;
   const age = player.dateOfBirth ? calculateAge(new Date(player.dateOfBirth)) : 'N/A';
   const overallRating = player.attributes?.find(attr => attr.name === 'Overall')?.value || 75;
   
   const getTopPositions = () => {
     const positions = player.matchStats?.minutesByPosition || {};
-    const positionEntries = Object.entries(positions).map(([position, minutes]) => ({ position, minutes: minutes as number }));
+    const positionEntries = Object.entries(positions).map(([position, minutes]) => ({ position, minutes: typeof minutes === 'number' ? minutes : 0 }));
     const sortedPositions = positionEntries.sort((a, b) => b.minutes - a.minutes).slice(0, 3);
     return sortedPositions;
   };
@@ -145,8 +123,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             <p className={cn("text-sm font-medium", design.positionColor)}>{player.type === 'goalkeeper' ? 'GK' : 'OUT'}</p>
             {team?.logoUrl && (
               <Avatar className="h-8 w-8 mt-1 border-2 border-white/50">
-                <AvatarImage src={team.logoUrl} alt={team.name} />
-                <AvatarFallback>{team.name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                <AvatarImage src={team.logoUrl} alt={team.name || 'Team'} />
+                <AvatarFallback>{getInitials(team.name)}</AvatarFallback>
               </Avatar>
             )}
           </div>
@@ -190,8 +168,16 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           {player.name} #{player.squadNumber}
         </h3>
         <div className="flex items-center space-x-2 text-xs mt-1">
-          <Badge variant="secondary" className={cn(design.text, "bg-opacity-50")}>Age: {age}</Badge>
-          <Badge variant={player.subscriptionType === 'full_squad' ? 'default' : 'outline'} className={cn(design.text, "bg-opacity-50")}>
+          <Badge variant="secondary" className={cn(design.text, "bg-black/20", design.border ? design.border : 'border-transparent')}>Age: {age}</Badge>
+          <Badge 
+            variant={player.subscriptionType === 'full_squad' ? 'default' : 'outline'} 
+            className={cn(
+              design.text, 
+              "bg-black/20", 
+              design.border ? design.border : 'border-transparent',
+              player.subscriptionType === 'full_squad' ? (design.bg.includes('yellow') || design.bg.includes('amber') ? 'bg-sky-600/70 text-white' : 'bg-primary/70 text-primary-foreground') : (design.bg.includes('yellow') || design.bg.includes('amber') ? 'bg-gray-600/70 text-white' : 'bg-muted/70 text-muted-foreground')
+            )}
+          >
             {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training'}
           </Badge>
         </div>
@@ -202,22 +188,23 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           {player.attributes?.slice(0, 6).map((attr, index) => (
             <div key={index} className="flex flex-col items-center">
               <span className={cn("font-bold", design.statColor)}>{attr.value}</span>
-              <span className={cn("text-muted-foreground", design.text)}>{attr.name}</span>
+              <span className={cn("opacity-80", design.text)}>{attr.name}</span>
             </div>
           ))}
         </div>
 
         {topPositions.length > 0 && (
             <div className="mt-2 text-left">
-                <p className={cn("text-xs font-semibold mb-1", design.text)}>Top Positions:</p>
+                <p className={cn("text-xs font-semibold mb-1 opacity-90", design.text)}>Top Positions:</p>
                 <div className="flex flex-col space-y-0.5">
                     {topPositions.map((pos, index) => (
-                        <div key={index} className="flex items-center">
-                            <span className={cn("text-xs font-medium mr-1", design.text)}>
+                        <div key={pos.position + index} className="flex items-center">
+                            <span className={cn("text-xs font-medium mr-1 opacity-80", design.text)}>
                                 {pos.position.replace(/SUB/g, 'S').replace(/TBD/g, '?')}:
                             </span>
-                            <span className={cn("text-xs", design.text, "opacity-80")}>
-                                { '+'.repeat(3 - index) } ({pos.minutes}m)
+                            <span className={cn("text-xs opacity-70", design.text)}>
+                                {/* Using a simple visual indicator; could be icons or more complex bars */}
+                                {'●'.repeat(Math.max(1,3 - index))} ({pos.minutes}m)
                             </span>
                         </div>
                     ))}
@@ -229,7 +216,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       <CardFooter className="p-2 flex justify-end relative z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className={cn("hover:bg-white/20", design.text)}>
+            <Button variant="ghost" size="icon" className={cn("hover:bg-black/20", design.text)}>
               <Settings2 className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
@@ -258,6 +245,19 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <CalendarIcon className="mr-2 h-4 w-4" /> View History
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {/* Adding specific items for fun stats, playstyle, card design if needed here or via specific popovers */}
+            {/* For example, if these were quick edits:
+            <DropdownMenuItem onClick={() => { /* open popover for fun stats * / }}>
+              <Star className="mr-2 h-4 w-4" /> Edit Fun Stats
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { /* open popover for playstyle * / }}>
+              <Shuffle className="mr-2 h-4 w-4" /> Edit Playstyle
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { /* open popover for card design * / }}>
+              <Palette className="mr-2 h-4 w-4" /> Change Card Design
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            */}
             <DropdownMenuItem onClick={() => onTransferPlayer(player)}>
               <Replace className="mr-2 h-4 w-4" /> Transfer Player
             </DropdownMenuItem>
@@ -265,19 +265,21 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <LogOut className="mr-2 h-4 w-4" /> Player Left Team
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onRemoveFromSquad(player)}>
+            <DropdownMenuItem onClick={() => onRemoveFromSquad(player)} className="text-red-600 hover:!text-red-600 hover:!bg-red-100/50 focus:!text-red-600 focus:!bg-red-100/50">
               <UserMinus className="mr-2 h-4 w-4" /> Remove from Squad
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </CardFooter>
        {/* Background Image/Pattern based on card type - ensure this is behind content */}
-      {design.bg.includes('bg-gradient-to-br') || design.bg.includes('bg-gradient-to-tr') ? null : (
+      {!(design.bg.includes('bg-gradient-to-br') || design.bg.includes('bg-gradient-to-tr')) && (
           <div 
             className={cn("absolute inset-0 z-0 opacity-20", design.bg)}
+            // Example for specific image, adjust as needed
             style={ player.cardDesignId === "icon" || player.cardDesignId === "hero" ? { backgroundImage: `url('/lovable-uploads/e312db4c-9834-4d19-8b74-abf4e871c7c1.png')`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
           ></div>
       )}
     </Card>
   );
 };
+
