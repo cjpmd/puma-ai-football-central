@@ -56,6 +56,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             setName(data.name || '');
             setEmail(data.email || '');
             setTeamName((data as any).teams?.name || '');
+            setInvitationCode(initialInvitationCode);
             setSignupMethod('invitation');
           }
         } catch (error) {
@@ -66,15 +67,6 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
     fetchInvitationDetails();
   }, [initialInvitationCode]);
-
-  // Auto-set default tab based on invitation code
-  useEffect(() => {
-    if (initialInvitationCode && invitationDetails) {
-      setSignupMethod('invitation');
-    } else if (!initialInvitationCode) {
-      setSignupMethod('team_code');
-    }
-  }, [initialInvitationCode, invitationDetails]);
 
   const handleSignup = async () => {
     if (!email || !password || !name) {
@@ -248,7 +240,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     return 'Create Account';
   };
 
-  // If we have an invitation code, show simplified invitation-only form
+  // If we have an invitation code and invitation details, show simplified invitation-only form
   if (initialInvitationCode && invitationDetails) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
