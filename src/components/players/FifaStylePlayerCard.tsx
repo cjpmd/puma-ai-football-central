@@ -337,21 +337,22 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const captainCount = player.matchStats?.captainGames || 0;
   const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
 
-  // Updated displayName logic
-  let determinedDisplayName = player.name || 'No Name';
-  const nameOnShirtValue = player.kit_sizes?.nameOnShirt;
-
-  if (nameOnShirtValue && nameOnShirtValue.trim() !== "") {
-    const playerFullNameParts = player.name ? player.name.split(' ') : [];
-    // Handle cases where player.name might be just a surname or single name
-    const playerLastName = playerFullNameParts.length > 0 ? playerFullNameParts[playerFullNameParts.length - 1] : '';
+  // Fixed displayName logic - use full name if available, otherwise use nameOnShirt
+  const getDisplayName = () => {
+    const fullName = player.name;
+    const nameOnShirt = player.kit_sizes?.nameOnShirt;
     
-    // Use nameOnShirt if it's different from the extracted last name, 
-    // OR if player.name is a single word (suggesting nameOnShirt is a deliberate choice like a nickname).
-    if (nameOnShirtValue.trim().toLowerCase() !== playerLastName.trim().toLowerCase() || playerFullNameParts.length <= 1) {
-      determinedDisplayName = nameOnShirtValue.trim();
+    // If we have a full name, use it. Otherwise fall back to nameOnShirt or "No Name"
+    if (fullName && fullName.trim()) {
+      return fullName.trim();
+    } else if (nameOnShirt && nameOnShirt.trim()) {
+      return nameOnShirt.trim();
+    } else {
+      return 'No Name';
     }
-  }
+  };
+
+  const displayName = getDisplayName();
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -368,6 +369,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   };
 
   const getInitials = (name: string) => {
+    if (!name || !name.trim()) return 'PL';
     return name
       .split(' ')
       .map(word => word[0])
@@ -507,7 +509,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           )}
 
           <div className="p-4 h-full flex flex-col justify-end relative z-10">
-            {topPositions.length > 0 && ( // Changed condition from topPositions.length >= 3
+            {topPositions.length > 0 && (
               <div className="absolute left-2 top-16 space-y-1">
                 {topPositions.map((pos) => (
                   <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
@@ -519,9 +521,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
             <div className="relative mx-auto mb-4 h-44 flex items-center justify-center">
               <div className="relative h-40 w-40">
-                {/* Custom photo container with feathered border */}
+                {/* Photo container */}
                 <div 
-                  className="h-40 w-40 rounded-full overflow-hidden border-3 border-white/70 shadow-lg"
+                  className="h-40 w-40 rounded-full overflow-hidden border-3 border-white/70 shadow-lg flex items-center justify-center"
                   style={{
                     background: player.photoUrl ? 'none' : 'rgba(255,255,255,0.3)',
                     boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.3)'
@@ -530,16 +532,12 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   {player.photoUrl ? (
                     <img 
                       src={player.photoUrl} 
-                      alt={determinedDisplayName}
+                      alt={displayName}
                       className="h-full w-full object-cover"
-                      style={{
-                        maskImage: 'radial-gradient(circle, black 60%, transparent 100%)',
-                        WebkitMaskImage: 'radial-gradient(circle, black 60%, transparent 100%)'
-                      }}
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-white font-bold text-2xl">
-                      {player.name ? getInitials(player.name) : 'PL'}
+                      {getInitials(displayName)}
                     </div>
                   )}
                 </div>
@@ -561,7 +559,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             <div className="space-y-1">
               <div className="text-center">
                 <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
-                  {determinedDisplayName}
+                  {displayName}
                 </h1>
               </div>
 
@@ -757,14 +755,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
             {/* Photo Management */}
             {onDeletePhoto && player.photoUrl && (
-              <div className="border-t border-white/20 pt-3">
-                <label className="text-sm font-medium mb-2 block text-white">Photo Management</label>
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-white">Photo Management</h3>
                 <Button
-                  variant="destructive"
+                  variant="outline"
                   size="sm"
-                  className="w-full text-xs"
-                  onClick={e => handleButtonAction(e, onDeletePhoto, 'Delete Photo')}
-                  title="Delete Photo"
+                  className="w-full border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
+                  onClick={() => onDeletePhoto(player)}
                 >
                   <Trash2 className="h-3 w-3 mr-2" />
                   Delete Photo
@@ -772,71 +769,79 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             )}
 
-            {/* Play Style Selector */}
-            <div className="border-t border-white/20 pt-3">
-              <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
-              <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
-                {playStylesWithIcons.map(style => (
-                  <Button
-                    key={style.value}
-                    variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => togglePlayStyle(style.value)}
-                    disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                    className="text-sm p-1 h-6 w-6"
-                    title={style.label}
-                  >
-                    {style.icon}
-                  </Button>
-                ))}
+            {/* Card Design Selection */}
+            {canManageCard && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-white">Card Design</h3>
+                <Select value={selectedDesign} onValueChange={handleSaveDesign}>
+                  <SelectTrigger className="w-full bg-gray-800 border-gray-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(cardDesigns).map(([id, design]) => (
+                      <SelectItem key={id} value={id}>
+                        {design.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="text-xs text-gray-400 mt-1">
-                Selected: {selectedPlayStyles.length}/3
-              </div>
-            </div>
-            
-            {/* Fun Stats Editor */}
-            <div>
-              <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
-              <div className="grid grid-cols-3 gap-1">
-                {funStatLabels.map(stat => (
-                  <div key={stat.key} className="text-center">
-                    <div className="text-xs mb-1 text-white">{stat.key}</div>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={99}
-                      value={funStats[stat.key] || ''}
-                      onChange={(e) => updateStat(stat.key, e.target.value)}
-                      className="w-full text-center h-6 bg-white/10 border-white/20 text-white text-xs"
-                      placeholder="--"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            )}
 
-            {/* Card Design Selector */}
-            <div>
-              <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
-              <Select value={selectedDesign} onValueChange={handleSaveDesign}>
-                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-6">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(cardDesigns).map(([id, design]) => (
-                    <SelectItem key={id} value={id}>
-                      {design.name}
-                    </SelectItem>
+            {/* Fun Stats */}
+            {canManageCard && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-white">FIFA Stats</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {funStatLabels.map(stat => (
+                    <div key={stat.key} className="space-y-1">
+                      <label className="text-xs text-gray-300">{stat.label}</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="99"
+                        value={funStats[stat.key] || ''}
+                        onChange={(e) => updateStat(stat.key, e.target.value)}
+                        className="bg-gray-800 border-gray-600 text-white text-xs h-7"
+                        placeholder="--"
+                      />
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
+                </div>
+              </div>
+            )}
+
+            {/* Play Styles */}
+            {canManageCard && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-semibold text-white">Play Styles (Max 3)</h3>
+                <div className="grid grid-cols-2 gap-1">
+                  {playStylesWithIcons.map(style => (
+                    <Button
+                      key={style.value}
+                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
+                      size="sm"
+                      className={`text-xs h-7 ${
+                        selectedPlayStyles.includes(style.value)
+                          ? "bg-blue-600 hover:bg-blue-700 text-white"
+                          : "border-white/20 hover:bg-white/10 text-white bg-transparent"
+                      }`}
+                      onClick={() => togglePlayStyle(style.value)}
+                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                    >
+                      <span className="mr-1">{style.icon}</span>
+                      {style.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="text-xs text-gray-400">
+                  Selected: {selectedPlayStyles.length}/3
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
-
-export default FifaStylePlayerCard;
