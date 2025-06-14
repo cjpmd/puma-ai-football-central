@@ -583,19 +583,19 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* Modified text section - moved further down */}
-            <div className={`absolute bottom-2 left-0 right-0 grid grid-cols-3 text-sm font-bold ${currentDesign.textColor} px-4`}>
-              <span className="text-left">
-                #{player.squadNumber || 'XX'}
-              </span>
-              <span className="text-center">
-                Age {age}
-              </span>
-              <span className="text-right">
-                {isGoalkeeper ? 'GK' : 'OUTFIELD'}
-              </span>
+              {/* Modified text section at the bottom */}
+              <div className={`grid grid-cols-3 text-sm font-bold pt-3 ${currentDesign.textColor}`}>
+                <span className="text-left pl-1">
+                  #{player.squadNumber || 'XX'}
+                </span>
+                <span className="text-center">
+                  Age {age}
+                </span>
+                <span className="text-right pr-1">
+                  {isGoalkeeper ? 'GK' : 'OUTFIELD'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
