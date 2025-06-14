@@ -42,6 +42,7 @@ export const MultiRoleDashboard = () => {
       { id: 'overview', label: 'Overview', icon: BarChart3 }
     ];
 
+    // Only add role-specific tabs based on the actual user role
     if (userRole === 'staff') {
       tabs.push(
         { id: 'teams', label: 'Teams', icon: Trophy },
@@ -193,13 +194,13 @@ export const MultiRoleDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welcome back, {user?.name || user?.email}
+            Welcome back, {user?.name || user?.email} ({userRole})
           </p>
         </div>
 
         {availableTabs.length > 1 ? (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+            <TabsList className={`grid w-full grid-cols-${availableTabs.length}`}>
               {availableTabs.map((tab) => (
                 <TabsTrigger key={tab.id} value={tab.id} className="flex items-center gap-2">
                   <tab.icon className="h-4 w-4" />
