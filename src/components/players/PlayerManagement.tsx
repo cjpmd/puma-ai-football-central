@@ -10,7 +10,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
-import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon } from 'lucide-react';
+import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
 import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
@@ -98,6 +98,11 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleModalOpen: Modal "${modal}" for player "${player.name}"`);
     setSelectedPlayer(player);
     setActiveModal(modal);
+  };
+
+  const handleClosePlayerForm = () => {
+    setShowPlayerForm(false);
+    setEditingPlayer(null);
   };
 
   const handleModalClose = () => {
@@ -332,18 +337,24 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
       {/* Player Form Modal */}
       {showPlayerForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background text-foreground rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              onClick={handleClosePlayerForm}
+              aria-label="Close player form"
+            >
+              <X className="h-5 w-5" />
+            </Button>
             <h2 className="text-xl font-bold mb-4">
               {editingPlayer ? 'Edit Player' : 'Add New Player'}
             </h2>
             <PlayerForm
               player={editingPlayer}
               onSubmit={handlePlayerSubmit}
-              onCancel={() => {
-                setShowPlayerForm(false);
-                setEditingPlayer(null);
-              }}
+              onCancel={handleClosePlayerForm}
               teamId={team.id}
             />
           </div>
@@ -393,8 +404,17 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
           />
 
           {activeModal === 'transfer' && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-background text-foreground rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                  onClick={handleModalClose}
+                  aria-label="Close transfer form"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
                 <PlayerTransferForm
                   player={selectedPlayer}
                   currentTeamId={team.id}
@@ -409,8 +429,17 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
           )}
 
           {activeModal === 'leave' && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-background text-foreground rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+                 <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                  onClick={handleModalClose}
+                  aria-label="Close leave form"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
                 <PlayerLeaveForm
                   player={selectedPlayer}
                   onSubmit={(leaveDate, leaveComments) => {
@@ -422,8 +451,16 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                         leaveDate: leaveDate, 
                         leaveComments: leaveComments 
                       }
+                    }, {
+                      onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+                        handleModalClose();
+                         toast({
+                           title: 'Player Left Team',
+                           description: `${selectedPlayer.name} has been marked as left.`,
+                         });
+                      }
                     });
-                    handleModalClose();
                   }}
                   onCancel={handleModalClose}
                 />
