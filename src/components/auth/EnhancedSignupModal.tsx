@@ -134,9 +134,9 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
   const getDialogTitle = () => {
     if (teamName) {
-      return `[DEBUG] Join ${teamName}`;
+      return `Join ${teamName}`;
     }
-    return '[DEBUG] Create Your Account';
+    return 'Create Your Account';
   };
 
   return (

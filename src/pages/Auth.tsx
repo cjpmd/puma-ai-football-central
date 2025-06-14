@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,12 +22,12 @@ const Auth = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
-  // Directly parse the invitation code from the window's URL search parameters
-  const searchParams = new URLSearchParams(window.location.search);
+  // Use the useSearchParams hook for a more reliable way to get URL parameters
+  const [searchParams] = useSearchParams();
   const invitationCode = searchParams.get('invitation');
 
   console.log(`[Auth.tsx] Full URL: ${window.location.href}`);
-  console.log(`[Auth.tsx] Search params string: ${searchParams.toString()}`);
+  console.log(`[Auth.tsx] Search params from hook: ${searchParams.toString()}`);
   console.log(`[Auth.tsx] Parsed invitation code: '${invitationCode}'`);
 
   useEffect(() => {
