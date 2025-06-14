@@ -8,22 +8,43 @@ import { userInvitationService, UserInvitation } from '@/services/userInvitation
 import { toast } from 'sonner';
 import { Trash2 } from 'lucide-react';
 
+const DELETED_INVITATIONS_KEY = 'deletedInvitations';
+
 export const InvitationResendPanel: React.FC = () => {
   const [invitations, setInvitations] = useState<UserInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadInvitations();
   }, []);
 
+  const getDeletedInvitations = (): Set<string> => {
+    try {
+      const deleted = localStorage.getItem(DELETED_INVITATIONS_KEY);
+      return deleted ? new Set(JSON.parse(deleted)) : new Set();
+    } catch {
+      return new Set();
+    }
+  };
+
+  const addToDeletedInvitations = (id: string) => {
+    try {
+      const deletedIds = getDeletedInvitations();
+      deletedIds.add(id);
+      localStorage.setItem(DELETED_INVITATIONS_KEY, JSON.stringify(Array.from(deletedIds)));
+    } catch (error) {
+      console.error('Error saving deleted invitation ID:', error);
+    }
+  };
+
   const loadInvitations = async () => {
     setIsLoading(true);
     try {
       const data = await userInvitationService.getInvitations();
-      // Filter out any invitations that were deleted in this session
+      // Filter out any invitations that were deleted
+      const deletedIds = getDeletedInvitations();
       const filteredData = data.filter(inv => !deletedIds.has(inv.id));
       setInvitations(filteredData);
     } catch (error) {
@@ -58,8 +79,8 @@ export const InvitationResendPanel: React.FC = () => {
 
       if (error) throw error;
 
-      // Add to deleted IDs set to prevent it from coming back on refresh
-      setDeletedIds(prev => new Set(prev).add(invitation.id));
+      // Add to localStorage to prevent it from showing up again
+      addToDeletedInvitations(invitation.id);
       // Remove from local state
       setInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
       toast.success(`Invitation for ${invitation.email} deleted`);
