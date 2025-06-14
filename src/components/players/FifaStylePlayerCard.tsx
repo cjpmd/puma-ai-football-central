@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Player, Team } from '@/types';
 import { getInitials, formatDate, calculateAge } from '@/lib/utils';
-import { Edit3, Users, UserMinus, UploadCloud, Palette, Sliders, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, MoreVertical, RefreshCw, LogOut, Trash2 } from 'lucide-react';
+import { Edit3, Users, UserMinus, UploadCloud, Palette, Sliders, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, Settings, RefreshCw, LogOut, Trash2 } from 'lucide-react';
 
 export interface FifaStylePlayerCardProps {
   player: Player;
@@ -93,7 +94,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-white hover:bg-slate-700">
-                <MoreVertical className="h-4 w-4" />
+                <Settings className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-slate-800 text-white border-slate-700">
