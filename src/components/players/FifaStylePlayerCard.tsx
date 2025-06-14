@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -584,8 +583,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 ))}
               </div>
 
-              {/* Modified text section at the bottom */}
-              <div className={`grid grid-cols-3 text-sm font-bold pt-3 ${currentDesign.textColor}`}>
+              {/* Modified text section at the bottom with increased padding */}
+              <div className={`grid grid-cols-3 text-sm font-bold pt-6 ${currentDesign.textColor}`}>
                 <span className="text-left pl-1">
                   #{player.squadNumber || 'XX'}
                 </span>
