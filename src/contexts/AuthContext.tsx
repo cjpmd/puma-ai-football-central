@@ -1,17 +1,23 @@
+
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Database } from '@/integrations/supabase/types';
+import { Team } from '@/types/team';
+import { Club } from '@/types/club';
 
 interface AuthContextType {
   user: User | null;
   profile: Database['public']['Tables']['profiles']['Row'] | null;
   session: Session | null;
   loading: boolean;
-  teams: Array<{ id: string; name: string }>;
-  clubs: Array<{ id: string; name: string }>;
+  teams: Team[];
+  clubs: Club[];
+  currentTeam?: Team | null;
   signIn: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  signUp?: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
 
@@ -22,8 +28,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [teams, setTeams] = useState<Array<{ id: string; name: string }>>([]);
-  const [clubs, setClubs] = useState<Array<{ id: string; name: string }>>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [clubs, setClubs] = useState<Club[]>([]);
+  const [currentTeam, setCurrentTeam] = useState<Team | null>(null);
 
   useEffect(() => {
     const getSession = async () => {
@@ -82,35 +89,90 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(profileData);
       }
 
-      // Fetch user teams
+      // Fetch user teams with full team data
       const { data: teamsData, error: teamsError } = await supabase
         .from('user_teams')
-        .select('team_id, teams(name)')
+        .select(`
+          team_id,
+          teams (
+            id,
+            name,
+            age_group,
+            season_start,
+            season_end,
+            subscription_type,
+            game_format,
+            kit_icons,
+            logo_url,
+            performance_categories,
+            manager_name,
+            manager_email,
+            manager_phone,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('user_id', userId);
 
       if (teamsError) {
         console.error('Error fetching user teams:', teamsError);
       } else {
         const userTeams = teamsData?.map(team => ({
-          id: team.team_id,
-          name: (team.teams as any)?.name || 'Unknown Team'
+          id: team.teams.id,
+          name: team.teams.name,
+          ageGroup: team.teams.age_group,
+          seasonStart: team.teams.season_start,
+          seasonEnd: team.teams.season_end,
+          subscriptionType: team.teams.subscription_type,
+          gameFormat: team.teams.game_format,
+          kitIcons: team.teams.kit_icons || { home: '', away: '', training: '', goalkeeper: '' },
+          logoUrl: team.teams.logo_url,
+          performanceCategories: team.teams.performance_categories || [],
+          managerName: team.teams.manager_name,
+          managerEmail: team.teams.manager_email,
+          managerPhone: team.teams.manager_phone,
+          createdAt: team.teams.created_at,
+          updatedAt: team.teams.updated_at
         })) || [];
         console.log('User teams:', userTeams);
         setTeams(userTeams);
+        
+        // Set the first team as current team if available
+        if (userTeams.length > 0) {
+          setCurrentTeam(userTeams[0]);
+        }
       }
 
-      // Fetch user clubs
+      // Fetch user clubs with full club data
       const { data: clubsData, error: clubsError } = await supabase
         .from('user_clubs')
-        .select('club_id, clubs(name)')
+        .select(`
+          club_id,
+          clubs (
+            id,
+            name,
+            reference_number,
+            subscription_type,
+            serial_number,
+            logo_url,
+            created_at,
+            updated_at
+          )
+        `)
         .eq('user_id', userId);
 
       if (clubsError) {
         console.error('Error fetching user clubs:', clubsError);
       } else {
         const userClubs = clubsData?.map(club => ({
-          id: club.club_id,
-          name: (club.clubs as any)?.name || 'Unknown Club'
+          id: club.clubs.id,
+          name: club.clubs.name,
+          referenceNumber: club.clubs.reference_number,
+          subscriptionType: club.clubs.subscription_type,
+          serialNumber: club.clubs.serial_number,
+          logoUrl: club.clubs.logo_url,
+          createdAt: club.clubs.created_at,
+          updatedAt: club.clubs.updated_at
         })) || [];
         console.log('User clubs:', userClubs);
         setClubs(userClubs);
@@ -136,6 +198,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const signUp = async (email: string, password: string) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+    } catch (error: any) {
+      throw new Error(error.error_description || error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setLoading(true);
@@ -144,12 +218,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setProfile(null);
       setTeams([]);
       setClubs([]);
+      setCurrentTeam(null);
     } catch (error) {
       console.error("Error signing out:", error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Alias for signOut to match what Header expects
+  const logout = signOut;
 
   const refreshUserData = async () => {
     if (user) {
@@ -169,6 +247,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setProfile(null);
         setTeams([]);
         setClubs([]);
+        setCurrentTeam(null);
       }
     });
 
@@ -182,8 +261,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     teams,
     clubs,
+    currentTeam,
     signIn,
     signOut,
+    signUp,
+    logout,
     refreshUserData
   };
 
