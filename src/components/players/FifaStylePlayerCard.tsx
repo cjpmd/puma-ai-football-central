@@ -310,16 +310,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
   // Updated getFaceStyle with explicit typing
   const getFaceStyle = (face: "front" | "back"): React.CSSProperties => {
-    if (face === "front") {
-      return {
-        zIndex: flipped ? 10 : 20,
-        pointerEvents: (flipped ? "none" : "auto") as AllowedPointerEvents,
-      };
-    }
-    // back
+    // face is visible if:
+    //  - front face, not flipped
+    //  - back face, flipped
+    const isVisible = (face === "front" && !flipped) || (face === "back" && flipped);
     return {
-      zIndex: flipped ? 20 : 10,
-      pointerEvents: (flipped ? "auto" : "none") as AllowedPointerEvents,
+      zIndex: isVisible ? 20 : 10,
+      pointerEvents: isVisible ? "auto" : "none",
     };
   };
 
@@ -344,6 +341,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             backfaceVisibility: 'hidden'
           }}
         >
+          {console.log("[FifaCard] Rendering Front Face, flipped:", flipped)}
           {/* Settings Button */}
           <Button
             variant="ghost"
@@ -501,6 +499,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             transform: 'rotateY(180deg)'
           }}
         >
+          {console.log("[FifaCard] Rendering Back Face, flipped:", flipped)}
           {/* Header: place Back and Close Buttons at top-right like the Front */}
           <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
             <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
