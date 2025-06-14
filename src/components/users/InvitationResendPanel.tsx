@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,8 +56,12 @@ export const InvitationResendPanel: React.FC = () => {
         .delete()
         .eq('id', invitation.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase delete error:', error);
+        throw error;
+      }
 
+      // Remove from local state only after successful database deletion
       setInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
       toast.success(`Invitation for ${invitation.name} deleted successfully`);
     } catch (error) {
