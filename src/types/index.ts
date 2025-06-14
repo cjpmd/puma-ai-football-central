@@ -184,6 +184,7 @@ export type Player = {
   cardDesignId?: string; // Added for FIFA-style card designs
   funStats?: Record<string, number>; // Added for FIFA-style fun stats
   playStyle?: string; // Added for FIFA-style play styles
+  user_id?: string; // Added to support direct user link for the player
   created_at?: string;
   updated_at?: string;
 };
@@ -382,6 +383,8 @@ export type Profile = {
   roles: string[];
   fa_id: string | null;
   coaching_badges: any[];
+  managed_player_ids?: string[]; // Added to support players managed by this user (e.g. parent)
   created_at: string;
   updated_at: string;
 };
+
