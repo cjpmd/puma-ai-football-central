@@ -1,10 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { userInvitationService } from '@/services/userInvitationService';
@@ -136,9 +134,9 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
   const getDialogTitle = () => {
     if (teamName) {
-      return `Join ${teamName}`;
+      return `[DEBUG] Join ${teamName}`;
     }
-    return 'Create Account';
+    return '[DEBUG] Create Your Account';
   };
 
   return (
@@ -194,21 +192,18 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             />
           </div>
 
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Invitation Code</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Input
-                value={invitationCode}
-                onChange={(e) => setInvitationCode(e.target.value)}
-                placeholder="Enter invitation code"
-                required
-                disabled={!!initialInvitationCode}
-                className={!!initialInvitationCode ? "bg-gray-50" : ""}
-              />
-            </CardContent>
-          </Card>
+          <div className="space-y-2">
+            <Label htmlFor="invitation-code">Invitation Code</Label>
+            <Input
+              id="invitation-code"
+              value={invitationCode}
+              onChange={(e) => setInvitationCode(e.target.value)}
+              placeholder="Enter invitation code"
+              required
+              disabled={!!initialInvitationCode}
+              className={!!initialInvitationCode ? "bg-gray-50" : ""}
+            />
+          </div>
 
           <Button
             type="submit"
