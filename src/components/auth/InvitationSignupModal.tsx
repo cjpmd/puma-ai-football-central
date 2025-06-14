@@ -40,7 +40,7 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
       
       console.log('Fetching invitation details for code:', invitationCode);
       try {
-        // First, get the invitation
+        // Simplified query - just get the invitation
         const { data: invitation, error: invitationError } = await supabase
           .from('user_invitations')
           .select('*')
@@ -69,9 +69,11 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
         }
 
         console.log('Invitation found:', invitation);
-        
-        // Get team name if team_id exists
-        let teamNameFromDb = '';
+        setInvitationDetails(invitation);
+        setName(invitation.name || '');
+        setEmail(invitation.email || '');
+
+        // Separately fetch team name if team_id exists
         if (invitation.team_id) {
           const { data: team, error: teamError } = await supabase
             .from('teams')
@@ -80,14 +82,10 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
             .single();
           
           if (team && !teamError) {
-            teamNameFromDb = team.name;
+            setTeamName(team.name);
           }
         }
 
-        setInvitationDetails(invitation);
-        setName(invitation.name || '');
-        setEmail(invitation.email || '');
-        setTeamName(teamNameFromDb);
         console.log('Invitation details set successfully');
       } catch (error) {
         console.error('Error fetching invitation details:', error);
@@ -99,12 +97,14 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
       }
     };
 
-    if (isOpen) {
+    if (isOpen && invitationCode) {
       fetchInvitationDetails();
     }
   }, [invitationCode, isOpen, toast]);
 
-  const handleSignup = async () => {
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!email || !password || !name) {
       toast({
         title: 'Missing Information',
@@ -169,11 +169,11 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <form onSubmit={handleSignup} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="name">Full Name</Label>
+            <Label htmlFor="invitation-name">Full Name</Label>
             <Input
-              id="name"
+              id="invitation-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -183,9 +183,9 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="invitation-email">Email</Label>
             <Input
-              id="email"
+              id="invitation-email"
               type="email"
               value={email}
               disabled
@@ -194,9 +194,9 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="invitation-password">Password</Label>
             <Input
-              id="password"
+              id="invitation-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -217,13 +217,13 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           )}
 
           <Button
-            onClick={handleSignup}
+            type="submit"
             disabled={isLoading}
             className="w-full"
           >
             {isLoading ? 'Creating Account...' : 'Create Account'}
           </Button>
-        </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

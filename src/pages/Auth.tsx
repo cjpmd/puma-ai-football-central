@@ -48,13 +48,8 @@ const Auth = () => {
     );
   }
 
-  useEffect(() => {
-    if (invitationCode) {
-      setShowEnhancedSignup(true);
-    }
-  }, [invitationCode]);
-
-  const handleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!email || !password) {
       toast({
         title: 'Missing Information',
@@ -92,7 +87,8 @@ const Auth = () => {
     }
   };
 
-  const handleBasicSignup = async () => {
+  const handleBasicSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!email || !password) {
       toast({
         title: 'Missing Information',
@@ -158,33 +154,37 @@ const Auth = () => {
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
-                <Input
-                  id="login-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter your email"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
-                <Input
-                  id="login-password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter your password"
-                />
-              </div>
-              <Button
-                onClick={handleLogin}
-                disabled={isLoading}
-                className="w-full"
-              >
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="login-password">Password</Label>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full"
+                >
+                  {isLoading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
@@ -209,34 +209,38 @@ const Auth = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="signup-email">Email</Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password">Password</Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                  />
-                </div>
-                <Button
-                  onClick={handleBasicSignup}
-                  disabled={isLoading}
-                  className="w-full"
-                  variant="outline"
-                >
-                  {isLoading ? 'Creating Account...' : 'Quick Sign Up'}
-                </Button>
+                <form onSubmit={handleBasicSignup} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-email">Email</Label>
+                    <Input
+                      id="signup-email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-password">Password</Label>
+                    <Input
+                      id="signup-password"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      required
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {isLoading ? 'Creating Account...' : 'Quick Sign Up'}
+                  </Button>
+                </form>
               </div>
             </TabsContent>
           </Tabs>
