@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -516,10 +517,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
             )}
 
-            <div className="relative mx-auto mb-2 h-60 flex items-center justify-center">
-              <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
+            <div className="relative mx-auto mb-4 h-44 flex items-center justify-center">
+              <Avatar className="h-40 w-40 border-3 border-white/70 shadow-lg">
                 <AvatarImage src={player.photoUrl} alt={determinedDisplayName} />
-                <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
+                <AvatarFallback className="text-2xl bg-white/30 text-white font-bold">
                   {player.name ? getInitials(player.name) : 'PL'}
                 </AvatarFallback>
               </Avatar>
