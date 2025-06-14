@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,8 @@ import { EnhancedSignupModal } from '@/components/auth/EnhancedSignupModal';
 import { LogIn, UserPlus } from 'lucide-react';
 
 const Auth = () => {
+  console.log(`[Auth.tsx] Component is EXECUTING. Timestamp: ${new Date().toISOString()}`);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -21,12 +24,15 @@ const Auth = () => {
   const { user, loading } = useAuth();
 
   // Directly parse the invitation code from the window's URL search parameters
-  const invitationCode = new URLSearchParams(window.location.search).get('invitation');
+  const searchParams = new URLSearchParams(window.location.search);
+  const invitationCode = searchParams.get('invitation');
 
-  console.log(`[Auth.tsx] Component is rendering. Full URL: ${window.location.href}`);
-  console.log(`[Auth.tsx] Directly parsed invitation code: '${invitationCode}'`);
+  console.log(`[Auth.tsx] Full URL: ${window.location.href}`);
+  console.log(`[Auth.tsx] Search params string: ${searchParams.toString()}`);
+  console.log(`[Auth.tsx] Parsed invitation code: '${invitationCode}'`);
 
   useEffect(() => {
+    console.log('[Auth.tsx] useEffect triggered. Dependencies:', { user: !!user, loading, invitationCode });
     // Wait for auth loading to finish before redirecting
     if (!loading && user && !invitationCode) {
       console.log('[Auth.tsx] User is logged in and no invitation code, redirecting to /dashboard');
@@ -36,7 +42,7 @@ const Auth = () => {
 
   // If there's an invitation code, render the modal directly.
   if (invitationCode) {
-    console.log('[Auth.tsx] Invitation code found, rendering EnhancedSignupModal.');
+    console.log('[Auth.tsx] INVITATION CODE DETECTED. Rendering EnhancedSignupModal.');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <EnhancedSignupModal
@@ -48,8 +54,11 @@ const Auth = () => {
     );
   }
 
+  console.log('[Auth.tsx] No invitation code. Proceeding to render login/signup tabs.');
+
   // Avoid rendering login form while auth state is loading or if user is logged in
   if (loading || user) {
+    console.log(`[Auth.tsx] Auth is loading (${loading}) or user exists (${!!user}). Rendering null.`);
     return null; // Or a loading spinner
   }
 
@@ -94,7 +103,7 @@ const Auth = () => {
     }
   };
 
-  console.log('[Auth.tsx] No invitation code, rendering standard login/signup tabs.');
+  console.log('[Auth.tsx] Rendering standard login/signup UI.');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
@@ -111,11 +120,11 @@ const Auth = () => {
               <TabsTrigger value="login">
                 <LogIn className="h-4 w-4 mr-2" />
                 Login
-              </TabsTrigger>
+              </Tabs-Trigger>
               <TabsTrigger value="signup">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Sign Up
-              </TabsTrigger>
+              </Tabs-Trigger>
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">
