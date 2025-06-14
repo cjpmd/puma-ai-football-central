@@ -305,6 +305,21 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     backgroundPosition: 'center'
   };
 
+  // Helper: determine card face z-index and pointer events
+  const getFaceStyle = (face: "front" | "back") => {
+    if (face === "front") {
+      return {
+        zIndex: flipped ? 10 : 20,
+        pointerEvents: flipped ? "none" : "auto"
+      };
+    }
+    // back
+    return {
+      zIndex: flipped ? 20 : 10,
+      pointerEvents: flipped ? "auto" : "none"
+    };
+  };
+
   // Container with perspective for 3D effect
   return (
     <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
@@ -318,13 +333,12 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         {/* Front of card */}
         <div 
           className={
-            `absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden
-            ${!flipped ? 'z-20' : 'z-10'}`
+            `absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`
           }
           style={{
             ...cardStyle,
-            backfaceVisibility: 'hidden',
-            pointerEvents: flipped ? 'none' : 'auto'
+            ...getFaceStyle("front"),
+            backfaceVisibility: 'hidden'
           }}
         >
           {/* Settings Button */}
@@ -476,29 +490,23 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         {/* Back of card - management view */}
         <div 
           className={
-            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden
-            ${flipped ? 'z-20' : 'z-10'}`
+            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden`
           }
           style={{
+            ...getFaceStyle("back"),
             backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
-            pointerEvents: flipped ? 'auto' : 'none'
+            transform: 'rotateY(180deg)'
           }}
         >
           {/* Header: place Back and Close Buttons at top-right like the Front */}
           <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
             <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
-            {/* Right-side container for Close and Back buttons */}
             <div className="absolute right-3 top-3 flex space-x-2">
               {onClose && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onClose();
-                  }}
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}
                   className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
                   style={{ pointerEvents: 'auto' }}
                 >
@@ -508,11 +516,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setFlipped(false);
-                }}
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setFlipped(false); }}
                 className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
                 style={{ pointerEvents: 'auto' }}
                 title="Back to card front"
