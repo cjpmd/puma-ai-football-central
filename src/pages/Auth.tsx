@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,16 +23,19 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   
   const invitationCode = searchParams.get('invitation');
+  console.log(`[Auth.tsx] Checking for invitation. Code: ${invitationCode}, Search: ${window.location.search}`);
 
   useEffect(() => {
     // Only redirect to dashboard if the user is logged in AND there's no invitation code.
     if (user && !invitationCode) {
+      console.log('[Auth.tsx] User is logged in and no invitation code, redirecting to /dashboard');
       navigate('/dashboard');
     }
   }, [user, navigate, invitationCode]);
 
   // If there's an invitation code, show the invitation signup modal and nothing else.
   if (invitationCode) {
+    console.log('[Auth.tsx] Invitation code found, rendering EnhancedSignupModal directly.');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <EnhancedSignupModal
@@ -58,6 +62,7 @@ const Auth = () => {
     }
 
     setIsLoading(true);
+    console.log('[Auth.tsx] Starting login process.');
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -72,6 +77,7 @@ const Auth = () => {
         description: 'You have been successfully logged in.',
       });
       
+      console.log('[Auth.tsx] Login successful, redirecting to /dashboard.');
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
@@ -88,6 +94,8 @@ const Auth = () => {
   if (user && !invitationCode) {
     return null; // Will redirect via useEffect
   }
+  
+  console.log('[Auth.tsx] No invitation code, rendering standard login/signup tabs.');
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
