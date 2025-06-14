@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Plus } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -65,6 +65,46 @@ export const UserManagementSystem = () => {
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
+
+  const createMissingProfile = async () => {
+    try {
+      console.log('Creating missing profile manually...');
+      
+      const specificUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
+      
+      // Try to create the profile with default values
+      const { error: createError } = await supabase
+        .from('profiles')
+        .insert([{
+          id: specificUserId,
+          name: 'David McDonald', // Default name based on email
+          email: 'dcjpm001@gmail.com',
+          roles: ['staff'] // Default role
+        }]);
+
+      if (createError) {
+        console.error('Error creating profile:', createError);
+        throw createError;
+      }
+
+      console.log('Profile created successfully');
+      
+      // Reload users after creation
+      await loadUsers();
+      
+      toast({
+        title: 'Success',
+        description: 'Missing profile created successfully.',
+      });
+    } catch (error: any) {
+      console.error('Error creating missing profile:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create missing profile',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const syncMissingProfiles = async () => {
     try {
@@ -422,6 +462,14 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={createMissingProfile}
+            variant="outline"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Missing Profile
+          </Button>
           <Button
             onClick={syncMissingProfiles}
             variant="outline"
