@@ -1,5 +1,3 @@
-
-
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -307,11 +305,167 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     backgroundPosition: 'center'
   };
 
-  if (flipped) {
-    // Back of card - management view
-    return (
-      <div className="w-[300px] h-[450px] mx-auto">
-        <div className="w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden">
+  // Container with perspective for 3D effect
+  return (
+    <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
+      <div 
+        className={`relative w-full h-full transition-transform duration-700 transform-style-preserve-3d ${
+          flipped ? 'rotate-y-180' : ''
+        }`}
+      >
+        {/* Front of card */}
+        <div 
+          className={`absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden backface-hidden`}
+          style={cardStyle}
+        >
+          {/* Settings Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setFlipped(true)}
+            className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+          >
+            <Settings className="h-4 w-4 text-white" />
+          </Button>
+
+          {/* Close Button */}
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+            >
+              <X className="h-4 w-4 text-white" />
+            </Button>
+          )}
+
+          {/* Missing Info Alerts */}
+          {hasAlerts && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
+              {missingInfoAlerts.slice(0, 3).map((alert, index) => {
+                const IconComponent = alert.icon;
+                return (
+                  <div key={index} title={alert.message} className="bg-orange-500/90 rounded-full p-1">
+                    <IconComponent className="h-3 w-3 text-white" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Captain Badge with Count */}
+          {isCaptain && (
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-yellow-500/90 rounded-full px-2 py-1">
+              <Crown className="h-4 w-4 text-white" />
+              <span className="text-white text-xs font-bold">{captainCount}</span>
+            </div>
+          )}
+
+          {/* POTM Badge with Count */}
+          {potmCount > 0 && (
+            <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-purple-500/90 rounded-full px-2 py-1">
+              <Award className="h-4 w-4 text-white" />
+              <span className="text-white text-xs font-bold">{potmCount}</span>
+            </div>
+          )}
+
+          <div className="p-4 h-full flex flex-col relative z-10">
+            {/* Position Badges (Left Side) - Only show if positions exist and has 3+ positions */}
+            {topPositions.length >= 3 && (
+              <div className="absolute left-2 top-16 space-y-1">
+                {topPositions.map((pos, idx) => (
+                  <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
+                    {pos.display}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Player Photo - Positioned in top two-thirds */}
+            <div className="relative mx-auto mb-2 mt-8 flex-1 flex items-center justify-center">
+              <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
+                <AvatarImage src={player.photoUrl} alt={displayName} />
+                <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
+                  {player.name ? getInitials(player.name) : 'PL'}
+                </AvatarFallback>
+              </Avatar>
+              {onUpdatePhoto && (
+                <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
+                  <Camera className="h-4 w-4" />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                </label>
+              )}
+            </div>
+
+            {/* Bottom Section - No shaded background, direct on card background */}
+            <div className="space-y-2">
+              {/* Player Name */}
+              <div className="text-center">
+                <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
+                  {displayName}
+                </h1>
+              </div>
+
+              {/* FIFA Stats */}
+              <div className="flex justify-between items-center px-1">
+                {funStatLabels.map(stat => (
+                  <div key={stat.key} className="text-center flex-1">
+                    <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
+                    <div className="text-white text-lg font-bold drop-shadow-md">
+                      {funStats[stat.key] || '--'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Play Style Icons - Reduced margin-top */}
+              <div className="flex justify-center gap-2 mt-1">
+                {selectedPlayStyles.map((style, index) => (
+                  <div key={index} className="text-2xl drop-shadow-lg">
+                    {getPlayStyleIcon(style)}
+                  </div>
+                ))}
+              </div>
+
+              {/* Bottom Info */}
+              <div className="flex justify-between items-center text-sm font-bold">
+                <span 
+                  className="text-gray-800"
+                  style={{
+                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  #{player.squadNumber || 'XX'}
+                </span>
+                <span 
+                  className="text-gray-800"
+                  style={{
+                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  Age {age}
+                </span>
+                <span 
+                  className="text-gray-800"
+                  style={{
+                    textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
+                  }}
+                >
+                  {isGoalkeeper ? 'GK' : 'OUTFIELD'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Back of card - management view */}
+        <div className="absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden backface-hidden rotate-y-180">
           <div className="h-full flex flex-col">
             {/* Header with Back Button and Close Button */}
             <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800">
@@ -499,162 +653,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           </div>
         </div>
       </div>
-    );
-  }
-
-  // Front of card - Updated layout without shaded box
-  return (
-    <div className="w-[300px] h-[450px] mx-auto">
-      <div 
-        className={`w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden relative`}
-        style={cardStyle}
-      >
-        {/* Settings Button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setFlipped(true)}
-          className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
-        >
-          <Settings className="h-4 w-4 text-white" />
-        </Button>
-
-        {/* Close Button */}
-        {onClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
-          >
-            <X className="h-4 w-4 text-white" />
-          </Button>
-        )}
-
-        {/* Missing Info Alerts */}
-        {hasAlerts && (
-          <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
-            {missingInfoAlerts.slice(0, 3).map((alert, index) => {
-              const IconComponent = alert.icon;
-              return (
-                <div key={index} title={alert.message} className="bg-orange-500/90 rounded-full p-1">
-                  <IconComponent className="h-3 w-3 text-white" />
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Captain Badge with Count */}
-        {isCaptain && (
-          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-yellow-500/90 rounded-full px-2 py-1">
-            <Crown className="h-4 w-4 text-white" />
-            <span className="text-white text-xs font-bold">{captainCount}</span>
-          </div>
-        )}
-
-        {/* POTM Badge with Count */}
-        {potmCount > 0 && (
-          <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-purple-500/90 rounded-full px-2 py-1">
-            <Award className="h-4 w-4 text-white" />
-            <span className="text-white text-xs font-bold">{potmCount}</span>
-          </div>
-        )}
-
-        <div className="p-4 h-full flex flex-col relative z-10">
-          {/* Position Badges (Left Side) - Only show if positions exist and has 3+ positions */}
-          {topPositions.length >= 3 && (
-            <div className="absolute left-2 top-16 space-y-1">
-              {topPositions.map((pos, idx) => (
-                <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
-                  {pos.display}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Player Photo - Positioned in top two-thirds */}
-          <div className="relative mx-auto mb-2 mt-8 flex-1 flex items-center justify-center">
-            <Avatar className="h-52 w-52 border-3 border-white/70 shadow-lg">
-              <AvatarImage src={player.photoUrl} alt={displayName} />
-              <AvatarFallback className="text-3xl bg-white/30 text-white font-bold">
-                {player.name ? getInitials(player.name) : 'PL'}
-              </AvatarFallback>
-            </Avatar>
-            {onUpdatePhoto && (
-              <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
-                <Camera className="h-4 w-4" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
-
-          {/* Bottom Section - No shaded background, direct on card background */}
-          <div className="space-y-2">
-            {/* Player Name */}
-            <div className="text-center">
-              <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
-                {displayName}
-              </h1>
-            </div>
-
-            {/* FIFA Stats */}
-            <div className="flex justify-between items-center px-1">
-              {funStatLabels.map(stat => (
-                <div key={stat.key} className="text-center flex-1">
-                  <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
-                  <div className="text-white text-lg font-bold drop-shadow-md">
-                    {funStats[stat.key] || '--'}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Play Style Icons - Reduced margin-top */}
-            <div className="flex justify-center gap-2 mt-1">
-              {selectedPlayStyles.map((style, index) => (
-                <div key={index} className="text-2xl drop-shadow-lg">
-                  {getPlayStyleIcon(style)}
-                </div>
-              ))}
-            </div>
-
-            {/* Bottom Info */}
-            <div className="flex justify-between items-center text-sm font-bold">
-              <span 
-                className="text-gray-800"
-                style={{
-                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                #{player.squadNumber || 'XX'}
-              </span>
-              <span 
-                className="text-gray-800"
-                style={{
-                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                Age {age}
-              </span>
-              <span 
-                className="text-gray-800"
-                style={{
-                  textShadow: '2px 2px 0 white, -2px -2px 0 white, 2px -2px 0 white, -2px 2px 0 white, 1px 1px 2px rgba(0,0,0,0.5)'
-                }}
-              >
-                {isGoalkeeper ? 'GK' : 'OUTFIELD'}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
-
