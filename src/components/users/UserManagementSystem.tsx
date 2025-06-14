@@ -76,10 +76,7 @@ export const UserManagementSystem = () => {
         throw new Error('Not authenticated');
       }
 
-      // For now, we'll create a profile for any invited user who doesn't have one
-      // This is a workaround since we can't directly access auth.users table
-      
-      // Get all pending invitations that have been accepted but user might not have profile
+      // Get all accepted invitations
       const { data: invitations, error: invError } = await supabase
         .from('user_invitations')
         .select('*')
@@ -119,6 +116,43 @@ export const UserManagementSystem = () => {
             } else {
               console.log('Profile created successfully for:', invitation.email);
             }
+          } else if (existingProfile) {
+            console.log('Profile already exists for:', invitation.email);
+          }
+        }
+      }
+
+      // Also try to create a profile for the specific user ID if it doesn't exist
+      const specificUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
+      const { data: specificProfile, error: specificError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', specificUserId)
+        .single();
+
+      if (specificError && specificError.code === 'PGRST116') {
+        // Try to find invitation for this user
+        const { data: userInvitation } = await supabase
+          .from('user_invitations')
+          .select('*')
+          .eq('accepted_by', specificUserId)
+          .single();
+          
+        if (userInvitation) {
+          console.log('Creating profile for specific user:', specificUserId);
+          const { error: createError } = await supabase
+            .from('profiles')
+            .insert([{
+              id: specificUserId,
+              name: userInvitation.name,
+              email: userInvitation.email,
+              roles: [userInvitation.role]
+            }]);
+
+          if (createError) {
+            console.error('Error creating specific profile:', createError);
+          } else {
+            console.log('Specific profile created successfully');
           }
         }
       }
@@ -145,10 +179,6 @@ export const UserManagementSystem = () => {
       setLoading(true);
       console.log('Loading users...');
 
-      // First, let's get all users from auth.users (this requires admin privileges)
-      // Since we can't directly query auth.users, we'll work with profiles
-      // and also check for any users who might have signed up but don't have profiles yet
-
       // Get all profiles with basic info
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -161,6 +191,28 @@ export const UserManagementSystem = () => {
       }
 
       console.log('Profiles found:', profiles?.length || 0);
+      console.log('All profiles:', profiles);
+
+      // Check specifically for the user we're looking for
+      const specificUser = profiles?.find(p => p.id === '51e6114e-0816-4a17-93c2-c57c03bedb92');
+      if (specificUser) {
+        console.log('Found specific user in profiles:', specificUser);
+      } else {
+        console.log('Specific user NOT found in profiles');
+        
+        // Check if they have an accepted invitation
+        const { data: invitation } = await supabase
+          .from('user_invitations')
+          .select('*')
+          .eq('accepted_by', '51e6114e-0816-4a17-93c2-c57c03bedb92')
+          .single();
+          
+        if (invitation) {
+          console.log('User has accepted invitation but no profile:', invitation);
+        } else {
+          console.log('No invitation found for specific user');
+        }
+      }
 
       if (!profiles || profiles.length === 0) {
         console.log('No profiles found');
