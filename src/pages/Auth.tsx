@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,11 +18,13 @@ const Auth = () => {
   const [showEnhancedSignup, setShowEnhancedSignup] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { user, loading } = useAuth(); // Use loading state
-  const [searchParams] = useSearchParams();
-  
-  const invitationCode = searchParams.get('invitation');
-  console.log(`[Auth.tsx] Page loaded. Invitation code: '${invitationCode}'`);
+  const { user, loading } = useAuth();
+
+  // Directly parse the invitation code from the window's URL search parameters
+  const invitationCode = new URLSearchParams(window.location.search).get('invitation');
+
+  console.log(`[Auth.tsx] Component is rendering. Full URL: ${window.location.href}`);
+  console.log(`[Auth.tsx] Directly parsed invitation code: '${invitationCode}'`);
 
   useEffect(() => {
     // Wait for auth loading to finish before redirecting
