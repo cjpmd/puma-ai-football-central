@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { EnhancedSignupModal } from '@/components/auth/EnhancedSignupModal';
+import { InvitationSignupModal } from '@/components/auth/InvitationSignupModal';
 import { LogIn, UserPlus } from 'lucide-react';
 
 const Auth = () => {
@@ -31,7 +31,19 @@ const Auth = () => {
     }
   }, [user, navigate]);
 
-  // Auto-open enhanced signup if invitation code is present
+  // If there's an invitation code, show the simplified invitation modal
+  if (invitationCode) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <InvitationSignupModal
+          isOpen={true}
+          onClose={() => navigate('/auth')}
+          invitationCode={invitationCode}
+        />
+      </div>
+    );
+  }
+
   useEffect(() => {
     if (invitationCode) {
       setShowEnhancedSignup(true);
@@ -230,7 +242,7 @@ const Auth = () => {
       <EnhancedSignupModal
         isOpen={showEnhancedSignup}
         onClose={() => setShowEnhancedSignup(false)}
-        initialInvitationCode={invitationCode}
+        initialInvitationCode=""
       />
     </div>
   );
