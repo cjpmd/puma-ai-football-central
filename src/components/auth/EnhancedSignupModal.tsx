@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -35,11 +36,21 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   const [teamName, setTeamName] = useState('');
   const { toast } = useToast();
 
+  // Set default tab to invitation if we have an invitation code
+  useEffect(() => {
+    if (initialInvitationCode) {
+      console.log('Setting signup method to invitation due to initial code:', initialInvitationCode);
+      setSignupMethod('invitation');
+      setInvitationCode(initialInvitationCode);
+    }
+  }, [initialInvitationCode]);
+
   // Check for invitation details when invitation code is provided
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      if (initialInvitationCode || invitationCode) {
-        const codeToUse = initialInvitationCode || invitationCode;
+      const codeToCheck = invitationCode || initialInvitationCode;
+      if (codeToCheck) {
+        console.log('Fetching invitation details for code:', codeToCheck);
         try {
           const { data, error } = await supabase
             .from('user_invitations')
@@ -47,18 +58,20 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
               *,
               teams!inner(name)
             `)
-            .eq('invitation_code', codeToUse)
+            .eq('invitation_code', codeToCheck)
             .eq('status', 'pending')
             .single();
 
           if (data && !error) {
+            console.log('Invitation details found:', data);
             setInvitationDetails(data);
             setName(data.name || '');
             setEmail(data.email || '');
             setTeamName((data as any).teams?.name || '');
-            setInvitationCode(codeToUse);
-            // Auto-switch to invitation tab when invitation details are found
+            // Ensure we're on the invitation tab
             setSignupMethod('invitation');
+          } else {
+            console.log('No invitation details found:', error);
           }
         } catch (error) {
           console.error('Error fetching invitation details:', error);
@@ -67,16 +80,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     };
 
     fetchInvitationDetails();
-  }, [initialInvitationCode, invitationCode]);
-
-  // Auto-set default tab based on invitation code - prioritize invitation if code exists
-  useEffect(() => {
-    if (initialInvitationCode) {
-      setSignupMethod('invitation');
-    } else if (!initialInvitationCode && !invitationDetails) {
-      setSignupMethod('team_code');
-    }
-  }, [initialInvitationCode, invitationDetails]);
+  }, [invitationCode, initialInvitationCode]);
 
   const handleSignup = async () => {
     if (!email || !password || !name) {
@@ -250,6 +254,9 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     return 'Create Account';
   };
 
+  // Check if we should disable fields for invitation signup
+  const isInvitationWithDetails = signupMethod === 'invitation' && invitationDetails;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
@@ -291,7 +298,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your full name"
                 required
-                disabled={signupMethod === 'invitation' && !!invitationDetails}
+                disabled={isInvitationWithDetails}
               />
             </div>
 
@@ -304,7 +311,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                disabled={signupMethod === 'invitation' && !!invitationDetails}
+                disabled={isInvitationWithDetails}
               />
             </div>
 
