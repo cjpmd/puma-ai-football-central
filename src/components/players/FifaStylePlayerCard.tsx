@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -594,7 +595,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           </div>
 
           {/* Bottom Section - No shaded background, direct on card background */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* Player Name */}
             <div className="text-center">
               <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
@@ -614,8 +615,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ))}
             </div>
 
-            {/* Play Style Icons */}
-            <div className="flex justify-center gap-2">
+            {/* Play Style Icons - Reduced margin-top */}
+            <div className="flex justify-center gap-2 mt-1">
               {selectedPlayStyles.map((style, index) => (
                 <div key={index} className="text-2xl drop-shadow-lg">
                   {getPlayStyleIcon(style)}
@@ -656,3 +657,4 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     </div>
   );
 };
+
