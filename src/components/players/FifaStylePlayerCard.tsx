@@ -534,15 +534,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   />
                 </label>
               )}
-              {onDeletePhoto && player.photoUrl && canManageCard && (
-                <button 
-                  onClick={(e) => { e.stopPropagation(); onDeletePhoto(player); }}
-                  className="absolute -bottom-2 -left-2 bg-red-600/90 text-white rounded-full p-2 cursor-pointer hover:bg-red-700 transition-colors shadow-lg"
-                  title="Delete Photo"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              )}
             </div>
 
             <div className="space-y-1">
@@ -604,7 +595,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           }}
         >
           {/* Header: place Back and Close Buttons at top-right like the Front */}
-          {/* ... keep existing code (back of card header with close and back buttons) ... */}
           <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
             <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
             <div className="absolute right-3 top-3 flex space-x-2">
