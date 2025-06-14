@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,6 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      // Use the component's internal invitationCode state, which is initialized by the prop
       if (invitationCode) {
         try {
           const { data: invitation, error: invitationError } = await supabase
@@ -40,8 +40,6 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             .single();
 
           if (invitationError || !invitation) {
-            // Don't toast here, as the user might be typing the code.
-            // Clear details if code becomes invalid.
             setInvitationDetails(null);
             setName('');
             setEmail('');
@@ -67,7 +65,6 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
           console.error('Error fetching invitation details:', error);
         }
       } else {
-        // If code is cleared, reset all fields
         setInvitationDetails(null);
         setName('');
         setEmail('');
