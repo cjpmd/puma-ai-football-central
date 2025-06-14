@@ -322,6 +322,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     };
   };
 
+  // --- Handler for Player Action buttons ---
+  const handleButtonAction = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    handler?: (player: Player) => void,
+    actionName?: string
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (handler) {
+      handler(player);
+    } else if (toast) {
+      toast({
+        title: "No handler implemented",
+        description: `${actionName || "This action"} is not available.`,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Container with perspective for 3D effect
   return (
     <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
