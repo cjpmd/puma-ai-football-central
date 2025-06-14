@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { userInvitationService, UserInvitation } from '@/services/userInvitationService';
 import { toast } from 'sonner';
+import { Trash2 } from 'lucide-react';
 
 export const InvitationResendPanel: React.FC = () => {
   const [invitations, setInvitations] = useState<UserInvitation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadInvitations();
@@ -40,6 +42,27 @@ export const InvitationResendPanel: React.FC = () => {
       toast.error('Failed to resend invitation');
     } finally {
       setResendingId(null);
+    }
+  };
+
+  const deleteInvitation = async (invitation: UserInvitation) => {
+    setDeletingId(invitation.id);
+    try {
+      const { error } = await supabase
+        .from('user_invitations')
+        .delete()
+        .eq('id', invitation.id);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
+      toast.success(`Invitation for ${invitation.email} deleted`);
+    } catch (error) {
+      console.error('Error deleting invitation:', error);
+      toast.error('Failed to delete invitation');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -82,16 +105,33 @@ export const InvitationResendPanel: React.FC = () => {
                     Created: {new Date(invitation.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                {invitation.status === 'pending' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => resendInvitation(invitation)}
-                    disabled={resendingId === invitation.id}
-                  >
-                    {resendingId === invitation.id ? 'Sending...' : 'Resend'}
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {invitation.status === 'pending' && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resendInvitation(invitation)}
+                        disabled={resendingId === invitation.id || deletingId === invitation.id}
+                      >
+                        {resendingId === invitation.id ? 'Sending...' : 'Resend'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => deleteInvitation(invitation)}
+                        disabled={deletingId === invitation.id || resendingId === invitation.id}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        {deletingId === invitation.id ? (
+                          'Deleting...'
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
