@@ -29,13 +29,18 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
   const { toast } = useToast();
 
   console.log('InvitationSignupModal - invitationCode:', invitationCode);
+  console.log('InvitationSignupModal - isOpen:', isOpen);
 
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      if (!invitationCode) return;
+      if (!invitationCode) {
+        console.log('No invitation code provided');
+        return;
+      }
       
       console.log('Fetching invitation details for code:', invitationCode);
       try {
+        // First, get the invitation
         const { data: invitation, error: invitationError } = await supabase
           .from('user_invitations')
           .select('*')
@@ -43,8 +48,18 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
           .eq('status', 'pending')
           .single();
 
-        if (invitationError || !invitation) {
-          console.log('No invitation found or error:', invitationError);
+        if (invitationError) {
+          console.log('Error fetching invitation:', invitationError);
+          toast({
+            title: 'Invalid Invitation',
+            description: 'The invitation code is invalid or has expired',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (!invitation) {
+          console.log('No invitation found');
           toast({
             title: 'Invalid Invitation',
             description: 'The invitation code is invalid or has expired',
@@ -84,8 +99,10 @@ export const InvitationSignupModal: React.FC<InvitationSignupModalProps> = ({
       }
     };
 
-    fetchInvitationDetails();
-  }, [invitationCode, toast]);
+    if (isOpen) {
+      fetchInvitationDetails();
+    }
+  }, [invitationCode, isOpen, toast]);
 
   const handleSignup = async () => {
     if (!email || !password || !name) {

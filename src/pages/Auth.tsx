@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -25,14 +26,17 @@ const Auth = () => {
   // Get invitation code from URL if present
   const invitationCode = searchParams.get('invitation') || '';
 
+  console.log('Auth page - invitationCode from URL:', invitationCode);
+
   useEffect(() => {
     if (user) {
       navigate('/dashboard');
     }
   }, [user, navigate]);
 
-  // If there's an invitation code, show the simplified invitation modal
+  // If there's an invitation code, show the invitation signup modal
   if (invitationCode) {
+    console.log('Showing InvitationSignupModal for code:', invitationCode);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <InvitationSignupModal
