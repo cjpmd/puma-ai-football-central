@@ -419,7 +419,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                       id: selectedPlayer.id,
                       data: { 
                         status: 'left', 
-                        leave_date: leaveDate, 
+                        leaveDate: leaveDate, // Corrected from leave_date
                         leave_comments: leaveComments 
                       }
                     });
