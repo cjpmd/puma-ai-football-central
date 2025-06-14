@@ -132,7 +132,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const { user, profile, loading: authLoading } = useAuth();
   const { hasPermission, loading: authzLoading } = useAuthorization();
   const [canManageCard, setCanManageCard] = useState(false);
-  const [isUserStaffContext, setIsUserStaffContext] = useState(false); // New state for staff context
+  const [isUserStaffContext, setIsUserStaffContext] = useState(false);
 
   // Updated parsePlayStyles function
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
@@ -176,7 +176,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
     setFunStats(player.funStats || {});
     setSelectedDesign(player.cardDesignId || "goldBallon");
-  }, [player.playStyle, player.funStats, player.cardDesignId, player]);
+  }, [player.playStyle, player.funStats, player.cardDesignId, selectedPlayStyles, player]);
 
   // useEffect to determine if the current user can manage this card and if they are staff
   useEffect(() => {
@@ -228,11 +228,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     return age;
   };
 
-  // Get top 3 positions with minutes (excluding SUB)
+  // Get top 3 positions with minutes (excluding SUB and TBD)
   const getTopPositions = () => {
     const minutesByPosition = player.matchStats?.minutesByPosition || {};
     const filteredPositions = Object.entries(minutesByPosition)
-      .filter(([position]) => position !== 'SUB')
+      .filter(([position]) => position !== 'SUB' && position !== 'TBD') // Exclude SUB and TBD
       .map(([position, minutes]) => ({
         position,
         minutes: Number(minutes) || 0
@@ -395,7 +395,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     const isVisible = (face === "front" && !flipped) || (face === "back" && flipped);
     return {
       zIndex: isVisible ? 20 : 10,
-      pointerEvents: isVisible ? "auto" : "none",
+      pointerEvents: isVisible ? "auto" : "none" as AllowedPointerEvents,
     };
   };
 
@@ -504,7 +504,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           )}
 
           <div className="p-4 h-full flex flex-col relative z-10">
-            {topPositions.length >= 3 && (
+            {topPositions.length > 0 && ( // Changed condition from topPositions.length >= 3
               <div className="absolute left-2 top-16 space-y-1">
                 {topPositions.map((pos) => (
                   <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
@@ -561,7 +561,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               </div>
 
               {/* Modified text section at the bottom */}
-              <div className={`grid grid-cols-3 text-sm font-bold pt-2 ${currentDesign.textColor}`}>
+              <div className={`grid grid-cols-3 text-sm font-bold pt-3 ${currentDesign.textColor}`}>
                 <span className="text-left pl-1">
                   #{player.squadNumber || 'XX'}
                 </span>
@@ -714,7 +714,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onTransferPlayer, 'Transfer Player')}
                   title="Transfer Player"
-                  disabled={!onTransferPlayer || !isUserStaffContext} // Updated condition
+                  disabled={!onTransferPlayer || !isUserStaffContext}
                 >
                   <RefreshCw className="h-3 w-3" />
                 </Button>
@@ -725,7 +725,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
                   onClick={e => handleButtonAction(e, onLeaveTeam, 'Leave Team')}
                   title="Leave Team"
-                  disabled={!onLeaveTeam || !isUserStaffContext} // Updated condition
+                  disabled={!onLeaveTeam || !isUserStaffContext}
                 >
                   <UserMinus className="h-3 w-3" />
                 </Button>
