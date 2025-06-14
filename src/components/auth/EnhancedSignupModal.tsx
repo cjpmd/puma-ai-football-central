@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -240,8 +239,8 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     return 'Create Account';
   };
 
-  // If we have an invitation code and invitation details, show simplified invitation-only form
-  if (initialInvitationCode && invitationDetails) {
+  // If we have an invitation code, show simplified invitation-only form
+  if (initialInvitationCode) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-w-md">
@@ -288,14 +287,16 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
               />
             </div>
 
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm">Invitation Details</CardTitle>
-                <CardDescription className="text-xs">
-                  Your invitation code: {invitationCode}
-                </CardDescription>
-              </CardHeader>
-            </Card>
+            {invitationDetails && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Invitation Details</CardTitle>
+                  <CardDescription className="text-xs">
+                    Your invitation code: {invitationCode}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
 
             <Button
               onClick={handleSignup}
