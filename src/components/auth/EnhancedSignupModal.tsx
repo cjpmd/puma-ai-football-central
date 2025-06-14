@@ -153,6 +153,19 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
         <form onSubmit={handleSignup} className="space-y-4 mt-4">
           <div className="space-y-2">
+            <Label htmlFor="invitation-code">Invitation Code</Label>
+            <Input
+              id="invitation-code"
+              value={invitationCode}
+              onChange={(e) => setInvitationCode(e.target.value)}
+              placeholder="Enter invitation code"
+              required
+              disabled={!!initialInvitationCode}
+              className={!!initialInvitationCode ? "bg-gray-50" : ""}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="name">Full Name</Label>
             <Input
               id="name"
@@ -192,22 +205,9 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="invitation-code">Invitation Code</Label>
-            <Input
-              id="invitation-code"
-              value={invitationCode}
-              onChange={(e) => setInvitationCode(e.target.value)}
-              placeholder="Enter invitation code"
-              required
-              disabled={!!initialInvitationCode}
-              className={!!initialInvitationCode ? "bg-gray-50" : ""}
-            />
-          </div>
-
           <Button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || !invitationDetails}
             className="w-full"
           >
             {isLoading ? 'Creating Account...' : 'Create Account & Accept Invitation'}
