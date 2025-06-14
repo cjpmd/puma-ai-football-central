@@ -1,288 +1,545 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Search, Filter, Users, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { PlayerCard } from './PlayerCard';
-import { PlayerForm } from './PlayerForm';
-import { PlayerInvitationPrompt } from './PlayerInvitationPrompt';
-import { UserInvitationModal } from '@/components/users/UserInvitationModal';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
+import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
-import { toast } from 'sonner';
+import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud, Trash2 } from 'lucide-react';
+import { PlayerForm } from './PlayerForm';
+import { FifaStylePlayerCard } from './FifaStylePlayerCard';
+import { PlayerParentModal } from './PlayerParentModal';
+import { PlayerAttributesModal } from './PlayerAttributesModal';
+import { PlayerObjectivesModal } from './PlayerObjectivesModal';
+import { PlayerCommentsModal } from './PlayerCommentsModal';
+import { PlayerStatsModal } from './PlayerStatsModal';
+import { PlayerHistoryModal } from './PlayerHistoryModal';
+import { PlayerTransferForm } from './PlayerTransferForm';
+import { PlayerLeaveForm } from './PlayerLeaveForm';
 
 interface PlayerManagementProps {
   team: Team;
 }
 
 export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'outfield' | 'goalkeeper'>('all');
-  const [filterAvailability, setFilterAvailability] = useState<'all' | 'green' | 'amber' | 'red'>('all');
-  const [isAddingPlayer, setIsAddingPlayer] = useState(false);
+  const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
+  const [showPlayerForm, setShowPlayerForm] = useState(false);
+  const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
-  const [showInvitationPrompt, setShowInvitationPrompt] = useState(false);
-  const [showInvitationModal, setShowInvitationModal] = useState(false);
-  const [newlyCreatedPlayer, setNewlyCreatedPlayer] = useState<Player | null>(null);
-  const [invitationType, setInvitationType] = useState<'player' | 'parent'>('player');
+  const [activeModal, setActiveModal] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadPlayers();
-  }, [team.id]);
-
-  const loadPlayers = async () => {
-    try {
-      setLoading(true);
-      const playersData = await playersService.getActivePlayersByTeamId(team.id);
-      setPlayers(playersData);
-    } catch (error) {
-      console.error('Error loading players:', error);
-      toast.error('Failed to load players');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddPlayer = async (playerData: Partial<Player>) => {
-    try {
-      const newPlayer = await playersService.createPlayer(playerData);
-      setPlayers(prev => [...prev, newPlayer]);
-      setIsAddingPlayer(false);
-      setNewlyCreatedPlayer(newPlayer);
-      setShowInvitationPrompt(true);
-      toast.success('Player added successfully!');
-    } catch (error) {
-      console.error('Error adding player:', error);
-      toast.error('Failed to add player');
-    }
-  };
-
-  const handleUpdatePlayer = async (playerData: Partial<Player>) => {
-    if (!selectedPlayer) return;
-    
-    try {
-      const updatedPlayer = await playersService.updatePlayer(selectedPlayer.id, playerData);
-      setPlayers(prev => prev.map(p => p.id === selectedPlayer.id ? updatedPlayer : p));
-      setSelectedPlayer(null);
-      toast.success('Player updated successfully!');
-    } catch (error) {
-      console.error('Error updating player:', error);
-      toast.error('Failed to update player');
-    }
-  };
-
-  const handleInvitePlayer = () => {
-    setInvitationType('player');
-    setShowInvitationPrompt(false);
-    setShowInvitationModal(true);
-  };
-
-  const handleInviteParent = () => {
-    setInvitationType('parent');
-    setShowInvitationPrompt(false);
-    setShowInvitationModal(true);
-  };
-
-  const handleInvitationSent = () => {
-    setShowInvitationModal(false);
-    setNewlyCreatedPlayer(null);
-    toast.success(`Invitation sent successfully!`);
-  };
-
-  const handleSkipInvitation = () => {
-    setShowInvitationPrompt(false);
-    setNewlyCreatedPlayer(null);
-  };
-
-  const filteredPlayers = players.filter(player => {
-    const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         player.squadNumber.toString().includes(searchTerm);
-    const matchesType = filterType === 'all' || player.type === filterType;
-    const matchesAvailability = filterAvailability === 'all' || player.availability === filterAvailability;
-    
-    return matchesSearch && matchesType && matchesAvailability;
+  // Fetch active players
+  const { data: players = [], isLoading } = useQuery({
+    queryKey: ['active-players', team.id],
+    queryFn: () => playersService.getActivePlayersByTeamId(team.id),
   });
 
-  const getAvailabilityCounts = () => {
-    return {
-      green: players.filter(p => p.availability === 'green').length,
-      amber: players.filter(p => p.availability === 'amber').length,
-      red: players.filter(p => p.availability === 'red').length
-    };
+  // Create player mutation
+  const createPlayerMutation = useMutation({
+    mutationFn: (playerData: any) => playersService.createPlayer(playerData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+      setShowPlayerForm(false);
+      toast({
+        title: 'Player Added',
+        description: 'Player has been successfully added to the team.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add player',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Update player mutation
+  const updatePlayerMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Player> }) => 
+      playersService.updatePlayer(id, data),
+    onSuccess: (updatedPlayer) => { // updatedPlayer is the returned data from playersService.updatePlayer
+      queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+      // Update selectedPlayer if it's the one being edited, to reflect changes immediately on the card
+      if (selectedPlayer && selectedPlayer.id === updatedPlayer.id) {
+        setSelectedPlayer(updatedPlayer);
+      }
+      if (editingPlayer && editingPlayer.id === updatedPlayer.id) {
+        setEditingPlayer(updatedPlayer); // If editing in form, update that too
+      }
+      toast({
+        title: 'Player Updated',
+        description: 'Player information has been successfully updated.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update player',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Delete player photo mutation
+  const deletePlayerPhotoMutation = useMutation({
+    mutationFn: (player: Player) => playersService.deletePlayerPhoto(player),
+    onSuccess: (updatedPlayer) => {
+      queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+      if (selectedPlayer && selectedPlayer.id === updatedPlayer.id) {
+        setSelectedPlayer(prev => prev ? { ...prev, photoUrl: null } : null);
+      }
+      toast({
+        title: 'Photo Deleted',
+        description: `Photo for ${updatedPlayer.name} has been successfully deleted.`,
+      });
+    },
+    onError: (error: any, variables) => {
+      toast({
+        title: 'Error Deleting Photo',
+        description: error.message || `Failed to delete photo for ${variables.name}.`,
+        variant: 'destructive',
+      });
+    },
+  });
+
+  // Filter players based on search and subscription type
+  const filteredPlayers = players.filter(player => {
+    const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      player.squadNumber?.toString().includes(searchTerm);
+    
+    const matchesSubscription = subscriptionFilter === 'all' || 
+      player.subscriptionType === subscriptionFilter;
+    
+    return matchesSearch && matchesSubscription;
+  });
+
+  const handleModalOpen = (modal: string, player: Player) => {
+    console.log(`[PlayerManagement] handleModalOpen: Modal "${modal}" for player "${player.name}"`);
+    setSelectedPlayer(player);
+    setActiveModal(modal);
   };
 
-  const availabilityCounts = getAvailabilityCounts();
+  const handleClosePlayerForm = () => {
+    setShowPlayerForm(false);
+    setEditingPlayer(null);
+  };
 
-  if (loading) {
+  const handleModalClose = () => {
+    console.log("[PlayerManagement] handleModalClose called");
+    setSelectedPlayer(null);
+    setActiveModal(null);
+  };
+
+  const handlePlayerSubmit = (playerData: any) => {
+    if (editingPlayer) {
+      updatePlayerMutation.mutate({
+        id: editingPlayer.id,
+        data: playerData
+      }, {
+        onSuccess: (updatedPlayer) => { 
+          queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+          setEditingPlayer(null);
+          setShowPlayerForm(false);
+          toast({
+            title: 'Player Updated',
+            description: 'Player information has been successfully updated.',
+          });
+        }
+      });
+    } else {
+      createPlayerMutation.mutate({
+        ...playerData,
+        team_id: team.id
+      });
+    }
+  };
+
+  const handlePlayerUpdate = (updatedData: any) => {
+    if (!selectedPlayer) return;
+    
+    updatePlayerMutation.mutate({
+      id: selectedPlayer.id,
+      data: updatedData
+    });
+    // Modal close is handled by the specific modal's onClose or PlayerForm logic if it's a direct edit
+    // If this is a generic update from a modal, close it:
+    // handleModalClose(); // This might be too aggressive if called from PlayerForm, for example.
+  };
+
+  const handleEditPlayer = (player: Player) => {
+    console.log(`[PlayerManagement] handleEditPlayer called for player: ${player.name}`);
+    setEditingPlayer(player);
+    setShowPlayerForm(true);
+  };
+
+  const handleManageParents = (player: Player) => {
+    console.log(`[PlayerManagement] handleManageParents for player: ${player.name}`);
+    handleModalOpen('parents', player);
+  };
+  
+  const handleRemoveFromSquad = (player: Player) => {
+    console.log(`[PlayerManagement] handleRemoveFromSquad for player: ${player.name}`);
+    if (window.confirm(`Are you sure you want to remove ${player.name} from the squad? This usually means they are leaving the team.`)) {
+      updatePlayerMutation.mutate({ id: player.id, data: { status: 'inactive' } }); 
+       toast({
+         title: 'Player Removed (Marked Inactive)',
+         description: `${player.name} has been marked as inactive.`,
+       });
+    }
+  };
+
+  const handleUpdatePhoto = async (player: Player, file: File) => {
+    console.log(`[PlayerManagement] handleUpdatePhoto for player: ${player.name}`);
+    if (!player || !file) {
+      toast({ title: 'Upload Error', description: 'Player or file missing.', variant: 'destructive' });
+      return;
+    }
+    try {
+      toast({ title: 'Uploading Photo...', description: `Uploading ${file.name} for ${player.name}.` });
+      const newPhotoUrl = await playersService.uploadPlayerPhoto(player.id, file);
+      
+      updatePlayerMutation.mutate({ 
+        id: player.id, 
+        data: { photoUrl: newPhotoUrl } 
+      }, {
+        onSuccess: (updatedPlayer) => {
+          queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+          // If this player is currently selected for a modal or card view, update its state
+          if (selectedPlayer && selectedPlayer.id === player.id) {
+            setSelectedPlayer(prev => prev ? { ...prev, photoUrl: newPhotoUrl } : null);
+          }
+          // Update the player in the main 'players' list if possible, or rely on query invalidation
+          const currentPlayers = queryClient.getQueryData<Player[]>(['active-players', team.id]);
+          if (currentPlayers) {
+            const updatedPlayers = currentPlayers.map(p => p.id === player.id ? { ...p, photoUrl: newPhotoUrl } : p);
+            queryClient.setQueryData(['active-players', team.id], updatedPlayers);
+          }
+
+          toast({
+            title: 'Photo Updated',
+            description: `Photo for ${player.name} has been successfully updated.`,
+          });
+        },
+        onError: (error: any) => {
+          toast({
+            title: 'Photo Update Failed',
+            description: error.message || `Failed to save photo URL for ${player.name}.`,
+            variant: 'destructive',
+          });
+        }
+      });
+    } catch (error: any) {
+      console.error('Error uploading photo:', error);
+      toast({
+        title: 'Upload Failed',
+        description: error.message || 'An unexpected error occurred during photo upload.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
+    if (!playerToDeletePhoto.photoUrl) {
+      toast({ title: 'No Photo to Delete', description: 'This player does not have a photo.', variant: 'default' });
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto);
+    }
+  };
+
+  const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
+    console.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { funStats: stats }
+    });
+  };
+
+  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
+    console.log(`[PlayerManagement] handleSavePlayStyle for player: ${player.name}`, playStyles);
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { playStyle: JSON.stringify(playStyles) } // Ensure playStyle is stringified if stored as JSON string in DB
+    });
+  };
+
+  const handleSaveCardDesign = (player: Player, designId: string) => {
+    console.log(`[PlayerManagement] handleSaveCardDesign for player: ${player.name}`, designId);
+    updatePlayerMutation.mutate({
+      id: player.id,
+      data: { cardDesignId: designId }
+    });
+  };
+
+  // New Handlers for Modals
+  const handleManageAttributes = (player: Player) => {
+    console.log(`[PlayerManagement] handleManageAttributes for player: ${player.name}`);
+    handleModalOpen('attributes', player);
+  };
+
+  const handleManageObjectives = (player: Player) => {
+    console.log(`[PlayerManagement] handleManageObjectives for player: ${player.name}`);
+    handleModalOpen('objectives', player);
+  };
+
+  const handleManageComments = (player: Player) => {
+    console.log(`[PlayerManagement] handleManageComments for player: ${player.name}`);
+    handleModalOpen('comments', player);
+  };
+
+  const handleViewStats = (player: Player) => {
+    console.log(`[PlayerManagement] handleViewStats for player: ${player.name}`);
+    handleModalOpen('stats', player);
+  };
+
+  const handleViewHistory = (player: Player) => {
+    console.log(`[PlayerManagement] handleViewHistory for player: ${player.name}`);
+    handleModalOpen('history', player);
+  };
+
+  const handleTransferPlayer = (player: Player) => {
+    console.log(`[PlayerManagement] handleTransferPlayer for player: ${player.name}`);
+    handleModalOpen('transfer', player);
+  };
+
+  const handleLeaveTeam = (player: Player) => {
+    console.log(`[PlayerManagement] handleLeaveTeam for player: ${player.name}`);
+    handleModalOpen('leave', player);
+  };
+
+  if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-muted-foreground">Loading players...</div>
+      <div className="space-y-6">
+        <div className="text-center py-8">Loading players...</div>
       </div>
-    );
-  }
-
-  if (isAddingPlayer) {
-    return (
-      <PlayerForm
-        teamId={team.id}
-        onSubmit={handleAddPlayer}
-        onCancel={() => setIsAddingPlayer(false)}
-      />
-    );
-  }
-
-  if (selectedPlayer) {
-    return (
-      <PlayerForm
-        player={selectedPlayer}
-        teamId={team.id}
-        onSubmit={handleUpdatePlayer}
-        onCancel={() => setSelectedPlayer(null)}
-      />
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header with stats */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Squad Management</h2>
-          <p className="text-muted-foreground">{players.length} players in {team.name}</p>
-        </div>
-        
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-              {availabilityCounts.green} Available
-            </Badge>
-            <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-              <div className="w-2 h-2 bg-amber-500 rounded-full mr-1"></div>
-              {availabilityCounts.amber} Limited
-            </Badge>
-            <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-              <div className="w-2 h-2 bg-red-500 rounded-full mr-1"></div>
-              {availabilityCounts.red} Unavailable
-            </Badge>
-          </div>
-          
-          <Button onClick={() => setIsAddingPlayer(true)} className="bg-puma-blue-500 hover:bg-puma-blue-600">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Player
-          </Button>
-        </div>
-      </div>
-
-      {/* Search and filters */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Filter className="h-5 w-5" />
-            Filters
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            {team.name} Squad
           </CardTitle>
+          <CardDescription>
+            Manage your team's players with FIFA-style trading cards
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search by name or squad number..."
+                  placeholder="Search players..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-10"
                 />
               </div>
+              
+              <Select value={subscriptionFilter} onValueChange={setSubscriptionFilter}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by subscription" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Players</SelectItem>
+                  <SelectItem value="full_squad">Full Squad</SelectItem>
+                  <SelectItem value="training">Training Only</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Badge variant="secondary">
+                {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
+              </Badge>
+              
+              <Button onClick={() => { setEditingPlayer(null); setShowPlayerForm(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Player
+              </Button>
             </div>
-            
-            <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Players</SelectItem>
-                <SelectItem value="outfield">Outfield</SelectItem>
-                <SelectItem value="goalkeeper">Goalkeepers</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={filterAvailability} onValueChange={(value: any) => setFilterAvailability(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Filter by availability" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Availability</SelectItem>
-                <SelectItem value="green">Available</SelectItem>
-                <SelectItem value="amber">Limited</SelectItem>
-                <SelectItem value="red">Unavailable</SelectItem>
-              </SelectContent>
-            </Select>
+
+            {/* FIFA-Style Player Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
+              {filteredPlayers.map((player) => (
+                <FifaStylePlayerCard
+                  key={player.id}
+                  player={player}
+                  team={team}
+                  onEdit={handleEditPlayer}
+                  onManageParents={handleManageParents}
+                  onRemoveFromSquad={handleRemoveFromSquad}
+                  onUpdatePhoto={handleUpdatePhoto}
+                  onDeletePhoto={handleDeletePlayerPhoto}
+                  onSaveFunStats={handleSaveFunStats}
+                  onSavePlayStyle={handleSavePlayStyle}
+                  onSaveCardDesign={handleSaveCardDesign}
+                  onManageAttributes={handleManageAttributes}
+                  onManageObjectives={handleManageObjectives}
+                  onManageComments={handleManageComments}
+                  onViewStats={handleViewStats}
+                  onViewHistory={handleViewHistory}
+                  onTransferPlayer={handleTransferPlayer}
+                  onLeaveTeam={handleLeaveTeam}
+                />
+              ))}
+            </div>
+
+            {filteredPlayers.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                {searchTerm || subscriptionFilter !== 'all' ? 'No players found matching your filters.' : 'No players found for this team.'}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Players grid */}
-      {filteredPlayers.length === 0 ? (
-        <Card className="border-dashed border-2 border-muted">
-          <CardContent className="py-8 flex flex-col items-center justify-center text-center">
-            <div className="rounded-full bg-muted p-3 mb-4">
-              <Users className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="font-semibold text-lg mb-1">
-              {searchTerm || filterType !== 'all' || filterAvailability !== 'all' ? 'No players found' : 'No players yet'}
-            </h3>
-            <p className="text-muted-foreground mb-4 max-w-md">
-              {searchTerm || filterType !== 'all' || filterAvailability !== 'all' 
-                ? 'Try adjusting your search terms or filters.' 
-                : 'Get started by adding your first player to the squad.'
-              }
-            </p>
-            {!searchTerm && filterType === 'all' && filterAvailability === 'all' && (
-              <Button onClick={() => setIsAddingPlayer(true)} className="bg-puma-blue-500 hover:bg-puma-blue-600">
-                <Plus className="h-4 w-4 mr-2" />
-                Add First Player
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredPlayers.map((player) => (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              onEdit={() => setSelectedPlayer(player)}
-              onDelete={loadPlayers}
+      {/* Player Form Modal */}
+      {showPlayerForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-background text-foreground rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              onClick={handleClosePlayerForm}
+              aria-label="Close player form"
+            >
+              <X className="h-5 w-5" />
+            </Button>
+            <h2 className="text-xl font-bold mb-4">
+              {editingPlayer ? 'Edit Player' : 'Add New Player'}
+            </h2>
+            <PlayerForm
+              player={editingPlayer}
+              onSubmit={handlePlayerSubmit}
+              onCancel={handleClosePlayerForm}
+              teamId={team.id}
             />
-          ))}
+          </div>
         </div>
       )}
 
-      {/* Player Invitation Prompt */}
-      <PlayerInvitationPrompt
-        isOpen={showInvitationPrompt}
-        onClose={() => setShowInvitationPrompt(false)}
-        onInvitePlayer={handleInvitePlayer}
-        onInviteParent={handleInviteParent}
-        onSkip={handleSkipInvitation}
-        playerName={newlyCreatedPlayer?.name || ''}
-      />
+      {/* All Modals */}
+      {selectedPlayer && (
+        <>
+          <PlayerParentModal
+            player={selectedPlayer}
+            isOpen={activeModal === 'parents'} 
+            onClose={handleModalClose} 
+          />
+          
+          <PlayerAttributesModal
+            player={selectedPlayer}
+            isOpen={activeModal === 'attributes'}
+            onClose={handleModalClose}
+            onSave={(attributes) => handlePlayerUpdate({ attributes })}
+          />
+          
+          <PlayerObjectivesModal
+            player={selectedPlayer}
+            isOpen={activeModal === 'objectives'}
+            onClose={handleModalClose}
+            onSave={(objectives) => handlePlayerUpdate({ objectives })}
+          />
+          
+          <PlayerCommentsModal
+            player={selectedPlayer}
+            isOpen={activeModal === 'comments'}
+            onClose={handleModalClose}
+            onSave={(comments) => handlePlayerUpdate({ comments })}
+          />
+          
+          <PlayerStatsModal
+            player={selectedPlayer}
+            isOpen={activeModal === 'stats'}
+            onClose={handleModalClose}
+          />
+          
+          <PlayerHistoryModal
+            player={selectedPlayer}
+            isOpen={activeModal === 'history'}
+            onClose={handleModalClose}
+          />
 
-      {/* User Invitation Modal */}
-      <UserInvitationModal
-        isOpen={showInvitationModal}
-        onClose={() => setShowInvitationModal(false)}
-        onInviteSent={handleInvitationSent}
-        prefilledData={{
-          teamId: team.id,
-          playerId: newlyCreatedPlayer?.id
-        }}
-      />
+          {activeModal === 'transfer' && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-background text-foreground rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                  onClick={handleModalClose}
+                  aria-label="Close transfer form"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+                <PlayerTransferForm
+                  player={selectedPlayer}
+                  currentTeamId={team.id}
+                  onSubmit={() => {
+                    handleModalClose();
+                    queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+                  }}
+                  onCancel={handleModalClose}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeModal === 'leave' && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-background text-foreground rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative shadow-xl">
+                 <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+                  onClick={handleModalClose}
+                  aria-label="Close leave form"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+                <PlayerLeaveForm
+                  player={selectedPlayer}
+                  onSubmit={(leaveDate, leaveComments) => {
+                    if (!selectedPlayer) return;
+                    updatePlayerMutation.mutate({
+                      id: selectedPlayer.id,
+                      data: { 
+                        status: 'left', 
+                        leaveDate: leaveDate, 
+                        leaveComments: leaveComments 
+                      }
+                    }, {
+                      onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
+                        handleModalClose();
+                         toast({
+                           title: 'Player Left Team',
+                           description: `${selectedPlayer.name} has been marked as left.`,
+                         });
+                      }
+                    });
+                  }}
+                  onCancel={handleModalClose}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

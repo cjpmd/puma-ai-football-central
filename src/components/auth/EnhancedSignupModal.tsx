@@ -4,137 +4,77 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { userInvitationService } from '@/services/userInvitationService';
-import { UserPlus } from 'lucide-react';
+import { Users, UserPlus, Link, Hash } from 'lucide-react';
 
 interface EnhancedSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSignup?: () => void;
   initialInvitationCode?: string;
 }
 
 export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
   isOpen,
   onClose,
-  onSignup,
   initialInvitationCode = ''
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [role, setRole] = useState('');
   const [invitationCode, setInvitationCode] = useState(initialInvitationCode);
+  const [linkingCode, setLinkingCode] = useState('');
+  const [teamCode, setTeamCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [signupMethod, setSignupMethod] = useState<'invitation' | 'linking' | 'open' | 'team_code'>('open');
   const [invitationDetails, setInvitationDetails] = useState<any>(null);
   const [teamName, setTeamName] = useState('');
-  const [invitationError, setInvitationError] = useState<string>('');
   const { toast } = useToast();
 
-  console.log('EnhancedSignupModal rendered with:', { 
-    isOpen, 
-    initialInvitationCode, 
-    invitationCode,
-    email,
-    name,
-    invitationError
-  });
-
-  // Initialize invitation code
-  useEffect(() => {
-    console.log('Effect - initialInvitationCode changed:', initialInvitationCode);
-    if (initialInvitationCode) {
-      console.log('Setting invitation code from initial value');
-      setInvitationCode(initialInvitationCode);
-      setInvitationError('');
-    } else {
-      // Reset form when no invitation code
-      setInvitationCode('');
-      setInvitationDetails(null);
-      setEmail('');
-      setName('');
-      setTeamName('');
-      setInvitationError('');
-    }
-  }, [initialInvitationCode]);
-
-  // Fetch invitation details when we have an invitation code
+  // Check for invitation details when invitation code is provided
   useEffect(() => {
     const fetchInvitationDetails = async () => {
-      if (!invitationCode) {
-        console.log('No invitation code, clearing details');
-        setInvitationDetails(null);
-        setInvitationError('');
-        return;
-      }
+      if (initialInvitationCode) {
+        try {
+          const { data, error } = await supabase
+            .from('user_invitations')
+            .select(`
+              *,
+              teams!inner(name)
+            `)
+            .eq('invitation_code', initialInvitationCode)
+            .eq('status', 'pending')
+            .single();
 
-      console.log('Fetching invitation details for code:', invitationCode);
-      setInvitationError('');
-      
-      try {
-        // Check if invitation exists regardless of status
-        const { data: anyInvitation, error: anyError } = await supabase
-          .from('user_invitations')
-          .select(`
-            *,
-            teams!inner(name)
-          `)
-          .eq('invitation_code', invitationCode)
-          .single();
-
-        console.log('Invitation found:', anyInvitation, 'Error:', anyError);
-
-        if (anyError && anyError.code === 'PGRST116') {
-          // No invitation found at all
-          setInvitationError('Invalid invitation code - no invitation found');
-          setInvitationDetails(null);
-          return;
+          if (data && !error) {
+            setInvitationDetails(data);
+            setName(data.name || '');
+            setEmail(data.email || '');
+            setTeamName((data as any).teams?.name || '');
+            setSignupMethod('invitation');
+          }
+        } catch (error) {
+          console.error('Error fetching invitation details:', error);
         }
-
-        if (anyInvitation) {
-          console.log('Invitation found with status:', anyInvitation.status);
-          
-          if (anyInvitation.status === 'accepted') {
-            setInvitationError('This invitation has already been accepted');
-            setInvitationDetails(null);
-            return;
-          }
-          
-          if (anyInvitation.status === 'expired') {
-            setInvitationError('This invitation has expired');
-            setInvitationDetails(null);
-            return;
-          }
-
-          if (new Date(anyInvitation.expires_at) < new Date()) {
-            setInvitationError('This invitation has expired');
-            setInvitationDetails(null);
-            return;
-          }
-
-          if (anyInvitation.status === 'pending') {
-            console.log('Valid pending invitation found:', anyInvitation);
-            setInvitationDetails(anyInvitation);
-            setName(anyInvitation.name || '');
-            setEmail(anyInvitation.email || '');
-            setTeamName((anyInvitation as any).teams?.name || '');
-            setInvitationError('');
-          } else {
-            setInvitationError(`Invitation status is ${anyInvitation.status}`);
-            setInvitationDetails(null);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching invitation details:', error);
-        setInvitationError('Error loading invitation details');
-        setInvitationDetails(null);
       }
     };
 
     fetchInvitationDetails();
-  }, [invitationCode]);
+  }, [initialInvitationCode]);
+
+  // Auto-set default tab based on invitation code
+  useEffect(() => {
+    if (initialInvitationCode && invitationDetails) {
+      setSignupMethod('invitation');
+    } else if (!initialInvitationCode) {
+      setSignupMethod('team_code');
+    }
+  }, [initialInvitationCode, invitationDetails]);
 
   const handleSignup = async () => {
     if (!email || !password || !name) {
@@ -146,7 +86,16 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       return;
     }
 
-    if (!invitationCode) {
+    if (signupMethod === 'open' && !role) {
+      toast({
+        title: 'Role Required',
+        description: 'Please select your role',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (signupMethod === 'invitation' && !invitationCode) {
       toast({
         title: 'Invitation Code Required',
         description: 'Please enter your invitation code',
@@ -155,10 +104,19 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       return;
     }
 
-    if (invitationError) {
+    if (signupMethod === 'linking' && !linkingCode) {
       toast({
-        title: 'Invalid Invitation',
-        description: 'Please resolve the invitation issue before proceeding',
+        title: 'Linking Code Required',
+        description: 'Please enter your linking code',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (signupMethod === 'team_code' && !teamCode) {
+      toast({
+        title: 'Team Code Required',
+        description: 'Please enter your team code',
         variant: 'destructive',
       });
       return;
@@ -167,13 +125,33 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     setIsLoading(true);
 
     try {
+      // Validate team code before creating account
+      if (signupMethod === 'team_code') {
+        const { data: team, error: teamError } = await supabase
+          .from('teams')
+          .select('id, name')
+          .eq('id', teamCode)
+          .single();
+
+        if (teamError || !team) {
+          toast({
+            title: 'Invalid Team Code',
+            description: 'The team code you entered is not valid',
+            variant: 'destructive',
+          });
+          setIsLoading(false);
+          return;
+        }
+      }
+
       // Create the user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name
+            name,
+            role: signupMethod === 'open' ? role : undefined
           },
           emailRedirectTo: `${window.location.origin}/`
         }
@@ -182,19 +160,74 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       if (authError) throw authError;
 
       if (authData.user) {
-        // Accept the invitation
-        await userInvitationService.acceptInvitation(invitationCode, authData.user.id);
-        
-        toast({
-          title: 'Account Created',
-          description: 'Your account has been created and invitation accepted!',
-        });
+        // Handle different signup methods
+        if (signupMethod === 'invitation' && invitationCode) {
+          await userInvitationService.acceptInvitation(invitationCode, authData.user.id);
+          toast({
+            title: 'Account Created',
+            description: 'Your account has been created and invitation accepted!',
+          });
+        } else if (signupMethod === 'linking' && linkingCode) {
+          // Try to link as player first, then staff
+          try {
+            await userInvitationService.linkPlayerAccount(linkingCode, authData.user.id);
+            toast({
+              title: 'Account Linked',
+              description: 'Your account has been created and linked to your player profile!',
+            });
+          } catch (playerError) {
+            try {
+              await userInvitationService.linkStaffAccount(linkingCode, authData.user.id);
+              toast({
+                title: 'Account Linked',
+                description: 'Your account has been created and linked to your staff profile!',
+              });
+            } catch (staffError) {
+              toast({
+                title: 'Invalid Linking Code',
+                description: 'The linking code you entered is not valid',
+                variant: 'destructive',
+              });
+              return;
+            }
+          }
+        } else if (signupMethod === 'team_code') {
+          // Add user to team with default parent role
+          await supabase
+            .from('user_teams')
+            .insert({
+              user_id: authData.user.id,
+              team_id: teamCode,
+              role: 'parent'
+            });
 
-        if (onSignup) {
-          onSignup();
+          // Update user profile with parent role
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('roles')
+            .eq('id', authData.user.id)
+            .single();
+
+          const currentRoles = profile?.roles || [];
+          if (!currentRoles.includes('parent')) {
+            await supabase
+              .from('profiles')
+              .update({ roles: [...currentRoles, 'parent'] })
+              .eq('id', authData.user.id);
+          }
+
+          toast({
+            title: 'Account Created',
+            description: 'Your account has been created and linked to your team!',
+          });
         } else {
-          onClose();
+          toast({
+            title: 'Account Created',
+            description: 'Your account has been created successfully!',
+          });
         }
+
+        onClose();
       }
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -210,64 +243,43 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
   const getDialogTitle = () => {
     if (teamName) {
-      return `Join ${teamName}`;
+      return `Create Account - ${teamName}`;
     }
-    return 'Join Team';
+    return 'Create Account';
   };
-
-  // Check if we should disable fields for invitation signup
-  const isInvitationWithDetails = invitationDetails && !invitationError;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" />
-            {getDialogTitle()}
-          </DialogTitle>
+          <DialogTitle>{getDialogTitle()}</DialogTitle>
           <DialogDescription>
-            Create your account using your invitation code
+            Choose how you'd like to create your account
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Show invitation error if any */}
-          {invitationError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-800">{invitationError}</p>
-            </div>
-          )}
+        <Tabs value={signupMethod} onValueChange={(value) => setSignupMethod(value as any)}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="invitation" className="text-xs">
+              <UserPlus className="h-3 w-3 mr-1" />
+              Invite
+            </TabsTrigger>
+            <TabsTrigger value="team_code" className="text-xs">
+              <Hash className="h-3 w-3 mr-1" />
+              Team
+            </TabsTrigger>
+            <TabsTrigger value="linking" className="text-xs">
+              <Link className="h-3 w-3 mr-1" />
+              Link
+            </TabsTrigger>
+            <TabsTrigger value="open" className="text-xs">
+              <Users className="h-3 w-3 mr-1" />
+              Open
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Show team info if invitation is valid */}
-          {isInvitationWithDetails && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-sm text-green-800">
-                You're invited to join <strong>{teamName}</strong> as a <strong>{invitationDetails.role}</strong>
-              </p>
-            </div>
-          )}
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Invitation Code</CardTitle>
-              <CardDescription className="text-xs">
-                {isInvitationWithDetails ? 'Your invitation details have been loaded' : 'Enter the invitation code you received'}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Input
-                value={invitationCode}
-                onChange={(e) => setInvitationCode(e.target.value)}
-                placeholder="Enter invitation code"
-                required
-                disabled={!!isInvitationWithDetails}
-              />
-            </CardContent>
-          </Card>
-
-          {/* Account creation fields */}
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
+            {/* Common fields for all signup methods */}
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
@@ -277,7 +289,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Enter your full name"
                 required
-                disabled={isInvitationWithDetails}
+                disabled={signupMethod === 'invitation' && !!invitationDetails}
               />
             </div>
 
@@ -290,7 +302,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 required
-                disabled={isInvitationWithDetails}
+                disabled={signupMethod === 'invitation' && !!invitationDetails}
               />
             </div>
 
@@ -305,23 +317,97 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
                 required
               />
             </div>
+
+            {/* Tab-specific content */}
+            <TabsContent value="invitation" className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Invitation Code</CardTitle>
+                  <CardDescription className="text-xs">
+                    Enter the invitation code you received
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Input
+                    value={invitationCode}
+                    onChange={(e) => setInvitationCode(e.target.value)}
+                    placeholder="Enter invitation code"
+                    required
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="team_code" className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Team Code</CardTitle>
+                  <CardDescription className="text-xs">
+                    Enter your team's unique code to join
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Input
+                    value={teamCode}
+                    onChange={(e) => setTeamCode(e.target.value)}
+                    placeholder="Enter team code"
+                    required
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="linking" className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Linking Code</CardTitle>
+                  <CardDescription className="text-xs">
+                    Enter your player or staff linking code
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Input
+                    value={linkingCode}
+                    onChange={(e) => setLinkingCode(e.target.value)}
+                    placeholder="Enter linking code"
+                    required
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="open" className="space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Select Your Role</CardTitle>
+                  <CardDescription className="text-xs">
+                    Choose the role that best describes you
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Select value={role} onValueChange={setRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="staff">Staff Member</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="player">Player</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <Button
+              onClick={handleSignup}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
+            </Button>
           </div>
-
-          <Button
-            onClick={handleSignup}
-            disabled={isLoading || !!invitationError}
-            className="w-full"
-          >
-            {isLoading ? 'Creating Account...' : 'Create Account'}
-          </Button>
-
-          {!invitationCode && (
-            <div className="text-center text-sm text-muted-foreground">
-              <p>Don't have an invitation code?</p>
-              <p>Contact your team administrator to get invited.</p>
-            </div>
-          )}
-        </div>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
