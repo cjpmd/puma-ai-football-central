@@ -86,6 +86,7 @@ const TeamManagement = () => {
         seasonEnd: team.season_end,
         clubId: team.club_id,
         gameFormat: team.game_format as GameFormat,
+        gameDuration: team.game_duration, // Fix: map game_duration from database
         subscriptionType: (team.subscription_type as SubscriptionType) || 'free',
         performanceCategories: team.performance_categories || [],
         kitIcons: typeof team.kit_icons === 'object' && team.kit_icons !== null ? 
@@ -119,6 +120,7 @@ const TeamManagement = () => {
         season_end: teamData.seasonEnd,
         club_id: teamData.clubId || null,
         game_format: teamData.gameFormat,
+        game_duration: teamData.gameDuration || 90, // Fix: include game_duration when creating
         subscription_type: teamData.subscriptionType || 'free',
         performance_categories: teamData.performanceCategories || [],
         kit_icons: teamData.kitIcons || { home: '', away: '', training: '', goalkeeper: '' },
@@ -188,6 +190,7 @@ const TeamManagement = () => {
       if ('seasonEnd' in teamData) updateData.season_end = teamData.seasonEnd;
       if ('clubId' in teamData) updateData.club_id = teamData.clubId || null;
       if ('gameFormat' in teamData) updateData.game_format = teamData.gameFormat;
+      if ('gameDuration' in teamData) updateData.game_duration = teamData.gameDuration; // Fix: include game_duration when updating
       if ('subscriptionType' in teamData) updateData.subscription_type = teamData.subscriptionType;
       if ('performanceCategories' in teamData) updateData.performance_categories = teamData.performanceCategories;
       if ('kitIcons' in teamData) updateData.kit_icons = teamData.kitIcons;
@@ -321,6 +324,7 @@ const TeamManagement = () => {
             </CardTitle>
             <CardDescription>
               {team.ageGroup} • {team.gameFormat}
+              {team.gameDuration && ` • ${team.gameDuration} min`}
             </CardDescription>
           </div>
         </div>
