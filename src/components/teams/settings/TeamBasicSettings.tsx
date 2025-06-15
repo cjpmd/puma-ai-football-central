@@ -41,19 +41,35 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   
-  // Initialize form data directly from team prop
-  const [formData, setFormData] = useState<FormData>(() => ({
-    name: team.name || '',
-    ageGroup: team.ageGroup || '',
-    gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: String(team.gameDuration || 90),
-    seasonStart: team.seasonStart || '',
-    seasonEnd: team.seasonEnd || '',
-    clubId: team.clubId || '',
-    managerName: team.managerName || '',
-    managerEmail: team.managerEmail || '',
-    managerPhone: team.managerPhone || '',
-  }));
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    ageGroup: '',
+    gameFormat: '11-a-side',
+    gameDuration: '90',
+    seasonStart: '',
+    seasonEnd: '',
+    clubId: '',
+    managerName: '',
+    managerEmail: '',
+    managerPhone: '',
+  });
+
+  // Sync form data with team prop when it changes
+  useEffect(() => {
+    console.log('Syncing form data with team prop:', team.name, 'gameDuration:', team.gameDuration);
+    setFormData({
+      name: team.name || '',
+      ageGroup: team.ageGroup || '',
+      gameFormat: team.gameFormat || '11-a-side',
+      gameDuration: String(team.gameDuration || 90),
+      seasonStart: team.seasonStart || '',
+      seasonEnd: team.seasonEnd || '',
+      clubId: team.clubId || '',
+      managerName: team.managerName || '',
+      managerEmail: team.managerEmail || '',
+      managerPhone: team.managerPhone || '',
+    });
+  }, [team.id, team.name, team.ageGroup, team.gameFormat, team.gameDuration, team.seasonStart, team.seasonEnd, team.clubId, team.managerName, team.managerEmail, team.managerPhone]);
 
   // Load available clubs on mount
   useEffect(() => {
@@ -84,6 +100,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   // Simple form field update handler
   const handleInputChange = (field: keyof FormData, value: string) => {
+    console.log('Input change:', field, value);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -166,9 +183,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
-
-      // Update form data to reflect any clamped values
-      setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
 
       // Refresh user data
       await refreshUserData();
