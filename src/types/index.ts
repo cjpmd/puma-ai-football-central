@@ -1,4 +1,3 @@
-
 export type UserRole = 
   | "admin" 
   | "team_manager" 
@@ -35,6 +34,7 @@ export type Team = {
   clubId?: string;
   subscriptionType: SubscriptionType;
   gameFormat: GameFormat;
+  gameDuration?: number; // Added game duration in minutes
   kitIcons: {
     home: string;
     away: string;
@@ -388,4 +388,3 @@ export type Profile = {
   created_at: string;
   updated_at: string;
 };
-
