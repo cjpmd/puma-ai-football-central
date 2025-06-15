@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,8 +100,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleInputChange = (field: string, value: string | number) => {
     console.log('Handling input change:', field, value);
     
-    // For game duration, allow string input during editing
     if (field === 'gameDuration') {
+      // Store the raw value for editing
       setFormData(prev => ({ ...prev, [field]: value }));
       
       // Only update team data if we have a valid number
