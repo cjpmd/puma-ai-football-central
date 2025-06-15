@@ -208,6 +208,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
 
+      // Force update form data to ensure consistency
+      setFormData(prev => ({
+        ...prev,
+        gameDuration: String(gameDurationNum),
+        clubId: clubIdForDb || 'independent'
+      }));
+
       // Refresh user data to get updated team information
       await refreshUserData();
 
