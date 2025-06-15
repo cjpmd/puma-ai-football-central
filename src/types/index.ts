@@ -35,7 +35,6 @@ export type Team = {
   clubId?: string;
   subscriptionType: SubscriptionType;
   gameFormat: GameFormat;
-  gameDuration?: number; // Duration in minutes
   kitIcons: {
     home: string;
     away: string;
@@ -269,7 +268,6 @@ export interface Event {
   location?: string;
   notes?: string;
   gameFormat?: GameFormat;
-  gameDuration?: number; // Duration in minutes
   opponent?: string;
   isHome?: boolean;
   facilityId?: string;
@@ -281,7 +279,7 @@ export interface Event {
   playerOfTheMatchId?: string;
   meetingTime?: string;
   teams?: string[];
-  kitSelection?: 'home' | 'away' | 'training';
+  kitSelection?: 'home' | 'away' | 'training'; // Added this property
 }
 
 export type EquipmentItem = {

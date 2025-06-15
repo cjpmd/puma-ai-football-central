@@ -47,7 +47,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
   ]);
   const [teamDefaultGameFormat, setTeamDefaultGameFormat] = useState<GameFormat>('7-a-side');
-  const [teamDefaultGameDuration, setTeamDefaultGameDuration] = useState(90);
   
   const [formData, setFormData] = useState({
     type: event?.type || 'training' as const,
@@ -58,7 +57,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     endTime: event?.endTime || '11:00',
     location: event?.location || '',
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
-    gameDuration: event?.gameDuration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
     isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
@@ -94,7 +92,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         endTime: event.endTime || '11:00',
         location: event.location || '',
         gameFormat: event.gameFormat || teamDefaultGameFormat,
-        gameDuration: event.gameDuration || teamDefaultGameDuration,
         opponent: event.opponent || '',
         isHome: event.isHome ?? true,
         facilityId: event.facilityId || '',
@@ -112,7 +109,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     try {
       const { data: team, error } = await supabase
         .from('teams')
-        .select('game_format, game_duration')
+        .select('game_format')
         .eq('id', teamId)
         .single();
 
@@ -122,13 +119,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         setTeamDefaultGameFormat(team.game_format as GameFormat);
         if (!event) {
           setFormData(prev => ({ ...prev, gameFormat: team.game_format as GameFormat }));
-        }
-      }
-      
-      if (team?.game_duration) {
-        setTeamDefaultGameDuration(team.game_duration);
-        if (!event) {
-          setFormData(prev => ({ ...prev, gameDuration: team.game_duration }));
         }
       }
     } catch (error) {
@@ -223,8 +213,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
       playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
-      kitSelection: formData.kitSelection,
-      gameDuration: formData.gameDuration
+      kitSelection: formData.kitSelection
     };
 
     onSubmit(eventData);
@@ -320,7 +309,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
             <Input
@@ -349,22 +338,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                 ))}
               </SelectContent>
             </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="gameDuration">Game Duration (minutes)</Label>
-            <Input
-              id="gameDuration"
-              type="number"
-              min="1"
-              max="180"
-              value={formData.gameDuration}
-              onChange={(e) => setFormData(prev => ({ ...prev, gameDuration: parseInt(e.target.value) || teamDefaultGameDuration }))}
-              placeholder={teamDefaultGameDuration.toString()}
-            />
-            <p className="text-xs text-muted-foreground">
-              Team default: {teamDefaultGameDuration} minutes
-            </p>
           </div>
         </div>
 

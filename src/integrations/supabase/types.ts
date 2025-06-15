@@ -524,7 +524,6 @@ export type Database = {
           event_type: string
           facility_booking_id: string | null
           facility_id: string | null
-          game_duration: number | null
           game_format: string | null
           id: string
           is_home: boolean | null
@@ -553,7 +552,6 @@ export type Database = {
           event_type: string
           facility_booking_id?: string | null
           facility_id?: string | null
-          game_duration?: number | null
           game_format?: string | null
           id?: string
           is_home?: boolean | null
@@ -582,7 +580,6 @@ export type Database = {
           event_type?: string
           facility_booking_id?: string | null
           facility_id?: string | null
-          game_duration?: number | null
           game_format?: string | null
           id?: string
           is_home?: boolean | null
@@ -1502,7 +1499,6 @@ export type Database = {
           age_group: string
           club_id: string | null
           created_at: string | null
-          game_duration: number | null
           game_format: string
           id: string
           kit_designs: Json | null
@@ -1523,7 +1519,6 @@ export type Database = {
           age_group: string
           club_id?: string | null
           created_at?: string | null
-          game_duration?: number | null
           game_format: string
           id?: string
           kit_designs?: Json | null
@@ -1544,7 +1539,6 @@ export type Database = {
           age_group?: string
           club_id?: string | null
           created_at?: string | null
-          game_duration?: number | null
           game_format?: string
           id?: string
           kit_designs?: Json | null

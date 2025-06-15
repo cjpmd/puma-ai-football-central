@@ -13,7 +13,6 @@ export interface DatabaseEvent {
   opponent?: string;
   is_home?: boolean;
   game_format?: string;
-  game_duration?: number; // Duration in minutes
   scores?: {
     home: number;
     away: number;

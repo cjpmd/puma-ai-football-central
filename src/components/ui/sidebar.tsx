@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 
 export function Sidebar() {
-  const { profile, signOut } = useAuth();
-  const isAdmin = profile?.roles?.includes('admin') || profile?.roles?.includes('global_admin');
+  const { user, signOut } = useAuth();
+  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('global_admin');
 
   return (
     <div className="h-full flex flex-col border-r bg-background">

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,22 +14,24 @@ import { useAuth } from '@/contexts/AuthContext';
 interface TeamBasicSettingsProps {
   team: Team;
   onUpdate: (teamData: Partial<Team>) => void;
+  onSave: () => void;
+  isSaving: boolean;
 }
 
 export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   team,
   onUpdate,
+  onSave,
+  isSaving
 }) => {
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
-  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: team.gameDuration !== undefined && team.gameDuration !== null ? String(team.gameDuration) : '90',
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     clubId: team.clubId || '',
@@ -42,14 +45,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
-    console.log('Team prop changed, updating form data:', team);
-    console.log('Team gameDuration from prop:', team.gameDuration, 'type:', typeof team.gameDuration);
-    
+    // Update form data when team prop changes
     setFormData({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
       gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: team.gameDuration !== undefined && team.gameDuration !== null ? String(team.gameDuration) : '90',
       seasonStart: team.seasonStart || '',
       seasonEnd: team.seasonEnd || '',
       clubId: team.clubId || '',
@@ -81,77 +81,43 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
-  // HELPER: Always coerce value to string if possible, or fallback
-  const safeGameDuration = (value: string | number | undefined | null): string => {
-    if (typeof value === 'string') {
-      if (!value.trim()) return "";
-      if (!/^\d+$/.test(value)) return "";
-      return value;
-    }
-    if (typeof value === "number" && !isNaN(value)) {
-      return value.toString();
-    }
-    return "";
-  };
-
-  // helper to normalize gameDuration to a valid number
-  const parseGameDuration = (value: string | number): number => {
-    const num = typeof value === "number" ? value : parseInt(value, 10);
-    // clamp between 1 and 180, default to 90 if not valid
-    if (isNaN(num) || num < 1 || num > 180) return 90;
-    return num;
-  };
-
-  // Only update local form state on input change.
-  const handleInputChange = (field: string, value: string | number) => {
-    console.log(`Form input changed: ${field} = ${value}`);
+  const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Update team data immediately for live preview
+    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
+      onUpdate({ [field]: value === 'independent' ? null : value });
+    }
   };
 
   const handleSaveBasicSettings = async () => {
-    setIsSaving(true);
-    console.log('Starting save with form data:', formData);
-    
     try {
-      const cleanGameDuration = parseGameDuration(formData.gameDuration);
+      console.log('Saving basic team settings:', formData);
+      
+      // Convert 'independent' back to null for database storage
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
-      console.log('Cleaned game duration:', cleanGameDuration);
-      console.log('Club ID for DB:', clubIdForDb);
-      
-      const updateData = {
-        name: formData.name,
-        age_group: formData.ageGroup,
-        game_format: formData.gameFormat,
-        game_duration: cleanGameDuration,
-        season_start: formData.seasonStart,
-        season_end: formData.seasonEnd,
-        club_id: clubIdForDb,
-        manager_name: formData.managerName,
-        manager_email: formData.managerEmail,
-        manager_phone: formData.managerPhone,
-        updated_at: new Date().toISOString()
-      };
-      
-      console.log('Update data being sent to Supabase:', updateData);
-      
-      const { data: updatedTeamData, error: teamError } = await supabase
+      // Update the team basic information
+      const { error: teamError } = await supabase
         .from('teams')
-        .update(updateData)
-        .eq('id', team.id)
-        .select()
-        .single();
+        .update({
+          name: formData.name,
+          age_group: formData.ageGroup,
+          game_format: formData.gameFormat,
+          season_start: formData.seasonStart,
+          season_end: formData.seasonEnd,
+          club_id: clubIdForDb,
+          manager_name: formData.managerName,
+          manager_email: formData.managerEmail,
+          manager_phone: formData.managerPhone,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', team.id);
 
       if (teamError) {
-        console.error('Supabase update error:', teamError);
+        console.error('Team update error:', teamError);
         throw teamError;
       }
-      
-      if (!updatedTeamData) {
-        throw new Error("Update failed: No data returned from Supabase.");
-      }
-
-      console.log('Supabase update successful, returned data:', updatedTeamData);
 
       // Handle club linking separately
       if (clubIdForDb !== team.clubId) {
@@ -173,40 +139,22 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Create updated team object with proper mapping from database fields
-      const updatedTeam = {
-        ...team,
-        name: updatedTeamData.name,
-        ageGroup: updatedTeamData.age_group,
-        gameFormat: updatedTeamData.game_format as any,
-        gameDuration: updatedTeamData.game_duration, // This is the key fix - map from database field
-        seasonStart: updatedTeamData.season_start,
-        seasonEnd: updatedTeamData.season_end,
-        clubId: updatedTeamData.club_id || undefined,
-        managerName: updatedTeamData.manager_name,
-        managerEmail: updatedTeamData.manager_email,
-        managerPhone: updatedTeamData.manager_phone,
-      };
-
-      console.log('Mapped updated team object:', updatedTeam);
-      
-      // Notify parent component of the update first
-      onUpdate(updatedTeam);
-
-      // Refresh the form data with the saved values to keep them in sync
-      setFormData({
-        name: updatedTeam.name || '',
-        ageGroup: updatedTeam.ageGroup || '',
-        gameFormat: updatedTeam.gameFormat || '11-a-side',
-        gameDuration: updatedTeam.gameDuration !== undefined && updatedTeam.gameDuration !== null ? String(updatedTeam.gameDuration) : '90',
-        seasonStart: updatedTeam.seasonStart || '',
-        seasonEnd: updatedTeam.seasonEnd || '',
-        clubId: updatedTeam.clubId || '',
-        managerName: updatedTeam.managerName || '',
-        managerEmail: updatedTeam.managerEmail || '',
-        managerPhone: updatedTeam.managerPhone || '',
+      // Update the team data in parent component
+      onUpdate({
+        name: formData.name,
+        ageGroup: formData.ageGroup,
+        gameFormat: formData.gameFormat as any,
+        seasonStart: formData.seasonStart,
+        seasonEnd: formData.seasonEnd,
+        clubId: clubIdForDb || undefined,
+        managerName: formData.managerName,
+        managerEmail: formData.managerEmail,
+        managerPhone: formData.managerPhone,
       });
-      
+
+      // Refresh user data to get updated team information
+      await refreshUserData();
+
       toast({
         title: 'Settings saved',
         description: 'Team basic settings have been updated successfully.',
@@ -218,8 +166,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         description: error.message || 'Failed to save team settings',
         variant: 'destructive',
       });
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -264,7 +210,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="game-format">Game Format</Label>
               <Select value={formData.gameFormat} onValueChange={(value) => handleInputChange('gameFormat', value)}>
@@ -281,23 +227,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="game-duration">Game Duration (minutes)</Label>
-              <Input
-                id="game-duration"
-                type="number"
-                min="1"
-                max="180"
-                value={formData.gameDuration}
-                onChange={e => handleInputChange('gameDuration', e.target.value)}
-                onBlur={e => {
-                  // On blur, enforce a valid number and update local state
-                  const parsed = parseGameDuration(e.target.value);
-                  setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
-                }}
-                placeholder="90"
-              />
-            </div>
+
             <div className="space-y-2">
               <Label htmlFor="club-selection">Club Affiliation</Label>
               <Select value={formData.clubId || 'independent'} onValueChange={(value) => handleInputChange('clubId', value)}>
