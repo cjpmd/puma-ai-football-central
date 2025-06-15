@@ -86,24 +86,35 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleInputChange = (field: string, value: string | number) => {
     console.log('Handling input change:', field, value);
     
-    let processedValue = value;
-    
-    // Special handling for gameDuration to prevent NaN
+    // For game duration, store the raw value but validate on save
     if (field === 'gameDuration') {
-      if (typeof value === 'string') {
-        const parsed = parseInt(value);
-        processedValue = isNaN(parsed) ? 90 : Math.max(1, Math.min(180, parsed)); // Clamp between 1-180 minutes
-      } else {
-        processedValue = Math.max(1, Math.min(180, value as number));
+      // Allow empty string or numbers
+      if (value === '' || value === null || value === undefined) {
+        setFormData(prev => ({ ...prev, [field]: '' }));
+        return;
       }
-      console.log('Processed game duration value:', processedValue);
+      
+      // Convert to number if it's a string
+      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      
+      // Only update if it's a valid number or empty
+      if (!isNaN(numValue) || value === '') {
+        setFormData(prev => ({ ...prev, [field]: value }));
+        
+        // Only update team data if we have a valid number
+        if (!isNaN(numValue) && numValue > 0) {
+          const clampedValue = Math.max(1, Math.min(180, numValue));
+          onUpdate({ [field]: clampedValue });
+        }
+      }
+      return;
     }
     
-    setFormData(prev => ({ ...prev, [field]: processedValue }));
+    setFormData(prev => ({ ...prev, [field]: value }));
     
     // Update team data immediately for live preview
-    if (['name', 'ageGroup', 'gameFormat', 'gameDuration', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      const updateValue = processedValue === 'independent' ? null : processedValue;
+    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
+      const updateValue = value === 'independent' ? null : value;
       console.log('Updating team data:', field, updateValue);
       onUpdate({ [field]: updateValue });
     }
@@ -116,10 +127,14 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       // Convert 'independent' back to null for database storage
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
-      // Ensure gameDuration is a valid number
-      const gameDurationForDb = typeof formData.gameDuration === 'number' && !isNaN(formData.gameDuration) 
-        ? formData.gameDuration 
-        : 90;
+      // Ensure gameDuration is a valid number, default to 90 if invalid
+      let gameDurationForDb = 90;
+      if (formData.gameDuration !== '' && formData.gameDuration !== null && formData.gameDuration !== undefined) {
+        const numValue = typeof formData.gameDuration === 'string' ? parseFloat(formData.gameDuration) : formData.gameDuration;
+        if (!isNaN(numValue) && numValue > 0) {
+          gameDurationForDb = Math.max(1, Math.min(180, Math.round(numValue)));
+        }
+      }
       
       console.log('Game duration for database:', gameDurationForDb);
       
@@ -179,6 +194,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         managerEmail: formData.managerEmail,
         managerPhone: formData.managerPhone,
       });
+
+      // Update local form data to reflect the saved value
+      setFormData(prev => ({ ...prev, gameDuration: gameDurationForDb }));
 
       // Refresh user data to get updated team information
       await refreshUserData();
