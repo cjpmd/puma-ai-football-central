@@ -13,19 +13,16 @@ import { useAuth } from '@/contexts/AuthContext';
 interface TeamBasicSettingsProps {
   team: Team;
   onUpdate: (teamData: Partial<Team>) => void;
-  onSave: () => void;
-  isSaving: boolean;
 }
 
 export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   team,
   onUpdate,
-  onSave,
-  isSaving
 }) => {
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Change: gameDuration now string for input handling
   const [formData, setFormData] = useState({
@@ -117,6 +114,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleSaveBasicSettings = async () => {
+    setIsSaving(true);
     try {
       const cleanGameDuration = parseGameDuration(formData.gameDuration);
 
@@ -126,7 +124,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
       // Update the team basic information
-      const { error: teamError } = await supabase
+      const { data: updatedTeamData, error: teamError } = await supabase
         .from('teams')
         .update({
           name: formData.name,
@@ -141,12 +139,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           manager_phone: formData.managerPhone,
           updated_at: new Date().toISOString()
         })
-        .eq('id', team.id);
+        .eq('id', team.id)
+        .select();
 
       if (teamError) {
         console.error('Team update error:', teamError);
         throw teamError;
       }
+
+      console.log('Supabase update successful, returned data:', updatedTeamData);
 
       // Handle club linking separately
       if (clubIdForDb !== team.clubId) {
@@ -196,6 +197,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         description: error.message || 'Failed to save team settings',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 

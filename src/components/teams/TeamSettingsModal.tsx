@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +49,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       id: 'basic',
       label: 'Basic',
       icon: <Settings className="h-4 w-4" />,
-      component: <TeamBasicSettings team={team} onUpdate={onUpdate} onSave={handleSave} isSaving={isSaving} />
+      component: <TeamBasicSettings team={team} onUpdate={onUpdate} />
     },
     {
       id: 'subscription',
