@@ -108,49 +108,67 @@ export const userInvitationService = {
     try {
       console.log('Processing invitation for email:', email);
       
-      // Find the user's profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', email)
-        .single();
-
-      if (profileError || !profile) {
-        return { processed: false, message: 'User profile not found' };
-      }
-
-      // Find pending invitations for this email
-      const { data: invitations, error: invitationError } = await supabase
+      // First, find accepted invitations for this email that have a user ID
+      const { data: acceptedInvitations, error: invitationError } = await supabase
         .from('user_invitations')
         .select('*')
         .eq('email', email)
-        .eq('status', 'pending');
+        .eq('status', 'accepted')
+        .not('accepted_by', 'is', null);
 
       if (invitationError) {
         throw invitationError;
       }
 
-      if (!invitations || invitations.length === 0) {
-        return { processed: false, message: 'No pending invitations found' };
+      if (!acceptedInvitations || acceptedInvitations.length === 0) {
+        // Check for pending invitations
+        const { data: pendingInvitations, error: pendingError } = await supabase
+          .from('user_invitations')
+          .select('*')
+          .eq('email', email)
+          .eq('status', 'pending');
+
+        if (pendingError) {
+          throw pendingError;
+        }
+
+        if (pendingInvitations && pendingInvitations.length > 0) {
+          return { processed: false, message: 'User has pending invitations but has not signed up yet' };
+        }
+
+        return { processed: false, message: 'No invitations found for this email' };
       }
 
       let processedCount = 0;
 
-      for (const invitation of invitations) {
-        // Update invitation status
-        const { error: updateError } = await supabase
-          .from('user_invitations')
-          .update({
-            status: 'accepted',
-            accepted_by: profile.id,
-            accepted_at: new Date().toISOString()
-          })
-          .eq('id', invitation.id);
-
-        if (updateError) {
-          console.error('Error updating invitation:', updateError);
+      for (const invitation of acceptedInvitations) {
+        const userId = invitation.accepted_by;
+        
+        if (!userId) {
+          console.log('Invitation has no accepted_by user ID:', invitation.id);
           continue;
         }
+
+        console.log('Processing invitation for user ID:', userId);
+
+        // Get the user's profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (profileError) {
+          console.error('Error fetching profile for user:', userId, profileError);
+          continue;
+        }
+
+        if (!profile) {
+          console.log('No profile found for user:', userId);
+          continue;
+        }
+
+        console.log('Found profile for user:', profile);
 
         // Update user's profile with the role
         const updatedRoles = Array.isArray(profile.roles) 
@@ -168,46 +186,58 @@ export const userInvitationService = {
 
         // Create team association if team_id exists
         if (invitation.team_id) {
+          console.log('Creating team association for user:', userId, 'team:', invitation.team_id);
+          
           const { error: teamError } = await supabase
             .from('user_teams')
             .insert([{
-              user_id: profile.id,
+              user_id: userId,
               team_id: invitation.team_id,
               role: invitation.role
             }]);
 
           if (teamError && teamError.code !== '23505') { // Ignore duplicate key errors
             console.error('Error creating team association:', teamError);
+          } else {
+            console.log('Team association created successfully');
           }
         }
 
         // Create player association if player_id exists
         if (invitation.player_id) {
+          console.log('Creating player association for user:', userId, 'player:', invitation.player_id);
+          
           const { error: playerError } = await supabase
             .from('user_players')
             .insert([{
-              user_id: profile.id,
+              user_id: userId,
               player_id: invitation.player_id,
               relationship: invitation.role === 'parent' ? 'parent' : 'self'
             }]);
 
           if (playerError && playerError.code !== '23505') { // Ignore duplicate key errors
             console.error('Error creating player association:', playerError);
+          } else {
+            console.log('Player association created successfully');
           }
         }
 
         // Create staff association if staff_id exists
         if (invitation.staff_id) {
+          console.log('Creating staff association for user:', userId, 'staff:', invitation.staff_id);
+          
           const { error: staffError } = await supabase
             .from('user_staff')
             .insert([{
-              user_id: profile.id,
+              user_id: userId,
               staff_id: invitation.staff_id,
               relationship: 'self'
             }]);
 
           if (staffError && staffError.code !== '23505') { // Ignore duplicate key errors
             console.error('Error creating staff association:', staffError);
+          } else {
+            console.log('Staff association created successfully');
           }
         }
 
