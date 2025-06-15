@@ -41,6 +41,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   const justSavedRef = useRef(false);
+  const saveInProgressRef = useRef(false);
   
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
@@ -60,8 +61,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
-    // Only update form data from team prop if we haven't just saved
-    if (!justSavedRef.current) {
+    // Only update form data from team prop if we haven't just saved and not currently saving
+    if (!justSavedRef.current && !saveInProgressRef.current) {
       console.log('Team prop changed, updating form data:', team);
       setFormData({
         name: team.name || '',
@@ -75,8 +76,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         managerEmail: team.managerEmail || '',
         managerPhone: team.managerPhone || '',
       });
-    } else {
+    } else if (justSavedRef.current) {
       // Reset the flag after preventing the override
+      console.log('Skipping form data update because we just saved');
       justSavedRef.current = false;
     }
   }, [team]);
@@ -135,6 +137,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleSaveBasicSettings = async () => {
     try {
       console.log('Saving basic team settings:', formData);
+      
+      // Mark that save is in progress
+      saveInProgressRef.current = true;
       
       // Convert gameDuration to number for database
       const gameDurationNum = parseInt(formData.gameDuration);
@@ -199,6 +204,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
       // Mark that we just saved to prevent form data override
       justSavedRef.current = true;
+      saveInProgressRef.current = false;
 
       // Update the team data in parent component with all the updated values
       const updatedTeamData = {
@@ -226,6 +232,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       });
     } catch (error: any) {
       console.error('Error saving basic settings:', error);
+      saveInProgressRef.current = false;
       toast({
         title: 'Error saving settings',
         description: error.message || 'Failed to save team settings',
