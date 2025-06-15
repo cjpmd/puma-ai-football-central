@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,29 +100,36 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleInputChange = (field: string, value: string | number) => {
     console.log('Handling input change:', field, value);
     
-    if (field === 'gameDuration') {
-      // Always store as string for form data
+    try {
+      if (field === 'gameDuration') {
+        // Always store as string for form data to prevent crashes
+        const stringValue = String(value);
+        setFormData(prev => ({ ...prev, [field]: stringValue }));
+        
+        // Only update team data if we have a valid number, but don't crash if invalid
+        if (stringValue.trim() !== '') {
+          const numValue = parseFloat(stringValue);
+          if (!isNaN(numValue) && numValue > 0) {
+            const clampedValue = Math.max(1, Math.min(180, numValue));
+            onUpdate({ [field]: clampedValue });
+          }
+        }
+        return;
+      }
+      
+      // For all other fields, store the value as string
       const stringValue = String(value);
       setFormData(prev => ({ ...prev, [field]: stringValue }));
       
-      // Try to convert to number for team update
-      const numValue = parseFloat(stringValue);
-      if (!isNaN(numValue) && numValue > 0) {
-        const clampedValue = Math.max(1, Math.min(180, numValue));
-        onUpdate({ [field]: clampedValue });
+      // Update team data immediately for live preview
+      if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
+        const updateValue = stringValue === 'independent' ? null : stringValue;
+        console.log('Updating team data:', field, updateValue);
+        onUpdate({ [field]: updateValue });
       }
-      return;
-    }
-    
-    // For all other fields, store the value as string
-    const stringValue = String(value);
-    setFormData(prev => ({ ...prev, [field]: stringValue }));
-    
-    // Update team data immediately for live preview
-    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      const updateValue = stringValue === 'independent' ? null : stringValue;
-      console.log('Updating team data:', field, updateValue);
-      onUpdate({ [field]: updateValue });
+    } catch (error) {
+      console.error('Error in handleInputChange:', error);
+      // Don't crash the component, just log the error
     }
   };
 
