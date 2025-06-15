@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,6 +84,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleInputChange = (field: string, value: string | number) => {
+    console.log('Updating field:', field, 'with value:', value);
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Update team data immediately for live preview
@@ -239,7 +241,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 min="1"
                 max="180"
                 value={formData.gameDuration}
-                onChange={(e) => handleInputChange('gameDuration', parseInt(e.target.value) || 90)}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value) || 90;
+                  console.log('Game duration changing to:', value);
+                  handleInputChange('gameDuration', value);
+                }}
                 placeholder="90"
               />
             </div>
