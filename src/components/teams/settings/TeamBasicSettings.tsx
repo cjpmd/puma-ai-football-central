@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -153,7 +152,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
-          game_duration: gameDurationNum,
+          game_duration: gameDurationNum, // Ensure this is a number
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -168,6 +167,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         console.error('Team update error:', teamError);
         throw teamError;
       }
+
+      console.log('Team updated successfully in database');
 
       // Handle club linking separately
       if (clubIdForDb !== team.clubId) {
@@ -194,7 +195,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: gameDurationNum,
+        gameDuration: gameDurationNum, // Ensure this is a number
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
