@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -9,6 +8,7 @@ interface UserProfile {
   email: string;
   name?: string;
   roles?: string[];
+  managed_player_ids?: string[];
 }
 
 interface AuthContextType {
@@ -70,7 +70,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: user.id,
         email: user.email || '',
         name: user.user_metadata?.name || user.email,
-        roles: user.user_metadata?.roles || []
+        roles: user.user_metadata?.roles || [],
+        managed_player_ids: user.user_metadata?.managed_player_ids || []
       });
 
       await fetchTeams(user.id);
