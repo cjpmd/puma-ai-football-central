@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +43,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
+    console.log('Team prop changed, updating form data:', team);
     setFormData({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
@@ -101,40 +103,51 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   // Only update local form state on input change.
   const handleInputChange = (field: string, value: string | number) => {
+    console.log(`Form input changed: ${field} = ${value}`);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSaveBasicSettings = async () => {
     setIsSaving(true);
+    console.log('Starting save with form data:', formData);
+    
     try {
       const cleanGameDuration = parseGameDuration(formData.gameDuration);
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
+      console.log('Cleaned game duration:', cleanGameDuration);
+      console.log('Club ID for DB:', clubIdForDb);
+      
+      const updateData = {
+        name: formData.name,
+        age_group: formData.ageGroup,
+        game_format: formData.gameFormat,
+        game_duration: cleanGameDuration,
+        season_start: formData.seasonStart,
+        season_end: formData.seasonEnd,
+        club_id: clubIdForDb,
+        manager_name: formData.managerName,
+        manager_email: formData.managerEmail,
+        manager_phone: formData.managerPhone,
+        updated_at: new Date().toISOString()
+      };
+      
+      console.log('Update data being sent to Supabase:', updateData);
+      
       const { data: updatedTeamData, error: teamError } = await supabase
         .from('teams')
-        .update({
-          name: formData.name,
-          age_group: formData.ageGroup,
-          game_format: formData.gameFormat,
-          game_duration: cleanGameDuration,
-          season_start: formData.seasonStart,
-          season_end: formData.seasonEnd,
-          club_id: clubIdForDb,
-          manager_name: formData.managerName,
-          manager_email: formData.managerEmail,
-          manager_phone: formData.managerPhone,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', team.id)
         .select()
         .single();
 
       if (teamError) {
+        console.error('Supabase update error:', teamError);
         throw teamError;
       }
       
       if (!updatedTeamData) {
-          throw new Error("Update failed: No data returned from Supabase.");
+        throw new Error("Update failed: No data returned from Supabase.");
       }
 
       console.log('Supabase update successful, returned data:', updatedTeamData);
@@ -160,7 +173,23 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       }
 
       // Refresh all user data to ensure UI consistency from the single source of truth (database)
+      console.log('Refreshing user data...');
       await refreshUserData();
+      
+      // Also notify parent component of the update
+      onUpdate({
+        ...team,
+        name: formData.name,
+        ageGroup: formData.ageGroup,
+        gameFormat: formData.gameFormat as any,
+        gameDuration: cleanGameDuration,
+        seasonStart: formData.seasonStart,
+        seasonEnd: formData.seasonEnd,
+        clubId: clubIdForDb || undefined,
+        managerName: formData.managerName,
+        managerEmail: formData.managerEmail,
+        managerPhone: formData.managerPhone,
+      });
 
       toast({
         title: 'Settings saved',
@@ -304,6 +333,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Manager Information */}
       <Card>
         <CardHeader>
           <CardTitle>Manager Information</CardTitle>
