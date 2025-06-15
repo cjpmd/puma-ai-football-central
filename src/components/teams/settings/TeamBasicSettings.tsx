@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,43 +40,22 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
-  const [isFormInitialized, setIsFormInitialized] = useState(false);
-  const formInitRef = useRef(false);
   
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    ageGroup: '',
-    gameFormat: '11-a-side',
-    gameDuration: '90',
-    seasonStart: '',
-    seasonEnd: '',
-    clubId: '',
-    managerName: '',
-    managerEmail: '',
-    managerPhone: '',
-  });
+  // Initialize form data directly from team prop
+  const [formData, setFormData] = useState<FormData>(() => ({
+    name: team.name || '',
+    ageGroup: team.ageGroup || '',
+    gameFormat: team.gameFormat || '11-a-side',
+    gameDuration: String(team.gameDuration || 90),
+    seasonStart: team.seasonStart || '',
+    seasonEnd: team.seasonEnd || '',
+    clubId: team.clubId || '',
+    managerName: team.managerName || '',
+    managerEmail: team.managerEmail || '',
+    managerPhone: team.managerPhone || '',
+  }));
 
-  // Initialize form data only once
-  useEffect(() => {
-    if (!formInitRef.current && team.id) {
-      console.log('Initializing form data from team:', team.name);
-      setFormData({
-        name: team.name || '',
-        ageGroup: team.ageGroup || '',
-        gameFormat: team.gameFormat || '11-a-side',
-        gameDuration: String(team.gameDuration || 90),
-        seasonStart: team.seasonStart || '',
-        seasonEnd: team.seasonEnd || '',
-        clubId: team.clubId || '',
-        managerName: team.managerName || '',
-        managerEmail: team.managerEmail || '',
-        managerPhone: team.managerPhone || '',
-      });
-      setIsFormInitialized(true);
-      formInitRef.current = true;
-    }
-  }, [team.id]);
-
+  // Load available clubs on mount
   useEffect(() => {
     loadAvailableClubs();
   }, []);
@@ -103,43 +82,16 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    console.log('Input change:', field, value);
+  // Simple form field update handler
+  const handleInputChange = (field: keyof FormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // For non-duration fields, provide immediate feedback
-    if (field !== 'gameDuration') {
-      const updateValue = field === 'clubId' && value === 'independent' ? null : value;
-      onUpdate({ [field]: updateValue });
-    }
-  };
-
-  const handleGameDurationChange = (value: string) => {
-    console.log('Game duration change:', value);
-    setFormData(prev => ({ ...prev, gameDuration: value }));
-  };
-
-  const handleGameDurationBlur = () => {
-    console.log('Game duration blur, value:', formData.gameDuration);
-    const numValue = parseInt(formData.gameDuration);
-    
-    if (!isNaN(numValue) && numValue > 0) {
-      const clampedValue = Math.max(1, Math.min(180, numValue));
-      console.log('Clamped game duration:', clampedValue);
-      
-      // Update form data with clamped value
-      setFormData(prev => ({ ...prev, gameDuration: String(clampedValue) }));
-      
-      // Update parent with the numeric value
-      onUpdate({ gameDuration: clampedValue });
-    }
   };
 
   const handleSaveBasicSettings = async () => {
     try {
       console.log('Saving basic team settings:', formData);
       
-      // Validate game duration
+      // Validate and process game duration
       const gameDurationNum = parseInt(formData.gameDuration);
       if (isNaN(gameDurationNum) || gameDurationNum <= 0) {
         toast({
@@ -240,11 +192,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     onUpdate(logoData);
   };
 
-  // Don't render form until it's initialized
-  if (!isFormInitialized) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div className="space-y-6">
       {/* Team Logo */}
@@ -307,8 +254,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 min="1"
                 max="180"
                 value={formData.gameDuration}
-                onChange={(e) => handleGameDurationChange(e.target.value)}
-                onBlur={handleGameDurationBlur}
+                onChange={(e) => handleInputChange('gameDuration', e.target.value)}
                 placeholder="90"
               />
             </div>
