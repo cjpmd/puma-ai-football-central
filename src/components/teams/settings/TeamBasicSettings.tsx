@@ -40,8 +40,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
-  const justSavedRef = useRef(false);
-  const saveInProgressRef = useRef(false);
+  const lastSavedDataRef = useRef<FormData | null>(null);
+  const isInitializedRef = useRef(false);
   
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
@@ -61,26 +61,42 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
-    // Only update form data from team prop if we haven't just saved and not currently saving
-    if (!justSavedRef.current && !saveInProgressRef.current) {
-      console.log('Team prop changed, updating form data:', team);
-      setFormData({
-        name: team.name || '',
-        ageGroup: team.ageGroup || '',
-        gameFormat: team.gameFormat || '11-a-side',
-        gameDuration: String(team.gameDuration || 90),
-        seasonStart: team.seasonStart || '',
-        seasonEnd: team.seasonEnd || '',
-        clubId: team.clubId || '',
-        managerName: team.managerName || '',
-        managerEmail: team.managerEmail || '',
-        managerPhone: team.managerPhone || '',
-      });
-    } else if (justSavedRef.current) {
-      // Reset the flag after preventing the override
-      console.log('Skipping form data update because we just saved');
-      justSavedRef.current = false;
+    // Only update form data from team prop on initial load or if the data is significantly different
+    const newFormData = {
+      name: team.name || '',
+      ageGroup: team.ageGroup || '',
+      gameFormat: team.gameFormat || '11-a-side',
+      gameDuration: String(team.gameDuration || 90),
+      seasonStart: team.seasonStart || '',
+      seasonEnd: team.seasonEnd || '',
+      clubId: team.clubId || '',
+      managerName: team.managerName || '',
+      managerEmail: team.managerEmail || '',
+      managerPhone: team.managerPhone || '',
+    };
+
+    // If this is the initial load, always update
+    if (!isInitializedRef.current) {
+      console.log('Initial load - setting form data from team prop');
+      setFormData(newFormData);
+      isInitializedRef.current = true;
+      return;
     }
+
+    // If we have saved data and the current form matches it, don't override
+    if (lastSavedDataRef.current) {
+      const formMatchesSaved = Object.keys(lastSavedDataRef.current).every(
+        key => formData[key as keyof FormData] === lastSavedDataRef.current![key as keyof FormData]
+      );
+      
+      if (formMatchesSaved) {
+        console.log('Skipping form data update - form matches last saved data');
+        return;
+      }
+    }
+
+    console.log('Team prop changed significantly, updating form data');
+    setFormData(newFormData);
   }, [team]);
 
   const loadAvailableClubs = async () => {
@@ -146,9 +162,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     try {
       console.log('Saving basic team settings:', formData);
       
-      // Mark that save is in progress
-      saveInProgressRef.current = true;
-      
       // Convert gameDuration to number for database
       const gameDurationNum = parseInt(formData.gameDuration);
       if (isNaN(gameDurationNum) || gameDurationNum <= 0) {
@@ -157,7 +170,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           description: 'Please enter a valid game duration (1-180 minutes)',
           variant: 'destructive',
         });
-        saveInProgressRef.current = false;
         return;
       }
       
@@ -211,9 +223,21 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Mark that we just saved to prevent form data override
-      justSavedRef.current = true;
-      saveInProgressRef.current = false;
+      // Store the saved data to prevent form override
+      const savedFormData = {
+        name: formData.name,
+        ageGroup: formData.ageGroup,
+        gameFormat: formData.gameFormat,
+        gameDuration: String(gameDurationNum),
+        seasonStart: formData.seasonStart,
+        seasonEnd: formData.seasonEnd,
+        clubId: clubIdForDb || '',
+        managerName: formData.managerName,
+        managerEmail: formData.managerEmail,
+        managerPhone: formData.managerPhone,
+      };
+      
+      lastSavedDataRef.current = savedFormData;
 
       // Update the team data in parent component with all the updated values
       const updatedTeamData = {
@@ -232,12 +256,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
 
-      // Update form data with the exact values that were saved
-      setFormData(prev => ({
-        ...prev,
-        gameDuration: String(gameDurationNum),
-        clubId: clubIdForDb || ''
-      }));
+      // Update form data to match what was actually saved
+      setFormData(savedFormData);
 
       // Refresh user data to get updated team information
       await refreshUserData();
@@ -248,7 +268,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       });
     } catch (error: any) {
       console.error('Error saving basic settings:', error);
-      saveInProgressRef.current = false;
       toast({
         title: 'Error saving settings',
         description: error.message || 'Failed to save team settings',
