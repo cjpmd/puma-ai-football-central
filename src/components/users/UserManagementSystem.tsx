@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -65,6 +65,79 @@ export const UserManagementSystem = () => {
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
+
+  const debugSpecificUserEmail = async () => {
+    const targetEmail = 'dcjpm001@gmail.com';
+    
+    try {
+      console.log('=== DEBUGGING USER EMAIL:', targetEmail, '===');
+      
+      // Check profiles table
+      console.log('1. Checking profiles table for email...');
+      const { data: profileByEmail, error: profileEmailError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', targetEmail);
+      
+      console.log('Profile by email query result:', { profileByEmail, profileEmailError });
+      
+      // Check invitations by email
+      console.log('2. Checking user_invitations for email...');
+      const { data: invitationsByEmail, error: invitationEmailError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('email', targetEmail);
+      
+      console.log('Invitations by email query result:', { invitationsByEmail, invitationEmailError });
+      
+      // If we found a profile, check their associations
+      if (profileByEmail && profileByEmail.length > 0) {
+        const userId = profileByEmail[0].id;
+        console.log('3. Found profile, checking associations for user ID:', userId);
+        
+        // Check user_teams
+        const { data: userTeams, error: userTeamsError } = await supabase
+          .from('user_teams')
+          .select('*')
+          .eq('user_id', userId);
+        
+        console.log('User teams:', { userTeams, userTeamsError });
+        
+        // Check user_players
+        const { data: userPlayers, error: userPlayersError } = await supabase
+          .from('user_players')
+          .select('*')
+          .eq('user_id', userId);
+        
+        console.log('User players:', { userPlayers, userPlayersError });
+        
+        // Check user_staff
+        const { data: userStaff, error: userStaffError } = await supabase
+          .from('user_staff')
+          .select('*')
+          .eq('user_id', userId);
+        
+        console.log('User staff:', { userStaff, userStaffError });
+      }
+      
+      // Check if there are any accepted invitations that haven't been processed
+      const acceptedInvitations = invitationsByEmail?.filter(inv => inv.status === 'accepted') || [];
+      console.log('4. Accepted invitations that need processing:', acceptedInvitations);
+      
+      toast({
+        title: 'Debug Complete for ' + targetEmail,
+        description: 'Check console for detailed information about this user',
+      });
+      
+    } catch (error: any) {
+      console.error('Debug error:', error);
+      toast({
+        title: 'Debug Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   const debugSpecificUser = async () => {
     const targetUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
@@ -556,6 +629,15 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={debugSpecificUserEmail}
+            variant="outline"
+            size="sm"
+            className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
+          >
+            <UserSearch className="h-4 w-4 mr-2" />
+            Debug Email User
+          </Button>
           {profile?.roles?.includes('global_admin') && (
             <Button
               onClick={debugSpecificUser}
