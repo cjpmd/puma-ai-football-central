@@ -40,32 +40,27 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
-  const [hasUserMadeChanges, setHasUserMadeChanges] = useState(false);
-  const isInitialMountRef = useRef(true);
+  const [isFormInitialized, setIsFormInitialized] = useState(false);
+  const formInitRef = useRef(false);
   
   const [formData, setFormData] = useState<FormData>({
-    name: team.name || '',
-    ageGroup: team.ageGroup || '',
-    gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: String(team.gameDuration || 90),
-    seasonStart: team.seasonStart || '',
-    seasonEnd: team.seasonEnd || '',
-    clubId: team.clubId || '',
-    managerName: team.managerName || '',
-    managerEmail: team.managerEmail || '',
-    managerPhone: team.managerPhone || '',
+    name: '',
+    ageGroup: '',
+    gameFormat: '11-a-side',
+    gameDuration: '90',
+    seasonStart: '',
+    seasonEnd: '',
+    clubId: '',
+    managerName: '',
+    managerEmail: '',
+    managerPhone: '',
   });
 
+  // Initialize form data only once
   useEffect(() => {
-    loadAvailableClubs();
-  }, []);
-
-  useEffect(() => {
-    // Only update form data from team prop on initial mount
-    // Don't override user changes with prop updates
-    if (isInitialMountRef.current) {
-      console.log('Initial mount - setting form data from team prop');
-      const newFormData = {
+    if (!formInitRef.current && team.id) {
+      console.log('Initializing form data from team:', team.name);
+      setFormData({
         name: team.name || '',
         ageGroup: team.ageGroup || '',
         gameFormat: team.gameFormat || '11-a-side',
@@ -76,11 +71,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         managerName: team.managerName || '',
         managerEmail: team.managerEmail || '',
         managerPhone: team.managerPhone || '',
-      };
-      setFormData(newFormData);
-      isInitialMountRef.current = false;
+      });
+      setIsFormInitialized(true);
+      formInitRef.current = true;
     }
-  }, [team]);
+  }, [team.id]);
+
+  useEffect(() => {
+    loadAvailableClubs();
+  }, []);
 
   const loadAvailableClubs = async () => {
     try {
@@ -105,42 +104,34 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleInputChange = (field: string, value: string) => {
-    try {
-      console.log('Handling input change:', field, value);
-      
-      // Mark that user has made changes
-      setHasUserMadeChanges(true);
-      
-      // Update form data
-      setFormData(prev => ({ ...prev, [field]: value }));
-      
-      // For immediate team updates (live preview), but exclude gameDuration to prevent crashes
-      if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId', 'managerName', 'managerEmail', 'managerPhone'].includes(field)) {
-        const updateValue = field === 'clubId' && value === 'independent' ? null : value;
-        console.log('Updating team data:', field, updateValue);
-        onUpdate({ [field]: updateValue });
-      }
-    } catch (error) {
-      console.error('Error in handleInputChange:', error);
+    console.log('Input change:', field, value);
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // For non-duration fields, provide immediate feedback
+    if (field !== 'gameDuration') {
+      const updateValue = field === 'clubId' && value === 'independent' ? null : value;
+      onUpdate({ [field]: updateValue });
     }
   };
 
+  const handleGameDurationChange = (value: string) => {
+    console.log('Game duration change:', value);
+    setFormData(prev => ({ ...prev, gameDuration: value }));
+  };
+
   const handleGameDurationBlur = () => {
-    try {
-      // Only update team data when user finishes typing (on blur)
-      const numValue = parseInt(formData.gameDuration);
-      if (!isNaN(numValue) && numValue > 0) {
-        const clampedValue = Math.max(1, Math.min(180, numValue));
-        console.log('Updating game duration on blur:', clampedValue);
-        onUpdate({ gameDuration: clampedValue });
-        
-        // Update form data with clamped value
-        if (clampedValue !== numValue) {
-          setFormData(prev => ({ ...prev, gameDuration: String(clampedValue) }));
-        }
-      }
-    } catch (error) {
-      console.error('Error in handleGameDurationBlur:', error);
+    console.log('Game duration blur, value:', formData.gameDuration);
+    const numValue = parseInt(formData.gameDuration);
+    
+    if (!isNaN(numValue) && numValue > 0) {
+      const clampedValue = Math.max(1, Math.min(180, numValue));
+      console.log('Clamped game duration:', clampedValue);
+      
+      // Update form data with clamped value
+      setFormData(prev => ({ ...prev, gameDuration: String(clampedValue) }));
+      
+      // Update parent with the numeric value
+      onUpdate({ gameDuration: clampedValue });
     }
   };
 
@@ -148,7 +139,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     try {
       console.log('Saving basic team settings:', formData);
       
-      // Convert gameDuration to number for database
+      // Validate game duration
       const gameDurationNum = parseInt(formData.gameDuration);
       if (isNaN(gameDurationNum) || gameDurationNum <= 0) {
         toast({
@@ -159,19 +150,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         return;
       }
       
-      // Convert 'independent' back to null for database storage
+      const clampedDuration = Math.max(1, Math.min(180, gameDurationNum));
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
-      console.log('Game duration for database:', gameDurationNum);
+      console.log('Saving to database with game duration:', clampedDuration);
       
-      // Update the team basic information
+      // Update the team in database
       const { error: teamError } = await supabase
         .from('teams')
         .update({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
-          game_duration: gameDurationNum,
+          game_duration: clampedDuration,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -189,15 +180,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
       console.log('Team updated successfully in database');
 
-      // Handle club linking separately
+      // Handle club linking
       if (clubIdForDb !== team.clubId) {
-        // Remove existing club link
         await supabase
           .from('club_teams')
           .delete()
           .eq('team_id', team.id);
 
-        // Add new club link if specified
         if (clubIdForDb) {
           const { error: linkError } = await supabase
             .from('club_teams')
@@ -209,12 +198,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Update the team data in parent component with all the updated values
+      // Update parent component with the saved data
       const updatedTeamData = {
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: gameDurationNum,
+        gameDuration: clampedDuration,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
@@ -226,10 +215,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
 
-      // Clear the user changes flag after successful save
-      setHasUserMadeChanges(false);
+      // Update form data to reflect any clamped values
+      setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
 
-      // Refresh user data to get updated team information
+      // Refresh user data
       await refreshUserData();
 
       toast({
@@ -250,6 +239,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     console.log('Logo update received:', logoData);
     onUpdate(logoData);
   };
+
+  // Don't render form until it's initialized
+  if (!isFormInitialized) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -313,7 +307,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 min="1"
                 max="180"
                 value={formData.gameDuration}
-                onChange={(e) => handleInputChange('gameDuration', e.target.value)}
+                onChange={(e) => handleGameDurationChange(e.target.value)}
                 onBlur={handleGameDurationBlur}
                 placeholder="90"
               />
