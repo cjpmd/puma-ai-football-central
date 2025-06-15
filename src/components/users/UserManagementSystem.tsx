@@ -74,20 +74,25 @@ export const UserManagementSystem = () => {
     try {
       console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
       
-      // Check if profile already exists
+      // Check if profile already exists using maybeSingle to avoid errors
       const { data: existingProfile, error: profileCheckError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', targetUserId)
-        .single();
+        .maybeSingle();
 
       console.log('Profile check result:', { existingProfile, profileCheckError });
 
-      // If profile doesn't exist (PGRST116 = no rows returned)
-      if (profileCheckError && profileCheckError.code === 'PGRST116') {
+      if (profileCheckError) {
+        console.error('Error checking profile:', profileCheckError);
+        throw profileCheckError;
+      }
+
+      // If no profile exists, create one
+      if (!existingProfile) {
         console.log('No profile found, creating one...');
         
-        // Get the first invitation to get user details
+        // Get invitations to get user details
         const { data: invitations, error: invitationError } = await supabase
           .from('user_invitations')
           .select('*')
@@ -106,27 +111,25 @@ export const UserManagementSystem = () => {
         console.log('Found invitations:', invitations);
         const firstInvitation = invitations[0];
         
-        // Create the missing profile
+        // Create the missing profile using upsert to handle any race conditions
         console.log('Creating missing profile for user:', targetUserId);
         const { error: createProfileError } = await supabase
           .from('profiles')
-          .insert([{
+          .upsert([{
             id: targetUserId,
             name: firstInvitation.name,
             email: firstInvitation.email,
             roles: [firstInvitation.role]
-          }]);
+          }], {
+            onConflict: 'id'
+          });
 
         if (createProfileError) {
           console.error('Error creating profile:', createProfileError);
           throw createProfileError;
         }
         console.log('Profile created successfully');
-      } else if (profileCheckError) {
-        // Some other error occurred
-        console.error('Unexpected error checking profile:', profileCheckError);
-        throw profileCheckError;
-      } else if (existingProfile) {
+      } else {
         console.log('Profile already exists:', existingProfile);
       }
 
