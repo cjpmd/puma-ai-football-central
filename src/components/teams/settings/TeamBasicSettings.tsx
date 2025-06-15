@@ -18,6 +18,20 @@ interface TeamBasicSettingsProps {
   isSaving: boolean;
 }
 
+// Local form data interface that allows gameDuration to be string during editing
+interface FormData {
+  name: string;
+  ageGroup: string;
+  gameFormat: string;
+  gameDuration: string | number;
+  seasonStart: string;
+  seasonEnd: string;
+  clubId: string;
+  managerName: string;
+  managerEmail: string;
+  managerPhone: string;
+}
+
 export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   team,
   onUpdate,
@@ -28,7 +42,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
