@@ -23,7 +23,7 @@ interface FormData {
   name: string;
   ageGroup: string;
   gameFormat: string;
-  gameDuration: number;
+  gameDuration: string; // Keep as string for input handling
   seasonStart: string;
   seasonEnd: string;
   clubId: string;
@@ -46,7 +46,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: team.gameDuration || 90,
+    gameDuration: String(team.gameDuration || 90), // Convert to string
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     clubId: team.clubId || '',
@@ -65,7 +65,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
       gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: team.gameDuration || 90,
+      gameDuration: String(team.gameDuration || 90), // Convert to string
       seasonStart: team.seasonStart || '',
       seasonEnd: team.seasonEnd || '',
       clubId: team.clubId || '',
@@ -97,29 +97,25 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
-  const handleInputChange = (field: string, value: string | number) => {
+  const handleInputChange = (field: string, value: string) => {
     console.log('Handling input change:', field, value);
     
-    if (field === 'gameDuration') {
-      // Convert to number and validate
-      const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      if (!isNaN(numValue) && numValue > 0) {
-        const clampedValue = Math.max(1, Math.min(180, Math.round(numValue)));
-        setFormData(prev => ({ ...prev, [field]: clampedValue }));
-        onUpdate({ [field]: clampedValue });
-      }
-      return;
-    }
+    // Update form data (all as strings)
+    setFormData(prev => ({ ...prev, [field]: value }));
     
-    // For all other fields, store the value as string
-    const stringValue = String(value);
-    setFormData(prev => ({ ...prev, [field]: stringValue }));
-    
-    // Update team data immediately for live preview
+    // For immediate team updates (live preview), convert types as needed
     if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      const updateValue = stringValue === 'independent' ? null : stringValue;
+      const updateValue = value === 'independent' ? null : value;
       console.log('Updating team data:', field, updateValue);
       onUpdate({ [field]: updateValue });
+    } else if (field === 'gameDuration') {
+      // Convert to number for team update, but validate first
+      const numValue = parseInt(value);
+      if (!isNaN(numValue) && numValue > 0) {
+        const clampedValue = Math.max(1, Math.min(180, numValue));
+        console.log('Updating game duration:', clampedValue);
+        onUpdate({ gameDuration: clampedValue });
+      }
     }
   };
 
@@ -127,10 +123,21 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     try {
       console.log('Saving basic team settings:', formData);
       
+      // Convert gameDuration to number for database
+      const gameDurationNum = parseInt(formData.gameDuration);
+      if (isNaN(gameDurationNum) || gameDurationNum <= 0) {
+        toast({
+          title: 'Invalid game duration',
+          description: 'Please enter a valid game duration (1-180 minutes)',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       // Convert 'independent' back to null for database storage
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
-      console.log('Game duration for database:', formData.gameDuration);
+      console.log('Game duration for database:', gameDurationNum);
       
       // Update the team basic information
       const { error: teamError } = await supabase
@@ -139,7 +146,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
-          game_duration: formData.gameDuration,
+          game_duration: gameDurationNum,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -180,7 +187,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: formData.gameDuration,
+        gameDuration: gameDurationNum,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
