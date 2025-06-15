@@ -44,6 +44,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   useEffect(() => {
     console.log('Team prop changed, updating form data:', team);
+    console.log('Team gameDuration from prop:', team.gameDuration, 'type:', typeof team.gameDuration);
+    
     setFormData({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
@@ -172,24 +174,29 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Refresh all user data to ensure UI consistency from the single source of truth (database)
+      // Create updated team object with proper mapping from database fields
+      const updatedTeam = {
+        ...team,
+        name: updatedTeamData.name,
+        ageGroup: updatedTeamData.age_group,
+        gameFormat: updatedTeamData.game_format as any,
+        gameDuration: updatedTeamData.game_duration, // This is the key fix - map from database field
+        seasonStart: updatedTeamData.season_start,
+        seasonEnd: updatedTeamData.season_end,
+        clubId: updatedTeamData.club_id || undefined,
+        managerName: updatedTeamData.manager_name,
+        managerEmail: updatedTeamData.manager_email,
+        managerPhone: updatedTeamData.manager_phone,
+      };
+
+      console.log('Mapped updated team object:', updatedTeam);
+      
+      // Notify parent component of the update first
+      onUpdate(updatedTeam);
+
+      // Then refresh all user data to ensure UI consistency
       console.log('Refreshing user data...');
       await refreshUserData();
-      
-      // Also notify parent component of the update
-      onUpdate({
-        ...team,
-        name: formData.name,
-        ageGroup: formData.ageGroup,
-        gameFormat: formData.gameFormat as any,
-        gameDuration: cleanGameDuration,
-        seasonStart: formData.seasonStart,
-        seasonEnd: formData.seasonEnd,
-        clubId: clubIdForDb || undefined,
-        managerName: formData.managerName,
-        managerEmail: formData.managerEmail,
-        managerPhone: formData.managerPhone,
-      });
 
       toast({
         title: 'Settings saved',
