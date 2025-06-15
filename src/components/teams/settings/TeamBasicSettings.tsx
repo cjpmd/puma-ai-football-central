@@ -82,23 +82,44 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
+  // HELPER: Always coerce value to string if possible, or fallback
+  const safeGameDuration = (value: string | number | undefined | null): string => {
+    if (typeof value === 'string') {
+      if (!value.trim()) return "";
+      if (!/^\d+$/.test(value)) return "";
+      return value;
+    }
+    if (typeof value === "number" && !isNaN(value)) {
+      return value.toString();
+    }
+    return "";
+  };
+
   // helper to normalize gameDuration to a valid number
   const parseGameDuration = (value: string | number): number => {
     const num = typeof value === "number" ? value : parseInt(value, 10);
+    // clamp between 1 and 180, default to 90 if not valid
     if (isNaN(num) || num < 1 || num > 180) return 90;
     return num;
   };
 
   // Accept string for gameDuration so input can be empty
   const handleInputChange = (field: string, value: string | number) => {
-    // keep gameDuration as string in form state (for <Input/>)
-    if (field === 'gameDuration') {
-      setFormData(prev => ({ ...prev, gameDuration: String(value) }));
-      // Don't call onUpdate until a valid number
+    if (field === "gameDuration") {
+      // allow to clear the field (for editing)
+      if (typeof value === "string" && value.trim() === "") {
+        setFormData(prev => ({ ...prev, gameDuration: "" }));
+        // Do NOT propagate empty to onUpdate
+        return;
+      }
+      // Only propagate if actually a valid number between 1 and 180
       const parsed = parseGameDuration(value);
-      if (!isNaN(parsed)) {
+      const rawStr = typeof value === "string" ? value : String(value);
+      setFormData(prev => ({ ...prev, gameDuration: rawStr }));
+      if (/^\d+$/.test(rawStr) && parsed.toString() === rawStr && parsed >= 1 && parsed <= 180) {
         onUpdate({ gameDuration: parsed });
       }
+      // else do not call onUpdate
       return;
     }
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -109,8 +130,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   const handleSaveBasicSettings = async () => {
     try {
-      // Only save a valid integer
-      const cleanGameDuration = parseGameDuration(formData.gameDuration);
+      const cleanGameDuration =
+        /^\d+$/.test(formData.gameDuration) && parseInt(formData.gameDuration) >= 1 && parseInt(formData.gameDuration) <= 180
+          ? parseInt(formData.gameDuration)
+          : 90;
 
       console.log('Saving basic team settings:', formData);
       
@@ -256,13 +279,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 type="number"
                 min="1"
                 max="180"
-                value={formData.gameDuration}
+                value={safeGameDuration(formData.gameDuration)}
                 onChange={e => handleInputChange('gameDuration', e.target.value)}
                 onBlur={e => {
-                  // on blur, enforce valid number in field, fallback to 90
-                  const parsed = parseGameDuration(e.target.value);
-                  setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
-                  onUpdate({ gameDuration: parsed });
+                  // On blur, enforce 90 if empty or invalid
+                  const val = e.target.value.trim();
+                  if (!val || isNaN(Number(val)) || Number(val) < 1 || Number(val) > 180) {
+                    setFormData(prev => ({ ...prev, gameDuration: "90" }));
+                    onUpdate({ gameDuration: 90 });
+                  } else {
+                    const parsed = parseGameDuration(val);
+                    setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
+                    onUpdate({ gameDuration: parsed });
+                  }
                 }}
                 placeholder="90"
               />
