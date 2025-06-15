@@ -168,6 +168,20 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
+      // Update the team data in parent component
+      onUpdate({
+        name: formData.name,
+        ageGroup: formData.ageGroup,
+        gameFormat: formData.gameFormat as any,
+        gameDuration: cleanGameDuration,
+        seasonStart: formData.seasonStart,
+        seasonEnd: formData.seasonEnd,
+        clubId: clubIdForDb || undefined,
+        managerName: formData.managerName,
+        managerEmail: formData.managerEmail,
+        managerPhone: formData.managerPhone,
+      });
+
       // Refresh user data to get updated team information
       await refreshUserData();
 
