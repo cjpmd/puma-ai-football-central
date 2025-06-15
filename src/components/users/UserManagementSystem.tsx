@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,17 +82,8 @@ export const UserManagementSystem = () => {
       
       console.log('Profile by ID query result:', { profileById, profileIdError });
 
-      // Check auth users (this might not work due to RLS)
-      console.log('2. Checking auth users...');
-      const { data: authUsers, error: authError } = await supabase
-        .from('auth.users')
-        .select('*')
-        .eq('id', targetUserId);
-      
-      console.log('Auth users query result:', { authUsers, authError });
-
       // Check invitations for this user
-      console.log('3. Checking user_invitations for user ID...');
+      console.log('2. Checking user_invitations for user ID...');
       const { data: invitationsByUserId, error: invitationUserError } = await supabase
         .from('user_invitations')
         .select('*')
@@ -102,7 +92,7 @@ export const UserManagementSystem = () => {
       console.log('Invitations by user ID query result:', { invitationsByUserId, invitationUserError });
 
       // Check all profiles to see what we get
-      console.log('4. Checking all profiles...');
+      console.log('3. Checking all profiles...');
       const { data: allProfiles, error: allProfilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -110,6 +100,15 @@ export const UserManagementSystem = () => {
         .limit(10);
       
       console.log('Recent profiles:', { allProfiles, allProfilesError });
+
+      // Check for the specific email in invitations
+      console.log('4. Checking user_invitations by email...');
+      const { data: invitationsByEmail, error: invitationEmailError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('email', 'dcjpm001@gmail.com');
+      
+      console.log('Invitations by email query result:', { invitationsByEmail, invitationEmailError });
 
       toast({
         title: 'Debug Complete for ' + targetUserId,
