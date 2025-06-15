@@ -1,3 +1,4 @@
+
 export interface KitDesign {
   shirtColor: string;
   sleeveColor: string;
@@ -39,6 +40,7 @@ export interface Team {
   clubId?: string;
   subscriptionType: string;
   gameFormat: string;
+  gameDuration?: number; // Added game duration in minutes
   kitIcons: KitIcons;
   logoUrl?: string | null;
   performanceCategories: string[];

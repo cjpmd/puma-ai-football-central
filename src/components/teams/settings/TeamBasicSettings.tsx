@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +31,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
+    gameDuration: team.gameDuration || 90,
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     clubId: team.clubId || '',
@@ -50,6 +50,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
       gameFormat: team.gameFormat || '11-a-side',
+      gameDuration: team.gameDuration || 90,
       seasonStart: team.seasonStart || '',
       seasonEnd: team.seasonEnd || '',
       clubId: team.clubId || '',
@@ -81,11 +82,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // Update team data immediately for live preview
-    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
+    if (['name', 'ageGroup', 'gameFormat', 'gameDuration', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
       onUpdate({ [field]: value === 'independent' ? null : value });
     }
   };
@@ -104,6 +105,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
+          game_duration: formData.gameDuration,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -144,6 +146,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
+        gameDuration: formData.gameDuration,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
@@ -210,7 +213,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="game-format">Game Format</Label>
               <Select value={formData.gameFormat} onValueChange={(value) => handleInputChange('gameFormat', value)}>
@@ -226,6 +229,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                   <SelectItem value="3-a-side">3v3</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="game-duration">Game Duration (minutes)</Label>
+              <Input
+                id="game-duration"
+                type="number"
+                min="1"
+                max="180"
+                value={formData.gameDuration}
+                onChange={(e) => handleInputChange('gameDuration', parseInt(e.target.value) || 90)}
+                placeholder="90"
+              />
             </div>
 
             <div className="space-y-2">

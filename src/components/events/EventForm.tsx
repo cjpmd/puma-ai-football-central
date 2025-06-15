@@ -47,6 +47,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
   ]);
   const [teamDefaultGameFormat, setTeamDefaultGameFormat] = useState<GameFormat>('7-a-side');
+  const [teamDefaultGameDuration, setTeamDefaultGameDuration] = useState<number>(90);
   
   const [formData, setFormData] = useState({
     type: event?.type || 'training' as const,
@@ -57,6 +58,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     endTime: event?.endTime || '11:00',
     location: event?.location || '',
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
+    gameDuration: event?.gameDuration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
     isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
@@ -71,7 +73,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   useEffect(() => {
     loadFacilities();
     loadPlayers();
-    loadTeamGameFormat();
+    loadTeamDefaults();
     if (event) {
       const eventTeams = (event as any).teams || [teamId];
       setNumberOfTeams(eventTeams.length || 1);
@@ -92,6 +94,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         endTime: event.endTime || '11:00',
         location: event.location || '',
         gameFormat: event.gameFormat || teamDefaultGameFormat,
+        gameDuration: event.gameDuration || teamDefaultGameDuration,
         opponent: event.opponent || '',
         isHome: event.isHome ?? true,
         facilityId: event.facilityId || '',
@@ -105,11 +108,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     }
   }, [event, teamId]);
 
-  const loadTeamGameFormat = async () => {
+  const loadTeamDefaults = async () => {
     try {
       const { data: team, error } = await supabase
         .from('teams')
-        .select('game_format')
+        .select('game_format, game_duration')
         .eq('id', teamId)
         .single();
 
@@ -121,8 +124,15 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           setFormData(prev => ({ ...prev, gameFormat: team.game_format as GameFormat }));
         }
       }
+
+      if (team?.game_duration) {
+        setTeamDefaultGameDuration(team.game_duration);
+        if (!event) {
+          setFormData(prev => ({ ...prev, gameDuration: team.game_duration }));
+        }
+      }
     } catch (error) {
-      console.error('Error loading team game format:', error);
+      console.error('Error loading team defaults:', error);
     }
   };
 
@@ -339,6 +349,23 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        {/* Game Duration */}
+        <div className="space-y-2">
+          <Label htmlFor="gameDuration">Game Duration (minutes)</Label>
+          <Input
+            id="gameDuration"
+            type="number"
+            min="1"
+            max="180"
+            value={formData.gameDuration}
+            onChange={(e) => setFormData(prev => ({ ...prev, gameDuration: parseInt(e.target.value) || teamDefaultGameDuration }))}
+            placeholder={teamDefaultGameDuration.toString()}
+          />
+          <p className="text-sm text-muted-foreground">
+            Team default: {teamDefaultGameDuration} minutes
+          </p>
         </div>
 
         {/* Time fields for non-opponent events or when not using team slots */}

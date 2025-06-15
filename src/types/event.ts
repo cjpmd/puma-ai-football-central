@@ -13,6 +13,7 @@ export interface DatabaseEvent {
   opponent?: string;
   is_home?: boolean;
   game_format?: string;
+  game_duration?: number; // Added game duration in minutes
   scores?: {
     home: number;
     away: number;
@@ -26,7 +27,7 @@ export interface DatabaseEvent {
   meeting_time?: string;
   total_minutes?: number;
   teams?: string[];
-  kit_selection?: 'home' | 'away' | 'training'; // Added this property
+  kit_selection?: 'home' | 'away' | 'training';
   created_at: string;
   updated_at: string;
 }

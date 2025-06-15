@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
 import { playerStatsService } from './playerStatsService';
@@ -21,6 +20,7 @@ export interface CreateEventData {
   };
   player_of_match_id?: string;
   game_format?: string;
+  game_duration?: number; // Added game duration
   kit_selection?: 'home' | 'away' | 'training';
 }
 
@@ -95,14 +95,15 @@ export const eventsService = {
       scores: updateData.scores,
       player_of_match_id: updateData.player_of_match_id,
       game_format: updateData.game_format,
-      kit_selection: updateData.kit_selection, // Explicitly include kit_selection
+      game_duration: updateData.game_duration, // Include game duration
+      kit_selection: updateData.kit_selection,
       coach_notes: updateData.coach_notes,
       staff_notes: updateData.staff_notes,
       training_notes: updateData.training_notes,
       updated_at: new Date().toISOString()
     };
     
-    console.log('Clean update data with kit_selection:', cleanUpdateData);
+    console.log('Clean update data with game_duration:', cleanUpdateData);
     
     const { data, error } = await supabase
       .from('events')
@@ -115,7 +116,7 @@ export const eventsService = {
       console.error('Error updating event:', error);
       throw error;
     }
-    console.log('Event updated successfully with kit_selection:', data);
+    console.log('Event updated successfully with game_duration:', data);
     return data as DatabaseEvent;
   },
 
