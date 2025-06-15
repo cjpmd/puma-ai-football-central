@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -23,7 +22,7 @@ interface FormData {
   name: string;
   ageGroup: string;
   gameFormat: string;
-  gameDuration: string | number;
+  gameDuration: string;
   seasonStart: string;
   seasonEnd: string;
   clubId: string;
@@ -46,7 +45,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: team.gameDuration || 90,
+    gameDuration: String(team.gameDuration || 90),
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     clubId: team.clubId || '',
@@ -65,7 +64,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
       gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: team.gameDuration || 90,
+      gameDuration: String(team.gameDuration || 90),
       seasonStart: team.seasonStart || '',
       seasonEnd: team.seasonEnd || '',
       clubId: team.clubId || '',
@@ -101,11 +100,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     console.log('Handling input change:', field, value);
     
     if (field === 'gameDuration') {
-      // Store the raw value for editing
-      setFormData(prev => ({ ...prev, [field]: value }));
+      // Always store as string for form data
+      const stringValue = String(value);
+      setFormData(prev => ({ ...prev, [field]: stringValue }));
       
-      // Only update team data if we have a valid number
-      const numValue = typeof value === 'string' ? parseFloat(value) : value;
+      // Try to convert to number for team update
+      const numValue = parseFloat(stringValue);
       if (!isNaN(numValue) && numValue > 0) {
         const clampedValue = Math.max(1, Math.min(180, numValue));
         onUpdate({ [field]: clampedValue });
@@ -113,11 +113,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       return;
     }
     
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // For all other fields, store the value as string
+    const stringValue = String(value);
+    setFormData(prev => ({ ...prev, [field]: stringValue }));
     
     // Update team data immediately for live preview
     if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      const updateValue = value === 'independent' ? null : value;
+      const updateValue = stringValue === 'independent' ? null : stringValue;
       console.log('Updating team data:', field, updateValue);
       onUpdate({ [field]: updateValue });
     }
@@ -135,7 +137,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       const currentDuration = formData.gameDuration;
       
       if (currentDuration !== '' && currentDuration !== null && currentDuration !== undefined) {
-        const numValue = typeof currentDuration === 'string' ? parseFloat(currentDuration) : currentDuration;
+        const numValue = parseFloat(currentDuration);
         if (!isNaN(numValue) && numValue > 0) {
           gameDurationForDb = Math.max(1, Math.min(180, Math.round(numValue)));
         }
@@ -201,7 +203,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       });
 
       // Update local form data to reflect the saved value
-      setFormData(prev => ({ ...prev, gameDuration: gameDurationForDb }));
+      setFormData(prev => ({ ...prev, gameDuration: String(gameDurationForDb) }));
 
       // Refresh user data to get updated team information
       await refreshUserData();
@@ -287,11 +289,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 min="1"
                 max="180"
                 value={formData.gameDuration}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  console.log('Game duration input changed:', value);
-                  handleInputChange('gameDuration', value);
-                }}
+                onChange={(e) => handleInputChange('gameDuration', e.target.value)}
                 placeholder="90"
               />
             </div>
