@@ -106,20 +106,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   // Accept string for gameDuration so input can be empty
   const handleInputChange = (field: string, value: string | number) => {
     if (field === "gameDuration") {
-      // allow to clear the field (for editing)
-      if (typeof value === "string" && value.trim() === "") {
-        setFormData(prev => ({ ...prev, gameDuration: "" }));
-        // Do NOT propagate empty to onUpdate
-        return;
-      }
-      // Only propagate if actually a valid number between 1 and 180
-      const parsed = parseGameDuration(value);
-      const rawStr = typeof value === "string" ? value : String(value);
-      setFormData(prev => ({ ...prev, gameDuration: rawStr }));
-      if (/^\d+$/.test(rawStr) && parsed.toString() === rawStr && parsed >= 1 && parsed <= 180) {
-        onUpdate({ gameDuration: parsed });
-      }
-      // else do not call onUpdate
+      // Just update local state. Validation and parent update will happen onBlur.
+      setFormData(prev => ({ ...prev, gameDuration: String(value) }));
       return;
     }
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -130,12 +118,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   const handleSaveBasicSettings = async () => {
     try {
-      const cleanGameDuration =
-        /^\d+$/.test(formData.gameDuration) && parseInt(formData.gameDuration) >= 1 && parseInt(formData.gameDuration) <= 180
-          ? parseInt(formData.gameDuration)
-          : 90;
+      const cleanGameDuration = parseGameDuration(formData.gameDuration);
 
-      console.log('Saving basic team settings:', formData);
+      console.log('Saving basic team settings:', { ...formData, gameDuration: cleanGameDuration });
       
       // Convert 'independent' back to null for database storage
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
@@ -279,19 +264,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 type="number"
                 min="1"
                 max="180"
-                value={safeGameDuration(formData.gameDuration)}
+                value={formData.gameDuration}
                 onChange={e => handleInputChange('gameDuration', e.target.value)}
                 onBlur={e => {
-                  // On blur, enforce 90 if empty or invalid
-                  const val = e.target.value.trim();
-                  if (!val || isNaN(Number(val)) || Number(val) < 1 || Number(val) > 180) {
-                    setFormData(prev => ({ ...prev, gameDuration: "90" }));
-                    onUpdate({ gameDuration: 90 });
-                  } else {
-                    const parsed = parseGameDuration(val);
-                    setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
-                    onUpdate({ gameDuration: parsed });
-                  }
+                  // On blur, enforce a valid number and update parent state
+                  const parsed = parseGameDuration(e.target.value);
+                  setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
+                  onUpdate({ gameDuration: parsed });
                 }}
                 placeholder="90"
               />
