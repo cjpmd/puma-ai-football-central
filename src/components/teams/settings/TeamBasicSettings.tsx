@@ -24,7 +24,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Change: gameDuration now string for input handling
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
@@ -100,30 +99,17 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     return num;
   };
 
-  // Accept string for gameDuration so input can be empty
+  // Only update local form state on input change.
   const handleInputChange = (field: string, value: string | number) => {
-    if (field === "gameDuration") {
-      // Just update local state. Validation and parent update will happen onBlur.
-      setFormData(prev => ({ ...prev, gameDuration: String(value) }));
-      return;
-    }
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      onUpdate({ [field]: value === 'independent' ? null : value });
-    }
   };
 
   const handleSaveBasicSettings = async () => {
     setIsSaving(true);
     try {
       const cleanGameDuration = parseGameDuration(formData.gameDuration);
-
-      console.log('Saving basic team settings:', { ...formData, gameDuration: cleanGameDuration });
-      
-      // Convert 'independent' back to null for database storage
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
-      // Update the team basic information
       const { data: updatedTeamData, error: teamError } = await supabase
         .from('teams')
         .update({
@@ -140,11 +126,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           updated_at: new Date().toISOString()
         })
         .eq('id', team.id)
-        .select();
+        .select()
+        .single();
 
       if (teamError) {
-        console.error('Team update error:', teamError);
         throw teamError;
+      }
+      
+      if (!updatedTeamData) {
+          throw new Error("Update failed: No data returned from Supabase.");
       }
 
       console.log('Supabase update successful, returned data:', updatedTeamData);
@@ -169,21 +159,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Update the team data in parent component
-      onUpdate({
-        name: formData.name,
-        ageGroup: formData.ageGroup,
-        gameFormat: formData.gameFormat as any,
-        gameDuration: cleanGameDuration,
-        seasonStart: formData.seasonStart,
-        seasonEnd: formData.seasonEnd,
-        clubId: clubIdForDb || undefined,
-        managerName: formData.managerName,
-        managerEmail: formData.managerEmail,
-        managerPhone: formData.managerPhone,
-      });
-
-      // Refresh user data to get updated team information
+      // Refresh all user data to ensure UI consistency from the single source of truth (database)
       await refreshUserData();
 
       toast({
@@ -270,10 +246,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 value={formData.gameDuration}
                 onChange={e => handleInputChange('gameDuration', e.target.value)}
                 onBlur={e => {
-                  // On blur, enforce a valid number and update parent state
+                  // On blur, enforce a valid number and update local state
                   const parsed = parseGameDuration(e.target.value);
                   setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
-                  onUpdate({ gameDuration: parsed });
                 }}
                 placeholder="90"
               />
