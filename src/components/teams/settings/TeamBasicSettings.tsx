@@ -40,36 +40,40 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
+  const [lastTeamId, setLastTeamId] = useState<string>(team.id);
   
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    ageGroup: '',
-    gameFormat: '11-a-side',
-    gameDuration: '90',
-    seasonStart: '',
-    seasonEnd: '',
-    clubId: '',
-    managerName: '',
-    managerEmail: '',
-    managerPhone: '',
+    name: team.name || '',
+    ageGroup: team.ageGroup || '',
+    gameFormat: team.gameFormat || '11-a-side',
+    gameDuration: String(team.gameDuration || 90),
+    seasonStart: team.seasonStart || '',
+    seasonEnd: team.seasonEnd || '',
+    clubId: team.clubId || '',
+    managerName: team.managerName || '',
+    managerEmail: team.managerEmail || '',
+    managerPhone: team.managerPhone || '',
   });
 
-  // Sync form data with team prop when it changes
+  // Only sync form data when the team ID changes (different team selected)
   useEffect(() => {
-    console.log('Syncing form data with team prop:', team.name, 'gameDuration:', team.gameDuration);
-    setFormData({
-      name: team.name || '',
-      ageGroup: team.ageGroup || '',
-      gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: String(team.gameDuration || 90),
-      seasonStart: team.seasonStart || '',
-      seasonEnd: team.seasonEnd || '',
-      clubId: team.clubId || '',
-      managerName: team.managerName || '',
-      managerEmail: team.managerEmail || '',
-      managerPhone: team.managerPhone || '',
-    });
-  }, [team.id, team.name, team.ageGroup, team.gameFormat, team.gameDuration, team.seasonStart, team.seasonEnd, team.clubId, team.managerName, team.managerEmail, team.managerPhone]);
+    if (team.id !== lastTeamId) {
+      console.log('Team changed, syncing form data for new team:', team.name);
+      setFormData({
+        name: team.name || '',
+        ageGroup: team.ageGroup || '',
+        gameFormat: team.gameFormat || '11-a-side',
+        gameDuration: String(team.gameDuration || 90),
+        seasonStart: team.seasonStart || '',
+        seasonEnd: team.seasonEnd || '',
+        clubId: team.clubId || '',
+        managerName: team.managerName || '',
+        managerEmail: team.managerEmail || '',
+        managerPhone: team.managerPhone || '',
+      });
+      setLastTeamId(team.id);
+    }
+  }, [team.id, lastTeamId, team.name, team.ageGroup, team.gameFormat, team.gameDuration, team.seasonStart, team.seasonEnd, team.clubId, team.managerName, team.managerEmail, team.managerPhone]);
 
   // Load available clubs on mount
   useEffect(() => {
@@ -182,6 +186,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       };
       
       console.log('Updating parent component with:', updatedTeamData);
+      
+      // Update the form data if any values were clamped
+      if (clampedDuration !== gameDurationNum) {
+        setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
+      }
+      
+      // Call onUpdate to update parent component
       onUpdate(updatedTeamData);
 
       // Refresh user data
