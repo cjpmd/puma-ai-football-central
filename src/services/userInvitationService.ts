@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface InviteUserData {
@@ -119,11 +120,50 @@ export const userInvitationService = {
         throw profileError;
       }
 
-      if (!userProfile) {
-        return { processed: false, message: 'No user found with this email address' };
-      }
+      let userId: string;
 
-      console.log('Found user profile:', userProfile);
+      if (!userProfile) {
+        console.log('No profile found, checking auth users and creating profile...');
+        
+        // Check if user exists in auth but doesn't have a profile
+        const { data: invitations } = await supabase
+          .from('user_invitations')
+          .select('*')
+          .eq('email', email)
+          .eq('status', 'accepted');
+
+        if (!invitations || invitations.length === 0) {
+          return { processed: false, message: 'No accepted invitations found for this email' };
+        }
+
+        const acceptedInvitation = invitations[0];
+        if (!acceptedInvitation.accepted_by) {
+          return { processed: false, message: 'No user ID found in accepted invitation' };
+        }
+
+        userId = acceptedInvitation.accepted_by;
+
+        // Create the missing profile
+        console.log('Creating profile for user:', userId);
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: userId,
+            name: acceptedInvitation.name,
+            email: acceptedInvitation.email,
+            roles: [acceptedInvitation.role]
+          }]);
+
+        if (createProfileError) {
+          console.error('Error creating profile:', createProfileError);
+          throw createProfileError;
+        }
+
+        console.log('Profile created successfully');
+      } else {
+        userId = userProfile.id;
+        console.log('Found existing profile for user:', userId);
+      }
 
       // Get all invitations for this email (both pending and accepted)
       const { data: allInvitations, error: invitationError } = await supabase
@@ -154,7 +194,7 @@ export const userInvitationService = {
             .from('user_invitations')
             .update({ 
               status: 'accepted',
-              accepted_by: userProfile.id,
+              accepted_by: userId,
               accepted_at: new Date().toISOString()
             })
             .eq('id', invitation.id);
@@ -169,7 +209,7 @@ export const userInvitationService = {
         const { data: currentProfile, error: currentProfileError } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', userProfile.id)
+          .eq('id', userId)
           .single();
 
         if (currentProfileError) {
@@ -187,7 +227,7 @@ export const userInvitationService = {
           const { error: profileUpdateError } = await supabase
             .from('profiles')
             .update({ roles: updatedRoles })
-            .eq('id', userProfile.id);
+            .eq('id', userId);
 
           if (profileUpdateError) {
             console.error('Error updating profile roles:', profileUpdateError);
@@ -198,12 +238,12 @@ export const userInvitationService = {
 
         // Create team association if team_id exists
         if (invitation.team_id) {
-          console.log('Creating team association for user:', userProfile.id, 'team:', invitation.team_id);
+          console.log('Creating team association for user:', userId, 'team:', invitation.team_id);
           
           const { error: teamError } = await supabase
             .from('user_teams')
             .insert([{
-              user_id: userProfile.id,
+              user_id: userId,
               team_id: invitation.team_id,
               role: invitation.role
             }]);
@@ -217,12 +257,12 @@ export const userInvitationService = {
 
         // Create player association if player_id exists
         if (invitation.player_id) {
-          console.log('Creating player association for user:', userProfile.id, 'player:', invitation.player_id);
+          console.log('Creating player association for user:', userId, 'player:', invitation.player_id);
           
           const { error: playerError } = await supabase
             .from('user_players')
             .insert([{
-              user_id: userProfile.id,
+              user_id: userId,
               player_id: invitation.player_id,
               relationship: invitation.role === 'parent' ? 'parent' : 'self'
             }]);
@@ -236,12 +276,12 @@ export const userInvitationService = {
 
         // Create staff association if staff_id exists
         if (invitation.staff_id) {
-          console.log('Creating staff association for user:', userProfile.id, 'staff:', invitation.staff_id);
+          console.log('Creating staff association for user:', userId, 'staff:', invitation.staff_id);
           
           const { error: staffError } = await supabase
             .from('user_staff')
             .insert([{
-              user_id: userProfile.id,
+              user_id: userId,
               staff_id: invitation.staff_id,
               relationship: 'self'
             }]);

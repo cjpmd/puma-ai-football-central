@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -97,6 +98,9 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     setIsLoading(true);
 
     try {
+      console.log('Starting signup process for:', email);
+      
+      // Create the auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -109,11 +113,28 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       if (authError) throw authError;
 
       if (authData.user) {
+        console.log('Auth user created:', authData.user.id);
+        
+        // Accept the invitation (marks it as accepted)
         await userInvitationService.acceptInvitation(invitationCode, authData.user.id);
-        toast({
-          title: 'Account Created',
-          description: 'Your account has been created and invitation accepted!',
-        });
+        console.log('Invitation accepted');
+        
+        // Process the invitation to create profile and associations
+        const result = await userInvitationService.processUserInvitation(email);
+        console.log('Invitation processing result:', result);
+        
+        if (result.processed) {
+          toast({
+            title: 'Account Created Successfully',
+            description: 'Your account has been created and you have been added to your team!',
+          });
+        } else {
+          toast({
+            title: 'Account Created',
+            description: 'Your account has been created. Team associations will be processed shortly.',
+          });
+        }
+        
         onClose();
       }
     } catch (error: any) {
