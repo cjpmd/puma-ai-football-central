@@ -106,31 +106,39 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleInputChange = (field: string, value: string) => {
-    console.log('Handling input change:', field, value);
-    
-    // Update form data
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // For immediate team updates (live preview), but exclude gameDuration to prevent crashes
-    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId', 'managerName', 'managerEmail', 'managerPhone'].includes(field)) {
-      const updateValue = field === 'clubId' && value === 'independent' ? null : value;
-      console.log('Updating team data:', field, updateValue);
-      onUpdate({ [field]: updateValue });
+    try {
+      console.log('Handling input change:', field, value);
+      
+      // Update form data
+      setFormData(prev => ({ ...prev, [field]: value }));
+      
+      // For immediate team updates (live preview), but exclude gameDuration to prevent crashes
+      if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId', 'managerName', 'managerEmail', 'managerPhone'].includes(field)) {
+        const updateValue = field === 'clubId' && value === 'independent' ? null : value;
+        console.log('Updating team data:', field, updateValue);
+        onUpdate({ [field]: updateValue });
+      }
+    } catch (error) {
+      console.error('Error in handleInputChange:', error);
     }
   };
 
   const handleGameDurationBlur = () => {
-    // Only update team data when user finishes typing (on blur)
-    const numValue = parseInt(formData.gameDuration);
-    if (!isNaN(numValue) && numValue > 0) {
-      const clampedValue = Math.max(1, Math.min(180, numValue));
-      console.log('Updating game duration on blur:', clampedValue);
-      onUpdate({ gameDuration: clampedValue });
-      
-      // Update form data with clamped value
-      if (clampedValue !== numValue) {
-        setFormData(prev => ({ ...prev, gameDuration: String(clampedValue) }));
+    try {
+      // Only update team data when user finishes typing (on blur)
+      const numValue = parseInt(formData.gameDuration);
+      if (!isNaN(numValue) && numValue > 0) {
+        const clampedValue = Math.max(1, Math.min(180, numValue));
+        console.log('Updating game duration on blur:', clampedValue);
+        onUpdate({ gameDuration: clampedValue });
+        
+        // Update form data with clamped value
+        if (clampedValue !== numValue) {
+          setFormData(prev => ({ ...prev, gameDuration: String(clampedValue) }));
+        }
       }
+    } catch (error) {
+      console.error('Error in handleGameDurationBlur:', error);
     }
   };
 
@@ -149,6 +157,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           description: 'Please enter a valid game duration (1-180 minutes)',
           variant: 'destructive',
         });
+        saveInProgressRef.current = false;
         return;
       }
       
@@ -222,6 +231,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
+
+      // Update form data with the exact values that were saved
+      setFormData(prev => ({
+        ...prev,
+        gameDuration: String(gameDurationNum),
+        clubId: clubIdForDb || ''
+      }));
 
       // Refresh user data to get updated team information
       await refreshUserData();
