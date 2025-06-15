@@ -47,6 +47,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
   ]);
   const [teamDefaultGameFormat, setTeamDefaultGameFormat] = useState<GameFormat>('7-a-side');
+  const [teamDefaultGameDuration, setTeamDefaultGameDuration] = useState(90);
   
   const [formData, setFormData] = useState({
     type: event?.type || 'training' as const,
@@ -57,6 +58,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     endTime: event?.endTime || '11:00',
     location: event?.location || '',
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
+    gameDuration: event?.gameDuration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
     isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
@@ -109,7 +111,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     try {
       const { data: team, error } = await supabase
         .from('teams')
-        .select('game_format')
+        .select('game_format, game_duration')
         .eq('id', teamId)
         .single();
 
@@ -119,6 +121,13 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         setTeamDefaultGameFormat(team.game_format as GameFormat);
         if (!event) {
           setFormData(prev => ({ ...prev, gameFormat: team.game_format as GameFormat }));
+        }
+      }
+      
+      if (team?.game_duration) {
+        setTeamDefaultGameDuration(team.game_duration);
+        if (!event) {
+          setFormData(prev => ({ ...prev, gameDuration: team.game_duration }));
         }
       }
     } catch (error) {
@@ -213,7 +222,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
       playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
-      kitSelection: formData.kitSelection
+      kitSelection: formData.kitSelection,
+      gameDuration: formData.gameDuration
     };
 
     onSubmit(eventData);
