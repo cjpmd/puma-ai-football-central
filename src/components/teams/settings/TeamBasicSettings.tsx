@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,11 +27,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   
+  // Change: gameDuration now string for input handling
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: team.gameDuration || 90,
+    gameDuration: team.gameDuration !== undefined && team.gameDuration !== null ? String(team.gameDuration) : '90',
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     clubId: team.clubId || '',
@@ -46,12 +46,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
-    // Update form data when team prop changes
     setFormData({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
       gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: team.gameDuration || 90,
+      gameDuration: team.gameDuration !== undefined && team.gameDuration !== null ? String(team.gameDuration) : '90',
       seasonStart: team.seasonStart || '',
       seasonEnd: team.seasonEnd || '',
       clubId: team.clubId || '',
@@ -83,18 +82,36 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     }
   };
 
+  // helper to normalize gameDuration to a valid number
+  const parseGameDuration = (value: string | number): number => {
+    const num = typeof value === "number" ? value : parseInt(value, 10);
+    if (isNaN(num) || num < 1 || num > 180) return 90;
+    return num;
+  };
+
+  // Accept string for gameDuration so input can be empty
   const handleInputChange = (field: string, value: string | number) => {
-    console.log('Updating field:', field, 'with value:', value);
+    // keep gameDuration as string in form state (for <Input/>)
+    if (field === 'gameDuration') {
+      setFormData(prev => ({ ...prev, gameDuration: String(value) }));
+      // Don't call onUpdate until a valid number
+      const parsed = parseGameDuration(value);
+      if (!isNaN(parsed)) {
+        onUpdate({ gameDuration: parsed });
+      }
+      return;
+    }
     setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Update team data immediately for live preview
-    if (['name', 'ageGroup', 'gameFormat', 'gameDuration', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
+    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
       onUpdate({ [field]: value === 'independent' ? null : value });
     }
   };
 
   const handleSaveBasicSettings = async () => {
     try {
+      // Only save a valid integer
+      const cleanGameDuration = parseGameDuration(formData.gameDuration);
+
       console.log('Saving basic team settings:', formData);
       
       // Convert 'independent' back to null for database storage
@@ -107,7 +124,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
-          game_duration: formData.gameDuration,
+          game_duration: cleanGameDuration,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -148,10 +165,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: formData.gameDuration,
+        gameDuration: cleanGameDuration,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
-        clubId: clubIdForDb || undefined,
+        clubId: clubIdForDb === 'independent' ? undefined : clubIdForDb,
         managerName: formData.managerName,
         managerEmail: formData.managerEmail,
         managerPhone: formData.managerPhone,
@@ -232,7 +249,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="game-duration">Game Duration (minutes)</Label>
               <Input
@@ -241,15 +257,16 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 min="1"
                 max="180"
                 value={formData.gameDuration}
-                onChange={(e) => {
-                  const value = parseInt(e.target.value) || 90;
-                  console.log('Game duration changing to:', value);
-                  handleInputChange('gameDuration', value);
+                onChange={e => handleInputChange('gameDuration', e.target.value)}
+                onBlur={e => {
+                  // on blur, enforce valid number in field, fallback to 90
+                  const parsed = parseGameDuration(e.target.value);
+                  setFormData(prev => ({ ...prev, gameDuration: String(parsed) }));
+                  onUpdate({ gameDuration: parsed });
                 }}
                 placeholder="90"
               />
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="club-selection">Club Affiliation</Label>
               <Select value={formData.clubId || 'independent'} onValueChange={(value) => handleInputChange('clubId', value)}>
@@ -301,8 +318,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           </div>
         </CardContent>
       </Card>
-
-      {/* Manager Information */}
       <Card>
         <CardHeader>
           <CardTitle>Manager Information</CardTitle>
