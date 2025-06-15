@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,11 +84,28 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleInputChange = (field: string, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    console.log('Handling input change:', field, value);
+    
+    let processedValue = value;
+    
+    // Special handling for gameDuration to prevent NaN
+    if (field === 'gameDuration') {
+      if (typeof value === 'string') {
+        const parsed = parseInt(value);
+        processedValue = isNaN(parsed) ? 90 : Math.max(1, Math.min(180, parsed)); // Clamp between 1-180 minutes
+      } else {
+        processedValue = Math.max(1, Math.min(180, value as number));
+      }
+      console.log('Processed game duration value:', processedValue);
+    }
+    
+    setFormData(prev => ({ ...prev, [field]: processedValue }));
     
     // Update team data immediately for live preview
     if (['name', 'ageGroup', 'gameFormat', 'gameDuration', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      onUpdate({ [field]: value === 'independent' ? null : value });
+      const updateValue = processedValue === 'independent' ? null : processedValue;
+      console.log('Updating team data:', field, updateValue);
+      onUpdate({ [field]: updateValue });
     }
   };
 
@@ -98,6 +116,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       // Convert 'independent' back to null for database storage
       const clubIdForDb = formData.clubId === 'independent' ? null : formData.clubId;
       
+      // Ensure gameDuration is a valid number
+      const gameDurationForDb = typeof formData.gameDuration === 'number' && !isNaN(formData.gameDuration) 
+        ? formData.gameDuration 
+        : 90;
+      
+      console.log('Game duration for database:', gameDurationForDb);
+      
       // Update the team basic information
       const { error: teamError } = await supabase
         .from('teams')
@@ -105,7 +130,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
-          game_duration: formData.gameDuration,
+          game_duration: gameDurationForDb,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -146,7 +171,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: formData.gameDuration,
+        gameDuration: gameDurationForDb,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
@@ -239,7 +264,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 min="1"
                 max="180"
                 value={formData.gameDuration}
-                onChange={(e) => handleInputChange('gameDuration', parseInt(e.target.value) || 90)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  console.log('Game duration input changed:', value);
+                  handleInputChange('gameDuration', value);
+                }}
                 placeholder="90"
               />
             </div>
