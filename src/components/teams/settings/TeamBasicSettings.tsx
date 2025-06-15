@@ -18,7 +18,6 @@ interface TeamBasicSettingsProps {
   isSaving: boolean;
 }
 
-// Fixed form data interface - gameDuration should be number to match Team type
 interface FormData {
   name: string;
   ageGroup: string;
@@ -104,17 +103,25 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     setFormData(prev => ({ ...prev, [field]: value }));
     
     // For immediate team updates (live preview), convert types as needed
+    // BUT skip gameDuration to prevent crashes during typing
     if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
       const updateValue = value === 'independent' ? null : value;
       console.log('Updating team data:', field, updateValue);
       onUpdate({ [field]: updateValue });
-    } else if (field === 'gameDuration') {
-      // Convert to number for team update, but validate first
-      const numValue = parseInt(value);
-      if (!isNaN(numValue) && numValue > 0) {
-        const clampedValue = Math.max(1, Math.min(180, numValue));
-        console.log('Updating game duration:', clampedValue);
-        onUpdate({ gameDuration: clampedValue });
+    }
+  };
+
+  const handleGameDurationBlur = () => {
+    // Only update team data when user finishes typing (on blur)
+    const numValue = parseInt(formData.gameDuration);
+    if (!isNaN(numValue) && numValue > 0) {
+      const clampedValue = Math.max(1, Math.min(180, numValue));
+      console.log('Updating game duration on blur:', clampedValue);
+      onUpdate({ gameDuration: clampedValue });
+      
+      // Update form data with clamped value
+      if (clampedValue !== numValue) {
+        setFormData(prev => ({ ...prev, gameDuration: String(clampedValue) }));
       }
     }
   };
@@ -281,6 +288,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 max="180"
                 value={formData.gameDuration}
                 onChange={(e) => handleInputChange('gameDuration', e.target.value)}
+                onBlur={handleGameDurationBlur}
                 placeholder="90"
               />
             </div>
