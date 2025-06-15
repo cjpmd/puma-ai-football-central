@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -194,8 +193,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       // Notify parent component of the update first
       onUpdate(updatedTeam);
 
-      // Don't refresh user data immediately - let the parent handle the update
-      // The refreshUserData() call was causing the UI to revert before the parent could update
+      // Refresh the form data with the saved values to keep them in sync
+      setFormData({
+        name: updatedTeam.name || '',
+        ageGroup: updatedTeam.ageGroup || '',
+        gameFormat: updatedTeam.gameFormat || '11-a-side',
+        gameDuration: updatedTeam.gameDuration !== undefined && updatedTeam.gameDuration !== null ? String(updatedTeam.gameDuration) : '90',
+        seasonStart: updatedTeam.seasonStart || '',
+        seasonEnd: updatedTeam.seasonEnd || '',
+        clubId: updatedTeam.clubId || '',
+        managerName: updatedTeam.managerName || '',
+        managerEmail: updatedTeam.managerEmail || '',
+        managerPhone: updatedTeam.managerPhone || '',
+      });
       
       toast({
         title: 'Settings saved',
