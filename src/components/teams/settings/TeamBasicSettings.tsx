@@ -40,8 +40,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
-  const lastSavedDataRef = useRef<FormData | null>(null);
-  const isInitializedRef = useRef(false);
+  const [hasUserMadeChanges, setHasUserMadeChanges] = useState(false);
+  const isInitialMountRef = useRef(true);
   
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
@@ -61,42 +61,25 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
-    // Only update form data from team prop on initial load or if the data is significantly different
-    const newFormData = {
-      name: team.name || '',
-      ageGroup: team.ageGroup || '',
-      gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: String(team.gameDuration || 90),
-      seasonStart: team.seasonStart || '',
-      seasonEnd: team.seasonEnd || '',
-      clubId: team.clubId || '',
-      managerName: team.managerName || '',
-      managerEmail: team.managerEmail || '',
-      managerPhone: team.managerPhone || '',
-    };
-
-    // If this is the initial load, always update
-    if (!isInitializedRef.current) {
-      console.log('Initial load - setting form data from team prop');
+    // Only update form data from team prop on initial mount
+    // Don't override user changes with prop updates
+    if (isInitialMountRef.current) {
+      console.log('Initial mount - setting form data from team prop');
+      const newFormData = {
+        name: team.name || '',
+        ageGroup: team.ageGroup || '',
+        gameFormat: team.gameFormat || '11-a-side',
+        gameDuration: String(team.gameDuration || 90),
+        seasonStart: team.seasonStart || '',
+        seasonEnd: team.seasonEnd || '',
+        clubId: team.clubId || '',
+        managerName: team.managerName || '',
+        managerEmail: team.managerEmail || '',
+        managerPhone: team.managerPhone || '',
+      };
       setFormData(newFormData);
-      isInitializedRef.current = true;
-      return;
+      isInitialMountRef.current = false;
     }
-
-    // If we have saved data and the current form matches it, don't override
-    if (lastSavedDataRef.current) {
-      const formMatchesSaved = Object.keys(lastSavedDataRef.current).every(
-        key => formData[key as keyof FormData] === lastSavedDataRef.current![key as keyof FormData]
-      );
-      
-      if (formMatchesSaved) {
-        console.log('Skipping form data update - form matches last saved data');
-        return;
-      }
-    }
-
-    console.log('Team prop changed significantly, updating form data');
-    setFormData(newFormData);
   }, [team]);
 
   const loadAvailableClubs = async () => {
@@ -124,6 +107,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleInputChange = (field: string, value: string) => {
     try {
       console.log('Handling input change:', field, value);
+      
+      // Mark that user has made changes
+      setHasUserMadeChanges(true);
       
       // Update form data
       setFormData(prev => ({ ...prev, [field]: value }));
@@ -223,22 +209,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Store the saved data to prevent form override
-      const savedFormData = {
-        name: formData.name,
-        ageGroup: formData.ageGroup,
-        gameFormat: formData.gameFormat,
-        gameDuration: String(gameDurationNum),
-        seasonStart: formData.seasonStart,
-        seasonEnd: formData.seasonEnd,
-        clubId: clubIdForDb || '',
-        managerName: formData.managerName,
-        managerEmail: formData.managerEmail,
-        managerPhone: formData.managerPhone,
-      };
-      
-      lastSavedDataRef.current = savedFormData;
-
       // Update the team data in parent component with all the updated values
       const updatedTeamData = {
         name: formData.name,
@@ -256,8 +226,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
 
-      // Update form data to match what was actually saved
-      setFormData(savedFormData);
+      // Clear the user changes flag after successful save
+      setHasUserMadeChanges(false);
 
       // Refresh user data to get updated team information
       await refreshUserData();
