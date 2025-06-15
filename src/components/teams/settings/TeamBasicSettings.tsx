@@ -213,7 +213,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label htmlFor="game-format">Game Format</Label>
               <Select value={formData.gameFormat} onValueChange={(value) => handleInputChange('gameFormat', value)}>

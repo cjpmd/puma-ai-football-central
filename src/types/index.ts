@@ -268,6 +268,7 @@ export interface Event {
   location?: string;
   notes?: string;
   gameFormat?: GameFormat;
+  gameDuration?: number; // Duration in minutes
   opponent?: string;
   isHome?: boolean;
   facilityId?: string;
@@ -279,7 +280,7 @@ export interface Event {
   playerOfTheMatchId?: string;
   meetingTime?: string;
   teams?: string[];
-  kitSelection?: 'home' | 'away' | 'training'; // Added this property
+  kitSelection?: 'home' | 'away' | 'training';
 }
 
 export type EquipmentItem = {
