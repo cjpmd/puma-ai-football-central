@@ -194,10 +194,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       // Notify parent component of the update first
       onUpdate(updatedTeam);
 
-      // Then refresh all user data to ensure UI consistency
-      console.log('Refreshing user data...');
-      await refreshUserData();
-
+      // Don't refresh user data immediately - let the parent handle the update
+      // The refreshUserData() call was causing the UI to revert before the parent could update
+      
       toast({
         title: 'Settings saved',
         description: 'Team basic settings have been updated successfully.',
