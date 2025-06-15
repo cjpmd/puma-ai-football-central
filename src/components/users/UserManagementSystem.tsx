@@ -74,36 +74,40 @@ export const UserManagementSystem = () => {
     try {
       console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
       
-      // First, check if profile already exists
+      // Check if profile already exists
       const { data: existingProfile, error: profileCheckError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', targetUserId)
         .single();
 
-      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
-        throw profileCheckError;
-      }
+      console.log('Profile check result:', { existingProfile, profileCheckError });
 
-      if (existingProfile) {
-        console.log('Profile already exists, processing invitations only');
-      } else {
+      // If profile doesn't exist (PGRST116 = no rows returned)
+      if (profileCheckError && profileCheckError.code === 'PGRST116') {
+        console.log('No profile found, creating one...');
+        
         // Get the first invitation to get user details
         const { data: invitations, error: invitationError } = await supabase
           .from('user_invitations')
           .select('*')
           .eq('email', targetEmail)
-          .order('created_at', { ascending: true })
-          .limit(1);
+          .order('created_at', { ascending: true });
 
-        if (invitationError || !invitations || invitations.length === 0) {
+        if (invitationError) {
+          console.error('Error fetching invitations:', invitationError);
+          throw invitationError;
+        }
+
+        if (!invitations || invitations.length === 0) {
           throw new Error('No invitations found for this email');
         }
 
+        console.log('Found invitations:', invitations);
         const firstInvitation = invitations[0];
         
         // Create the missing profile
-        console.log('Creating missing profile...');
+        console.log('Creating missing profile for user:', targetUserId);
         const { error: createProfileError } = await supabase
           .from('profiles')
           .insert([{
@@ -114,13 +118,20 @@ export const UserManagementSystem = () => {
           }]);
 
         if (createProfileError) {
+          console.error('Error creating profile:', createProfileError);
           throw createProfileError;
         }
         console.log('Profile created successfully');
+      } else if (profileCheckError) {
+        // Some other error occurred
+        console.error('Unexpected error checking profile:', profileCheckError);
+        throw profileCheckError;
+      } else if (existingProfile) {
+        console.log('Profile already exists:', existingProfile);
       }
 
       // Process all pending invitations for this email
-      console.log('Processing all pending invitations...');
+      console.log('Processing all pending invitations for:', targetEmail);
       const result = await userInvitationService.processUserInvitation(targetEmail);
       console.log('Processing result:', result);
 
@@ -129,14 +140,14 @@ export const UserManagementSystem = () => {
       
       toast({
         title: 'User Fixed Successfully',
-        description: `User ${targetEmail} has been fixed and should now appear in the list with proper team access.`,
+        description: `User ${targetEmail} has been processed. ${result.message}`,
       });
       
     } catch (error: any) {
       console.error('Fix user error:', error);
       toast({
         title: 'Fix User Error',
-        description: error.message,
+        description: error.message || 'An unexpected error occurred',
         variant: 'destructive',
       });
     }
