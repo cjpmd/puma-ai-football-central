@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -40,6 +40,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
+  const justSavedRef = useRef(false);
   
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
@@ -59,20 +60,25 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   }, []);
 
   useEffect(() => {
-    // Update form data when team prop changes
-    console.log('Team prop changed, updating form data:', team);
-    setFormData({
-      name: team.name || '',
-      ageGroup: team.ageGroup || '',
-      gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: String(team.gameDuration || 90),
-      seasonStart: team.seasonStart || '',
-      seasonEnd: team.seasonEnd || '',
-      clubId: team.clubId || '',
-      managerName: team.managerName || '',
-      managerEmail: team.managerEmail || '',
-      managerPhone: team.managerPhone || '',
-    });
+    // Only update form data from team prop if we haven't just saved
+    if (!justSavedRef.current) {
+      console.log('Team prop changed, updating form data:', team);
+      setFormData({
+        name: team.name || '',
+        ageGroup: team.ageGroup || '',
+        gameFormat: team.gameFormat || '11-a-side',
+        gameDuration: String(team.gameDuration || 90),
+        seasonStart: team.seasonStart || '',
+        seasonEnd: team.seasonEnd || '',
+        clubId: team.clubId || '',
+        managerName: team.managerName || '',
+        managerEmail: team.managerEmail || '',
+        managerPhone: team.managerPhone || '',
+      });
+    } else {
+      // Reset the flag after preventing the override
+      justSavedRef.current = false;
+    }
   }, [team]);
 
   const loadAvailableClubs = async () => {
@@ -191,6 +197,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
+      // Mark that we just saved to prevent form data override
+      justSavedRef.current = true;
+
       // Update the team data in parent component with all the updated values
       const updatedTeamData = {
         name: formData.name,
@@ -207,13 +216,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Updating parent component with:', updatedTeamData);
       onUpdate(updatedTeamData);
-
-      // Force update form data to ensure consistency
-      setFormData(prev => ({
-        ...prev,
-        gameDuration: String(gameDurationNum),
-        clubId: clubIdForDb || 'independent'
-      }));
 
       // Refresh user data to get updated team information
       await refreshUserData();
