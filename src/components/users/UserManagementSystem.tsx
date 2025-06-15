@@ -15,6 +15,7 @@ import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
 import { BulkUserImport } from './BulkUserImport';
 import { InvitationResendPanel } from './InvitationResendPanel';
+import { userInvitationService } from '@/services/userInvitationService';
 
 interface UserProfile {
   id: string;
@@ -542,7 +543,7 @@ export const UserManagementSystem = () => {
           </Button>
           {profile?.roles?.includes('global_admin') && (
             <Button
-              onClick={debugSpecificUser}
+              onClick={debugSpecificUserEmail}
               variant="outline"
               size="sm"
               className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
