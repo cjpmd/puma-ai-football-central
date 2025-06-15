@@ -23,6 +23,8 @@ export interface UserInvitation {
   status: 'pending' | 'accepted' | 'expired';
   created_at: string;
   invited_by: string;
+  accepted_by?: string;
+  accepted_at?: string;
 }
 
 export const userInvitationService = {
@@ -99,6 +101,126 @@ export const userInvitationService = {
     if (error) {
       console.error('Error accepting invitation:', error);
       throw error;
+    }
+  },
+
+  async processUserInvitation(email: string): Promise<{ processed: boolean; message: string }> {
+    try {
+      console.log('Processing invitation for email:', email);
+      
+      // Find the user's profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (profileError || !profile) {
+        return { processed: false, message: 'User profile not found' };
+      }
+
+      // Find pending invitations for this email
+      const { data: invitations, error: invitationError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('email', email)
+        .eq('status', 'pending');
+
+      if (invitationError) {
+        throw invitationError;
+      }
+
+      if (!invitations || invitations.length === 0) {
+        return { processed: false, message: 'No pending invitations found' };
+      }
+
+      let processedCount = 0;
+
+      for (const invitation of invitations) {
+        // Update invitation status
+        const { error: updateError } = await supabase
+          .from('user_invitations')
+          .update({
+            status: 'accepted',
+            accepted_by: profile.id,
+            accepted_at: new Date().toISOString()
+          })
+          .eq('id', invitation.id);
+
+        if (updateError) {
+          console.error('Error updating invitation:', updateError);
+          continue;
+        }
+
+        // Update user's profile with the role
+        const updatedRoles = Array.isArray(profile.roles) 
+          ? [...new Set([...profile.roles, invitation.role])]
+          : [invitation.role];
+
+        const { error: profileUpdateError } = await supabase
+          .from('profiles')
+          .update({ roles: updatedRoles })
+          .eq('id', profile.id);
+
+        if (profileUpdateError) {
+          console.error('Error updating profile roles:', profileUpdateError);
+        }
+
+        // Create team association if team_id exists
+        if (invitation.team_id) {
+          const { error: teamError } = await supabase
+            .from('user_teams')
+            .insert([{
+              user_id: profile.id,
+              team_id: invitation.team_id,
+              role: invitation.role
+            }]);
+
+          if (teamError && teamError.code !== '23505') { // Ignore duplicate key errors
+            console.error('Error creating team association:', teamError);
+          }
+        }
+
+        // Create player association if player_id exists
+        if (invitation.player_id) {
+          const { error: playerError } = await supabase
+            .from('user_players')
+            .insert([{
+              user_id: profile.id,
+              player_id: invitation.player_id,
+              relationship: invitation.role === 'parent' ? 'parent' : 'self'
+            }]);
+
+          if (playerError && playerError.code !== '23505') { // Ignore duplicate key errors
+            console.error('Error creating player association:', playerError);
+          }
+        }
+
+        // Create staff association if staff_id exists
+        if (invitation.staff_id) {
+          const { error: staffError } = await supabase
+            .from('user_staff')
+            .insert([{
+              user_id: profile.id,
+              staff_id: invitation.staff_id,
+              relationship: 'self'
+            }]);
+
+          if (staffError && staffError.code !== '23505') { // Ignore duplicate key errors
+            console.error('Error creating staff association:', staffError);
+          }
+        }
+
+        processedCount++;
+      }
+
+      return { 
+        processed: processedCount > 0, 
+        message: `Processed ${processedCount} invitation(s) for ${email}` 
+      };
+    } catch (error: any) {
+      console.error('Error processing user invitation:', error);
+      return { processed: false, message: error.message };
     }
   },
 

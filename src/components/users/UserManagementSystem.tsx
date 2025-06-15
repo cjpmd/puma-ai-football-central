@@ -139,56 +139,32 @@ export const UserManagementSystem = () => {
     }
   };
 
-  const debugSpecificUser = async () => {
-    const targetUserId = '51e6114e-0816-4a17-93c2-c57c03bedb92';
+  const processSpecificUserInvitation = async () => {
+    const targetEmail = 'dcjpm001@gmail.com';
     
     try {
-      console.log('=== DEBUGGING USER:', targetUserId, '===');
+      console.log('Processing invitation for:', targetEmail);
       
-      // Check if user exists in auth.users (this will fail due to RLS, but we can try)
-      console.log('1. Checking profiles table...');
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', targetUserId);
+      const result = await userInvitationService.processUserInvitation(targetEmail);
       
-      console.log('Profile query result:', { profileData, profileError });
-      
-      // Check invitations
-      console.log('2. Checking user_invitations...');
-      const { data: invitationData, error: invitationError } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('accepted_by', targetUserId);
-      
-      console.log('Invitation query result:', { invitationData, invitationError });
-      
-      // Check all invitations for this user (by email if we can find it)
-      console.log('3. Checking all invitations...');
-      const { data: allInvitations, error: allInvError } = await supabase
-        .from('user_invitations')
-        .select('*');
-      
-      console.log('All invitations:', allInvitations);
-      
-      // Check user_teams
-      console.log('4. Checking user_teams...');
-      const { data: userTeamsData, error: userTeamsError } = await supabase
-        .from('user_teams')
-        .select('*')
-        .eq('user_id', targetUserId);
-      
-      console.log('User teams query result:', { userTeamsData, userTeamsError });
-      
-      toast({
-        title: 'Debug Complete',
-        description: 'Check console for detailed debugging information',
-      });
+      if (result.processed) {
+        await loadUsers();
+        toast({
+          title: 'Success',
+          description: result.message,
+        });
+      } else {
+        toast({
+          title: 'No Action Taken',
+          description: result.message,
+          variant: 'destructive',
+        });
+      }
       
     } catch (error: any) {
-      console.error('Debug error:', error);
+      console.error('Error processing specific user invitation:', error);
       toast({
-        title: 'Debug Error',
+        title: 'Processing Error',
         description: error.message,
         variant: 'destructive',
       });
@@ -216,92 +192,9 @@ export const UserManagementSystem = () => {
       // Check each pending invitation to see if the user has signed up
       for (const invitation of pendingInvitations || []) {
         try {
-          // Check if a profile exists with this email
-          const { data: existingProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('email', invitation.email)
-            .single();
-
-          if (existingProfile && !profileError) {
-            console.log(`Processing invitation for ${invitation.email} (User ID: ${existingProfile.id})`);
-            
-            // Update the invitation to accepted
-            const { error: updateError } = await supabase
-              .from('user_invitations')
-              .update({
-                status: 'accepted',
-                accepted_by: existingProfile.id,
-                accepted_at: new Date().toISOString()
-              })
-              .eq('id', invitation.id);
-
-            if (updateError) {
-              console.error('Error updating invitation:', updateError);
-              continue;
-            }
-
-            // Update user's profile with the role from invitation
-            const updatedRoles = Array.isArray(existingProfile.roles) 
-              ? [...new Set([...existingProfile.roles, invitation.role])]
-              : [invitation.role];
-
-            const { error: profileUpdateError } = await supabase
-              .from('profiles')
-              .update({ roles: updatedRoles })
-              .eq('id', existingProfile.id);
-
-            if (profileUpdateError) {
-              console.error('Error updating profile roles:', profileUpdateError);
-            }
-
-            // Create team association if team_id exists
-            if (invitation.team_id) {
-              const { error: teamError } = await supabase
-                .from('user_teams')
-                .insert([{
-                  user_id: existingProfile.id,
-                  team_id: invitation.team_id,
-                  role: invitation.role
-                }]);
-
-              if (teamError && teamError.code !== '23505') { // Ignore duplicate key errors
-                console.error('Error creating team association:', teamError);
-              }
-            }
-
-            // Create player association if player_id exists
-            if (invitation.player_id) {
-              const { error: playerError } = await supabase
-                .from('user_players')
-                .insert([{
-                  user_id: existingProfile.id,
-                  player_id: invitation.player_id,
-                  relationship: invitation.role === 'parent' ? 'parent' : 'self'
-                }]);
-
-              if (playerError && playerError.code !== '23505') { // Ignore duplicate key errors
-                console.error('Error creating player association:', playerError);
-              }
-            }
-
-            // Create staff association if staff_id exists
-            if (invitation.staff_id) {
-              const { error: staffError } = await supabase
-                .from('user_staff')
-                .insert([{
-                  user_id: existingProfile.id,
-                  staff_id: invitation.staff_id,
-                  relationship: 'self'
-                }]);
-
-              if (staffError && staffError.code !== '23505') { // Ignore duplicate key errors
-                console.error('Error creating staff association:', staffError);
-              }
-            }
-
+          const result = await userInvitationService.processUserInvitation(invitation.email);
+          if (result.processed) {
             processedCount++;
-            console.log(`Successfully processed invitation for ${invitation.email}`);
           }
         } catch (error) {
           console.error(`Error processing invitation for ${invitation.email}:`, error);
@@ -637,6 +530,15 @@ export const UserManagementSystem = () => {
           >
             <UserSearch className="h-4 w-4 mr-2" />
             Debug Email User
+          </Button>
+          <Button
+            onClick={processSpecificUserInvitation}
+            variant="outline"
+            size="sm"
+            className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            Fix User
           </Button>
           {profile?.roles?.includes('global_admin') && (
             <Button
