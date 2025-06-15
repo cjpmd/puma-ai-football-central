@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,7 +22,7 @@ interface FormData {
   name: string;
   ageGroup: string;
   gameFormat: string;
-  gameDuration: string; // Keep as string for input handling
+  gameDuration: string;
   seasonStart: string;
   seasonEnd: string;
   clubId: string;
@@ -44,7 +45,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
     gameFormat: team.gameFormat || '11-a-side',
-    gameDuration: String(team.gameDuration || 90), // Convert to string
+    gameDuration: String(team.gameDuration || 90),
     seasonStart: team.seasonStart || '',
     seasonEnd: team.seasonEnd || '',
     clubId: team.clubId || '',
@@ -59,11 +60,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   useEffect(() => {
     // Update form data when team prop changes
+    console.log('Team prop changed, updating form data:', team);
     setFormData({
       name: team.name || '',
       ageGroup: team.ageGroup || '',
       gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: String(team.gameDuration || 90), // Convert to string
+      gameDuration: String(team.gameDuration || 90),
       seasonStart: team.seasonStart || '',
       seasonEnd: team.seasonEnd || '',
       clubId: team.clubId || '',
@@ -98,13 +100,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleInputChange = (field: string, value: string) => {
     console.log('Handling input change:', field, value);
     
-    // Update form data (all as strings)
+    // Update form data
     setFormData(prev => ({ ...prev, [field]: value }));
     
-    // For immediate team updates (live preview), convert types as needed
-    // BUT skip gameDuration to prevent crashes during typing
-    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId'].includes(field)) {
-      const updateValue = value === 'independent' ? null : value;
+    // For immediate team updates (live preview), but exclude gameDuration to prevent crashes
+    if (['name', 'ageGroup', 'gameFormat', 'seasonStart', 'seasonEnd', 'clubId', 'managerName', 'managerEmail', 'managerPhone'].includes(field)) {
+      const updateValue = field === 'clubId' && value === 'independent' ? null : value;
       console.log('Updating team data:', field, updateValue);
       onUpdate({ [field]: updateValue });
     }
@@ -152,7 +153,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           name: formData.name,
           age_group: formData.ageGroup,
           game_format: formData.gameFormat,
-          game_duration: gameDurationNum, // Ensure this is a number
+          game_duration: gameDurationNum,
           season_start: formData.seasonStart,
           season_end: formData.seasonEnd,
           club_id: clubIdForDb,
@@ -190,19 +191,22 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Update the team data in parent component
-      onUpdate({
+      // Update the team data in parent component with all the updated values
+      const updatedTeamData = {
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: gameDurationNum, // Ensure this is a number
+        gameDuration: gameDurationNum,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
         managerName: formData.managerName,
         managerEmail: formData.managerEmail,
         managerPhone: formData.managerPhone,
-      });
+      };
+      
+      console.log('Updating parent component with:', updatedTeamData);
+      onUpdate(updatedTeamData);
 
       // Refresh user data to get updated team information
       await refreshUserData();
