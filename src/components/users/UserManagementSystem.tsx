@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,66 +68,51 @@ export const UserManagementSystem = () => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
 
-  const debugSpecificUserEmail = async () => {
-    const targetEmail = 'dcjpm001@gmail.com';
+  const debugSpecificUser = async () => {
+    const targetUserId = '9eb48f9d-a697-4863-80e1-9a648ede7836';
     
     try {
-      console.log('=== DEBUGGING USER EMAIL:', targetEmail, '===');
+      console.log('=== DEBUGGING SPECIFIC USER:', targetUserId, '===');
       
-      // Check profiles table
-      console.log('1. Checking profiles table for email...');
-      const { data: profileByEmail, error: profileEmailError } = await supabase
+      // Check profiles table directly
+      console.log('1. Checking profiles table for user ID...');
+      const { data: profileById, error: profileIdError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', targetEmail);
+        .eq('id', targetUserId);
       
-      console.log('Profile by email query result:', { profileByEmail, profileEmailError });
+      console.log('Profile by ID query result:', { profileById, profileIdError });
+
+      // Check auth users (this might not work due to RLS)
+      console.log('2. Checking auth users...');
+      const { data: authUsers, error: authError } = await supabase
+        .from('auth.users')
+        .select('*')
+        .eq('id', targetUserId);
       
-      // Check invitations by email
-      console.log('2. Checking user_invitations for email...');
-      const { data: invitationsByEmail, error: invitationEmailError } = await supabase
+      console.log('Auth users query result:', { authUsers, authError });
+
+      // Check invitations for this user
+      console.log('3. Checking user_invitations for user ID...');
+      const { data: invitationsByUserId, error: invitationUserError } = await supabase
         .from('user_invitations')
         .select('*')
-        .eq('email', targetEmail);
+        .eq('accepted_by', targetUserId);
       
-      console.log('Invitations by email query result:', { invitationsByEmail, invitationEmailError });
+      console.log('Invitations by user ID query result:', { invitationsByUserId, invitationUserError });
+
+      // Check all profiles to see what we get
+      console.log('4. Checking all profiles...');
+      const { data: allProfiles, error: allProfilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(10);
       
-      // If we found a profile, check their associations
-      if (profileByEmail && profileByEmail.length > 0) {
-        const userId = profileByEmail[0].id;
-        console.log('3. Found profile, checking associations for user ID:', userId);
-        
-        // Check user_teams
-        const { data: userTeams, error: userTeamsError } = await supabase
-          .from('user_teams')
-          .select('*')
-          .eq('user_id', userId);
-        
-        console.log('User teams:', { userTeams, userTeamsError });
-        
-        // Check user_players
-        const { data: userPlayers, error: userPlayersError } = await supabase
-          .from('user_players')
-          .select('*')
-          .eq('user_id', userId);
-        
-        console.log('User players:', { userPlayers, userPlayersError });
-        
-        // Check user_staff
-        const { data: userStaff, error: userStaffError } = await supabase
-          .from('user_staff')
-          .select('*')
-          .eq('user_id', userId);
-        
-        console.log('User staff:', { userStaff, userStaffError });
-      }
-      
-      // Check if there are any accepted invitations that haven't been processed
-      const acceptedInvitations = invitationsByEmail?.filter(inv => inv.status === 'accepted') || [];
-      console.log('4. Accepted invitations that need processing:', acceptedInvitations);
-      
+      console.log('Recent profiles:', { allProfiles, allProfilesError });
+
       toast({
-        title: 'Debug Complete for ' + targetEmail,
+        title: 'Debug Complete for ' + targetUserId,
         description: 'Check console for detailed information about this user',
       });
       
@@ -134,38 +120,6 @@ export const UserManagementSystem = () => {
       console.error('Debug error:', error);
       toast({
         title: 'Debug Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const processSpecificUserInvitation = async () => {
-    const targetEmail = 'dcjpm001@gmail.com';
-    
-    try {
-      console.log('Processing invitation for:', targetEmail);
-      
-      const result = await userInvitationService.processUserInvitation(targetEmail);
-      
-      if (result.processed) {
-        await loadUsers();
-        toast({
-          title: 'Success',
-          description: result.message,
-        });
-      } else {
-        toast({
-          title: 'No Action Taken',
-          description: result.message,
-          variant: 'destructive',
-        });
-      }
-      
-    } catch (error: any) {
-      console.error('Error processing specific user invitation:', error);
-      toast({
-        title: 'Processing Error',
         description: error.message,
         variant: 'destructive',
       });
@@ -524,34 +478,14 @@ export const UserManagementSystem = () => {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={debugSpecificUserEmail}
+            onClick={debugSpecificUser}
             variant="outline"
             size="sm"
             className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
           >
             <UserSearch className="h-4 w-4 mr-2" />
-            Debug Email User
+            Debug Missing User
           </Button>
-          <Button
-            onClick={processSpecificUserInvitation}
-            variant="outline"
-            size="sm"
-            className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
-          >
-            <UserCheck className="h-4 w-4 mr-2" />
-            Fix User
-          </Button>
-          {profile?.roles?.includes('global_admin') && (
-            <Button
-              onClick={debugSpecificUserEmail}
-              variant="outline"
-              size="sm"
-              className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
-            >
-              <Bug className="h-4 w-4 mr-2" />
-              Debug User
-            </Button>
-          )}
           <Button
             onClick={processPendingInvitations}
             variant="outline"
