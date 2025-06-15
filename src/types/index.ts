@@ -35,6 +35,7 @@ export type Team = {
   clubId?: string;
   subscriptionType: SubscriptionType;
   gameFormat: GameFormat;
+  gameDuration?: number; // Duration in minutes
   kitIcons: {
     home: string;
     away: string;
