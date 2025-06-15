@@ -73,6 +73,13 @@ export const UserManagementSystem = () => {
     
     try {
       console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
+      console.log('Current user:', user);
+      console.log('Current profile:', profile);
+      
+      // Check if current user is global admin
+      if (!profile?.roles?.includes('global_admin')) {
+        throw new Error('You must be a global admin to perform this action');
+      }
       
       // Check if profile already exists using maybeSingle to avoid errors
       const { data: existingProfile, error: profileCheckError } = await supabase
@@ -111,23 +118,51 @@ export const UserManagementSystem = () => {
         console.log('Found invitations:', invitations);
         const firstInvitation = invitations[0];
         
-        // Create the missing profile using upsert to handle any race conditions
+        // Create the missing profile using insert (since upsert might have issues with RLS)
         console.log('Creating missing profile for user:', targetUserId);
-        const { error: createProfileError } = await supabase
+        
+        // First try with direct insert
+        const { data: newProfile, error: createProfileError } = await supabase
           .from('profiles')
-          .upsert([{
+          .insert([{
             id: targetUserId,
             name: firstInvitation.name,
             email: firstInvitation.email,
             roles: [firstInvitation.role]
-          }], {
-            onConflict: 'id'
-          });
+          }])
+          .select()
+          .single();
 
         if (createProfileError) {
-          console.error('Error creating profile:', createProfileError);
-          throw createProfileError;
+          console.error('Error creating profile with direct insert:', createProfileError);
+          
+          // If direct insert fails, try with RPC call as backup
+          console.log('Attempting alternative profile creation method...');
+          const { data: rpcResult, error: rpcError } = await supabase.rpc('user_is_global_admin');
+          console.log('Global admin check result:', rpcResult);
+          
+          if (rpcError || !rpcResult) {
+            throw new Error('Global admin verification failed. Please ensure you have proper permissions.');
+          }
+          
+          // Try upsert as last resort
+          const { error: upsertError } = await supabase
+            .from('profiles')
+            .upsert([{
+              id: targetUserId,
+              name: firstInvitation.name,
+              email: firstInvitation.email,
+              roles: [firstInvitation.role]
+            }], {
+              onConflict: 'id'
+            });
+            
+          if (upsertError) {
+            console.error('Error with upsert:', upsertError);
+            throw new Error(`Failed to create profile: ${upsertError.message}`);
+          }
         }
+        
         console.log('Profile created successfully');
       } else {
         console.log('Profile already exists:', existingProfile);
