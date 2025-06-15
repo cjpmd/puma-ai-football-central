@@ -67,6 +67,81 @@ export const UserManagementSystem = () => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
 
+  const fixSpecificUser = async () => {
+    const targetUserId = '9eb48f9d-a697-4863-80e1-9a648ede7836';
+    const targetEmail = 'dcjpm001@gmail.com';
+    
+    try {
+      console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
+      
+      // First, check if profile already exists
+      const { data: existingProfile, error: profileCheckError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', targetUserId)
+        .single();
+
+      if (profileCheckError && profileCheckError.code !== 'PGRST116') {
+        throw profileCheckError;
+      }
+
+      if (existingProfile) {
+        console.log('Profile already exists, processing invitations only');
+      } else {
+        // Get the first invitation to get user details
+        const { data: invitations, error: invitationError } = await supabase
+          .from('user_invitations')
+          .select('*')
+          .eq('email', targetEmail)
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        if (invitationError || !invitations || invitations.length === 0) {
+          throw new Error('No invitations found for this email');
+        }
+
+        const firstInvitation = invitations[0];
+        
+        // Create the missing profile
+        console.log('Creating missing profile...');
+        const { error: createProfileError } = await supabase
+          .from('profiles')
+          .insert([{
+            id: targetUserId,
+            name: firstInvitation.name,
+            email: firstInvitation.email,
+            roles: [firstInvitation.role]
+          }]);
+
+        if (createProfileError) {
+          throw createProfileError;
+        }
+        console.log('Profile created successfully');
+      }
+
+      // Process all pending invitations for this email
+      console.log('Processing all pending invitations...');
+      const result = await userInvitationService.processUserInvitation(targetEmail);
+      console.log('Processing result:', result);
+
+      // Reload users to see the changes
+      await loadUsers();
+      
+      toast({
+        title: 'User Fixed Successfully',
+        description: `User ${targetEmail} has been fixed and should now appear in the list with proper team access.`,
+      });
+      
+    } catch (error: any) {
+      console.error('Fix user error:', error);
+      toast({
+        title: 'Fix User Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const debugSpecificUser = async () => {
     const targetUserId = '9eb48f9d-a697-4863-80e1-9a648ede7836';
     
@@ -476,6 +551,15 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            onClick={fixSpecificUser}
+            variant="outline"
+            size="sm"
+            className="bg-red-50 border-red-200 text-red-800 hover:bg-red-100"
+          >
+            <UserCheck className="h-4 w-4 mr-2" />
+            Fix Missing User
+          </Button>
           <Button
             onClick={debugSpecificUser}
             variant="outline"
