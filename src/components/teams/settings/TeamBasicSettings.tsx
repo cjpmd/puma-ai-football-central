@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,26 +99,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const handleInputChange = (field: string, value: string | number) => {
     console.log('Handling input change:', field, value);
     
-    // For game duration, store the raw value but validate on save
+    // For game duration, allow string input during editing
     if (field === 'gameDuration') {
-      // Allow empty string or numbers
-      if (value === '' || value === null || value === undefined) {
-        setFormData(prev => ({ ...prev, [field]: '' }));
-        return;
-      }
+      setFormData(prev => ({ ...prev, [field]: value }));
       
-      // Convert to number if it's a string
+      // Only update team data if we have a valid number
       const numValue = typeof value === 'string' ? parseFloat(value) : value;
-      
-      // Only update if it's a valid number or empty
-      if (!isNaN(numValue) || value === '') {
-        setFormData(prev => ({ ...prev, [field]: value }));
-        
-        // Only update team data if we have a valid number
-        if (!isNaN(numValue) && numValue > 0) {
-          const clampedValue = Math.max(1, Math.min(180, numValue));
-          onUpdate({ [field]: clampedValue });
-        }
+      if (!isNaN(numValue) && numValue > 0) {
+        const clampedValue = Math.max(1, Math.min(180, numValue));
+        onUpdate({ [field]: clampedValue });
       }
       return;
     }
@@ -143,8 +131,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       // Ensure gameDuration is a valid number, default to 90 if invalid
       let gameDurationForDb = 90;
-      if (formData.gameDuration !== '' && formData.gameDuration !== null && formData.gameDuration !== undefined) {
-        const numValue = typeof formData.gameDuration === 'string' ? parseFloat(formData.gameDuration) : formData.gameDuration;
+      const currentDuration = formData.gameDuration;
+      
+      if (currentDuration !== '' && currentDuration !== null && currentDuration !== undefined) {
+        const numValue = typeof currentDuration === 'string' ? parseFloat(currentDuration) : currentDuration;
         if (!isNaN(numValue) && numValue > 0) {
           gameDurationForDb = Math.max(1, Math.min(180, Math.round(numValue)));
         }
