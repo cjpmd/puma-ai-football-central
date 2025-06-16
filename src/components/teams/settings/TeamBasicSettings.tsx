@@ -143,7 +143,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('Saving to database with game duration:', clampedDuration);
       
       // Update the team in database
-      const { error: teamError } = await supabase
+      const { data: updatedTeam, error: teamError } = await supabase
         .from('teams')
         .update({
           name: formData.name,
@@ -158,14 +158,16 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           manager_phone: formData.managerPhone,
           updated_at: new Date().toISOString()
         })
-        .eq('id', team.id);
+        .eq('id', team.id)
+        .select()
+        .single();
 
       if (teamError) {
         console.error('Team update error:', teamError);
         throw teamError;
       }
 
-      console.log('Team updated successfully in database');
+      console.log('Team updated successfully in database:', updatedTeam);
 
       // Handle club linking
       if (clubIdForDb !== team.clubId) {
@@ -191,12 +193,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
       }
 
-      // Prepare updated team data for parent component
+      // Prepare updated team data for parent component - CRITICAL: Include the updated values
       const updatedTeamData = {
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: clampedDuration,
+        gameDuration: clampedDuration, // Make sure this is the updated value
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
@@ -207,10 +209,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Updating parent component with:', updatedTeamData);
       
-      // Call onUpdate to update parent component
+      // Call onUpdate to update parent component BEFORE refreshing user data
       onUpdate(updatedTeamData);
 
-      // Refresh user data to ensure everything is in sync
+      // Refresh user data to ensure everything is in sync - but this should not overwrite our changes
       await refreshUserData();
 
       toast({
@@ -301,6 +303,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 onChange={(e) => handleInputChange('gameDuration', e.target.value)}
                 placeholder="90"
               />
+              <p className="text-xs text-muted-foreground">
+                Current saved value: {team.gameDuration || 90} minutes
+              </p>
             </div>
 
             <div className="space-y-2">

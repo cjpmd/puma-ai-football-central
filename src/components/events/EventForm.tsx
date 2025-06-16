@@ -112,7 +112,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         kitSelection: event.kitSelection || 'home'
       });
     } else {
-      console.log('Creating new event, using team defaults');
+      console.log('Creating new event, using team defaults - gameFormat:', teamDefaultGameFormat, 'gameDuration:', teamDefaultGameDuration);
       // For new events, use team defaults
       setFormData(prev => ({
         ...prev,
