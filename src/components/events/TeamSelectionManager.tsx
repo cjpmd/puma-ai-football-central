@@ -130,7 +130,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const periodState = periodStates[periodKey];
       
       if (periodState) {
-        // Track playing time (only for starting players, NOT substitutes)
+        // Track playing time (ONLY for starting players, NOT substitutes)
         periodState.selectedPlayers.forEach(playerId => {
           if (playerTrackers[playerId]) {
             playerTrackers[playerId].totalPlayingTime += periodState.durationMinutes;
@@ -144,9 +144,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           }
         });
 
-        // Track substitute time (only count as substitute time, NOT playing time)
+        // Track substitute time (ONLY count as substitute time, NOT playing time)
         periodState.substitutePlayers.forEach(playerId => {
-          if (playerTrackers[playerId]) {
+          // Only add substitute time if player is NOT also in selectedPlayers for this period
+          if (playerTrackers[playerId] && !periodState.selectedPlayers.includes(playerId)) {
             playerTrackers[playerId].totalSubstituteTime += periodState.durationMinutes;
             playerTrackers[playerId].periodBreakdown.push({
               period,
@@ -158,7 +159,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           }
         });
 
-        // Add periods where player is not involved
+        // Add periods where player is not involved at all
         allPlayers.forEach(player => {
           const isPlaying = periodState.selectedPlayers.includes(player.id);
           const isSubstitute = periodState.substitutePlayers.includes(player.id);

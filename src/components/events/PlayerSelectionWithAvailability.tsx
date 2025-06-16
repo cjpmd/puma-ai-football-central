@@ -58,7 +58,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   const [availability, setAvailability] = useState<Record<string, any>>({});
   const [nameDisplayOption, setNameDisplayOption] = useState<NameDisplayOption>('surname');
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'list' | 'formation'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'formation'>('formation');
 
   useEffect(() => {
     loadPlayersAndAvailability();
@@ -190,7 +190,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       
       // Also remove as captain if they were captain
       if (captainId === playerId) {
-        onCaptainChange('no-captain');
+        onCaptainChange('');
       }
     } else {
       // Add to selected players
@@ -209,7 +209,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       
       // Also remove as captain if they were captain
       if (captainId === playerId) {
-        onCaptainChange('no-captain');
+        onCaptainChange('');
       }
     } else {
       // Add to substitutes
@@ -222,7 +222,9 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
     
     if (playerId === 'none') {
       // Remove player from this position
-      newSelectedPlayers.splice(positionIndex, 1);
+      if (positionIndex < newSelectedPlayers.length) {
+        newSelectedPlayers.splice(positionIndex, 1);
+      }
     } else {
       // Remove player from their current position if they're already selected
       const currentIndex = newSelectedPlayers.indexOf(playerId);
@@ -234,11 +236,11 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       if (positionIndex < newSelectedPlayers.length) {
         newSelectedPlayers[positionIndex] = playerId;
       } else {
-        // Fill gaps with empty strings if needed
+        // Fill gaps if needed
         while (newSelectedPlayers.length < positionIndex) {
           newSelectedPlayers.push('');
         }
-        newSelectedPlayers.push(playerId);
+        newSelectedPlayers[positionIndex] = playerId;
       }
     }
     
@@ -271,130 +273,137 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
         {/* Formation Selection */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Formation & Setup</CardTitle>
+            <CardTitle className="text-lg">Formation Selection ({gameFormat})</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Label>Formation:</Label>
-                <Select value={formation} onValueChange={onFormationChange}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formations
-                      .filter(form => form.id && form.id.trim() !== '') // Filter out formations with empty IDs
-                      .map((form) => (
-                        <SelectItem key={form.id} value={form.id}>
-                          {form.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Label>Captain:</Label>
-                <Select 
-                  value={captainId || 'no-captain'} 
-                  onValueChange={(value) => onCaptainChange(value === 'no-captain' ? '' : value)}
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select captain" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no-captain">No Captain</SelectItem>
-                    {[...selectedPlayers, ...substitutePlayers]
-                      .map(playerId => players.find(p => p.id === playerId))
-                      .filter(Boolean)
-                      .map((player) => (
-                        <SelectItem key={player!.id} value={player!.id}>
-                          {formatPlayerDisplayName(player!)}
-                        </SelectItem>
-                      ))
-                    }
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {formations
+                .filter(form => form.id && form.id.trim() !== '') // Filter out formations with empty IDs
+                .map((form) => (
+                  <div key={form.id} className="text-center">
+                    <Button
+                      variant={formation === form.id ? "default" : "outline"}
+                      onClick={() => onFormationChange(form.id)}
+                      className="w-full mb-2"
+                    >
+                      {form.name}
+                    </Button>
+                    {formation === form.id && (
+                      <Badge variant="default" className="text-xs">
+                        Selected
+                      </Badge>
+                    )}
+                  </div>
+                ))}
             </div>
             
-            <div className="text-sm text-muted-foreground">
-              Formation requires {maxPlayers} players • Team {teamNumber} • Period {periodNumber}
+            <div className="text-center text-sm text-muted-foreground">
+              Selected: {formation}
             </div>
           </CardContent>
         </Card>
 
-        {/* Formation Pitch with Position Assignment */}
+        {/* Starting Team Formation with Position Assignment */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Formation - {formation}</CardTitle>
+            <CardTitle className="text-lg">Starting Team ({maxPlayers} positions)</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Assign players to specific positions for the {formation} formation
+            </p>
           </CardHeader>
           <CardContent>
-            <div className="bg-green-100 p-6 rounded-lg border-2 border-green-300 min-h-[400px]">
-              <div className="text-center text-sm font-medium text-green-800 mb-4">
-                Assign players to positions
-              </div>
-              
-              <div className="space-y-4">
-                {positions.map((position, index) => {
-                  const assignedPlayerId = selectedPlayers[index];
-                  const assignedPlayer = assignedPlayerId ? players.find(p => p.id === assignedPlayerId) : null;
-                  const availableForPosition = players.filter(p => 
-                    !selectedPlayers.includes(p.id) || p.id === assignedPlayerId
-                  );
+            <div className="space-y-3">
+              {positions.map((position, index) => {
+                const assignedPlayerId = selectedPlayers[index];
+                const assignedPlayer = assignedPlayerId ? players.find(p => p.id === assignedPlayerId) : null;
+                const availableForPosition = players.filter(p => 
+                  !selectedPlayers.includes(p.id) || p.id === assignedPlayerId
+                );
 
-                  return (
-                    <div key={`${position}-${index}`} className="flex items-center justify-between p-3 bg-white rounded-lg border">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="min-w-[60px] text-center font-medium">
-                          {position}
-                        </Badge>
-                        <div className="flex-1">
-                          <Select
-                            value={assignedPlayerId || 'none'}
-                            onValueChange={(value) => handlePositionPlayerChange(index, value)}
-                          >
-                            <SelectTrigger className="w-64">
-                              <SelectValue placeholder="Select player" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="none">No Player</SelectItem>
-                              {availableForPosition.map((player) => {
-                                const isConflicted = isPlayerConflicted(player.id);
-                                const timeInfo = getPlayerTimeInfo(player.id);
-                                
-                                return (
-                                  <SelectItem key={player.id} value={player.id}>
-                                    <div className="flex items-center gap-2 w-full">
-                                      <span>{formatPlayerDisplayName(player)}</span>
-                                      {getAvailabilityIcon(player.id)}
-                                      {isConflicted && <AlertCircle className="h-3 w-3 text-red-500" />}
-                                      {timeInfo && (
-                                        <Badge variant="outline" className="text-xs">
-                                          {timeInfo}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                  </SelectItem>
-                                );
-                              })}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      
-                      {assignedPlayer && (
-                        <div className="flex items-center gap-2">
-                          {captainId === assignedPlayer.id && (
-                            <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                          )}
-                          {getAvailabilityBadge(assignedPlayer.id)}
-                        </div>
-                      )}
+                return (
+                  <div key={`${position}-${index}`} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="min-w-[60px]">
+                      <Badge variant="outline" className="text-center font-medium">
+                        {position}
+                      </Badge>
                     </div>
-                  );
-                })}
-              </div>
+                    
+                    <div className="flex-1">
+                      <Select
+                        value={assignedPlayerId || 'none'}
+                        onValueChange={(value) => handlePositionPlayerChange(index, value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select player" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No Player</SelectItem>
+                          {availableForPosition.map((player) => {
+                            const isConflicted = isPlayerConflicted(player.id);
+                            const timeInfo = getPlayerTimeInfo(player.id);
+                            
+                            return (
+                              <SelectItem key={player.id} value={player.id}>
+                                <div className="flex items-center gap-2 w-full">
+                                  <span>{formatPlayerDisplayName(player)}</span>
+                                  {getAvailabilityIcon(player.id)}
+                                  {isConflicted && <AlertCircle className="h-3 w-3 text-red-500" />}
+                                  {timeInfo && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {timeInfo}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    {assignedPlayer && (
+                      <div className="flex items-center gap-2">
+                        {captainId === assignedPlayer.id && (
+                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                        )}
+                        {getAvailabilityBadge(assignedPlayer.id)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Team Captain */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Team Captain (all periods)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Label>Captain:</Label>
+              <Select 
+                value={captainId || 'no-captain'} 
+                onValueChange={(value) => onCaptainChange(value === 'no-captain' ? '' : value)}
+              >
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Select captain" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="no-captain">No Captain</SelectItem>
+                  {[...selectedPlayers, ...substitutePlayers]
+                    .map(playerId => players.find(p => p.id === playerId))
+                    .filter(Boolean)
+                    .map((player) => (
+                      <SelectItem key={player!.id} value={player!.id}>
+                        {formatPlayerDisplayName(player!)}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
@@ -501,13 +510,59 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   const renderListView = () => {
     return (
       <div className="space-y-6">
-        {/* Formation Selection */}
+        {/* Formation and Captain Selection */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Formation & Setup</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* ... keep existing code (formation and captain selection) */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Label>Formation:</Label>
+                <Select value={formation} onValueChange={onFormationChange}>
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formations
+                      .filter(form => form.id && form.id.trim() !== '') // Filter out formations with empty IDs
+                      .map((form) => (
+                        <SelectItem key={form.id} value={form.id}>
+                          {form.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Label>Captain:</Label>
+                <Select 
+                  value={captainId || 'no-captain'} 
+                  onValueChange={(value) => onCaptainChange(value === 'no-captain' ? '' : value)}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select captain" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-captain">No Captain</SelectItem>
+                    {[...selectedPlayers, ...substitutePlayers]
+                      .map(playerId => players.find(p => p.id === playerId))
+                      .filter(Boolean)
+                      .map((player) => (
+                        <SelectItem key={player!.id} value={player!.id}>
+                          {formatPlayerDisplayName(player!)}
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              Formation requires {maxPlayers} players • Team {teamNumber} • Period {periodNumber}
+            </div>
           </CardContent>
         </Card>
 
@@ -520,7 +575,61 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* ... keep existing code (starting players list) */}
+            <ScrollArea className="h-48">
+              <div className="space-y-2">
+                {selectedPlayers.map((playerId) => {
+                  const player = players.find(p => p.id === playerId);
+                  if (!player) return null;
+                  
+                  const isCaptain = captainId === playerId;
+                  const isConflicted = isPlayerConflicted(playerId);
+                  
+                  return (
+                    <div
+                      key={playerId}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isCaptain ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                      } ${isConflicted ? 'border-red-300 bg-red-50' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="default" className="min-w-[60px] text-center">
+                          {selectedPlayers.indexOf(playerId) + 1}
+                        </Badge>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{formatPlayerDisplayName(player)}</span>
+                            {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                            {getAvailabilityIcon(playerId)}
+                            {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {getAvailabilityBadge(playerId)}
+                            {isConflicted && (
+                              <Badge variant="destructive" className="text-xs">
+                                Also in Team {/* This would show which other team */}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePlayerToggle(playerId)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  );
+                })}
+                
+                {selectedPlayers.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No starting players selected yet
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
 
@@ -533,7 +642,90 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* ... keep existing code (substitute players list) */}
+            <ScrollArea className="h-48">
+              <div className="space-y-2">
+                {substitutePlayers.map((playerId) => {
+                  const player = players.find(p => p.id === playerId);
+                  if (!player) return null;
+                  
+                  const isCaptain = captainId === playerId;
+                  const isConflicted = isPlayerConflicted(playerId);
+                  
+                  return (
+                    <div
+                      key={playerId}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isCaptain ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                      } ${isConflicted ? 'border-red-300 bg-red-50' : ''}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="secondary" className="min-w-[60px] text-center">
+                          SUB
+                        </Badge>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{formatPlayerDisplayName(player)}</span>
+                            {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                            {getAvailabilityIcon(playerId)}
+                            {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {getAvailabilityBadge(playerId)}
+                            {isConflicted && (
+                              <Badge variant="destructive" className="text-xs">
+                                Also in Team {/* This would show which other team */}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSubstituteToggle(playerId)}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  );
+                })}
+                
+                {substitutePlayers.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No substitute players selected yet
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+            
+            {/* Add substitute from available players */}
+            {availablePlayers.length > 0 && (
+              <div className="mt-4 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <Label className="text-sm">Add Substitute:</Label>
+                  <Select onValueChange={(playerId) => {
+                    if (playerId !== 'none') {
+                      handleSubstituteToggle(playerId);
+                    }
+                  }}>
+                    <SelectTrigger className="w-64">
+                      <SelectValue placeholder="Select player to add as substitute" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Select a player</SelectItem>
+                      {availablePlayers.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{formatPlayerDisplayName(player)}</span>
+                            {getAvailabilityIcon(player.id)}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -546,7 +738,66 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {/* ... keep existing code (available players list) */}
+            <ScrollArea className="h-48">
+              <div className="space-y-2">
+                {availablePlayers.map((player) => {
+                  const isConflicted = isPlayerConflicted(player.id);
+                  
+                  return (
+                    <div
+                      key={player.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isConflicted ? 'border-red-300 bg-red-50' : 'bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="min-w-[60px] text-center">
+                          {player.squad_number}
+                        </Badge>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{formatPlayerDisplayName(player)}</span>
+                            {getAvailabilityIcon(player.id)}
+                            {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
+                          </div>
+                          <div className="flex gap-1 mt-1">
+                            {getAvailabilityBadge(player.id)}
+                            {isConflicted && (
+                              <Badge variant="destructive" className="text-xs">
+                                Also in Team {/* This would show which other team */}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePlayerToggle(player.id)}
+                          disabled={selectedPlayers.length >= maxPlayers}
+                        >
+                          Add to Starting
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSubstituteToggle(player.id)}
+                        >
+                          Add as Sub
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+                
+                {availablePlayers.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    All players have been selected
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </CardContent>
         </Card>
       </div>
