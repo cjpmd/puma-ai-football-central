@@ -130,7 +130,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       const periodState = periodStates[periodKey];
       
       if (periodState) {
-        // Track playing time
+        // Track playing time (only for starting players, NOT substitutes)
         periodState.selectedPlayers.forEach(playerId => {
           if (playerTrackers[playerId]) {
             playerTrackers[playerId].totalPlayingTime += periodState.durationMinutes;
@@ -144,13 +144,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           }
         });
 
-        // Track substitute time
+        // Track substitute time (only count as substitute time, NOT playing time)
         periodState.substitutePlayers.forEach(playerId => {
           if (playerTrackers[playerId]) {
             playerTrackers[playerId].totalSubstituteTime += periodState.durationMinutes;
             playerTrackers[playerId].periodBreakdown.push({
               period,
-              playingTime: 0,
+              playingTime: 0, // Substitutes don't get playing time
               substituteTime: periodState.durationMinutes,
               isPlaying: false,
               isSubstitute: true
@@ -888,9 +888,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <div>
                         <h4 className="font-medium">{getPlayerSurname(tracker.playerId)}</h4>
                         <div className="flex gap-4 text-sm text-muted-foreground">
-                          <span>Playing: {tracker.totalPlayingTime}m</span>
-                          <span>Substitute: {tracker.totalSubstituteTime}m</span>
-                          <span>Total: {tracker.totalPlayingTime + tracker.totalSubstituteTime}m</span>
+                          <span className="text-green-700">Playing: {tracker.totalPlayingTime}m</span>
+                          <span className="text-blue-700">Substitute: {tracker.totalSubstituteTime}m</span>
+                          <span className="font-medium">Total: {tracker.totalPlayingTime + tracker.totalSubstituteTime}m</span>
                         </div>
                       </div>
                       <div className="flex gap-1">
