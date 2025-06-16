@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -189,7 +190,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       
       // Also remove as captain if they were captain
       if (captainId === playerId) {
-        onCaptainChange('');
+        onCaptainChange('no-captain');
       }
     } else {
       // Add to selected players
@@ -208,7 +209,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       
       // Also remove as captain if they were captain
       if (captainId === playerId) {
-        onCaptainChange('');
+        onCaptainChange('no-captain');
       }
     } else {
       // Add to substitutes
@@ -264,14 +265,14 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
             <div className="flex items-center gap-2">
               <Label>Captain:</Label>
               <Select 
-                value={captainId} 
-                onValueChange={onCaptainChange}
+                value={captainId || 'no-captain'} 
+                onValueChange={(value) => onCaptainChange(value === 'no-captain' ? '' : value)}
               >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Select captain" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No Captain</SelectItem>
+                  <SelectItem value="no-captain">No Captain</SelectItem>
                   {[...selectedPlayers, ...substitutePlayers]
                     .map(playerId => players.find(p => p.id === playerId))
                     .filter(Boolean)
