@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +42,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const [lastTeamId, setLastTeamId] = useState<string>(team.id);
   const [isLocalSaving, setIsLocalSaving] = useState(false);
   
+  // Debug: Log the team object when component receives it
+  console.log('TeamBasicSettings received team object:', team);
+  console.log('Team gameDuration from props:', team.gameDuration);
+  
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
@@ -56,10 +59,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     managerPhone: team.managerPhone || '',
   });
 
-  // Only sync form data when the team ID changes (different team selected)
+  // Only sync form data when the team ID changes (different team selected) or when gameDuration changes
   useEffect(() => {
-    if (team.id !== lastTeamId) {
-      console.log('Team changed, syncing form data for new team:', team.name);
+    if (team.id !== lastTeamId || team.gameDuration !== parseInt(formData.gameDuration)) {
+      console.log('Team changed or gameDuration updated, syncing form data for team:', team.name);
+      console.log('Current team.gameDuration:', team.gameDuration);
+      console.log('Current formData.gameDuration:', formData.gameDuration);
+      
       const newFormData = {
         name: team.name || '',
         ageGroup: team.ageGroup || '',
@@ -76,7 +82,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       setFormData(newFormData);
       setLastTeamId(team.id);
     }
-  }, [team.id, lastTeamId]);
+  }, [team.id, team.gameDuration, lastTeamId, formData.gameDuration]);
 
   // Load available clubs on mount
   useEffect(() => {
@@ -209,16 +215,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Updating parent component with:', updatedTeamData);
       
-      // Call onUpdate to update parent component BEFORE refreshing user data
+      // Call onUpdate to update parent component FIRST
       onUpdate(updatedTeamData);
-
-      // Refresh user data to ensure everything is in sync - but this should not overwrite our changes
-      await refreshUserData();
 
       toast({
         title: 'Settings saved',
         description: 'Team basic settings have been updated successfully.',
       });
+
+      // IMPORTANT: Refresh user data AFTER a short delay to allow parent update to complete
+      setTimeout(async () => {
+        console.log('Refreshing user data after parent update...');
+        await refreshUserData();
+      }, 100);
 
       console.log('Save process completed successfully');
     } catch (error: any) {
@@ -304,7 +313,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 placeholder="90"
               />
               <p className="text-xs text-muted-foreground">
-                Current saved value: {team.gameDuration || 90} minutes
+                Team default: {team.gameDuration || 90} minutes
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Current form value: {formData.gameDuration} minutes
               </p>
             </div>
 
