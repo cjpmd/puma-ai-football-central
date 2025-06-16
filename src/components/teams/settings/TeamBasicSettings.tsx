@@ -41,6 +41,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
   const [lastTeamId, setLastTeamId] = useState<string>(team.id);
+  const [isLocalSaving, setIsLocalSaving] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
@@ -59,7 +60,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   useEffect(() => {
     if (team.id !== lastTeamId) {
       console.log('Team changed, syncing form data for new team:', team.name);
-      setFormData({
+      const newFormData = {
         name: team.name || '',
         ageGroup: team.ageGroup || '',
         gameFormat: team.gameFormat || '11-a-side',
@@ -70,7 +71,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         managerName: team.managerName || '',
         managerEmail: team.managerEmail || '',
         managerPhone: team.managerPhone || '',
-      });
+      };
+      console.log('Setting new form data:', newFormData);
+      setFormData(newFormData);
       setLastTeamId(team.id);
     }
   }, [team.id, lastTeamId]);
@@ -105,12 +108,23 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   // Simple form field update handler
   const handleInputChange = (field: keyof FormData, value: string) => {
     console.log('Input change:', field, value);
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [field]: value };
+      console.log('New form data:', newData);
+      return newData;
+    });
   };
 
   const handleSaveBasicSettings = async () => {
+    if (isLocalSaving) {
+      console.log('Save already in progress, ignoring duplicate request');
+      return;
+    }
+
+    setIsLocalSaving(true);
+    
     try {
-      console.log('Saving basic team settings:', formData);
+      console.log('Starting save with form data:', formData);
       
       // Validate and process game duration
       const gameDurationNum = parseInt(formData.gameDuration);
@@ -171,7 +185,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         }
       }
 
-      // Update parent component with the saved data
+      // Update form data if any values were clamped
+      if (clampedDuration !== gameDurationNum) {
+        console.log('Updating form data with clamped duration:', clampedDuration);
+        setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
+      }
+
+      // Prepare updated team data for parent component
       const updatedTeamData = {
         name: formData.name,
         ageGroup: formData.ageGroup,
@@ -187,21 +207,18 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       
       console.log('Updating parent component with:', updatedTeamData);
       
-      // Update the form data if any values were clamped
-      if (clampedDuration !== gameDurationNum) {
-        setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
-      }
-      
       // Call onUpdate to update parent component
       onUpdate(updatedTeamData);
 
-      // Refresh user data
+      // Refresh user data to ensure everything is in sync
       await refreshUserData();
 
       toast({
         title: 'Settings saved',
         description: 'Team basic settings have been updated successfully.',
       });
+
+      console.log('Save process completed successfully');
     } catch (error: any) {
       console.error('Error saving basic settings:', error);
       toast({
@@ -209,6 +226,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         description: error.message || 'Failed to save team settings',
         variant: 'destructive',
       });
+    } finally {
+      setIsLocalSaving(false);
     }
   };
 
@@ -327,10 +346,10 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
           <div className="flex justify-end pt-4">
             <Button 
               onClick={handleSaveBasicSettings}
-              disabled={isSaving}
+              disabled={isSaving || isLocalSaving}
               className="bg-puma-blue-500 hover:bg-puma-blue-600"
             >
-              {isSaving ? 'Saving...' : 'Save Basic Settings'}
+              {(isSaving || isLocalSaving) ? 'Saving...' : 'Save Basic Settings'}
             </Button>
           </div>
         </CardContent>
