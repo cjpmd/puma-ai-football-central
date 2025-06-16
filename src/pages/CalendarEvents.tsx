@@ -24,6 +24,7 @@ import { CalendarGridView } from '@/components/events/CalendarGridView';
 import { EventsGridView } from '@/components/events/EventsGridView';
 import { Calendar } from '@/components/ui/calendar';
 import { AvailabilityNotificationService } from '@/components/events/AvailabilityNotificationService';
+import { supabase } from '@/integrations/supabase/client';
 
 const CalendarEventsPage = () => {
   const { teams } = useAuth();
