@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,24 +58,48 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     managerPhone: team.managerPhone || '',
   });
 
-  // Sync form data whenever team props change
+  // Load fresh team data from database when component mounts or team ID changes
   useEffect(() => {
-    console.log('Team props changed, updating form data');
-    console.log('Current team.gameDuration:', team.gameDuration);
+    const loadFreshTeamData = async () => {
+      if (!team.id) return;
+      
+      try {
+        console.log('Loading fresh team data for team:', team.id);
+        const { data: freshTeam, error } = await supabase
+          .from('teams')
+          .select('*')
+          .eq('id', team.id)
+          .single();
+          
+        if (error) {
+          console.error('Error loading fresh team data:', error);
+          return;
+        }
+        
+        console.log('Fresh team data loaded:', freshTeam);
+        
+        // Update form data with fresh database values
+        setFormData({
+          name: freshTeam.name || '',
+          ageGroup: freshTeam.age_group || '',
+          gameFormat: freshTeam.game_format || '11-a-side',
+          gameDuration: String(freshTeam.game_duration || 90),
+          seasonStart: freshTeam.season_start || '',
+          seasonEnd: freshTeam.season_end || '',
+          clubId: freshTeam.club_id || '',
+          managerName: freshTeam.manager_name || '',
+          managerEmail: freshTeam.manager_email || '',
+          managerPhone: freshTeam.manager_phone || '',
+        });
+        
+        console.log('Form data updated with fresh values, gameDuration:', freshTeam.game_duration);
+      } catch (error) {
+        console.error('Error loading fresh team data:', error);
+      }
+    };
     
-    setFormData({
-      name: team.name || '',
-      ageGroup: team.ageGroup || '',
-      gameFormat: team.gameFormat || '11-a-side',
-      gameDuration: String(team.gameDuration || 90),
-      seasonStart: team.seasonStart || '',
-      seasonEnd: team.seasonEnd || '',
-      clubId: team.clubId || '',
-      managerName: team.managerName || '',
-      managerEmail: team.managerEmail || '',
-      managerPhone: team.managerPhone || '',
-    });
-  }, [team]);
+    loadFreshTeamData();
+  }, [team.id]);
 
   // Load available clubs on mount
   useEffect(() => {
@@ -191,12 +216,12 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         setFormData(prev => ({ ...prev, gameDuration: String(clampedDuration) }));
       }
 
-      // Prepare updated team data for parent component - CRITICAL: Include the updated values
+      // Prepare updated team data for parent component
       const updatedTeamData = {
         name: formData.name,
         ageGroup: formData.ageGroup,
         gameFormat: formData.gameFormat as any,
-        gameDuration: clampedDuration, // Make sure this is the updated value
+        gameDuration: clampedDuration,
         seasonStart: formData.seasonStart,
         seasonEnd: formData.seasonEnd,
         clubId: clubIdForDb || undefined,
@@ -206,8 +231,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       };
       
       console.log('Updating parent component with:', updatedTeamData);
-      
-      // Call onUpdate to update parent component FIRST
       onUpdate(updatedTeamData);
 
       toast({
@@ -215,11 +238,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         description: 'Team basic settings have been updated successfully.',
       });
 
-      // IMPORTANT: Refresh user data AFTER a short delay to allow parent update to complete
+      // Refresh user data after successful save
       setTimeout(async () => {
-        console.log('Refreshing user data after parent update...');
+        console.log('Refreshing user data after save...');
         await refreshUserData();
-      }, 100);
+      }, 500);
 
       console.log('Save process completed successfully');
     } catch (error: any) {

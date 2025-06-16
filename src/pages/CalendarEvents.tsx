@@ -153,19 +153,69 @@ const CalendarEventsPage = () => {
     createEvent(newEvent);
   };
 
-  const handleEditEvent = (event: DatabaseEvent) => {
-    setSelectedEvent(event);
-    setEventTitle(event.title);
-    setEventDescription(event.description || '');
-    setEventDate(new Date(event.date));
-    setEventStartTime(event.start_time || '');
-    setEventEndTime(event.end_time || '');
-    setEventLocation(event.location || '');
-    setEventNotes(event.notes || '');
-    setEventEventType(event.event_type as any);
-    setEventOpponent(event.opponent || '');
-    setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
-    setEventKitSelection((event as any).kit_selection || 'home');
+  const handleEditEvent = async (event: DatabaseEvent) => {
+    // Load fresh event data from database
+    try {
+      console.log('Loading fresh event data for event:', event.id);
+      const { data: freshEvent, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', event.id)
+        .single();
+        
+      if (error) {
+        console.error('Error loading fresh event data:', error);
+        // Fall back to using the passed event data
+        setSelectedEvent(event);
+        setEventTitle(event.title);
+        setEventDescription(event.description || '');
+        setEventDate(new Date(event.date));
+        setEventStartTime(event.start_time || '');
+        setEventEndTime(event.end_time || '');
+        setEventLocation(event.location || '');
+        setEventNotes(event.notes || '');
+        setEventEventType(event.event_type as any);
+        setEventOpponent(event.opponent || '');
+        setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
+        setEventGameDuration(event.game_duration || teamDefaultGameDuration);
+        setEventKitSelection((event as any).kit_selection || 'home');
+      } else {
+        console.log('Fresh event data loaded:', freshEvent);
+        // Use fresh data from database
+        setSelectedEvent(freshEvent as DatabaseEvent);
+        setEventTitle(freshEvent.title);
+        setEventDescription(freshEvent.description || '');
+        setEventDate(new Date(freshEvent.date));
+        setEventStartTime(freshEvent.start_time || '');
+        setEventEndTime(freshEvent.end_time || '');
+        setEventLocation(freshEvent.location || '');
+        setEventNotes(freshEvent.notes || '');
+        setEventEventType(freshEvent.event_type as any);
+        setEventOpponent(freshEvent.opponent || '');
+        setEventGameFormat((freshEvent.game_format || '7-a-side') as GameFormat);
+        setEventGameDuration(freshEvent.game_duration || teamDefaultGameDuration);
+        setEventKitSelection(freshEvent.kit_selection || 'home');
+        
+        console.log('Event form data set with fresh values, gameDuration:', freshEvent.game_duration);
+      }
+    } catch (error) {
+      console.error('Error loading fresh event data:', error);
+      // Fall back to using the passed event data
+      setSelectedEvent(event);
+      setEventTitle(event.title);
+      setEventDescription(event.description || '');
+      setEventDate(new Date(event.date));
+      setEventStartTime(event.start_time || '');
+      setEventEndTime(event.end_time || '');
+      setEventLocation(event.location || '');
+      setEventNotes(event.notes || '');
+      setEventEventType(event.event_type as any);
+      setEventOpponent(event.opponent || '');
+      setEventGameFormat((event.game_format || '7-a-side') as GameFormat);
+      setEventGameDuration(event.game_duration || teamDefaultGameDuration);
+      setEventKitSelection((event as any).kit_selection || 'home');
+    }
+    
     setIsEditModalOpen(true);
   };
 
