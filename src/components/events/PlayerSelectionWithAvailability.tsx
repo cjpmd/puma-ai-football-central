@@ -252,8 +252,8 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                 </SelectTrigger>
                 <SelectContent>
                   {formations.map((form) => (
-                    <SelectItem key={form} value={form}>
-                      {form}
+                    <SelectItem key={form.id} value={form.id}>
+                      {form.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
