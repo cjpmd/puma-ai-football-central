@@ -11,6 +11,7 @@ import { GameFormat } from '@/types';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { NameDisplayOption } from '@/types/team';
+import { FormationSelector } from './FormationSelector';
 
 interface Player {
   id: string;
@@ -249,64 +250,27 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
     onPlayersChange(filteredPlayers);
   };
 
-  const availablePlayers = players.filter(player => 
-    !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id)
-  );
-
-  const formations = getFormationsByFormat(gameFormat);
-  const positions = getPositionsForFormation(formation, gameFormat);
-  const maxPlayers = positions.length;
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">Loading players...</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const renderFormationView = () => {
     return (
       <div className="space-y-6">
-        {/* Formation Selection */}
+        {/* Formation Selection with Visual Pitch */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Formation Selection ({gameFormat})</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {formations
-                .filter(form => form.id && form.id.trim() !== '') // Filter out formations with empty IDs
-                .map((form) => (
-                  <div key={form.id} className="text-center">
-                    <Button
-                      variant={formation === form.id ? "default" : "outline"}
-                      onClick={() => onFormationChange(form.id)}
-                      className="w-full mb-2"
-                    >
-                      {form.name}
-                    </Button>
-                    {formation === form.id && (
-                      <Badge variant="default" className="text-xs">
-                        Selected
-                      </Badge>
-                    )}
-                  </div>
-                ))}
-            </div>
-            
-            <div className="text-center text-sm text-muted-foreground">
-              Selected: {formation}
-            </div>
+          <CardContent>
+            <FormationSelector
+              gameFormat={gameFormat}
+              selectedFormation={formation}
+              onFormationChange={onFormationChange}
+            />
           </CardContent>
         </Card>
 
         {/* Starting Team Formation with Position Assignment */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Starting Team ({maxPlayers} positions)</CardTitle>
+            <CardTitle className="text-lg">Starting Team ({positions.length} positions)</CardTitle>
             <p className="text-sm text-muted-foreground">
               Assign players to specific positions for the {formation} formation
             </p>
@@ -803,6 +767,21 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
       </div>
     );
   };
+
+  const positions = getPositionsForFormation(formation, gameFormat);
+  const availablePlayers = players.filter(player => 
+    !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id)
+  );
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Loading players...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
