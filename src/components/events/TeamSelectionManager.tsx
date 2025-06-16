@@ -73,13 +73,25 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const periodKey = `team_${team.team_number}_period_${period.period_number}`;
         const existingData = data?.find(item => item.period_number === period.period_number);
 
-        // Extract player IDs from player_positions JSONB array
-        const playerIds = existingData?.player_positions ? 
-          existingData.player_positions.map((pos: any) => pos.playerId || pos.player_id).filter(Boolean) : [];
+        // Extract player IDs from player_positions JSONB array with proper type checking
+        let playerIds: string[] = [];
+        if (existingData?.player_positions && Array.isArray(existingData.player_positions)) {
+          playerIds = existingData.player_positions
+            .map((pos: any) => pos.playerId || pos.player_id)
+            .filter(Boolean);
+        }
+
+        // Extract substitute players with proper type checking
+        let substitutes: string[] = [];
+        if (existingData?.substitute_players) {
+          if (Array.isArray(existingData.substitute_players)) {
+            substitutes = existingData.substitute_players as string[];
+          }
+        }
 
         initialTeamData[periodKey] = {
           players: playerIds,
-          substitutes: existingData?.substitute_players || [],
+          substitutes: substitutes,
           formation: existingData?.formation || '1-4-4-2',
           captain: existingData?.captain_id || ''
         };
@@ -309,9 +321,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             <TabsContent value="staff" className="space-y-6 mt-6">
               <StaffSelectionSection
                 teamId={team.id}
-                event_id={eventId}
+                eventId={eventId}
                 periods={periods}
-                team_number={team.team_number}
+                teamNumber={team.team_number}
               />
             </TabsContent>
             
