@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
 import { playerStatsService } from './playerStatsService';
@@ -20,7 +21,7 @@ export interface CreateEventData {
   };
   player_of_match_id?: string;
   game_format?: string;
-  game_duration?: number; // Added game duration
+  game_duration?: number;
   kit_selection?: 'home' | 'away' | 'training';
 }
 
@@ -59,11 +60,33 @@ export const eventsService = {
   },
 
   async createEvent(eventData: CreateEventData): Promise<DatabaseEvent> {
-    console.log('Creating event with data:', eventData);
+    console.log('Creating event with data (including game_duration):', eventData);
+    
+    // Ensure game_duration is included in the database insert
+    const dbEventData = {
+      team_id: eventData.team_id,
+      title: eventData.title,
+      description: eventData.description,
+      date: eventData.date,
+      start_time: eventData.start_time,
+      end_time: eventData.end_time,
+      location: eventData.location,
+      notes: eventData.notes,
+      event_type: eventData.event_type,
+      opponent: eventData.opponent,
+      is_home: eventData.is_home,
+      scores: eventData.scores,
+      player_of_match_id: eventData.player_of_match_id,
+      game_format: eventData.game_format,
+      game_duration: eventData.game_duration, // Explicitly include game_duration
+      kit_selection: eventData.kit_selection
+    };
+    
+    console.log('Database event data with game_duration:', dbEventData);
     
     const { data, error } = await supabase
       .from('events')
-      .insert([eventData])
+      .insert([dbEventData])
       .select()
       .single();
 
@@ -71,15 +94,15 @@ export const eventsService = {
       console.error('Error creating event:', error);
       throw error;
     }
-    console.log('Event created successfully:', data);
+    console.log('Event created successfully with game_duration:', data);
     return data as DatabaseEvent;
   },
 
   async updateEvent(eventData: UpdateEventData): Promise<DatabaseEvent> {
     const { id, ...updateData } = eventData;
-    console.log('Updating event with data:', updateData);
+    console.log('Updating event with data (including game_duration):', updateData);
     
-    // Ensure all fields are properly included in the update
+    // Ensure all fields are properly included in the update, especially game_duration
     const cleanUpdateData = {
       team_id: updateData.team_id,
       title: updateData.title,
@@ -95,7 +118,7 @@ export const eventsService = {
       scores: updateData.scores,
       player_of_match_id: updateData.player_of_match_id,
       game_format: updateData.game_format,
-      game_duration: updateData.game_duration, // Include game duration
+      game_duration: updateData.game_duration, // Explicitly include game_duration
       kit_selection: updateData.kit_selection,
       coach_notes: updateData.coach_notes,
       staff_notes: updateData.staff_notes,

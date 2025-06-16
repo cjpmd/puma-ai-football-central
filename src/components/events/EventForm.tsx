@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +75,12 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     loadFacilities();
     loadPlayers();
     loadTeamDefaults();
+  }, [teamId]);
+
+  useEffect(() => {
+    // Update form data when team defaults are loaded or when editing an existing event
     if (event) {
+      console.log('Editing existing event, using event-specific values');
       const eventTeams = (event as any).teams || [teamId];
       setNumberOfTeams(eventTeams.length || 1);
       const initialSlots = eventTeams.map((_, index: number) => ({
@@ -105,31 +111,41 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         playerOfTheMatchId: event.playerOfTheMatchId || '',
         kitSelection: event.kitSelection || 'home'
       });
+    } else {
+      console.log('Creating new event, using team defaults');
+      // For new events, use team defaults
+      setFormData(prev => ({
+        ...prev,
+        gameFormat: teamDefaultGameFormat,
+        gameDuration: teamDefaultGameDuration
+      }));
     }
-  }, [event, teamId]);
+  }, [event, teamId, teamDefaultGameFormat, teamDefaultGameDuration]);
 
   const loadTeamDefaults = async () => {
     try {
+      console.log('Loading team defaults for team:', teamId);
       const { data: team, error } = await supabase
         .from('teams')
         .select('game_format, game_duration')
         .eq('id', teamId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading team defaults:', error);
+        return;
+      }
+      
+      console.log('Team defaults loaded:', team);
       
       if (team?.game_format) {
+        console.log('Setting team default game format:', team.game_format);
         setTeamDefaultGameFormat(team.game_format as GameFormat);
-        if (!event) {
-          setFormData(prev => ({ ...prev, gameFormat: team.game_format as GameFormat }));
-        }
       }
 
       if (team?.game_duration) {
+        console.log('Setting team default game duration:', team.game_duration);
         setTeamDefaultGameDuration(team.game_duration);
-        if (!event) {
-          setFormData(prev => ({ ...prev, gameDuration: team.game_duration }));
-        }
       }
     } catch (error) {
       console.error('Error loading team defaults:', error);
@@ -211,6 +227,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     
     const primaryTimeSlot = teamTimeSlots[0];
     
+    console.log('Submitting event with game duration:', formData.gameDuration);
+    
     const eventData: Partial<Event> = {
       ...formData,
       teamId,
@@ -226,6 +244,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       kitSelection: formData.kitSelection
     };
 
+    console.log('Final event data being submitted:', eventData);
     onSubmit(eventData);
   };
 
@@ -335,7 +354,10 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             <Label htmlFor="gameFormat">Game Format</Label>
             <Select
               value={formData.gameFormat}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }))}
+              onValueChange={(value) => {
+                console.log('Game format changed to:', value);
+                setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }));
+              }}
             >
               <SelectTrigger>
                 <SelectValue />
@@ -360,7 +382,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             min="1"
             max="180"
             value={formData.gameDuration}
-            onChange={(e) => setFormData(prev => ({ ...prev, gameDuration: parseInt(e.target.value) || teamDefaultGameDuration }))}
+            onChange={(e) => {
+              const newDuration = parseInt(e.target.value) || teamDefaultGameDuration;
+              console.log('Game duration changed to:', newDuration);
+              setFormData(prev => ({ ...prev, gameDuration: newDuration }));
+            }}
             placeholder={teamDefaultGameDuration.toString()}
           />
           <p className="text-sm text-muted-foreground">
