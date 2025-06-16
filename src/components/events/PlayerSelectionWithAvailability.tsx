@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -141,7 +142,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   const formatPlayerDisplayName = (player: Player): string => {
     const formattedName = formatPlayerName(player.name, nameDisplayOption);
     const timeInfo = getPlayerTimeInfo(player.id);
-    return `${formattedName} (#${player.squad_number})${timeInfo}`;
+    return `${formattedName} (#${player.squad_number})${timeInfo ? ` - ${timeInfo}` : ''}`;
   };
 
   const getAvailabilityIcon = (playerId: string) => {
@@ -472,6 +473,9 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
   };
 
   const renderListView = () => {
+    const formations = getFormationsByFormat(gameFormat);
+    const maxPlayers = getPositionsForFormation(formation, gameFormat).length;
+
     return (
       <div className="space-y-6">
         {/* Formation and Captain Selection */}

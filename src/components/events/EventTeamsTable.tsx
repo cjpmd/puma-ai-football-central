@@ -98,7 +98,11 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
         </CardHeader>
         <CardContent className="flex-1 overflow-hidden p-0">
           <TeamSelectionManager
-            event={event}
+            eventId={eventId}
+            team={{ id: primaryTeamId, name: teams[0]?.name || 'Team', team_number: 1 }}
+            periods={[{ id: '1', period_number: 1, duration_minutes: event.game_duration || 90 }]}
+            gameFormat={gameFormat as GameFormat}
+            eventType={event.event_type}
             isOpen={true}
             onClose={onClose || (() => {})}
           />

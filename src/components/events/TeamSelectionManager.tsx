@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -58,12 +59,12 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       setLoading(true);
       const initialTeamData: TeamData = {};
 
-      // Fetch existing team data for all periods
+      // Fetch existing team data for all periods from event_selections
       const { data, error } = await supabase
-        .from('event_teams_periods')
+        .from('event_selections')
         .select('*')
         .eq('event_id', eventId)
-        .eq('team_number', team.team_number);
+        .eq('team_id', team.id);
 
       if (error) throw error;
 
@@ -72,9 +73,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         const periodKey = `team_${team.team_number}_period_${period.period_number}`;
         const existingData = data?.find(item => item.period_number === period.period_number);
 
+        // Extract player IDs from player_positions JSONB array
+        const playerIds = existingData?.player_positions ? 
+          existingData.player_positions.map((pos: any) => pos.playerId || pos.player_id).filter(Boolean) : [];
+
         initialTeamData[periodKey] = {
-          players: existingData?.players || [],
-          substitutes: existingData?.substitutes || [],
+          players: playerIds,
+          substitutes: existingData?.substitute_players || [],
           formation: existingData?.formation || '1-4-4-2',
           captain: existingData?.captain_id || ''
         };
@@ -114,20 +119,28 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     const periodNumber = parseInt(periodKey.split('_period_')[1]);
 
     try {
-      // Update data in Supabase
+      // Convert players array to player_positions format
+      const playerPositions = newData.players.map((playerId: string, index: number) => ({
+        playerId,
+        position: `P${index + 1}`, // Simple position assignment
+        isSubstitute: false
+      }));
+
+      // Update data in Supabase using event_selections table
       const { error } = await supabase
-        .from('event_teams_periods')
+        .from('event_selections')
         .upsert(
           {
             event_id: eventId,
-            team_number: team.team_number,
+            team_id: team.id,
             period_number: periodNumber,
-            players: newData.players,
-            substitutes: newData.substitutes,
+            player_positions: playerPositions,
+            substitute_players: newData.substitutes,
             formation: newData.formation,
-            captain_id: newData.captain
+            captain_id: newData.captain,
+            duration_minutes: periods.find(p => p.period_number === periodNumber)?.duration_minutes || 90
           },
-          { onConflict: 'event_id, team_number, period_number' }
+          { onConflict: 'event_id, team_id, period_number' }
         );
 
       if (error) {
@@ -296,9 +309,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
             <TabsContent value="staff" className="space-y-6 mt-6">
               <StaffSelectionSection
                 teamId={team.id}
-                eventId={eventId}
+                event_id={eventId}
                 periods={periods}
-                teamNumber={team.team_number}
+                team_number={team.team_number}
               />
             </TabsContent>
             
