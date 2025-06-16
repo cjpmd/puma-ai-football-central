@@ -46,9 +46,15 @@ const CalendarEventsPage = () => {
   const [eventEventType, setEventEventType] = useState<'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly' | 'match'>('training');
   const [eventOpponent, setEventOpponent] = useState('');
   const [eventGameFormat, setEventGameFormat] = useState<GameFormat>('7-a-side');
+  const [eventGameDuration, setEventGameDuration] = useState<number>(90);
   const [eventKitSelection, setEventKitSelection] = useState('home');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
+
+  // Get current team's default values
+  const currentTeam = teams.find(team => team.id === selectedTeamId);
+  const teamDefaultGameFormat = currentTeam?.gameFormat || '7-a-side';
+  const teamDefaultGameDuration = currentTeam?.gameDuration || 90;
 
   const eventTypes = [
     { value: 'training', label: 'Training' },
@@ -59,6 +65,14 @@ const CalendarEventsPage = () => {
     { value: 'festival', label: 'Festival' },
     { value: 'social', label: 'Social Event' }
   ];
+
+  // Update defaults when team changes
+  useEffect(() => {
+    if (currentTeam) {
+      setEventGameFormat(currentTeam.gameFormat || '7-a-side');
+      setEventGameDuration(currentTeam.gameDuration || 90);
+    }
+  }, [currentTeam]);
 
   const { data: events = [], isLoading } = useQuery({
     queryKey: ['events', selectedTeamId],
@@ -131,6 +145,7 @@ const CalendarEventsPage = () => {
       notes: eventNotes || undefined,
       event_type: eventEventType,
       game_format: eventGameFormat,
+      game_duration: eventGameDuration,
       opponent: isMatchType ? eventOpponent || undefined : undefined,
     };
 
@@ -171,6 +186,7 @@ const CalendarEventsPage = () => {
       notes: eventNotes || undefined,
       event_type: eventEventType,
       game_format: eventGameFormat,
+      game_duration: eventGameDuration,
       opponent: isMatchType ? eventOpponent || undefined : undefined,
     };
 
@@ -221,7 +237,8 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
-    setEventGameFormat('7-a-side');
+    setEventGameFormat(teamDefaultGameFormat);
+    setEventGameDuration(teamDefaultGameDuration);
     setEventKitSelection('home');
   };
 
@@ -237,7 +254,8 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
-    setEventGameFormat('7-a-side');
+    setEventGameFormat(teamDefaultGameFormat);
+    setEventGameDuration(teamDefaultGameDuration);
     setEventKitSelection('home');
   };
 
@@ -629,11 +647,31 @@ const CalendarEventsPage = () => {
                   <SelectContent>
                     {gameFormats.map((format) => (
                       <SelectItem key={format} value={format}>
-                        {format}
+                        {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="gameDuration" className="text-right">
+                  Game Duration
+                </Label>
+                <div className="col-span-3 space-y-2">
+                  <Input
+                    id="gameDuration"
+                    type="number"
+                    min="1"
+                    max="180"
+                    value={eventGameDuration}
+                    onChange={(e) => setEventGameDuration(parseInt(e.target.value) || teamDefaultGameDuration)}
+                    placeholder={teamDefaultGameDuration.toString()}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Team default: {teamDefaultGameDuration} minutes
+                  </p>
+                </div>
               </div>
 
               {isMatchType(eventEventType) && (
@@ -790,11 +828,31 @@ const CalendarEventsPage = () => {
                   <SelectContent>
                     {gameFormats.map((format) => (
                       <SelectItem key={format} value={format}>
-                        {format}
+                        {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="gameDuration" className="text-right">
+                  Game Duration
+                </Label>
+                <div className="col-span-3 space-y-2">
+                  <Input
+                    id="gameDuration"
+                    type="number"
+                    min="1"
+                    max="180"
+                    value={eventGameDuration}
+                    onChange={(e) => setEventGameDuration(parseInt(e.target.value) || teamDefaultGameDuration)}
+                    placeholder={teamDefaultGameDuration.toString()}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Team default: {teamDefaultGameDuration} minutes
+                  </p>
+                </div>
               </div>
 
               {isMatchType(eventEventType) && (

@@ -39,10 +39,8 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const { toast } = useToast();
   const { clubs, refreshUserData } = useAuth();
   const [availableClubs, setAvailableClubs] = useState<Club[]>([]);
-  const [lastTeamId, setLastTeamId] = useState<string>(team.id);
   const [isLocalSaving, setIsLocalSaving] = useState(false);
   
-  // Debug: Log the team object when component receives it
   console.log('TeamBasicSettings received team object:', team);
   console.log('Team gameDuration from props:', team.gameDuration);
   
@@ -59,30 +57,24 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     managerPhone: team.managerPhone || '',
   });
 
-  // Only sync form data when the team ID changes (different team selected) or when gameDuration changes
+  // Sync form data whenever team props change
   useEffect(() => {
-    if (team.id !== lastTeamId || team.gameDuration !== parseInt(formData.gameDuration)) {
-      console.log('Team changed or gameDuration updated, syncing form data for team:', team.name);
-      console.log('Current team.gameDuration:', team.gameDuration);
-      console.log('Current formData.gameDuration:', formData.gameDuration);
-      
-      const newFormData = {
-        name: team.name || '',
-        ageGroup: team.ageGroup || '',
-        gameFormat: team.gameFormat || '11-a-side',
-        gameDuration: String(team.gameDuration || 90),
-        seasonStart: team.seasonStart || '',
-        seasonEnd: team.seasonEnd || '',
-        clubId: team.clubId || '',
-        managerName: team.managerName || '',
-        managerEmail: team.managerEmail || '',
-        managerPhone: team.managerPhone || '',
-      };
-      console.log('Setting new form data:', newFormData);
-      setFormData(newFormData);
-      setLastTeamId(team.id);
-    }
-  }, [team.id, team.gameDuration, lastTeamId, formData.gameDuration]);
+    console.log('Team props changed, updating form data');
+    console.log('Current team.gameDuration:', team.gameDuration);
+    
+    setFormData({
+      name: team.name || '',
+      ageGroup: team.ageGroup || '',
+      gameFormat: team.gameFormat || '11-a-side',
+      gameDuration: String(team.gameDuration || 90),
+      seasonStart: team.seasonStart || '',
+      seasonEnd: team.seasonEnd || '',
+      clubId: team.clubId || '',
+      managerName: team.managerName || '',
+      managerEmail: team.managerEmail || '',
+      managerPhone: team.managerPhone || '',
+    });
+  }, [team]);
 
   // Load available clubs on mount
   useEffect(() => {
@@ -313,10 +305,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 placeholder="90"
               />
               <p className="text-xs text-muted-foreground">
-                Team default: {team.gameDuration || 90} minutes
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Current form value: {formData.gameDuration} minutes
+                Current value: {formData.gameDuration} minutes
               </p>
             </div>
 
