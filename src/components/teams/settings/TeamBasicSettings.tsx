@@ -73,7 +73,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       });
       setLastTeamId(team.id);
     }
-  }, [team.id, lastTeamId, team.name, team.ageGroup, team.gameFormat, team.gameDuration, team.seasonStart, team.seasonEnd, team.clubId, team.managerName, team.managerEmail, team.managerPhone]);
+  }, [team.id, lastTeamId]);
 
   // Load available clubs on mount
   useEffect(() => {
