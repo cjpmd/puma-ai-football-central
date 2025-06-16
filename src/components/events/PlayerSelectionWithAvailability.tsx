@@ -1,148 +1,499 @@
 
-import { useState, useEffect } from 'react';
-import { PlayerSelectionPanel } from './PlayerSelectionPanel';
-import { availabilityService } from '@/services/availabilityService';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { AvailabilityStatusBadge } from './AvailabilityStatusBadge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Users, Star, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { GameFormat } from '@/types';
+import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
+import { formatPlayerName } from '@/utils/nameUtils';
+import { NameDisplayOption } from '@/types/team';
 
 interface Player {
   id: string;
   name: string;
   squad_number: number;
-  subscription_type: string;
-  subscription_status: string;
-  status: string;
-  availability_status?: 'pending' | 'available' | 'unavailable';
+  availability?: 'available' | 'unavailable' | 'pending' | null;
 }
 
-interface PlayerSelectionWithAvailabilityProps {
+interface PlayerSelectionProps {
   teamId: string;
   eventId: string;
   selectedPlayers: string[];
-  substitutePlayers?: string[];
-  captainId?: string;
+  substitutePlayers: string[];
+  captainId: string;
   onPlayersChange: (players: string[]) => void;
-  onSubstitutesChange?: (substitutes: string[]) => void;
+  onSubstitutesChange: (substitutes: string[]) => void;
   onCaptainChange: (captainId: string) => void;
-  eventType?: string;
-  formation?: string;
-  onFormationChange?: (formation: string) => void;
-  gameFormat?: any;
-  teamNumber?: number;
-  periodNumber?: number;
+  eventType: string;
+  formation: string;
+  onFormationChange: (formation: string) => void;
+  gameFormat: GameFormat;
+  teamNumber: number;
+  periodNumber: number;
+  getPlayerTimeInfo?: (playerId: string) => string;
 }
 
-export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionWithAvailabilityProps> = (props) => {
-  const [playerAvailabilities, setPlayerAvailabilities] = useState<Record<string, string>>({});
-  const [allPlayers, setAllPlayers] = useState<Player[]>([]);
-  
-  // Remember filter state using localStorage with event-specific key
-  const filterStorageKey = `showAllPlayers_${props.eventId}_${props.teamNumber}_${props.periodNumber}`;
-  const [showAllPlayers, setShowAllPlayers] = useState(() => {
-    const saved = localStorage.getItem(filterStorageKey);
-    return saved ? JSON.parse(saved) : false;
-  });
+export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = ({
+  teamId,
+  eventId,
+  selectedPlayers,
+  substitutePlayers,
+  captainId,
+  onPlayersChange,
+  onSubstitutesChange,
+  onCaptainChange,
+  eventType,
+  formation,
+  onFormationChange,
+  gameFormat,
+  teamNumber,
+  periodNumber,
+  getPlayerTimeInfo = () => ''
+}) => {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [availability, setAvailability] = useState<Record<string, any>>({});
+  const [nameDisplayOption, setNameDisplayOption] = useState<NameDisplayOption>('surname');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadPlayerAvailabilities();
-    loadTeamPlayers();
-  }, [props.eventId, props.teamId]);
+    loadPlayersAndAvailability();
+    loadTeamNameDisplaySetting();
+  }, [teamId, eventId]);
 
-  // Save filter state to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem(filterStorageKey, JSON.stringify(showAllPlayers));
-  }, [showAllPlayers, filterStorageKey]);
-
-  const loadPlayerAvailabilities = async () => {
+  const loadTeamNameDisplaySetting = async () => {
     try {
-      const availabilities = await availabilityService.getEventAvailability(props.eventId);
-      const availabilityMap: Record<string, string> = {};
-      
-      availabilities.forEach(availability => {
-        if (availability.role === 'player') {
-          availabilityMap[availability.user_id] = availability.status;
-        }
-      });
-      
-      setPlayerAvailabilities(availabilityMap);
+      const { data, error } = await supabase
+        .from('teams')
+        .select('name_display_option')
+        .eq('id', teamId)
+        .single();
+
+      if (error) throw error;
+      setNameDisplayOption((data?.name_display_option as NameDisplayOption) || 'surname');
     } catch (error) {
-      console.error('Error loading player availabilities:', error);
+      console.error('Error loading team name display setting:', error);
     }
   };
 
-  const loadTeamPlayers = async () => {
+  const loadPlayersAndAvailability = async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true);
+      
+      // Load players
+      const { data: playersData, error: playersError } = await supabase
         .from('players')
-        .select('*')
-        .eq('team_id', props.teamId)
+        .select('id, name, squad_number')
+        .eq('team_id', teamId)
         .eq('status', 'active')
         .order('squad_number');
 
-      if (error) throw error;
-      setAllPlayers(data || []);
+      if (playersError) throw playersError;
+
+      // Load availability
+      const { data: availabilityData, error: availabilityError } = await supabase
+        .from('event_availability')
+        .select('user_id, status, role')
+        .eq('event_id', eventId);
+
+      if (availabilityError) throw availabilityError;
+
+      // Load user-player relationships
+      const { data: userPlayersData, error: userPlayersError } = await supabase
+        .from('user_players')
+        .select('user_id, player_id, relationship');
+
+      if (userPlayersError) throw userPlayersError;
+
+      // Create availability mapping
+      const availabilityMap: Record<string, any> = {};
+      
+      if (availabilityData && userPlayersData) {
+        userPlayersData.forEach(userPlayer => {
+          const playerAvailability = availabilityData.find(avail => 
+            avail.user_id === userPlayer.user_id && 
+            (avail.role === 'player' || avail.role === 'parent')
+          );
+          
+          if (playerAvailability) {
+            availabilityMap[userPlayer.player_id] = {
+              status: playerAvailability.status,
+              role: playerAvailability.role
+            };
+          }
+        });
+      }
+
+      setPlayers(playersData || []);
+      setAvailability(availabilityMap);
     } catch (error) {
-      console.error('Error loading team players:', error);
+      console.error('Error loading players and availability:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const filterUnavailablePlayers = (playerIds: string[]) => {
-    return playerIds.filter(playerId => {
-      const availability = playerAvailabilities[playerId];
-      return availability !== 'unavailable';
-    });
+  const formatPlayerDisplayName = (player: Player): string => {
+    const formattedName = formatPlayerName(player.name, nameDisplayOption);
+    const timeInfo = getPlayerTimeInfo(player.id);
+    return `${formattedName} (#${player.squad_number})${timeInfo}`;
   };
 
-  const handlePlayersChange = (players: string[]) => {
-    const filteredPlayers = filterUnavailablePlayers(players);
-    props.onPlayersChange(filteredPlayers);
-  };
-
-  const handleSubstitutesChange = (substitutes: string[]) => {
-    if (props.onSubstitutesChange) {
-      const filteredSubstitutes = filterUnavailablePlayers(substitutes);
-      props.onSubstitutesChange(filteredSubstitutes);
+  const getAvailabilityIcon = (playerId: string) => {
+    const avail = availability[playerId];
+    if (!avail) return null;
+    
+    switch (avail.status) {
+      case 'available':
+        return <span className="text-green-500">✓</span>;
+      case 'unavailable':
+        return <span className="text-red-500">✗</span>;
+      case 'pending':
+        return <Clock className="h-3 w-3 text-amber-500" />;
+      default:
+        return null;
     }
   };
 
-  const handlePlayerRemove = (playerId: string) => {
-    const newPlayers = props.selectedPlayers.filter(id => id !== playerId);
-    props.onPlayersChange(newPlayers);
-
-    if (props.substitutePlayers && props.onSubstitutesChange) {
-      const newSubstitutes = props.substitutePlayers.filter(id => id !== playerId);
-      props.onSubstitutesChange(newSubstitutes);
-    }
-
-    // Only remove captain if they're not in substitutes
-    if (props.captainId === playerId && !props.substitutePlayers?.includes(playerId)) {
-      props.onCaptainChange('');
+  const getAvailabilityBadge = (playerId: string) => {
+    const avail = availability[playerId];
+    if (!avail) return null;
+    
+    switch (avail.status) {
+      case 'available':
+        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Available</Badge>;
+      case 'unavailable':
+        return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Unavailable</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Pending</Badge>;
+      default:
+        return null;
     }
   };
+
+  const isPlayerConflicted = (playerId: string): boolean => {
+    // Check if player is already selected in another team for this period
+    // This would need to be passed down from parent or calculated differently
+    // For now, return false as we don't have access to other teams' data
+    return false;
+  };
+
+  const handlePlayerToggle = (playerId: string) => {
+    if (selectedPlayers.includes(playerId)) {
+      // Remove from selected players
+      const newSelected = selectedPlayers.filter(id => id !== playerId);
+      onPlayersChange(newSelected);
+      
+      // Also remove as captain if they were captain
+      if (captainId === playerId) {
+        onCaptainChange('');
+      }
+    } else {
+      // Add to selected players
+      const positions = getPositionsForFormation(formation, gameFormat);
+      if (selectedPlayers.length < positions.length) {
+        onPlayersChange([...selectedPlayers, playerId]);
+      }
+    }
+  };
+
+  const handleSubstituteToggle = (playerId: string) => {
+    if (substitutePlayers.includes(playerId)) {
+      // Remove from substitutes
+      const newSubstitutes = substitutePlayers.filter(id => id !== playerId);
+      onSubstitutesChange(newSubstitutes);
+      
+      // Also remove as captain if they were captain
+      if (captainId === playerId) {
+        onCaptainChange('');
+      }
+    } else {
+      // Add to substitutes
+      onSubstitutesChange([...substitutePlayers, playerId]);
+    }
+  };
+
+  const availablePlayers = players.filter(player => 
+    !selectedPlayers.includes(player.id) && !substitutePlayers.includes(player.id)
+  );
+
+  const formations = getFormationsByFormat(gameFormat);
+  const positions = getPositionsForFormation(formation, gameFormat);
+  const maxPlayers = positions.length;
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center">Loading players...</div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      {/* Availability Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-sm p-4 bg-gray-50 rounded-lg">
-        <span className="font-medium">Availability Status:</span>
-        <div className="flex flex-wrap items-center gap-3">
-          <AvailabilityStatusBadge status="available" />
-          <AvailabilityStatusBadge status="pending" />
-          <AvailabilityStatusBadge status="unavailable" />
-        </div>
-      </div>
+    <div className="space-y-6">
+      {/* Formation Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Formation & Setup</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label>Formation:</Label>
+              <Select value={formation} onValueChange={onFormationChange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {formations.map((form) => (
+                    <SelectItem key={form} value={form}>
+                      {form}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Label>Captain:</Label>
+              <Select 
+                value={captainId} 
+                onValueChange={onCaptainChange}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Select captain" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No Captain</SelectItem>
+                  {[...selectedPlayers, ...substitutePlayers]
+                    .map(playerId => players.find(p => p.id === playerId))
+                    .filter(Boolean)
+                    .map((player) => (
+                      <SelectItem key={player!.id} value={player!.id}>
+                        {formatPlayerDisplayName(player!)}
+                      </SelectItem>
+                    ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          <div className="text-sm text-muted-foreground">
+            Formation requires {maxPlayers} players • Team {teamNumber} • Period {periodNumber}
+          </div>
+        </CardContent>
+      </Card>
 
-      <PlayerSelectionPanel
-        {...props}
-        onPlayersChange={handlePlayersChange}
-        onSubstitutesChange={handleSubstitutesChange}
-        showFormationView={true}
-        showSubstitutesInFormation={true}
-        showAllPlayers={showAllPlayers}
-        onShowAllPlayersChange={setShowAllPlayers}
-        allowCaptainAsSubstitute={true}
-      />
+      {/* Starting Players */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Starting Players ({selectedPlayers.length}/{maxPlayers})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-64">
+            <div className="space-y-2">
+              {selectedPlayers.map((playerId, index) => {
+                const player = players.find(p => p.id === playerId);
+                if (!player) return null;
+                
+                const position = positions[index] || 'TBD';
+                const isCaptain = captainId === playerId;
+                const isConflicted = isPlayerConflicted(playerId);
+                
+                return (
+                  <div
+                    key={playerId}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      isCaptain ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                    } ${isConflicted ? 'border-red-300 bg-red-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="min-w-[60px] text-center">
+                        {position}
+                      </Badge>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{formatPlayerDisplayName(player)}</span>
+                          {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                          {getAvailabilityIcon(playerId)}
+                          {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          {getAvailabilityBadge(playerId)}
+                          {isConflicted && (
+                            <Badge variant="destructive" className="text-xs">
+                              Also in Team {/* This would show which other team */}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handlePlayerToggle(playerId)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                );
+              })}
+              
+              {selectedPlayers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No players selected yet
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Substitute Players */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Substitute Players ({substitutePlayers.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-48">
+            <div className="space-y-2">
+              {substitutePlayers.map((playerId) => {
+                const player = players.find(p => p.id === playerId);
+                if (!player) return null;
+                
+                const isCaptain = captainId === playerId;
+                const isConflicted = isPlayerConflicted(playerId);
+                
+                return (
+                  <div
+                    key={playerId}
+                    className={`flex items-center justify-between p-3 rounded-lg border ${
+                      isCaptain ? 'bg-yellow-50 border-yellow-200' : 'bg-white'
+                    } ${isConflicted ? 'border-red-300 bg-red-50' : ''}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Badge variant="secondary" className="min-w-[60px] text-center">
+                        SUB
+                      </Badge>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{formatPlayerDisplayName(player)}</span>
+                          {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                          {getAvailabilityIcon(playerId)}
+                          {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          {getAvailabilityBadge(playerId)}
+                          {isConflicted && (
+                            <Badge variant="destructive" className="text-xs">
+                              Also in Team {/* This would show which other team */}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleSubstituteToggle(playerId)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                );
+              })}
+              
+              {substitutePlayers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No substitute players selected yet
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Available Players */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Available Players ({availablePlayers.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-64">
+            <div className="space-y-2">
+              {availablePlayers.map((player) => {
+                const isConflicted = isPlayerConflicted(player.id);
+                
+                return (
+                  <div
+                    key={player.id}
+                    className={`flex items-center justify-between p-3 rounded-lg border bg-white ${
+                      isConflicted ? 'border-red-300 bg-red-50' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{formatPlayerDisplayName(player)}</span>
+                          {getAvailabilityIcon(player.id)}
+                          {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
+                        </div>
+                        <div className="flex gap-1 mt-1">
+                          {getAvailabilityBadge(player.id)}
+                          {isConflicted && (
+                            <Badge variant="destructive" className="text-xs">
+                              Also in Team {/* This would show which other team */}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handlePlayerToggle(player.id)}
+                        disabled={selectedPlayers.length >= maxPlayers}
+                      >
+                        Add to Starting
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSubstituteToggle(player.id)}
+                      >
+                        Add as Sub
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {availablePlayers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  All players have been selected
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
     </div>
   );
 };

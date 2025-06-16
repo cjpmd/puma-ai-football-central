@@ -51,6 +51,12 @@ const CalendarEventsPage = () => {
   const [eventKitSelection, setEventKitSelection] = useState('home');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
+  
+  // Fresh team data state for accurate defaults
+  const [freshTeamDefaults, setFreshTeamDefaults] = useState<{
+    gameFormat: GameFormat;
+    gameDuration: number;
+  }>({ gameFormat: '7-a-side', gameDuration: 90 });
 
   // Get current team's default values
   const currentTeam = teams.find(team => team.id === selectedTeamId);
@@ -155,7 +161,6 @@ const CalendarEventsPage = () => {
   };
 
   const handleEditEvent = async (event: DatabaseEvent) => {
-    // Load fresh event data from database
     try {
       console.log('Loading fresh event data for event:', event.id);
       const { data: freshEvent, error } = await supabase
@@ -166,7 +171,6 @@ const CalendarEventsPage = () => {
         
       if (error) {
         console.error('Error loading fresh event data:', error);
-        // Fall back to using the passed event data
         setSelectedEvent(event);
         setEventTitle(event.title);
         setEventDescription(event.description || '');
@@ -182,7 +186,6 @@ const CalendarEventsPage = () => {
         setEventKitSelection((event as any).kit_selection || 'home');
       } else {
         console.log('Fresh event data loaded:', freshEvent);
-        // Use fresh data from database
         setSelectedEvent(freshEvent as DatabaseEvent);
         setEventTitle(freshEvent.title);
         setEventDescription(freshEvent.description || '');
@@ -201,7 +204,6 @@ const CalendarEventsPage = () => {
       }
     } catch (error) {
       console.error('Error loading fresh event data:', error);
-      // Fall back to using the passed event data
       setSelectedEvent(event);
       setEventTitle(event.title);
       setEventDescription(event.description || '');
@@ -274,7 +276,6 @@ const CalendarEventsPage = () => {
   };
 
   const openCreateModal = async () => {
-    // Load fresh team data before opening create modal
     try {
       console.log('Loading fresh team data for create modal, team:', selectedTeamId);
       const { data: freshTeam, error } = await supabase
@@ -288,11 +289,16 @@ const CalendarEventsPage = () => {
         // Fall back to cached values
         setEventGameFormat(teamDefaultGameFormat);
         setEventGameDuration(teamDefaultGameDuration);
+        setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat, gameDuration: teamDefaultGameDuration });
       } else {
         console.log('Fresh team data loaded for create modal:', freshTeam);
         // Use fresh database values
-        setEventGameFormat((freshTeam.game_format || '7-a-side') as GameFormat);
-        setEventGameDuration(freshTeam.game_duration || 90);
+        const freshFormat = (freshTeam.game_format || '7-a-side') as GameFormat;
+        const freshDuration = freshTeam.game_duration || 90;
+        
+        setEventGameFormat(freshFormat);
+        setEventGameDuration(freshDuration);
+        setFreshTeamDefaults({ gameFormat: freshFormat, gameDuration: freshDuration });
         
         console.log('Set create modal defaults - gameFormat:', freshTeam.game_format, 'gameDuration:', freshTeam.game_duration);
       }
@@ -301,6 +307,7 @@ const CalendarEventsPage = () => {
       // Fall back to cached values
       setEventGameFormat(teamDefaultGameFormat);
       setEventGameDuration(teamDefaultGameDuration);
+      setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat, gameDuration: teamDefaultGameDuration });
     }
     
     setIsCreateModalOpen(true);
@@ -317,8 +324,8 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
-    setEventGameFormat(teamDefaultGameFormat);
-    setEventGameDuration(teamDefaultGameDuration);
+    setEventGameFormat(freshTeamDefaults.gameFormat);
+    setEventGameDuration(freshTeamDefaults.gameDuration);
     setEventKitSelection('home');
   };
 
@@ -727,7 +734,7 @@ const CalendarEventsPage = () => {
                   <SelectContent>
                     {gameFormats.map((format) => (
                       <SelectItem key={format} value={format}>
-                        {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
+                        {format} {format === freshTeamDefaults.gameFormat ? '(Team Default)' : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -745,11 +752,11 @@ const CalendarEventsPage = () => {
                     min="1"
                     max="180"
                     value={eventGameDuration}
-                    onChange={(e) => setEventGameDuration(parseInt(e.target.value) || teamDefaultGameDuration)}
-                    placeholder={teamDefaultGameDuration.toString()}
+                    onChange={(e) => setEventGameDuration(parseInt(e.target.value) || freshTeamDefaults.gameDuration)}
+                    placeholder={freshTeamDefaults.gameDuration.toString()}
                   />
                   <p className="text-sm text-muted-foreground">
-                    Team default: {teamDefaultGameDuration} minutes
+                    Team default: {freshTeamDefaults.gameDuration} minutes
                   </p>
                 </div>
               </div>
