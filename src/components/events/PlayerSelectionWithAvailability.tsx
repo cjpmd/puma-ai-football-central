@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -251,11 +250,13 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {formations.map((form) => (
-                    <SelectItem key={form.id} value={form.id}>
-                      {form.name}
-                    </SelectItem>
-                  ))}
+                  {formations
+                    .filter(form => form.id && form.id.trim() !== '') // Filter out formations with empty IDs
+                    .map((form) => (
+                      <SelectItem key={form.id} value={form.id}>
+                        {form.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
