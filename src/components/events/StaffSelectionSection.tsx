@@ -16,23 +16,25 @@ interface StaffMember {
 
 interface StaffSelectionSectionProps {
   teamId: string;
-  selectedStaff: string[];
-  onStaffChange: (staffIds: string[]) => void;
-  staffAssignments?: Record<string, string[]>;
+  eventId: string;
+  periods: any[];
+  teamNumber: number;
 }
 
 export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
   teamId,
-  selectedStaff,
-  onStaffChange,
-  staffAssignments = {}
+  eventId,
+  periods,
+  teamNumber
 }) => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadTeamStaff();
-  }, [teamId]);
+    loadSelectedStaff();
+  }, [teamId, eventId]);
 
   const loadTeamStaff = async () => {
     try {
@@ -59,15 +61,58 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
     }
   };
 
-  const handleStaffToggle = (staffId: string) => {
+  const loadSelectedStaff = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_selections')
+        .select('staff_selection')
+        .eq('event_id', eventId)
+        .eq('team_id', teamId);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const staffSelection = data[0].staff_selection;
+        if (Array.isArray(staffSelection)) {
+          const staffIds = staffSelection.map((staff: any) => staff.staffId).filter(Boolean);
+          setSelectedStaff(staffIds);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading selected staff:', error);
+    }
+  };
+
+  const handleStaffToggle = async (staffId: string) => {
     const newSelectedStaff = selectedStaff.includes(staffId)
       ? selectedStaff.filter(id => id !== staffId)
       : [...selectedStaff, staffId];
-    onStaffChange(newSelectedStaff);
-  };
+    
+    setSelectedStaff(newSelectedStaff);
 
-  const getAssignedTeams = (staffId: string): string[] => {
-    return staffAssignments[staffId] || [];
+    // Update the database
+    try {
+      const staffSelection = newSelectedStaff.map(id => ({ staffId: id }));
+      
+      await supabase
+        .from('event_selections')
+        .upsert(
+          {
+            event_id: eventId,
+            team_id: teamId,
+            period_number: 1, // Default to period 1 for staff
+            staff_selection: staffSelection,
+            player_positions: [],
+            formation: '1-4-4-2',
+            duration_minutes: 90
+          },
+          { onConflict: 'event_id, team_id, period_number' }
+        );
+    } catch (error) {
+      console.error('Error updating staff selection:', error);
+      // Revert the state change on error
+      setSelectedStaff(selectedStaff);
+    }
   };
 
   if (loading) {
@@ -101,37 +146,25 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {staff.map((staffMember) => {
-              const assignedTeams = getAssignedTeams(staffMember.id);
-              return (
-                <div key={staffMember.id} className="flex items-center space-x-3 p-3 border rounded">
-                  <Checkbox
-                    id={`staff-${staffMember.id}`}
-                    checked={selectedStaff.includes(staffMember.id)}
-                    onCheckedChange={() => handleStaffToggle(staffMember.id)}
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`staff-${staffMember.id}`} className="font-medium cursor-pointer">
-                        {staffMember.name}
-                      </Label>
-                      {assignedTeams.length > 0 && (
-                        <div className="flex gap-1">
-                          {assignedTeams.map((teamId, index) => (
-                            <Badge key={teamId} variant="outline" className="text-xs">
-                              Team {index + 1}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                    </div>
+            {staff.map((staffMember) => (
+              <div key={staffMember.id} className="flex items-center space-x-3 p-3 border rounded">
+                <Checkbox
+                  id={`staff-${staffMember.id}`}
+                  checked={selectedStaff.includes(staffMember.id)}
+                  onCheckedChange={() => handleStaffToggle(staffMember.id)}
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor={`staff-${staffMember.id}`} className="font-medium cursor-pointer">
+                      {staffMember.name}
+                    </Label>
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )}
       </CardContent>
