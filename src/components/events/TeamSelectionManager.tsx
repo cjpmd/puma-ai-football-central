@@ -13,6 +13,7 @@ import { PlayerSelectionWithAvailability } from './PlayerSelectionWithAvailabili
 import { StaffSelectionSection } from './StaffSelectionSection';
 import { EventAvailabilityDashboard } from './EventAvailabilityDashboard';
 import { TeamSelector } from './TeamSelector';
+import { FormationSelector } from './FormationSelector';
 import { availabilityService } from '@/services/availabilityService';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
@@ -109,7 +110,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     return teamIdentifier.split('-team-')[0];
   };
 
-  // Calculate player time tracking for current team
+  // Calculate player time tracking for current team - FIXED VERSION
   const calculatePlayerTimeTracking = (teamId: string): PlayerTimeTracker[] => {
     const teamPeriodsForTeam = teamPeriods[teamId] || [1];
     const playerTrackers: Record<string, PlayerTimeTracker> = {};
@@ -124,59 +125,46 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       };
     });
 
-    // Calculate time for each period
+    // Calculate time for each period - FIXED to avoid duplicates and correct time calculation
     teamPeriodsForTeam.forEach(period => {
       const periodKey = `${teamId}-${period}`;
       const periodState = periodStates[periodKey];
       
       if (periodState) {
-        // Track playing time (ONLY for starting players, NOT substitutes)
-        periodState.selectedPlayers.forEach(playerId => {
-          if (playerTrackers[playerId]) {
-            playerTrackers[playerId].totalPlayingTime += periodState.durationMinutes;
-            playerTrackers[playerId].periodBreakdown.push({
-              period,
-              playingTime: periodState.durationMinutes,
-              substituteTime: 0,
-              isPlaying: true,
-              isSubstitute: false
-            });
-          }
-        });
-
-        // Track substitute time (ONLY count as substitute time, NOT playing time)
-        periodState.substitutePlayers.forEach(playerId => {
-          // Only add substitute time if player is NOT also in selectedPlayers for this period
-          if (playerTrackers[playerId] && !periodState.selectedPlayers.includes(playerId)) {
-            playerTrackers[playerId].totalSubstituteTime += periodState.durationMinutes;
-            playerTrackers[playerId].periodBreakdown.push({
-              period,
-              playingTime: 0, // Substitutes don't get playing time
-              substituteTime: periodState.durationMinutes,
-              isPlaying: false,
-              isSubstitute: true
-            });
-          }
-        });
-
-        // Add periods where player is not involved at all
+        // Process all players to ensure each gets exactly one entry per period
         allPlayers.forEach(player => {
-          const isPlaying = periodState.selectedPlayers.includes(player.id);
-          const isSubstitute = periodState.substitutePlayers.includes(player.id);
+          const playerId = player.id;
+          const isPlaying = periodState.selectedPlayers.includes(playerId);
+          const isSubstitute = periodState.substitutePlayers.includes(playerId);
           
-          if (!isPlaying && !isSubstitute) {
-            playerTrackers[player.id].periodBreakdown.push({
-              period,
-              playingTime: 0,
-              substituteTime: 0,
-              isPlaying: false,
-              isSubstitute: false
-            });
+          let playingTime = 0;
+          let substituteTime = 0;
+          
+          // FIXED: Only count as playing time if in selectedPlayers (NOT substitutes)
+          if (isPlaying) {
+            playingTime = periodState.durationMinutes;
+            playerTrackers[playerId].totalPlayingTime += playingTime;
           }
+          
+          // FIXED: Only count substitute time if in substitutes AND NOT in playing positions
+          if (isSubstitute && !isPlaying) {
+            substituteTime = periodState.durationMinutes;
+            playerTrackers[playerId].totalSubstituteTime += substituteTime;
+          }
+          
+          // Add exactly one breakdown entry per period per player
+          playerTrackers[playerId].periodBreakdown.push({
+            period,
+            playingTime,
+            substituteTime,
+            isPlaying,
+            isSubstitute: isSubstitute && !isPlaying // Only true substitute if not also playing
+          });
         });
       }
     });
 
+    // Return only players who have some involvement
     return Object.values(playerTrackers).filter(tracker => 
       tracker.totalPlayingTime > 0 || tracker.totalSubstituteTime > 0
     );
@@ -917,7 +905,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     );
   };
 
-  // Enhanced Formation Overview with player time summary
+  // Enhanced Formation Overview with proper visual formations - FIXED
   const renderFormationOverview = () => {
     const teamState = teamStates[activeTeam];
     const teamPeriodsForThisTeam = teamPeriods[activeTeam] || [1];
@@ -964,13 +952,38 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-3">
-                  {renderCompactFormationPitch(
-                    periodState.formation,
-                    periodState.selectedPlayers,
-                    periodState.substitutePlayers,
-                    teamState.captainId, // Captain from team level
-                    periodState.durationMinutes
-                  )}
+                  {/* FIXED: Use FormationSelector for proper visual formation */}
+                  <div className="mb-4">
+                    <FormationSelector
+                      gameFormat={event.game_format as GameFormat}
+                      selectedFormation={periodState.formation}
+                      onFormationChange={(formation) => updatePeriodState(periodKey, { formation })}
+                    />
+                  </div>
+                  
+                  {/* Show selected players */}
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium">Playing ({periodState.selectedPlayers.length})</div>
+                    {periodState.selectedPlayers.map(playerId => (
+                      <div key={playerId} className="text-xs flex items-center justify-between">
+                        <span>{getPlayerSurname(playerId)}</span>
+                        {teamState.captainId === playerId && (
+                          <Badge variant="secondary" className="text-xs">C</Badge>
+                        )}
+                      </div>
+                    ))}
+                    
+                    {periodState.substitutePlayers.length > 0 && (
+                      <>
+                        <div className="text-xs font-medium mt-2">Substitutes ({periodState.substitutePlayers.length})</div>
+                        {periodState.substitutePlayers.map(playerId => (
+                          <div key={playerId} className="text-xs text-muted-foreground">
+                            {getPlayerSurname(playerId)}
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </div>
                   
                   {teamState.selectedStaff.length > 0 && (
                     <div className="mt-2 pt-2 border-t">
@@ -990,7 +1003,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           })}
         </div>
 
-        {/* Player Time Summary */}
+        {/* Player Time Summary - FIXED calculations */}
         {playerTimeTrackers.length > 0 && (
           <Card>
             <CardHeader>
@@ -1002,8 +1015,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   <div key={tracker.playerId} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                     <span className="text-sm font-medium">{getPlayerSurname(tracker.playerId)}</span>
                     <div className="text-xs text-muted-foreground">
-                      <span className="mr-2">Playing: {tracker.totalPlayingTime}m</span>
-                      <span>Sub: {tracker.totalSubstituteTime}m</span>
+                      <span className="mr-2 text-green-700">Playing: {tracker.totalPlayingTime}m</span>
+                      <span className="text-blue-700">Sub: {tracker.totalSubstituteTime}m</span>
                     </div>
                   </div>
                 ))}
@@ -1258,7 +1271,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
               </div>
             </div>
 
-            {/* Main Content Tabs - Now with 5 tabs including Playing Time */}
+            {/* Main Content Tabs - Updated with Formation Overview */}
             <Tabs defaultValue="players" className="space-y-4">
               <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="players">Player Selection</TabsTrigger>
