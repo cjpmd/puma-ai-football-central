@@ -273,7 +273,36 @@ const CalendarEventsPage = () => {
     deleteEvent(eventId);
   };
 
-  const openCreateModal = () => {
+  const openCreateModal = async () => {
+    // Load fresh team data before opening create modal
+    try {
+      console.log('Loading fresh team data for create modal, team:', selectedTeamId);
+      const { data: freshTeam, error } = await supabase
+        .from('teams')
+        .select('*')
+        .eq('id', selectedTeamId)
+        .single();
+        
+      if (error) {
+        console.error('Error loading fresh team data:', error);
+        // Fall back to cached values
+        setEventGameFormat(teamDefaultGameFormat);
+        setEventGameDuration(teamDefaultGameDuration);
+      } else {
+        console.log('Fresh team data loaded for create modal:', freshTeam);
+        // Use fresh database values
+        setEventGameFormat((freshTeam.game_format || '7-a-side') as GameFormat);
+        setEventGameDuration(freshTeam.game_duration || 90);
+        
+        console.log('Set create modal defaults - gameFormat:', freshTeam.game_format, 'gameDuration:', freshTeam.game_duration);
+      }
+    } catch (error) {
+      console.error('Error loading fresh team data:', error);
+      // Fall back to cached values
+      setEventGameFormat(teamDefaultGameFormat);
+      setEventGameDuration(teamDefaultGameDuration);
+    }
+    
     setIsCreateModalOpen(true);
   };
 
@@ -457,7 +486,7 @@ const CalendarEventsPage = () => {
               </Popover>
             )}
 
-            <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Button onClick={openCreateModal}>
               Create Event
             </Button>
           </div>
