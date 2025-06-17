@@ -239,6 +239,40 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     setActiveTab(value as "overview" | "formation" | "staff" | "playing-time");
   };
 
+  const handlePlayersChange = (players: string[]) => {
+    if (currentSelection) {
+      handleSelectionUpdate({
+        ...currentSelection,
+        player_positions: players.map((playerId, index) => ({
+          player_id: playerId,
+          position: `P${index + 1}`,
+          isSubstitute: false
+        }))
+      });
+    }
+  };
+
+  const handleSubstitutesChange = (substitutes: string[]) => {
+    if (currentSelection) {
+      handleSelectionUpdate({
+        ...currentSelection,
+        substitute_players: substitutes.map(playerId => ({
+          player_id: playerId,
+          position: 'SUB'
+        }))
+      });
+    }
+  };
+
+  const handleCaptainChange = (captainId: string) => {
+    if (currentSelection) {
+      handleSelectionUpdate({
+        ...currentSelection,
+        captain_id: captainId
+      });
+    }
+  };
+
   if (loading) {
     return <div className="text-center py-4">Loading event data...</div>;
   }
@@ -277,21 +311,27 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Player Selection</h3>
                   <PlayerSelectionWithAvailability
-                    event={event}
-                    availablePlayers={availablePlayers}
-                    selectedPlayers={currentSelection?.player_positions || []}
-                    substitutePlayers={currentSelection?.substitute_players || []}
-                    formation={currentSelection?.formation}
-                    captainId={currentSelection?.captain_id}
-                    onPlayersChange={(players: any[], subs: any[], captain: any) => {
-                      handleSelectionUpdate({
-                        ...currentSelection,
-                        player_positions: players,
-                        substitute_players: subs,
-                        captain_id: captain
-                      });
+                    teamId={event.team_id}
+                    eventId={event.id}
+                    selectedPlayers={currentSelection?.player_positions?.map((p: any) => p.player_id || p.playerId) || []}
+                    substitutePlayers={currentSelection?.substitute_players?.map((s: any) => s.player_id || s.playerId) || []}
+                    captainId={currentSelection?.captain_id || ''}
+                    onPlayersChange={handlePlayersChange}
+                    onSubstitutesChange={handleSubstitutesChange}
+                    onCaptainChange={handleCaptainChange}
+                    eventType={event.event_type}
+                    formation={currentSelection?.formation || ''}
+                    onFormationChange={(formationId) => {
+                      if (currentSelection) {
+                        handleSelectionUpdate({
+                          ...currentSelection,
+                          formation: formationId
+                        });
+                      }
                     }}
                     gameFormat={event.game_format as GameFormat}
+                    teamNumber={1}
+                    periodNumber={1}
                   />
                 </div>
               </TabsContent>
@@ -313,21 +353,27 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                   
                   {currentSelection && (
                     <PlayerSelectionWithAvailability
-                      event={event}
-                      availablePlayers={availablePlayers}
-                      selectedPlayers={currentSelection.player_positions || []}
-                      substitutePlayers={currentSelection.substitute_players || []}
-                      formation={currentSelection.formation}
-                      captainId={currentSelection.captain_id}
-                      onPlayersChange={(players: any[], subs: any[], captain: any) => {
-                        handleSelectionUpdate({
-                          ...currentSelection,
-                          player_positions: players,
-                          substitute_players: subs,
-                          captain_id: captain
-                        });
+                      teamId={event.team_id}
+                      eventId={event.id}
+                      selectedPlayers={currentSelection.player_positions?.map((p: any) => p.player_id || p.playerId) || []}
+                      substitutePlayers={currentSelection.substitute_players?.map((s: any) => s.player_id || s.playerId) || []}
+                      captainId={currentSelection.captain_id || ''}
+                      onPlayersChange={handlePlayersChange}
+                      onSubstitutesChange={handleSubstitutesChange}
+                      onCaptainChange={handleCaptainChange}
+                      eventType={event.event_type}
+                      formation={currentSelection.formation || ''}
+                      onFormationChange={(formationId) => {
+                        if (currentSelection) {
+                          handleSelectionUpdate({
+                            ...currentSelection,
+                            formation: formationId
+                          });
+                        }
                       }}
                       gameFormat={event.game_format as GameFormat}
+                      teamNumber={1}
+                      periodNumber={1}
                     />
                   )}
                 </div>
