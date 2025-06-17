@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -70,14 +71,14 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       if (playersError) throw playersError;
       setAvailablePlayers(playersData || []);
 
-      // Load existing team selection if available
+      // Load existing team selection if available - using correct table name
       const { data: selectionData, error: selectionError } = await supabase
-        .from('event_team_selections')
+        .from('event_selections')
         .select('*')
         .eq('event_id', event.id)
         .single();
 
-      if (selectionError && selectionError.code !== '404') throw selectionError;
+      if (selectionError && selectionError.code !== 'PGRST116') throw selectionError;
       setCurrentSelection(selectionData || {
         event_id: event.id,
         team_id: event.team_id,
@@ -118,7 +119,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const handleSelectionUpdate = async (updatedSelection: any) => {
     try {
       const { data, error } = await supabase
-        .from('event_team_selections')
+        .from('event_selections')
         .upsert(updatedSelection, { onConflict: 'event_id' })
         .select()
         .single();
@@ -142,9 +143,20 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const calculatePlayerTimeTracking = (selections: any[]) => {
     const playerTimes: { [playerId: string]: PlayerTimeData } = {};
     
-    // First pass: collect all data
+    // Track processed periods to avoid duplicates
+    const processedPeriods = new Set<string>();
+    
     selections.forEach((selection) => {
       const { player_positions = [], substitute_players = [], duration_minutes = 0, period_number = 1 } = selection;
+      
+      // Create unique key for this period
+      const periodKey = `${selection.event_id}-${period_number}`;
+      
+      // Skip if we've already processed this period
+      if (processedPeriods.has(periodKey)) {
+        return;
+      }
+      processedPeriods.add(periodKey);
       
       // Process playing positions (exclude substitutes)
       player_positions.forEach((pos: any) => {
@@ -161,22 +173,18 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           };
         }
         
-        // Check if this period already exists for this player
-        const existingPeriod = playerTimes[playerId].periods.find(p => p.period === period_number);
-        if (!existingPeriod) {
-          playerTimes[playerId].totalPlaying += duration_minutes;
-          playerTimes[playerId].periods.push({
-            period: period_number,
-            minutes: duration_minutes,
-            type: 'playing',
-            position: pos.position
-          });
-          playerTimes[playerId].playingPeriods.push({
-            period: period_number,
-            minutes: duration_minutes,
-            position: pos.position
-          });
-        }
+        playerTimes[playerId].totalPlaying += duration_minutes;
+        playerTimes[playerId].periods.push({
+          period: period_number,
+          minutes: duration_minutes,
+          type: 'playing',
+          position: pos.position
+        });
+        playerTimes[playerId].playingPeriods.push({
+          period: period_number,
+          minutes: duration_minutes,
+          position: pos.position
+        });
       });
       
       // Process substitute players
@@ -194,22 +202,18 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
           };
         }
         
-        // Check if this player already has a substitute entry for this period
-        const existingSubPeriod = playerTimes[playerId].substitutePeriods.find(p => p.period === period_number);
-        if (!existingSubPeriod) {
-          playerTimes[playerId].totalSubstitute += duration_minutes;
-          playerTimes[playerId].periods.push({
-            period: period_number,
-            minutes: duration_minutes,
-            type: 'substitute',
-            position: 'SUB'
-          });
-          playerTimes[playerId].substitutePeriods.push({
-            period: period_number,
-            minutes: duration_minutes,
-            position: 'SUB'
-          });
-        }
+        playerTimes[playerId].totalSubstitute += duration_minutes;
+        playerTimes[playerId].periods.push({
+          period: period_number,
+          minutes: duration_minutes,
+          type: 'substitute',
+          position: 'SUB'
+        });
+        playerTimes[playerId].substitutePeriods.push({
+          period: period_number,
+          minutes: duration_minutes,
+          position: 'SUB'
+        });
       });
     });
     
@@ -231,6 +235,10 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as "overview" | "formation" | "staff" | "playing-time");
+  };
+
   if (loading) {
     return <div className="text-center py-4">Loading event data...</div>;
   }
@@ -248,7 +256,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         </div>
         
         <div className="h-[calc(90vh-80px)] overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <TabsList className="w-full justify-start px-4 flex-shrink-0">
               <TabsTrigger value="overview" className="flex items-center gap-2">
                 <span>📋</span> List View
@@ -275,7 +283,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                     substitutePlayers={currentSelection?.substitute_players || []}
                     formation={currentSelection?.formation}
                     captainId={currentSelection?.captain_id}
-                    onPlayersChange={(players, subs, captain) => {
+                    onPlayersChange={(players: any[], subs: any[], captain: any) => {
                       handleSelectionUpdate({
                         ...currentSelection,
                         player_positions: players,
@@ -311,7 +319,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       substitutePlayers={currentSelection.substitute_players || []}
                       formation={currentSelection.formation}
                       captainId={currentSelection.captain_id}
-                      onPlayersChange={(players, subs, captain) => {
+                      onPlayersChange={(players: any[], subs: any[], captain: any) => {
                         handleSelectionUpdate({
                           ...currentSelection,
                           player_positions: players,
@@ -327,9 +335,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
               <TabsContent value="staff" className="h-full m-0 p-4 overflow-auto">
                 <StaffSelectionSection
-                  event={event}
-                  staffAssignments={currentSelection?.staff_assignments || []}
-                  onStaffAssignmentsChange={(staff) => {
+                  teamId={event.team_id}
+                  selectedStaff={currentSelection?.staff_assignments || []}
+                  onStaffChange={(staff) => {
                     handleSelectionUpdate({
                       ...currentSelection,
                       staff_assignments: staff
@@ -346,15 +354,32 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <p>
                         Here you can analyze the playing time for each player based on the current team selection.
                       </p>
-                      {/* Example: Display player time tracking */}
-                      {Object.entries(calculatePlayerTimeTracking([currentSelection])).map(([playerId, timeData]) => (
-                        <div key={playerId} className="mb-2">
-                          <p className="font-semibold">Player ID: {playerId}</p>
-                          <p>Total Playing Time: {timeData.totalPlaying} minutes</p>
-                          <p>Total Substitute Time: {timeData.totalSubstitute} minutes</p>
-                          {/* Detailed breakdown can be added here */}
-                        </div>
-                      ))}
+                      {Object.entries(calculatePlayerTimeTracking([currentSelection])).map(([playerId, timeData]) => {
+                        const player = availablePlayers.find(p => p.id === playerId);
+                        return (
+                          <div key={playerId} className="mb-4 p-4 border rounded-lg">
+                            <p className="font-semibold">{player?.name || `Player ID: ${playerId}`}</p>
+                            <p>Total Playing Time: {timeData.totalPlaying} minutes</p>
+                            <p>Total Substitute Time: {timeData.totalSubstitute} minutes</p>
+                            <div className="mt-2">
+                              <p className="text-sm font-medium">Playing Periods:</p>
+                              {timeData.playingPeriods.map((period, index) => (
+                                <span key={index} className="inline-block mr-2 text-xs bg-green-100 px-2 py-1 rounded">
+                                  P{period.period}: {period.minutes}min ({period.position})
+                                </span>
+                              ))}
+                            </div>
+                            <div className="mt-2">
+                              <p className="text-sm font-medium">Substitute Periods:</p>
+                              {timeData.substitutePeriods.map((period, index) => (
+                                <span key={index} className="inline-block mr-2 text-xs bg-yellow-100 px-2 py-1 rounded">
+                                  P{period.period}: {period.minutes}min (SUB)
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </>
                   )}
                 </div>
