@@ -109,7 +109,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     return teamIdentifier.split('-team-')[0];
   };
 
-  // Calculate player time tracking for current team
+  // FIXED: Calculate player time tracking for current team
   const calculatePlayerTimeTracking = (teamId: string): PlayerTimeTracker[] => {
     const teamPeriodsForTeam = teamPeriods[teamId] || [1];
     const playerTrackers: Record<string, PlayerTimeTracker> = {};
@@ -124,55 +124,41 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       };
     });
 
-    // Calculate time for each period
+    // Calculate time for each period - FIXED to prevent duplicates and separate playing/substitute time
     teamPeriodsForTeam.forEach(period => {
       const periodKey = `${teamId}-${period}`;
       const periodState = periodStates[periodKey];
       
       if (periodState) {
-        // Track playing time (ONLY for starting players, NOT substitutes)
-        periodState.selectedPlayers.forEach(playerId => {
-          if (playerTrackers[playerId]) {
-            playerTrackers[playerId].totalPlayingTime += periodState.durationMinutes;
-            playerTrackers[playerId].periodBreakdown.push({
-              period,
-              playingTime: periodState.durationMinutes,
-              substituteTime: 0,
-              isPlaying: true,
-              isSubstitute: false
-            });
-          }
-        });
-
-        // Track substitute time (ONLY count as substitute time, NOT playing time)
-        periodState.substitutePlayers.forEach(playerId => {
-          // Only add substitute time if player is NOT also in selectedPlayers for this period
-          if (playerTrackers[playerId] && !periodState.selectedPlayers.includes(playerId)) {
-            playerTrackers[playerId].totalSubstituteTime += periodState.durationMinutes;
-            playerTrackers[playerId].periodBreakdown.push({
-              period,
-              playingTime: 0, // Substitutes don't get playing time
-              substituteTime: periodState.durationMinutes,
-              isPlaying: false,
-              isSubstitute: true
-            });
-          }
-        });
-
-        // Add periods where player is not involved at all
+        // For each player, determine their status in this period
         allPlayers.forEach(player => {
-          const isPlaying = periodState.selectedPlayers.includes(player.id);
-          const isSubstitute = periodState.substitutePlayers.includes(player.id);
+          const playerId = player.id;
+          const isPlaying = periodState.selectedPlayers.includes(playerId);
+          const isSubstitute = periodState.substitutePlayers.includes(playerId);
           
-          if (!isPlaying && !isSubstitute) {
-            playerTrackers[player.id].periodBreakdown.push({
-              period,
-              playingTime: 0,
-              substituteTime: 0,
-              isPlaying: false,
-              isSubstitute: false
-            });
+          let playingTime = 0;
+          let substituteTime = 0;
+          
+          // FIXED: Only count as playing time if player is in selectedPlayers (not substitutes)
+          if (isPlaying) {
+            playingTime = periodState.durationMinutes;
+            playerTrackers[playerId].totalPlayingTime += playingTime;
           }
+          
+          // FIXED: Only count as substitute time if player is ONLY in substitutes (not also playing)
+          if (isSubstitute && !isPlaying) {
+            substituteTime = periodState.durationMinutes;
+            playerTrackers[playerId].totalSubstituteTime += substituteTime;
+          }
+          
+          // FIXED: Add exactly one entry per period per player (prevents duplicates)
+          playerTrackers[playerId].periodBreakdown.push({
+            period,
+            playingTime,
+            substituteTime,
+            isPlaying,
+            isSubstitute: isSubstitute && !isPlaying // Only true substitute if not also playing
+          });
         });
       }
     });
@@ -859,7 +845,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
     }
   };
 
-  // NEW: Playing Time Tab Component
+  // NEW: Playing Time Tab Component with FIXED calculations
   const renderPlayingTimeTab = () => {
     const playerTimeTrackers = calculatePlayerTimeTracking(activeTeam);
     
