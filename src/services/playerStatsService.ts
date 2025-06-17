@@ -176,7 +176,10 @@ export const playerStatsService = {
       // First, clean up any events with "Unknown" opponents
       await this.cleanupUnknownOpponentEvents();
       
-      // Then regenerate all stats
+      // Then regenerate event_player_stats from event_selections
+      await this.regenerateEventPlayerStatsFromSelections();
+      
+      // Finally regenerate all player match stats
       const { error } = await supabase.rpc('update_all_completed_events_stats');
 
       if (error) {
@@ -187,6 +190,111 @@ export const playerStatsService = {
       console.log('Successfully regenerated all player stats');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
+      throw error;
+    }
+  },
+
+  async regenerateEventPlayerStatsFromSelections(): Promise<void> {
+    try {
+      console.log('Regenerating event_player_stats from event_selections...');
+      
+      // Clear all existing event_player_stats
+      const { error: clearError } = await supabase
+        .from('event_player_stats')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+
+      if (clearError) {
+        console.error('Error clearing event_player_stats:', clearError);
+        throw clearError;
+      }
+
+      // Get all event selections
+      const { data: selections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select(`
+          *,
+          events!inner(date, end_time)
+        `);
+
+      if (selectionsError) {
+        console.error('Error fetching event selections:', selectionsError);
+        throw selectionsError;
+      }
+
+      if (!selections || selections.length === 0) {
+        console.log('No event selections found');
+        return;
+      }
+
+      // Process each selection
+      for (const selection of selections) {
+        const event = selection.events;
+        
+        // Only process completed events
+        if (!this.isEventCompleted(event.date, event.end_time)) {
+          continue;
+        }
+
+        const playerPositions = selection.player_positions as any[];
+        if (!Array.isArray(playerPositions)) {
+          continue;
+        }
+
+        // Process each player in the selection
+        for (const playerPos of playerPositions) {
+          const playerId = playerPos.playerId || playerPos.player_id;
+          if (!playerId) continue;
+
+          // Only create stats for actual playing positions (not substitutes)
+          if (playerPos.position && playerPos.position !== 'SUB' && playerPos.position !== 'Substitute') {
+            const minutesPlayed = playerPos.minutes || selection.duration_minutes || 90;
+            const isCaptain = playerId === selection.captain_id;
+
+            await supabase
+              .from('event_player_stats')
+              .insert({
+                event_id: selection.event_id,
+                player_id: playerId,
+                team_number: selection.team_number || 1,
+                period_number: selection.period_number || 1,
+                position: playerPos.position,
+                minutes_played: minutesPlayed,
+                is_captain: isCaptain,
+                is_substitute: false,
+                performance_category_id: selection.performance_category_id
+              });
+          }
+        }
+
+        // Process substitutes separately (they should not have playing positions recorded)
+        const substitutes = selection.substitute_players as any[] || selection.substitutes as any[] || [];
+        if (Array.isArray(substitutes)) {
+          for (const sub of substitutes) {
+            const playerId = sub.playerId || sub.player_id;
+            if (!playerId) continue;
+
+            // Substitutes get 0 minutes for playing time
+            await supabase
+              .from('event_player_stats')
+              .insert({
+                event_id: selection.event_id,
+                player_id: playerId,
+                team_number: selection.team_number || 1,
+                period_number: selection.period_number || 1,
+                position: null, // No position for substitutes
+                minutes_played: 0, // Substitutes don't get playing minutes
+                is_captain: false,
+                is_substitute: true,
+                performance_category_id: selection.performance_category_id
+              });
+          }
+        }
+      }
+
+      console.log('Successfully regenerated event_player_stats from selections');
+    } catch (error) {
+      console.error('Error regenerating event_player_stats:', error);
       throw error;
     }
   },

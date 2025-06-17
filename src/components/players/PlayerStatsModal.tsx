@@ -33,6 +33,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   const queryClient = useQueryClient();
 
   // Don't render the modal if there's no player
@@ -162,7 +163,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
       queryClient.invalidateQueries({ queryKey: ['active-players'] });
       
-      toast.success('All player statistics regenerated successfully');
+      toast.success('All player statistics regenerated successfully - positions and playing time should now be accurate');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
       toast.error('Failed to regenerate statistics');
@@ -194,9 +195,10 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 onClick={handleRegenerateStats}
                 disabled={isRegenerating}
                 className="flex items-center gap-2"
+                title="This will fix position recording and playing time calculation issues"
               >
                 <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                Regenerate All
+                Fix All Data
               </Button>
             </div>
           </DialogTitle>
