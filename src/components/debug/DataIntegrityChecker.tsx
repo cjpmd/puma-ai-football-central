@@ -57,19 +57,29 @@ export const DataIntegrityChecker: React.FC = () => {
         });
       }
 
-      // Check for duplicate position entries for same player/event/period
-      const { data: duplicates, error: dupError } = await supabase
+      // Check for potential duplicate entries by looking for multiple stats for same player/event/period
+      const { data: allStats, error: allStatsError } = await supabase
         .from('event_player_stats')
-        .select('player_id, event_id, period_number, position, count(*)')
-        .not('position', 'is', null)
-        .group('player_id, event_id, period_number, position')
-        .having('count(*) > 1');
+        .select('player_id, event_id, period_number, position')
+        .not('position', 'is', null);
 
-      if (dupError) {
-        console.error('Error checking duplicates:', dupError);
+      if (allStatsError) {
+        console.error('Error checking for duplicates:', allStatsError);
         foundIssues.push('Failed to check for duplicate entries');
-      } else if (duplicates && duplicates.length > 0) {
-        foundIssues.push(`Found ${duplicates.length} duplicate position entries`);
+      } else if (allStats) {
+        // Group by player_id, event_id, period_number, position and count
+        const duplicateMap = new Map<string, number>();
+        
+        allStats.forEach(stat => {
+          const key = `${stat.player_id}-${stat.event_id}-${stat.period_number}-${stat.position}`;
+          duplicateMap.set(key, (duplicateMap.get(key) || 0) + 1);
+        });
+
+        const duplicates = Array.from(duplicateMap.entries()).filter(([, count]) => count > 1);
+        
+        if (duplicates.length > 0) {
+          foundIssues.push(`Found ${duplicates.length} duplicate position entries`);
+        }
       }
 
       setIssues(foundIssues);
