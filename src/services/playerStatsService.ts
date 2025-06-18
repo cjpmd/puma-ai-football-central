@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
@@ -171,7 +170,7 @@ export const playerStatsService = {
 
   async regenerateAllPlayerStats(): Promise<void> {
     try {
-      console.log('Regenerating all player stats from event_player_stats');
+      console.log('=== STARTING COMPLETE DATA REGENERATION ===');
       
       // First, clean up any events with "Unknown" opponents
       await this.cleanupUnknownOpponentEvents();
@@ -187,7 +186,7 @@ export const playerStatsService = {
         throw error;
       }
       
-      console.log('Successfully regenerated all player stats');
+      console.log('=== COMPLETE DATA REGENERATION FINISHED ===');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
       throw error;
@@ -196,7 +195,7 @@ export const playerStatsService = {
 
   async regenerateEventPlayerStatsFromSelections(): Promise<void> {
     try {
-      console.log('Regenerating event_player_stats from event_selections...');
+      console.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS ===');
       
       // Clear all existing event_player_stats
       const { error: clearError } = await supabase
@@ -209,12 +208,14 @@ export const playerStatsService = {
         throw clearError;
       }
 
-      // Get all event selections
+      console.log('Cleared all existing event_player_stats');
+
+      // Get all event selections with event data
       const { data: selections, error: selectionsError } = await supabase
         .from('event_selections')
         .select(`
           *,
-          events!inner(date, end_time)
+          events!inner(date, end_time, opponent)
         `);
 
       if (selectionsError) {
@@ -227,55 +228,86 @@ export const playerStatsService = {
         return;
       }
 
+      console.log(`Processing ${selections.length} event selections...`);
+
       // Process each selection
       for (const selection of selections) {
         const event = selection.events;
         
+        console.log(`Processing selection for event ${selection.event_id} (${event.date} vs ${event.opponent})`);
+        
         // Only process completed events
         if (!this.isEventCompleted(event.date, event.end_time)) {
+          console.log(`Skipping uncompleted event: ${event.date}`);
           continue;
         }
 
         const playerPositions = selection.player_positions as any[];
         if (!Array.isArray(playerPositions)) {
+          console.log('Player positions is not an array, skipping');
           continue;
         }
+
+        console.log(`Found ${playerPositions.length} players in selection`);
+        console.log('Player positions data:', playerPositions);
 
         // Process each player in the selection
         for (const playerPos of playerPositions) {
           const playerId = playerPos.playerId || playerPos.player_id;
-          if (!playerId) continue;
+          if (!playerId) {
+            console.log('No player ID found, skipping position:', playerPos);
+            continue;
+          }
 
-          // Only create stats for actual playing positions (not substitutes)
-          if (playerPos.position && playerPos.position !== 'SUB' && playerPos.position !== 'Substitute') {
+          // Check if this player has a valid playing position (not a substitute position)
+          const position = playerPos.position;
+          const isValidPlayingPosition = position && 
+            position !== 'SUB' && 
+            position !== 'Substitute' && 
+            position !== 'TBD' &&
+            position.trim() !== '';
+
+          if (isValidPlayingPosition) {
+            // This is a player with an actual playing position
             const minutesPlayed = playerPos.minutes || selection.duration_minutes || 90;
             const isCaptain = playerId === selection.captain_id;
 
-            await supabase
+            console.log(`Creating stats for player ${playerId}: position=${position}, minutes=${minutesPlayed}, captain=${isCaptain}`);
+
+            const { error: insertError } = await supabase
               .from('event_player_stats')
               .insert({
                 event_id: selection.event_id,
                 player_id: playerId,
                 team_number: selection.team_number || 1,
                 period_number: selection.period_number || 1,
-                position: playerPos.position,
+                position: position,
                 minutes_played: minutesPlayed,
                 is_captain: isCaptain,
                 is_substitute: false,
                 performance_category_id: selection.performance_category_id
               });
+
+            if (insertError) {
+              console.error(`Error inserting stats for player ${playerId}:`, insertError);
+            }
+          } else {
+            console.log(`Skipping player ${playerId} with invalid/substitute position: ${position}`);
           }
         }
 
-        // Process substitutes separately (they should not have playing positions recorded)
+        // Handle substitutes separately - they should get substitute records with 0 playing time
         const substitutes = selection.substitute_players as any[] || selection.substitutes as any[] || [];
-        if (Array.isArray(substitutes)) {
+        if (Array.isArray(substitutes) && substitutes.length > 0) {
+          console.log(`Processing ${substitutes.length} substitutes`);
+          
           for (const sub of substitutes) {
             const playerId = sub.playerId || sub.player_id;
             if (!playerId) continue;
 
-            // Substitutes get 0 minutes for playing time
-            await supabase
+            console.log(`Creating substitute stats for player ${playerId}: 0 minutes, no position`);
+
+            const { error: insertError } = await supabase
               .from('event_player_stats')
               .insert({
                 event_id: selection.event_id,
@@ -288,11 +320,15 @@ export const playerStatsService = {
                 is_substitute: true,
                 performance_category_id: selection.performance_category_id
               });
+
+            if (insertError) {
+              console.error(`Error inserting substitute stats for player ${playerId}:`, insertError);
+            }
           }
         }
       }
 
-      console.log('Successfully regenerated event_player_stats from selections');
+      console.log('=== SUCCESSFULLY REGENERATED EVENT_PLAYER_STATS ===');
     } catch (error) {
       console.error('Error regenerating event_player_stats:', error);
       throw error;
