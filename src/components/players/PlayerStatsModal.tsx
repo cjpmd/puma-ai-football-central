@@ -1,3 +1,4 @@
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Player } from '@/types';
@@ -33,7 +34,6 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [showDebugInfo, setShowDebugInfo] = useState(false);
   const queryClient = useQueryClient();
 
   // Don't render the modal if there's no player
@@ -156,6 +156,15 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const handleRegenerateStats = async () => {
     setIsRegenerating(true);
     try {
+      // First regenerate the event_player_stats from event_selections
+      const { error: regenError } = await supabase.rpc('regenerate_all_event_player_stats');
+      
+      if (regenError) {
+        console.error('Error regenerating event player stats:', regenError);
+        throw regenError;
+      }
+
+      // Then update all player match stats
       await playerStatsService.regenerateAllPlayerStats();
       
       // Invalidate and refetch player data
@@ -163,7 +172,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
       queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
       queryClient.invalidateQueries({ queryKey: ['active-players'] });
       
-      toast.success('All player statistics regenerated successfully - positions and playing time should now be accurate');
+      toast.success('All player statistics regenerated successfully - positions should now be accurate');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
       toast.error('Failed to regenerate statistics');
@@ -204,7 +213,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>This will fix position recording and playing time calculation issues</p>
+                    <p>This will rebuild all statistics from the correct team selection data</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
@@ -350,7 +359,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   <CardHeader>
                     <CardTitle className="text-lg">Match History</CardTitle>
                     <CardDescription>
-                      Detailed breakdown of recent matches (excluding unknown opponents)
+                      Recent matches based on actual team selections (positions should be accurate)
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
