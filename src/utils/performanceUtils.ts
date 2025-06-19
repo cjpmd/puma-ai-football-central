@@ -83,11 +83,17 @@ export const getPlayerMatchHistory = async (playerId: string) => {
     console.log('=== DEBUGGING MATCH HISTORY DATA SOURCE ===');
     console.log('Fetching match history for player:', playerId);
     
-    // First get the player stats with event details
+    // First get the player stats with event details - properly aggregated by event
     const { data: playerStats, error: statsError } = await supabase
       .from('event_player_stats')
       .select(`
-        *,
+        event_id,
+        player_id,
+        position,
+        minutes_played,
+        is_captain,
+        is_substitute,
+        performance_category_id,
         events!inner(
           id,
           date,
@@ -121,14 +127,14 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       categoryMap.set(cat.id, cat.name);
     });
 
-    // Group by event and aggregate positions properly
+    // Group by event and aggregate positions properly - fix duplicate key issue
     const eventGroups = playerStats?.reduce((acc, stat) => {
-      const eventId = stat.events?.id;
+      const eventId = stat.event_id; // Use event_id directly, not nested events.id
       if (!eventId) return acc;
 
       if (!acc[eventId]) {
         acc[eventId] = {
-          id: eventId,
+          id: eventId, // Use event_id as the unique identifier
           date: stat.events?.date,
           opponent: stat.events?.opponent,
           eventType: stat.events?.event_type,
@@ -144,51 +150,48 @@ export const getPlayerMatchHistory = async (playerId: string) => {
         };
       }
 
-      // Aggregate data properly
-      acc[eventId].totalMinutes += stat.minutes_played || 0;
+      // Only aggregate playing time (not substitute bench time)
+      if (!stat.is_substitute && stat.minutes_played > 0) {
+        acc[eventId].totalMinutes += stat.minutes_played || 0;
+        
+        // Aggregate position minutes - ONLY for actual playing positions
+        if (stat.position && stat.minutes_played > 0) {
+          if (!acc[eventId].minutesByPosition[stat.position]) {
+            acc[eventId].minutesByPosition[stat.position] = 0;
+          }
+          acc[eventId].minutesByPosition[stat.position] += stat.minutes_played;
+          
+          console.log(`Player ${playerId} in event ${eventId}:`);
+          console.log(`  - Position: ${stat.position}`);
+          console.log(`  - Minutes: ${stat.minutes_played}`);
+          console.log(`  - Is Substitute: ${stat.is_substitute}`);
+        }
+      }
+
+      // Aggregate other properties
       acc[eventId].captain = acc[eventId].captain || stat.is_captain;
       acc[eventId].wasSubstitute = acc[eventId].wasSubstitute || stat.is_substitute;
-      acc[eventId].teams.add(stat.team_number);
-      acc[eventId].periods.add(stat.period_number);
       acc[eventId].rawStats.push(stat); // Store raw data for debugging
-
-      // Aggregate position minutes - ONLY if player actually played in that position
-      if (stat.position && stat.minutes_played > 0 && !stat.is_substitute) {
-        if (!acc[eventId].minutesByPosition[stat.position]) {
-          acc[eventId].minutesByPosition[stat.position] = 0;
-        }
-        acc[eventId].minutesByPosition[stat.position] += stat.minutes_played;
-        
-        console.log(`Player ${playerId} in event ${eventId}:`);
-        console.log(`  - Position: ${stat.position}`);
-        console.log(`  - Minutes: ${stat.minutes_played}`);
-        console.log(`  - Is Substitute: ${stat.is_substitute}`);
-        console.log(`  - Raw stat:`, stat);
-      } else {
-        console.log(`Skipping position aggregation for player ${playerId} in event ${eventId}:`);
-        console.log(`  - Position: ${stat.position}`);
-        console.log(`  - Minutes: ${stat.minutes_played}`);
-        console.log(`  - Is Substitute: ${stat.is_substitute}`);
-      }
 
       return acc;
     }, {} as Record<string, any>) || {};
 
     console.log('Aggregated event groups:', eventGroups);
 
-    // Convert to array and format
-    const matchHistory = Object.values(eventGroups).map(event => {
+    // Convert to array and format - ensure unique keys
+    const matchHistory = Object.values(eventGroups).map((event, index) => {
       console.log(`Final match history entry for event ${event.id}:`);
       console.log(`  - Date: ${event.date}`);
       console.log(`  - Opponent: ${event.opponent}`);
       console.log(`  - Total Minutes: ${event.totalMinutes}`);
       console.log(`  - Minutes by Position:`, event.minutesByPosition);
-      console.log(`  - Raw Stats:`, event.rawStats);
       
       return {
         ...event,
-        teams: Array.from(event.teams),
-        periods: Array.from(event.periods)
+        // Ensure unique ID for React keys - use combination of event ID and index if needed
+        uniqueKey: `${event.id}-${index}`,
+        teams: event.teams ? Array.from(event.teams) : [],
+        periods: event.periods ? Array.from(event.periods) : []
       };
     });
 

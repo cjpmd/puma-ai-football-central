@@ -366,8 +366,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredRecentGames.map((game) => (
-                          <TableRow key={game.id}>
+                        {filteredRecentGames.map((game, index) => (
+                          <TableRow key={`${game.id}-${index}`}>
                             <TableCell>
                               <div className="font-medium">
                                 {formatDate(game.date, 'dd MMM yyyy')}

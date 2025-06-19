@@ -171,8 +171,8 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {matchHistory.map((match, index) => (
-                        <TableRow key={`${match.id}-${index}`}>
+                      {matchHistory.map((match) => (
+                        <TableRow key={match.uniqueKey || match.id}>
                           <TableCell>{formatDate(match.date, 'PP')}</TableCell>
                           <TableCell>{match.opponent || 'Training'}</TableCell>
                           <TableCell>
