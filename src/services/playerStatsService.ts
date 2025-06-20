@@ -1,10 +1,11 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
   /**
    * Update a specific player's match statistics using the database function
    */
-  async updatePlayerStats(playerId: string): Promise<void> {
+  async updatePlayerStats(playerId: string): Promise<void> => {
     try {
       console.log('=== DEBUGGING PLAYER STATS UPDATE ===');
       console.log('Updating stats for player:', playerId);
@@ -130,7 +131,7 @@ export const playerStatsService = {
   /**
    * Update all player stats for a specific event
    */
-  async updateEventPlayerStats(eventId: string): Promise<void> {
+  async updateEventPlayerStats(eventId: string): Promise<void> => {
     try {
       console.log('Updating stats for all players in event:', eventId);
       
@@ -150,7 +151,7 @@ export const playerStatsService = {
     }
   },
 
-  async updateAllCompletedEventsStats(): Promise<void> {
+  async updateAllCompletedEventsStats(): Promise<void> => {
     try {
       console.log('Starting bulk update of all completed events');
       
@@ -168,7 +169,7 @@ export const playerStatsService = {
     }
   },
 
-  async regenerateAllPlayerStats(): Promise<void> {
+  async regenerateAllPlayerStats(): Promise<void> => {
     try {
       console.log('=== STARTING COMPLETE DATA REGENERATION ===');
       
@@ -193,11 +194,24 @@ export const playerStatsService = {
     }
   },
 
-  async regenerateEventPlayerStatsFromSelections(): Promise<void> {
+  async regenerateEventPlayerStatsFromSelections(): Promise<void> => {
     try {
       console.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS ===');
       
-      // Clear all existing event_player_stats
+      // Clear all existing event_player_stats with detailed logging
+      const { data: existingStats, error: fetchError } = await supabase
+        .from('event_player_stats')
+        .select('id, player_id, position, event_id');
+
+      if (!fetchError) {
+        console.log(`📊 Found ${existingStats?.length || 0} existing event_player_stats records to delete`);
+        
+        // Log some examples of what we're about to delete
+        if (existingStats && existingStats.length > 0) {
+          console.log('Sample records being deleted:', existingStats.slice(0, 5));
+        }
+      }
+
       const { error: clearError } = await supabase
         .from('event_player_stats')
         .delete()
@@ -230,6 +244,9 @@ export const playerStatsService = {
 
       console.log(`📋 Processing ${selections.length} event selections...`);
 
+      let totalPlayersProcessed = 0;
+      let totalRecordsCreated = 0;
+
       // Process each selection
       for (const selection of selections) {
         const event = selection.events;
@@ -256,6 +273,7 @@ export const playerStatsService = {
 
         // Process each player in the selection
         for (const playerPos of playerPositions) {
+          totalPlayersProcessed++;
           const playerId = playerPos.playerId || playerPos.player_id;
           if (!playerId) {
             console.log('❌ No player ID found, skipping position:', playerPos);
@@ -299,6 +317,7 @@ export const playerStatsService = {
               console.error(`❌ Error inserting stats for player ${playerId}:`, insertError);
             } else {
               console.log(`✅ Successfully created stats for player ${playerId}`);
+              totalRecordsCreated++;
             }
           } else {
             console.log(`⏸️ Skipping player ${playerId} with invalid/substitute position: ${position}`);
@@ -334,11 +353,15 @@ export const playerStatsService = {
               console.error(`❌ Error inserting substitute stats for player ${playerId}:`, insertError);
             } else {
               console.log(`✅ Successfully created substitute record for player ${playerId}`);
+              totalRecordsCreated++;
             }
           }
         }
       }
 
+      console.log(`📊 REGENERATION SUMMARY:`);
+      console.log(`   Total players processed: ${totalPlayersProcessed}`);
+      console.log(`   Total records created: ${totalRecordsCreated}`);
       console.log('🎉 SUCCESSFULLY REGENERATED EVENT_PLAYER_STATS FROM SELECTIONS');
       
       // Verify the regeneration by checking some sample data
@@ -366,7 +389,7 @@ export const playerStatsService = {
     }
   },
 
-  async cleanupUnknownOpponentEvents(): Promise<void> {
+  async cleanupUnknownOpponentEvents(): Promise<void> => {
     try {
       console.log('Cleaning up events with unknown opponents...');
       
@@ -427,7 +450,7 @@ export const playerStatsService = {
     }
   },
 
-  async cleanupOrphanedPlayerStats(): Promise<void> {
+  async cleanupOrphanedPlayerStats(): Promise<void> => {
     try {
       console.log('Cleaning up orphaned player stats...');
       
