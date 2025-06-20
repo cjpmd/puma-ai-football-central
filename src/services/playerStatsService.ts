@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const playerStatsService = {
@@ -35,6 +34,17 @@ export const playerStatsService = {
             playerId: stat.player_id
           }))
         );
+        
+        // Specifically look for Arbroath Maroons fixture
+        const arbroathFixture = playerStats?.find(stat => 
+          stat.events?.opponent && stat.events.opponent.toLowerCase().includes('arbroath')
+        );
+        if (arbroathFixture) {
+          console.log('🎯 ARBROATH MAROONS FIXTURE FOUND IN EVENT_PLAYER_STATS:');
+          console.log('Position recorded:', arbroathFixture.position);
+          console.log('Minutes recorded:', arbroathFixture.minutes_played);
+          console.log('Event ID:', arbroathFixture.event_id);
+        }
       }
 
       // Also check event_selections to see what was actually selected
@@ -60,6 +70,14 @@ export const playerStatsService = {
             );
             if (playerInSelection) {
               console.log('Player found in selection:', playerInSelection);
+              
+              // Specifically check Arbroath fixture
+              if (selection.events?.opponent && selection.events.opponent.toLowerCase().includes('arbroath')) {
+                console.log('🎯 ARBROATH MAROONS FIXTURE - SELECTION DATA:');
+                console.log('Position in selection:', playerInSelection.position);
+                console.log('Should be LM, is it?', playerInSelection.position === 'LM');
+                console.log('Full player selection data:', JSON.stringify(playerInSelection, null, 2));
+              }
             } else {
               console.log('Player NOT found in this selection');
             }
@@ -86,6 +104,8 @@ export const playerStatsService = {
           const statsObj = matchStats as any;
           if (statsObj.minutesByPosition) {
             console.log('Minutes by position:', statsObj.minutesByPosition);
+            console.log('🎯 LM minutes:', statsObj.minutesByPosition.LM || 0);
+            console.log('🎯 CB minutes:', statsObj.minutesByPosition.CB || 0);
           }
         }
       }
@@ -116,6 +136,8 @@ export const playerStatsService = {
           const updatedStatsObj = updatedMatchStats as any;
           if (updatedStatsObj.minutesByPosition) {
             console.log('Updated minutes by position:', updatedStatsObj.minutesByPosition);
+            console.log('🎯 Updated LM minutes:', updatedStatsObj.minutesByPosition.LM || 0);
+            console.log('🎯 Updated CB minutes:', updatedStatsObj.minutesByPosition.CB || 0);
           }
         }
       }
@@ -256,6 +278,13 @@ export const playerStatsService = {
         console.log(`   Opponent: ${event.opponent}`);
         console.log(`   Team: ${selection.team_id}`);
         
+        // Special logging for Arbroath fixture
+        const isArbroathFixture = event.opponent && event.opponent.toLowerCase().includes('arbroath');
+        if (isArbroathFixture) {
+          console.log('🎯 PROCESSING ARBROATH MAROONS FIXTURE');
+          console.log('🎯 Full selection data:', JSON.stringify(selection, null, 2));
+        }
+        
         // Only process completed events
         if (!this.isEventCompleted(event.date, event.end_time)) {
           console.log(`⏸️ Skipping uncompleted event: ${event.date}`);
@@ -269,7 +298,9 @@ export const playerStatsService = {
         }
 
         console.log(`👥 Found ${playerPositions.length} players in selection`);
-        console.log('📋 Player positions data:', JSON.stringify(playerPositions, null, 2));
+        if (isArbroathFixture) {
+          console.log('🎯 ARBROATH - Player positions data:', JSON.stringify(playerPositions, null, 2));
+        }
 
         // Process each player in the selection
         for (const playerPos of playerPositions) {
@@ -288,6 +319,13 @@ export const playerStatsService = {
             position !== 'TBD' &&
             position.trim() !== '';
 
+          if (isArbroathFixture && playerId) {
+            console.log(`🎯 ARBROATH - Processing player ${playerId}:`);
+            console.log(`🎯 Position: ${position}`);
+            console.log(`🎯 Is valid playing position: ${isValidPlayingPosition}`);
+            console.log(`🎯 Full player data:`, JSON.stringify(playerPos, null, 2));
+          }
+
           if (isValidPlayingPosition) {
             // This is a player with an actual playing position
             const minutesPlayed = playerPos.minutes || selection.duration_minutes || 90;
@@ -298,6 +336,13 @@ export const playerStatsService = {
             console.log(`   Minutes: ${minutesPlayed}`);
             console.log(`   Captain: ${isCaptain}`);
             console.log(`   Event: ${event.date} vs ${event.opponent}`);
+
+            if (isArbroathFixture) {
+              console.log('🎯 ARBROATH - About to insert event_player_stats:');
+              console.log(`🎯 Player ID: ${playerId}`);
+              console.log(`🎯 Position: ${position}`);
+              console.log(`🎯 Minutes: ${minutesPlayed}`);
+            }
 
             const { error: insertError } = await supabase
               .from('event_player_stats')
@@ -315,12 +360,21 @@ export const playerStatsService = {
 
             if (insertError) {
               console.error(`❌ Error inserting stats for player ${playerId}:`, insertError);
+              if (isArbroathFixture) {
+                console.log('🎯 ARBROATH - INSERT FAILED!', insertError);
+              }
             } else {
               console.log(`✅ Successfully created stats for player ${playerId}`);
+              if (isArbroathFixture) {
+                console.log(`🎯 ARBROATH - Successfully inserted ${position} for player ${playerId}`);
+              }
               totalRecordsCreated++;
             }
           } else {
             console.log(`⏸️ Skipping player ${playerId} with invalid/substitute position: ${position}`);
+            if (isArbroathFixture && playerId) {
+              console.log(`🎯 ARBROATH - Skipped player ${playerId} with position: ${position}`);
+            }
           }
         }
 
@@ -381,6 +435,15 @@ export const playerStatsService = {
         sampleStats.forEach(stat => {
           console.log(`   ${stat.players.name}: ${stat.position} for ${stat.minutes_played}min on ${stat.events.date} vs ${stat.events.opponent}`);
         });
+        
+        // Look specifically for Arbroath data
+        const arbroathSample = sampleStats.find(stat => 
+          stat.events.opponent && stat.events.opponent.toLowerCase().includes('arbroath')
+        );
+        if (arbroathSample) {
+          console.log('🎯 ARBROATH SAMPLE FROM REGENERATED DATA:');
+          console.log(`🎯 ${arbroathSample.players.name}: ${arbroathSample.position} for ${arbroathSample.minutes_played}min`);
+        }
       }
 
     } catch (error) {
