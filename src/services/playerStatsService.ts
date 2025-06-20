@@ -74,8 +74,8 @@ export const playerStatsService = {
               // Specifically check Arbroath fixture
               if (selection.events?.opponent && selection.events.opponent.toLowerCase().includes('arbroath')) {
                 console.log('🎯 ARBROATH MAROONS FIXTURE - SELECTION DATA:');
-                console.log('Position in selection:', playerInSelection.position);
-                console.log('Should be LM, is it?', playerInSelection.position === 'LM');
+                console.log('Position in selection:', (playerInSelection as any).position);
+                console.log('Should be LM, is it?', (playerInSelection as any).position === 'LM');
                 console.log('Full player selection data:', JSON.stringify(playerInSelection, null, 2));
               }
             } else {
