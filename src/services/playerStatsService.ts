@@ -5,7 +5,7 @@ export const playerStatsService = {
   /**
    * Update a specific player's match statistics using the database function
    */
-  async updatePlayerStats(playerId: string): Promise<void> => {
+  async updatePlayerStats(playerId: string): Promise<void> {
     try {
       console.log('=== DEBUGGING PLAYER STATS UPDATE ===');
       console.log('Updating stats for player:', playerId);
@@ -131,7 +131,7 @@ export const playerStatsService = {
   /**
    * Update all player stats for a specific event
    */
-  async updateEventPlayerStats(eventId: string): Promise<void> => {
+  async updateEventPlayerStats(eventId: string): Promise<void> {
     try {
       console.log('Updating stats for all players in event:', eventId);
       
@@ -151,7 +151,7 @@ export const playerStatsService = {
     }
   },
 
-  async updateAllCompletedEventsStats(): Promise<void> => {
+  async updateAllCompletedEventsStats(): Promise<void> {
     try {
       console.log('Starting bulk update of all completed events');
       
@@ -169,7 +169,7 @@ export const playerStatsService = {
     }
   },
 
-  async regenerateAllPlayerStats(): Promise<void> => {
+  async regenerateAllPlayerStats(): Promise<void> {
     try {
       console.log('=== STARTING COMPLETE DATA REGENERATION ===');
       
@@ -194,7 +194,7 @@ export const playerStatsService = {
     }
   },
 
-  async regenerateEventPlayerStatsFromSelections(): Promise<void> => {
+  async regenerateEventPlayerStatsFromSelections(): Promise<void> {
     try {
       console.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS ===');
       
@@ -389,7 +389,7 @@ export const playerStatsService = {
     }
   },
 
-  async cleanupUnknownOpponentEvents(): Promise<void> => {
+  async cleanupUnknownOpponentEvents(): Promise<void> {
     try {
       console.log('Cleaning up events with unknown opponents...');
       
@@ -450,7 +450,7 @@ export const playerStatsService = {
     }
   },
 
-  async cleanupOrphanedPlayerStats(): Promise<void> => {
+  async cleanupOrphanedPlayerStats(): Promise<void> {
     try {
       console.log('Cleaning up orphaned player stats...');
       
