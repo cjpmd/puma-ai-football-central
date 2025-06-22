@@ -20,6 +20,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
 
 interface PlayerStatsModalProps {
   player: Player | null;
@@ -156,16 +157,17 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const handleRegenerateStats = async () => {
     setIsRegenerating(true);
     try {
-      // First regenerate the event_player_stats from event_selections
-      const { error: regenError } = await supabase.rpc('regenerate_all_event_player_stats');
+      console.log('🎯 STARTING MANUAL DATA REGENERATION');
       
-      if (regenError) {
-        console.error('Error regenerating event player stats:', regenError);
-        throw regenError;
-      }
-
-      // Then update all player match stats
+      // Debug current player positions before regeneration
+      await debugPlayerPositions(player.id, player.name);
+      
+      // Use the service method instead of calling supabase directly
       await playerStatsService.regenerateAllPlayerStats();
+      
+      // Debug positions after regeneration
+      console.log('🎯 POST-REGENERATION DEBUG:');
+      await debugPlayerPositions(player.id, player.name);
       
       // Invalidate and refetch player data
       queryClient.invalidateQueries({ queryKey: ['players'] });
