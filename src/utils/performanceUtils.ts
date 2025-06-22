@@ -81,10 +81,11 @@ export const calculatePerformanceTrend = async (playerId: string): Promise<Perfo
 
 export const getPlayerMatchHistory = async (playerId: string) => {
   try {
-    console.log('Fetching match history for player:', playerId);
+    console.log('=== FETCHING MATCH HISTORY FROM AUTHORITATIVE SOURCE ===');
+    console.log('Player ID:', playerId);
 
-    // Get match history by reconstructing from event_selections (authoritative data)
-    // This ensures we get the correct positions as they were actually selected
+    // Get match history directly from event_selections (the authoritative source)
+    // This ensures we get the exact positions as they were selected
     const { data: eventSelections, error: selectionsError } = await supabase
       .from('event_selections')
       .select(`
@@ -93,9 +94,11 @@ export const getPlayerMatchHistory = async (playerId: string) => {
           id,
           date,
           opponent,
+          title,
           start_time,
           player_of_match_id,
-          event_type
+          event_type,
+          end_time
         ),
         performance_categories(name)
       `)
@@ -112,10 +115,17 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       return [];
     }
 
+    console.log(`Found ${eventSelections.length} event selections to process`);
+
     // Filter and process events where this player was selected
     const playerEvents = [];
     
     for (const selection of eventSelections) {
+      // Only process completed events
+      if (!isEventCompleted(selection.events?.date, selection.events?.end_time)) {
+        continue;
+      }
+
       const playerPositions = selection.player_positions as any[];
       if (!Array.isArray(playerPositions)) continue;
 
@@ -125,8 +135,18 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       );
 
       if (playerInSelection) {
+        const isArbroathGame = selection.events?.opponent && 
+          selection.events.opponent.toLowerCase().includes('arbroath');
+          
+        if (isArbroathGame) {
+          console.log('🎯 FOUND ARBROATH GAME IN MATCH HISTORY:');
+          console.log(`🎯 Event: ${selection.events?.title}`);
+          console.log(`🎯 Player position in selection: ${playerInSelection.position}`);
+          console.log(`🎯 Full player data:`, JSON.stringify(playerInSelection, null, 2));
+        }
+
         // Calculate total minutes for this player in this event
-        const minutes = selection.duration_minutes || 90;
+        const minutes = playerInSelection.minutes || selection.duration_minutes || 90;
         
         // Check if player was captain
         const isCaptain = selection.captain_id === playerId;
@@ -134,12 +154,12 @@ export const getPlayerMatchHistory = async (playerId: string) => {
         // Check if player was POTM
         const isPlayerOfTheMatch = selection.events?.player_of_match_id === playerId;
         
-        // Build position data - use the actual selected position
+        // Build position data - use the actual selected position from event_selections
         const minutesByPosition = {
           [playerInSelection.position]: minutes
         };
 
-        playerEvents.push({
+        const eventData = {
           id: selection.event_id,
           uniqueKey: `${selection.event_id}-${selection.id}`,
           date: selection.events?.date,
@@ -153,7 +173,16 @@ export const getPlayerMatchHistory = async (playerId: string) => {
           wasSubstitute: playerInSelection.isSubstitute || false,
           teams: selection.team_number ? [selection.team_number.toString()] : [],
           periods: selection.period_number ? [selection.period_number.toString()] : []
-        });
+        };
+
+        if (isArbroathGame) {
+          console.log('🎯 ARBROATH GAME EVENT DATA:');
+          console.log(`🎯 Position in minutesByPosition: ${Object.keys(minutesByPosition)[0]}`);
+          console.log(`🎯 Minutes: ${minutes}`);
+          console.log('🎯 Full event data:', JSON.stringify(eventData, null, 2));
+        }
+
+        playerEvents.push(eventData);
       }
     }
 
@@ -164,7 +193,19 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       return dateB.getTime() - dateA.getTime();
     });
 
-    console.log(`Found ${playerEvents.length} events for player ${playerId} using event_selections data`);
+    console.log(`✅ Found ${playerEvents.length} events for player using event_selections (authoritative source)`);
+    
+    // Log Arbroath data if found
+    const arbroathGame = playerEvents.find(event => 
+      event.opponent && event.opponent.toLowerCase().includes('arbroath')
+    );
+    if (arbroathGame) {
+      console.log('🎯 FINAL ARBROATH GAME DATA IN MATCH HISTORY:');
+      console.log(`🎯 Opponent: ${arbroathGame.opponent}`);
+      console.log(`🎯 Position: ${Object.keys(arbroathGame.minutesByPosition)[0]}`);
+      console.log(`🎯 Minutes: ${arbroathGame.totalMinutes}`);
+    }
+    
     return playerEvents.slice(0, 20); // Limit to recent 20 events
 
   } catch (error) {
@@ -172,3 +213,25 @@ export const getPlayerMatchHistory = async (playerId: string) => {
     return [];
   }
 };
+
+function isEventCompleted(eventDate: string, endTime?: string): boolean {
+  const today = new Date();
+  const eventDateObj = new Date(eventDate);
+  
+  // If event date is in the past, it's completed
+  if (eventDateObj.toDateString() < today.toDateString()) {
+    return true;
+  }
+  
+  // If event is today and has an end time, check if end time has passed
+  if (eventDateObj.toDateString() === today.toDateString() && endTime) {
+    const now = new Date();
+    const [hours, minutes] = endTime.split(':').map(Number);
+    const eventEndTime = new Date();
+    eventEndTime.setHours(hours, minutes, 0, 0);
+    
+    return now > eventEndTime;
+  }
+  
+  return false;
+}
