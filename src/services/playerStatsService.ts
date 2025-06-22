@@ -151,11 +151,11 @@ export const playerStatsService = {
 
         console.log(`👥 Found ${playerPositions.length} players in selection`);
 
-        // Special logging for Arbroath fixture
+        // Special logging for Arbroath fixture and Andrew McDonald
         const isArbroathFixture = event.opponent && event.opponent.toLowerCase().includes('arbroath');
         if (isArbroathFixture) {
           console.log('🎯 PROCESSING ARBROATH MAROONS FIXTURE');
-          console.log('🎯 Player positions:', JSON.stringify(playerPositions, null, 2));
+          console.log('🎯 Player positions array:', JSON.stringify(playerPositions, null, 2));
         }
 
         // Process each player in the selection
@@ -174,16 +174,28 @@ export const playerStatsService = {
           }
 
           const position = playerPos.position;
+          
+          // Check if this is Andrew McDonald for debugging
+          const isAndrewMcDonald = playerId === '1297cfba-5c6d-48bc-9441-96584ec6df1c';
+          
+          if (isAndrewMcDonald && isArbroathFixture) {
+            console.log(`🎯 ANDREW MCDONALD - ARBROATH FIXTURE PROCESSING:`);
+            console.log(`🎯 Raw position from selection: "${position}"`);
+            console.log(`🎯 Player object:`, JSON.stringify(playerPos, null, 2));
+          }
+
+          // Skip substitutes and invalid positions
           const isValidPlayingPosition = position && 
             position !== 'SUB' && 
             position !== 'Substitute' && 
             position !== 'TBD' &&
-            position.trim() !== '';
+            position.trim() !== '' &&
+            !playerPos.isSubstitute;
 
-          if (isArbroathFixture) {
-            console.log(`🎯 ARBROATH - Processing player ${playerId}:`);
-            console.log(`🎯 Position: ${position}`);
-            console.log(`🎯 Is valid playing position: ${isValidPlayingPosition}`);
+          if (isAndrewMcDonald && isArbroathFixture) {
+            console.log(`🎯 ANDREW - Is valid playing position: ${isValidPlayingPosition}`);
+            console.log(`🎯 ANDREW - Position: "${position}"`);
+            console.log(`🎯 ANDREW - isSubstitute flag: ${playerPos.isSubstitute}`);
           }
 
           if (isValidPlayingPosition) {
@@ -191,13 +203,12 @@ export const playerStatsService = {
             const minutesPlayed = playerPos.minutes || selection.duration_minutes || 90;
             const isCaptain = playerId === selection.captain_id;
 
-            console.log(`✅ Creating stats for player ${playerId}: ${position} for ${minutesPlayed} minutes`);
-
-            if (isArbroathFixture) {
-              console.log('🎯 ARBROATH - About to insert event_player_stats:');
-              console.log(`🎯 Player ID: ${playerId}`);
-              console.log(`🎯 Position: ${position}`);
-              console.log(`🎯 Minutes: ${minutesPlayed}`);
+            if (isAndrewMcDonald && isArbroathFixture) {
+              console.log(`🎯 ANDREW - About to insert event_player_stats:`);
+              console.log(`🎯 ANDREW - Player ID: ${playerId}`);
+              console.log(`🎯 ANDREW - Position: "${position}"`);
+              console.log(`🎯 ANDREW - Minutes: ${minutesPlayed}`);
+              console.log(`🎯 ANDREW - Is Captain: ${isCaptain}`);
             }
 
             const { error: insertError } = await supabase
@@ -216,23 +227,26 @@ export const playerStatsService = {
 
             if (insertError) {
               console.error(`❌ Error inserting stats for player ${playerId}:`, insertError);
-              if (isArbroathFixture) {
-                console.log('🎯 ARBROATH - INSERT FAILED!', insertError);
+              if (isAndrewMcDonald && isArbroathFixture) {
+                console.log('🎯 ANDREW - INSERT FAILED!', insertError);
               }
             } else {
-              console.log(`✅ Successfully created stats for player ${playerId}`);
-              if (isArbroathFixture) {
-                console.log(`🎯 ARBROATH - Successfully inserted ${position} for player ${playerId}`);
+              console.log(`✅ Successfully created stats for player ${playerId} in position ${position}`);
+              if (isAndrewMcDonald && isArbroathFixture) {
+                console.log(`🎯 ANDREW - Successfully inserted ${position} for player ${playerId}`);
               }
               totalRecordsCreated++;
               processedPlayerEvents.add(playerEventKey);
             }
           } else {
-            console.log(`⏸️ Skipping player ${playerId} with invalid position: ${position}`);
+            if (isAndrewMcDonald && isArbroathFixture) {
+              console.log(`🎯 ANDREW - Skipping invalid/substitute position: "${position}"`);
+            }
+            console.log(`⏸️ Skipping player ${playerId} with invalid/substitute position: "${position}"`);
           }
         }
 
-        // Handle substitutes separately
+        // Handle substitutes separately if they exist
         const substitutes = selection.substitute_players as any[] || selection.substitutes as any[] || [];
         if (Array.isArray(substitutes) && substitutes.length > 0) {
           console.log(`🔄 Processing ${substitutes.length} substitutes`);
@@ -276,21 +290,20 @@ export const playerStatsService = {
       console.log(`📊 REGENERATION SUMMARY: ${totalRecordsCreated} records created`);
       console.log(`🔍 Processed ${processedPlayerEvents.size} unique player-event combinations`);
       
-      // Verify Arbroath data specifically
-      const { data: arbroathCheck, error: checkError } = await supabase
+      // Verify Andrew's data specifically after regeneration
+      const { data: andrewStats, error: andrewError } = await supabase
         .from('event_player_stats')
         .select(`
           *,
-          events!inner(date, opponent, title),
-          players!inner(name)
+          events!inner(date, opponent, title)
         `)
-        .ilike('events.opponent', '%arbroath%')
-        .not('position', 'is', null);
+        .eq('player_id', '1297cfba-5c6d-48bc-9441-96584ec6df1c')
+        .ilike('events.opponent', '%arbroath%');
 
-      if (!checkError && arbroathCheck) {
-        console.log('🎯 ARBROATH VERIFICATION - Records in event_player_stats:');
-        arbroathCheck.forEach(stat => {
-          console.log(`🎯 ${stat.players.name}: ${stat.position} for ${stat.minutes_played}min vs ${stat.events.opponent}`);
+      if (!andrewError && andrewStats) {
+        console.log('🎯 ANDREW VERIFICATION - Records in event_player_stats after regeneration:');
+        andrewStats.forEach(stat => {
+          console.log(`🎯 ANDREW: Position "${stat.position}" for ${stat.minutes_played}min vs ${stat.events.opponent} (Captain: ${stat.is_captain}, Sub: ${stat.is_substitute})`);
         });
       }
 
