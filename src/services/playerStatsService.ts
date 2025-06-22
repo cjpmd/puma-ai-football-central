@@ -129,6 +129,7 @@ export const playerStatsService = {
       console.log(`📋 Processing ${selections.length} event selections...`);
 
       let totalRecordsCreated = 0;
+      const processedPlayerEvents = new Set<string>(); // Track processed player+event combinations
 
       // Process each selection
       for (const selection of selections) {
@@ -162,6 +163,13 @@ export const playerStatsService = {
           const playerId = playerPos.playerId || playerPos.player_id;
           if (!playerId) {
             console.log('❌ No player ID found, skipping position:', playerPos);
+            continue;
+          }
+
+          // Create unique key to prevent duplicates
+          const playerEventKey = `${playerId}-${selection.event_id}-${selection.team_number || 1}-${selection.period_number || 1}`;
+          if (processedPlayerEvents.has(playerEventKey)) {
+            console.log(`⚠️ Skipping duplicate entry for player ${playerId} in event ${selection.event_id}`);
             continue;
           }
 
@@ -217,6 +225,7 @@ export const playerStatsService = {
                 console.log(`🎯 ARBROATH - Successfully inserted ${position} for player ${playerId}`);
               }
               totalRecordsCreated++;
+              processedPlayerEvents.add(playerEventKey);
             }
           } else {
             console.log(`⏸️ Skipping player ${playerId} with invalid position: ${position}`);
@@ -231,6 +240,12 @@ export const playerStatsService = {
           for (const sub of substitutes) {
             const playerId = sub.playerId || sub.player_id;
             if (!playerId) continue;
+
+            const playerEventKey = `${playerId}-${selection.event_id}-${selection.team_number || 1}-${selection.period_number || 1}-SUB`;
+            if (processedPlayerEvents.has(playerEventKey)) {
+              console.log(`⚠️ Skipping duplicate substitute entry for player ${playerId}`);
+              continue;
+            }
 
             console.log(`🔄 Creating substitute stats for player ${playerId}`);
 
@@ -252,12 +267,14 @@ export const playerStatsService = {
               console.error(`❌ Error inserting substitute stats:`, insertError);
             } else {
               totalRecordsCreated++;
+              processedPlayerEvents.add(playerEventKey);
             }
           }
         }
       }
 
       console.log(`📊 REGENERATION SUMMARY: ${totalRecordsCreated} records created`);
+      console.log(`🔍 Processed ${processedPlayerEvents.size} unique player-event combinations`);
       
       // Verify Arbroath data specifically
       const { data: arbroathCheck, error: checkError } = await supabase

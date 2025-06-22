@@ -18,6 +18,35 @@ export const DataIntegrityChecker: React.FC = () => {
     const foundIssues: string[] = [];
 
     try {
+      // Check for duplicate entries by looking for multiple stats for same player/event/period/position
+      const { data: duplicateCheck, error: duplicateError } = await supabase
+        .from('event_player_stats')
+        .select('player_id, event_id, period_number, position, team_number')
+        .not('position', 'is', null);
+
+      if (duplicateError) {
+        console.error('Error checking for duplicates:', duplicateError);
+        foundIssues.push('Failed to check for duplicate entries');
+      } else if (duplicateCheck) {
+        // Group by player_id, event_id, period_number, position, team_number and count
+        const duplicateMap = new Map<string, number>();
+        
+        duplicateCheck.forEach(stat => {
+          const key = `${stat.player_id}-${stat.event_id}-${stat.period_number}-${stat.position}-${stat.team_number}`;
+          duplicateMap.set(key, (duplicateMap.get(key) || 0) + 1);
+        });
+
+        const duplicates = Array.from(duplicateMap.entries()).filter(([, count]) => count > 1);
+        
+        if (duplicates.length > 0) {
+          foundIssues.push(`Found ${duplicates.length} duplicate player-event-position combinations`);
+          console.log('🚨 DUPLICATE ENTRIES FOUND:');
+          duplicates.forEach(([key, count]) => {
+            console.log(`🚨 ${key}: ${count} entries`);
+          });
+        }
+      }
+
       // Check for position inconsistencies
       const { data: playerStats, error } = await supabase
         .from('event_player_stats')
@@ -55,31 +84,6 @@ export const DataIntegrityChecker: React.FC = () => {
           subsWithPositions: subsWithPositions.length,
           zeroMinutesWithPositions: zeroMinutesWithPositions.length
         });
-      }
-
-      // Check for potential duplicate entries by looking for multiple stats for same player/event/period
-      const { data: allStats, error: allStatsError } = await supabase
-        .from('event_player_stats')
-        .select('player_id, event_id, period_number, position')
-        .not('position', 'is', null);
-
-      if (allStatsError) {
-        console.error('Error checking for duplicates:', allStatsError);
-        foundIssues.push('Failed to check for duplicate entries');
-      } else if (allStats) {
-        // Group by player_id, event_id, period_number, position and count
-        const duplicateMap = new Map<string, number>();
-        
-        allStats.forEach(stat => {
-          const key = `${stat.player_id}-${stat.event_id}-${stat.period_number}-${stat.position}`;
-          duplicateMap.set(key, (duplicateMap.get(key) || 0) + 1);
-        });
-
-        const duplicates = Array.from(duplicateMap.entries()).filter(([, count]) => count > 1);
-        
-        if (duplicates.length > 0) {
-          foundIssues.push(`Found ${duplicates.length} duplicate position entries`);
-        }
       }
 
       setIssues(foundIssues);
@@ -175,9 +179,9 @@ export const DataIntegrityChecker: React.FC = () => {
         <div className="text-sm text-muted-foreground">
           <p><strong>What this checks:</strong></p>
           <ul className="list-disc list-inside space-y-1">
+            <li>Duplicate entries for same player/event/position combinations</li>
             <li>Substitutes incorrectly recorded with playing positions</li>
             <li>Players with 0 minutes but assigned positions</li>
-            <li>Duplicate position entries for same player/event/period</li>
             <li>Position recording accuracy vs team selections</li>
           </ul>
         </div>
