@@ -23,6 +23,7 @@ import { formatPlayerName } from '@/utils/nameUtils';
 import { NameDisplayOption } from '@/types/team';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { debugMasonCMIssue } from '@/utils/debugMasonCMIssue';
+import { fixMasonIssue } from '@/utils/fixMasonIssue';
 
 interface TeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -1141,6 +1142,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 Debug Mason CM
               </Button>
               <Button
+                onClick={handleFixMason}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 border-green-300"
+              >
+                <Settings className="h-4 w-4" />
+                Fix Mason Issue
+              </Button>
+              <Button
                 onClick={handleSaveSelection}
                 disabled={saving}
                 className="flex items-center gap-2"
@@ -1406,5 +1416,15 @@ const handleDebugMason = async () => {
   } catch (error) {
     console.error('Error debugging Mason:', error);
     toast.error('Failed to debug Mason CM issue');
+  }
+};
+
+const handleFixMason = async () => {
+  try {
+    await fixMasonIssue();
+    toast.success('Mason issue fix completed - check console for details');
+  } catch (error) {
+    console.error('Error fixing Mason issue:', error);
+    toast.error('Failed to fix Mason issue');
   }
 };
