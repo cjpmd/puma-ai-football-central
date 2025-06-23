@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const debugPlayerPositions = async (playerId: string, playerName: string): Promise<void> => {
@@ -22,26 +21,32 @@ export const debugPlayerPositions = async (playerId: string, playerName: string)
       console.error('Error fetching Ferry selections:', selectionsError);
     } else if (ferrySelections) {
       for (const selection of ferrySelections) {
-        console.log(`Event: ${selection.events?.title} (${selection.events?.date})`);
-        console.log(`Team/Period: ${selection.team_number}/${selection.period_number}`);
+        console.log(`🎯 Event: ${selection.events?.title} (${selection.events?.date})`);
+        console.log(`🎯 Team/Period: ${selection.team_number}/${selection.period_number}`);
+        console.log(`🎯 Event ID: ${selection.events?.id}`);
         
         const playerPositions = selection.player_positions as any[];
-        const masonInSelection = playerPositions?.find((pp: any) => 
-          pp.playerId === playerId || pp.player_id === playerId
-        );
+        console.log(`🎯 FULL PLAYER_POSITIONS ARRAY:`, JSON.stringify(playerPositions, null, 2));
         
-        if (masonInSelection) {
-          console.log('🎯 FOUND MASON IN FERRY SELECTION:');
-          console.log(`🎯 Position: ${masonInSelection.position}`);
-          console.log(`🎯 Is Substitute: ${masonInSelection.isSubstitute}`);
-          console.log(`🎯 Minutes: ${masonInSelection.minutes || 'not specified'}`);
-          console.log('🎯 Full data:', JSON.stringify(masonInSelection, null, 2));
-        } else {
-          console.log('❌ Mason NOT found in this Ferry selection');
-        }
+        // Check every player in this selection
+        playerPositions?.forEach((pp: any, index: number) => {
+          console.log(`🎯 Player ${index + 1}:`, JSON.stringify(pp, null, 2));
+          
+          const playerIdInPosition = pp.playerId || pp.player_id;
+          if (playerIdInPosition === playerId) {
+            console.log(`🎯 FOUND MASON AT INDEX ${index}:`);
+            console.log(`🎯 Position: "${pp.position}"`);
+            console.log(`🎯 Is Substitute: ${pp.isSubstitute}`);
+            console.log(`🎯 Minutes: ${pp.minutes || 'not specified'}`);
+            console.log(`🎯 Player ID: ${playerIdInPosition}`);
+          } else if (pp.position === 'CM') {
+            console.log(`🎯 FOUND CM POSITION for different player:`, JSON.stringify(pp, null, 2));
+          }
+        });
       }
     }
 
+    // Check what's actually in event_player_stats for Ferry matches
     console.log('\n🎯 FERRY ATHLETIC FIXTURES IN EVENT_PLAYER_STATS:');
     const { data: ferryStats, error: statsError } = await supabase
       .from('event_player_stats')
@@ -55,15 +60,63 @@ export const debugPlayerPositions = async (playerId: string, playerName: string)
     if (statsError) {
       console.error('Error fetching Ferry stats:', statsError);
     } else if (ferryStats) {
-      console.log(`Found ${ferryStats.length} Ferry Athletic entries in event_player_stats`);
+      console.log(`🎯 Found ${ferryStats.length} Ferry Athletic entries in event_player_stats`);
       for (const stat of ferryStats) {
-        console.log(`Event: ${stat.events?.title} (${stat.events?.date})`);
+        console.log(`\n🎯 Event: ${stat.events?.title} (${stat.events?.date})`);
         console.log(`🎯 Team/Period: ${stat.team_number}/${stat.period_number}`);
-        console.log(`🎯 Position in stats: ${stat.position}`);
+        console.log(`🎯 Position in stats: "${stat.position}"`);
         console.log(`🎯 Minutes in stats: ${stat.minutes_played}`);
         console.log(`🎯 Is Captain: ${stat.is_captain}`);
         console.log(`🎯 Is Substitute: ${stat.is_substitute}`);
+        console.log(`🎯 Event ID: ${stat.event_id}`);
+        console.log(`🎯 Performance Category ID: ${stat.performance_category_id}`);
+        console.log(`🎯 Record ID: ${stat.id}`);
       }
+    }
+
+    // Check if there are multiple event_selections for the same Ferry event
+    console.log('\n🎯 CHECKING FOR DUPLICATE FERRY EVENT SELECTIONS:');
+    const { data: allFerrySelections, error: allFerryError } = await supabase
+      .from('event_selections')
+      .select(`
+        id,
+        event_id,
+        team_number,
+        period_number,
+        player_positions,
+        events!inner(opponent, title, date)
+      `)
+      .or('events.opponent.ilike.%ferry%,events.title.ilike.%ferry%')
+      .order('events.date', { ascending: false });
+
+    if (allFerryError) {
+      console.error('Error fetching all Ferry selections:', allFerryError);
+    } else if (allFerrySelections) {
+      const groupedByEvent = allFerrySelections.reduce((acc: any, selection: any) => {
+        const eventId = selection.event_id;
+        if (!acc[eventId]) {
+          acc[eventId] = [];
+        }
+        acc[eventId].push(selection);
+        return acc;
+      }, {});
+
+      Object.entries(groupedByEvent).forEach(([eventId, selections]: [string, any[]]) => {
+        console.log(`🎯 Event ${eventId} (${selections[0]?.events?.title}) has ${selections.length} selections:`);
+        selections.forEach((sel, idx) => {
+          console.log(`🎯   Selection ${idx + 1}: Team ${sel.team_number}, Period ${sel.period_number}`);
+          
+          // Check if Mason is in this specific selection
+          const playerPositions = sel.player_positions as any[];
+          const masonInThisSelection = playerPositions?.find((pp: any) => 
+            (pp.playerId === playerId || pp.player_id === playerId)
+          );
+          
+          if (masonInThisSelection) {
+            console.log(`🎯     MASON FOUND in this selection with position: "${masonInThisSelection.position}"`);
+          }
+        });
+      });
     }
   }
 
