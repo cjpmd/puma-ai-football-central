@@ -24,10 +24,66 @@ export const debugMasonCMIssue = async (): Promise<void> => {
 
   if (selectionsError) {
     console.error('Error fetching selections:', selectionsError);
-    return;
-  }
+    // Try alternative approach - get all selections and filter in JS
+    console.log('\n🔄 TRYING ALTERNATIVE APPROACH - GETTING ALL SELECTIONS:');
+    const { data: allSelections, error: allSelectionsError } = await supabase
+      .from('event_selections')
+      .select(`
+        id,
+        event_id,
+        team_number,
+        period_number,
+        formation,
+        player_positions,
+        events!inner(id, date, opponent, title)
+      `);
 
-  if (selections) {
+    if (allSelectionsError) {
+      console.error('Error fetching all selections:', allSelectionsError);
+      return;
+    }
+
+    // Filter for Ferry Athletic matches in JavaScript
+    const ferrySelections = allSelections?.filter(selection => {
+      const event = selection.events;
+      return event && (
+        (event.opponent && event.opponent.toLowerCase().includes('ferry')) ||
+        (event.title && event.title.toLowerCase().includes('ferry'))
+      );
+    });
+
+    if (ferrySelections && ferrySelections.length > 0) {
+      console.log(`Found ${ferrySelections.length} Ferry Athletic selections`);
+      
+      ferrySelections.forEach((selection, idx) => {
+        console.log(`\n📋 Selection ${idx + 1}:`);
+        console.log(`Event: ${selection.events?.title} (${selection.events?.date})`);
+        console.log(`Formation: ${selection.formation}`);
+        console.log(`Team/Period: ${selection.team_number}/${selection.period_number}`);
+        
+        const playerPositions = selection.player_positions as any[];
+        console.log(`Total players in positions: ${playerPositions?.length || 0}`);
+        
+        // Check each position and log details
+        playerPositions?.forEach((pos, posIdx) => {
+          const playerId = pos.playerId || pos.player_id;
+          console.log(`  Position ${posIdx + 1}: ${pos.position} - Player: ${playerId}`);
+          
+          if (playerId === masonId) {
+            console.log(`  🎯 MASON FOUND! Position: "${pos.position}", IsSubstitute: ${pos.isSubstitute}`);
+            console.log(`  🎯 Full Mason position object:`, JSON.stringify(pos, null, 4));
+          }
+          
+          if (pos.position === 'CM') {
+            console.log(`  ⚠️ CM POSITION FOUND! Player: ${playerId}`);
+            console.log(`  ⚠️ Full CM position object:`, JSON.stringify(pos, null, 4));
+          }
+        });
+      });
+    } else {
+      console.log('No Ferry Athletic selections found');
+    }
+  } else if (selections) {
     console.log(`Found ${selections.length} Ferry Athletic selections`);
     
     selections.forEach((selection, idx) => {
@@ -58,23 +114,33 @@ export const debugMasonCMIssue = async (): Promise<void> => {
   }
 
   // Step 2: Check event_player_stats for Mason and Ferry matches
-  console.log('\n2️⃣ CHECKING EVENT_PLAYER_STATS FOR MASON (FERRY MATCHES):');
+  console.log('\n2️⃣ CHECKING EVENT_PLAYER_STATS FOR MASON:');
   const { data: stats, error: statsError } = await supabase
     .from('event_player_stats')
     .select(`
       *,
       events!inner(id, date, opponent, title)
     `)
-    .eq('player_id', masonId)
-    .or('events.opponent.ilike.%ferry%,events.title.ilike.%ferry%');
+    .eq('player_id', masonId);
 
   if (statsError) {
     console.error('Error fetching stats:', statsError);
   } else if (stats) {
-    console.log(`Found ${stats.length} event_player_stats records for Mason in Ferry matches`);
+    console.log(`Found ${stats.length} event_player_stats records for Mason`);
     
-    stats.forEach((stat, idx) => {
-      console.log(`\n📊 Stat Record ${idx + 1}:`);
+    // Filter for Ferry matches
+    const ferryStats = stats.filter(stat => {
+      const event = stat.events;
+      return event && (
+        (event.opponent && event.opponent.toLowerCase().includes('ferry')) ||
+        (event.title && event.title.toLowerCase().includes('ferry'))
+      );
+    });
+    
+    console.log(`Found ${ferryStats.length} Ferry Athletic stats for Mason`);
+    
+    ferryStats.forEach((stat, idx) => {
+      console.log(`\n📊 Ferry Stat Record ${idx + 1}:`);
       console.log(`Event: ${stat.events?.title} (${stat.events?.date})`);
       console.log(`Position: "${stat.position}"`);
       console.log(`Minutes: ${stat.minutes_played}`);
