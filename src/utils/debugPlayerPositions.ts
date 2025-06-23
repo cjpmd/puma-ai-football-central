@@ -82,23 +82,39 @@ export const debugPlayerPositions = async (playerId: string, playerName: string)
   } else if (allStats) {
     console.log(`\n📊 TOTAL EVENT_PLAYER_STATS ENTRIES: ${allStats.length}`);
     
-    // Group by position to show totals
-    const positionTotals: { [key: string]: { minutes: number, games: number } } = {};
-    
-    allStats.forEach(stat => {
-      if (!stat.is_substitute && stat.position) {
-        if (!positionTotals[stat.position]) {
-          positionTotals[stat.position] = { minutes: 0, games: 0 };
-        }
-        positionTotals[stat.position].minutes += stat.minutes_played;
-        positionTotals[stat.position].games += 1;
+    if (allStats.length === 0) {
+      console.log('❌ NO EVENT_PLAYER_STATS FOUND - This explains why match stats are blank!');
+      
+      // Check if there are any event_selections for this player
+      const { data: playerSelections, error: selectionError } = await supabase
+        .from('event_selections')
+        .select('*')
+        .filter('player_positions', 'cs', `[{"playerId": "${playerId}"}]`);
+        
+      if (selectionError) {
+        console.error('Error checking event_selections:', selectionError);
+      } else {
+        console.log(`Found ${playerSelections?.length || 0} event_selections containing this player`);
       }
-    });
-    
-    console.log('📊 POSITION TOTALS (playing time only, excluding substitutes):');
-    Object.entries(positionTotals).forEach(([position, totals]) => {
-      console.log(`  ${position}: ${totals.minutes} minutes across ${totals.games} periods`);
-    });
+    } else {
+      // Group by position to show totals
+      const positionTotals: { [key: string]: { minutes: number, games: number } } = {};
+      
+      allStats.forEach(stat => {
+        if (!stat.is_substitute && stat.position) {
+          if (!positionTotals[stat.position]) {
+            positionTotals[stat.position] = { minutes: 0, games: 0 };
+          }
+          positionTotals[stat.position].minutes += stat.minutes_played;
+          positionTotals[stat.position].games += 1;
+        }
+      });
+      
+      console.log('📊 POSITION TOTALS (playing time only, excluding substitutes):');
+      Object.entries(positionTotals).forEach(([position, totals]) => {
+        console.log(`  ${position}: ${totals.minutes} minutes across ${totals.games} periods`);
+      });
+    }
   }
 
   // Get current player match stats
@@ -122,7 +138,12 @@ export const debugPlayerPositions = async (playerId: string, playerName: string)
         console.log('🎯 SUB minutes:', matchStats.minutesByPosition.SUB || 0);
         console.log('🎯 CM minutes:', matchStats.minutesByPosition.CM || 0);
       }
+    } else {
+      console.log('❌ NO minutesByPosition data in match_stats');
     }
+    
+    console.log('🎯 Total games:', matchStats?.totalGames || 0);
+    console.log('🎯 Total minutes:', matchStats?.totalMinutes || 0);
     
     if (matchStats?.recentGames && isMason) {
       const ferryGame = matchStats.recentGames.find((game: any) => 

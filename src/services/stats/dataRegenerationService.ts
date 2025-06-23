@@ -7,7 +7,7 @@ export const dataRegenerationService = {
     try {
       console.log('=== STARTING COMPLETE DATA REGENERATION ===');
       
-      // Step 1: Use the new database function to regenerate event_player_stats
+      // Step 1: Use the fixed database function to regenerate event_player_stats
       console.log('Step 1: Regenerating event_player_stats from event_selections...');
       const { error: regenerateError } = await supabase.rpc('regenerate_all_event_player_stats');
       
@@ -28,6 +28,19 @@ export const dataRegenerationService = {
       }
       
       console.log('✅ Successfully updated all player match stats');
+      
+      // Step 3: Verify data was properly regenerated
+      console.log('Step 3: Verifying regenerated data...');
+      const { data: statsCount, error: verifyError } = await supabase
+        .from('event_player_stats')
+        .select('id', { count: 'exact' });
+        
+      if (verifyError) {
+        console.error('Error verifying regenerated data:', verifyError);
+      } else {
+        console.log(`✅ Verification complete: ${statsCount?.length || 0} event_player_stats records created`);
+      }
+      
       console.log('=== COMPLETE DATA REGENERATION FINISHED ===');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
