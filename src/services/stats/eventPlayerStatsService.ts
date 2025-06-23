@@ -30,7 +30,7 @@ export const eventPlayerStatsService = {
       .from('event_selections')
       .select(`
         *,
-        events!inner(date, end_time, opponent, title)
+        events!inner(id, date, end_time, opponent, title)
       `);
 
     if (selectionsError) {
@@ -68,23 +68,28 @@ export const eventPlayerStatsService = {
 
       console.log(`👥 Found ${playerPositions.length} players in selection`);
 
-      // Special logging for Andrew McDonald and Arbroath fixture
-      const isArbroathFixture = event.opponent && event.opponent.toLowerCase().includes('arbroath');
-      const andrewId = '1297cfba-5c6d-48bc-9441-96584ec6df1c';
+      // Special logging for Ferry Athletic fixture
+      const isFerryFixture = (event.opponent && event.opponent.toLowerCase().includes('ferry')) || 
+                            (event.title && event.title.toLowerCase().includes('ferry'));
+      const masonId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4'; // Mason McPherson ID
       
-      if (isArbroathFixture) {
-        console.log('🎯 PROCESSING ARBROATH MAROONS FIXTURE');
+      if (isFerryFixture) {
+        console.log('🎯 PROCESSING FERRY ATHLETIC FIXTURE');
+        console.log('🎯 Event title:', event.title);
+        console.log('🎯 Event opponent:', event.opponent);
+        console.log('🎯 Selection team number:', selection.team_number);
+        console.log('🎯 Selection period number:', selection.period_number);
         console.log('🎯 Player positions array:', JSON.stringify(playerPositions, null, 2));
         
-        // Find Andrew specifically
-        const andrewData = playerPositions.find(pp => 
-          pp.playerId === andrewId || pp.player_id === andrewId
+        // Find Mason specifically
+        const masonData = playerPositions.find(pp => 
+          pp.playerId === masonId || pp.player_id === masonId
         );
-        if (andrewData) {
-          console.log('🎯 ANDREW FOUND IN ARBROATH SELECTION:');
-          console.log(`🎯 Position: "${andrewData.position}"`);
-          console.log(`🎯 Is Substitute: ${andrewData.isSubstitute}`);
-          console.log('🎯 Full Andrew data:', JSON.stringify(andrewData, null, 2));
+        if (masonData) {
+          console.log('🎯 MASON FOUND IN FERRY SELECTION:');
+          console.log(`🎯 Position: "${masonData.position}"`);
+          console.log(`🎯 Is Substitute: ${masonData.isSubstitute}`);
+          console.log('🎯 Full Mason data:', JSON.stringify(masonData, null, 2));
         }
       }
 
@@ -96,79 +101,63 @@ export const eventPlayerStatsService = {
           continue;
         }
 
-        const playerEventKey = `${playerId}-${selection.event_id}-${selection.team_number || 1}-${selection.period_number || 1}`;
-        if (processedPlayerEvents.has(playerEventKey)) {
-          console.log(`⚠️ Skipping duplicate entry for player ${playerId} in event ${selection.event_id}`);
-          continue;
-        }
-
         const position = playerPos.position;
-        const isAndrewMcDonald = playerId === andrewId;
+        const isMasonMcPherson = playerId === masonId;
         
-        if (isAndrewMcDonald && isArbroathFixture) {
-          console.log(`🎯 ANDREW MCDONALD - ARBROATH FIXTURE PROCESSING:`);
+        if (isMasonMcPherson && isFerryFixture) {
+          console.log(`🎯 MASON MCPHERSON - FERRY FIXTURE PROCESSING:`);
           console.log(`🎯 Raw position from selection: "${position}"`);
+          console.log(`🎯 Team/Period: ${selection.team_number}/${selection.period_number}`);
           console.log(`🎯 Player object:`, JSON.stringify(playerPos, null, 2));
         }
 
-        // Skip substitutes and invalid positions
-        const isValidPlayingPosition = position && 
-          position !== 'SUB' && 
-          position !== 'Substitute' && 
-          position !== 'TBD' &&
-          position.trim() !== '' &&
-          !playerPos.isSubstitute;
-
-        if (isAndrewMcDonald && isArbroathFixture) {
-          console.log(`🎯 ANDREW - Is valid playing position: ${isValidPlayingPosition}`);
-          console.log(`🎯 ANDREW - Position: "${position}"`);
-          console.log(`🎯 ANDREW - isSubstitute flag: ${playerPos.isSubstitute}`);
+        // Create unique key for this player-event-team-period combination
+        const playerEventKey = `${playerId}-${selection.event_id}-${selection.team_number || 1}-${selection.period_number || 1}`;
+        if (processedPlayerEvents.has(playerEventKey)) {
+          console.log(`⚠️ Skipping duplicate entry for player ${playerId} in event ${selection.event_id}, team ${selection.team_number}, period ${selection.period_number}`);
+          continue;
         }
 
-        if (isValidPlayingPosition) {
-          const minutesPlayed = playerPos.minutes || selection.duration_minutes || 90;
-          const isCaptain = playerId === selection.captain_id;
+        // Handle both substitutes and playing positions
+        const isSubstitute = playerPos.isSubstitute || position === 'SUB' || position === 'Substitute';
+        const minutesPlayed = playerPos.minutes || selection.duration_minutes || 90;
+        const isCaptain = playerId === selection.captain_id;
 
-          if (isAndrewMcDonald && isArbroathFixture) {
-            console.log(`🎯 ANDREW - About to insert event_player_stats:`);
-            console.log(`🎯 ANDREW - Player ID: ${playerId}`);
-            console.log(`🎯 ANDREW - Position: "${position}"`);
-            console.log(`🎯 ANDREW - Minutes: ${minutesPlayed}`);
-            console.log(`🎯 ANDREW - Is Captain: ${isCaptain}`);
-          }
+        if (isMasonMcPherson && isFerryFixture) {
+          console.log(`🎯 MASON - Processing entry:`);
+          console.log(`🎯 MASON - Position: "${position}"`);
+          console.log(`🎯 MASON - Is Substitute: ${isSubstitute}`);
+          console.log(`🎯 MASON - Minutes: ${minutesPlayed}`);
+          console.log(`🎯 MASON - Is Captain: ${isCaptain}`);
+        }
 
-          const { error: insertError } = await supabase
-            .from('event_player_stats')
-            .insert({
-              event_id: selection.event_id,
-              player_id: playerId,
-              team_number: selection.team_number || 1,
-              period_number: selection.period_number || 1,
-              position: position,
-              minutes_played: minutesPlayed,
-              is_captain: isCaptain,
-              is_substitute: false,
-              performance_category_id: selection.performance_category_id
-            });
+        // Insert all entries (both playing positions and substitutes)
+        const { error: insertError } = await supabase
+          .from('event_player_stats')
+          .insert({
+            event_id: selection.event_id,
+            player_id: playerId,
+            team_number: selection.team_number || 1,
+            period_number: selection.period_number || 1,
+            position: position,
+            minutes_played: minutesPlayed,
+            is_captain: isCaptain,
+            is_substitute: isSubstitute,
+            performance_category_id: selection.performance_category_id
+          });
 
-          if (insertError) {
-            console.error(`❌ Error inserting stats for player ${playerId}:`, insertError);
-            if (isAndrewMcDonald && isArbroathFixture) {
-              console.log('🎯 ANDREW - INSERT FAILED!', insertError);
-            }
-          } else {
-            console.log(`✅ Successfully created stats for player ${playerId} in position ${position}`);
-            if (isAndrewMcDonald && isArbroathFixture) {
-              console.log(`🎯 ANDREW - Successfully inserted ${position} for player ${playerId}`);
-            }
-            totalRecordsCreated++;
-            processedPlayerEvents.add(playerEventKey);
+        if (insertError) {
+          console.error(`❌ Error inserting stats for player ${playerId}:`, insertError);
+          if (isMasonMcPherson && isFerryFixture) {
+            console.log('🎯 MASON - INSERT FAILED!', insertError);
           }
         } else {
-          if (isAndrewMcDonald && isArbroathFixture) {
-            console.log(`🎯 ANDREW - Skipping invalid/substitute position: "${position}"`);
+          console.log(`✅ Successfully created stats for player ${playerId} in position ${position} (substitute: ${isSubstitute})`);
+          if (isMasonMcPherson && isFerryFixture) {
+            console.log(`🎯 MASON - Successfully inserted ${position} for player ${playerId} (substitute: ${isSubstitute})`);
           }
-          console.log(`⏸️ Skipping player ${playerId} with invalid/substitute position: "${position}"`);
+          totalRecordsCreated++;
+          processedPlayerEvents.add(playerEventKey);
         }
       }
     }
