@@ -22,6 +22,7 @@ import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formati
 import { formatPlayerName } from '@/utils/nameUtils';
 import { NameDisplayOption } from '@/types/team';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { debugMasonCMIssue } from '@/utils/debugMasonCMIssue';
 
 interface TeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -1129,14 +1130,25 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                 Select your teams and request availability confirmation for this event.
               </DialogDescription>
             </div>
-            <Button
-              onClick={handleSaveSelection}
-              disabled={saving}
-              className="flex items-center gap-2"
-            >
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save Selection'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleDebugMason}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Debug Mason CM
+              </Button>
+              <Button
+                onClick={handleSaveSelection}
+                disabled={saving}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                {saving ? 'Saving...' : 'Save Selection'}
+              </Button>
+            </div>
           </div>
         </DialogHeader>
         
@@ -1384,5 +1396,15 @@ const getFormationPositions = (formation: string): string[] => {
       return ['GK', 'CB', 'CB', 'CB', 'RM', 'CM', 'CM', 'LM', 'RW', 'ST', 'LW'];
     default:
       return ['GK', 'RB', 'CB', 'CB', 'LB', 'CM', 'CM', 'CM', 'RW', 'ST', 'LW'];
+  }
+};
+
+const handleDebugMason = async () => {
+  try {
+    await debugMasonCMIssue();
+    toast.success('Mason CM debugging completed - check console for details');
+  } catch (error) {
+    console.error('Error debugging Mason:', error);
+    toast.error('Failed to debug Mason CM issue');
   }
 };
