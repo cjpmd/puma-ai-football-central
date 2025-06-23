@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const playerMatchStatsService = {
   /**
-   * Update a specific player's match statistics using the database function
+   * Update a specific player's match statistics using the improved database function
    */
   async updatePlayerStats(playerId: string): Promise<void> {
     try {
@@ -19,7 +19,7 @@ export const playerMatchStatsService = {
         throw error;
       }
       
-      console.log('Successfully updated player stats for:', playerId);
+      console.log('✅ Successfully updated player stats for:', playerId);
     } catch (error) {
       console.error('Error updating player stats:', error);
       throw error;
@@ -42,16 +42,19 @@ export const playerMatchStatsService = {
         throw error;
       }
       
-      console.log('Completed updating all player stats for event');
+      console.log('✅ Completed updating all player stats for event');
     } catch (error) {
       console.error('Error updating event player stats:', error);
       throw error;
     }
   },
 
+  /**
+   * Update all completed events stats using the improved database function
+   */
   async updateAllCompletedEventsStats(): Promise<void> {
     try {
-      console.log('Starting bulk update of all completed events');
+      console.log('Starting bulk update of all completed events with improved logic');
       
       const { error } = await supabase.rpc('update_all_completed_events_stats');
 
@@ -60,7 +63,7 @@ export const playerMatchStatsService = {
         throw error;
       }
       
-      console.log('Completed bulk update of all events');
+      console.log('✅ Completed bulk update of all events with improved position tracking');
     } catch (error) {
       console.error('Error updating all completed events stats:', error);
       throw error;
