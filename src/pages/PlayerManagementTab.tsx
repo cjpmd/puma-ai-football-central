@@ -25,6 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
 import { DataIntegrityChecker } from '@/components/debug/DataIntegrityChecker';
 import { ComprehensiveDataIntegrityChecker } from '@/components/debug/ComprehensiveDataIntegrityChecker';
+import { PlayerStatsRebuilder } from '@/components/debug/PlayerStatsRebuilder';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -412,10 +413,11 @@ const PlayerManagementTab = () => {
           </div>
         </div>
 
-        {/* Add Comprehensive Data Integrity Checker */}
-        <ComprehensiveDataIntegrityChecker />
+        {/* Add the new PlayerStatsRebuilder component */}
+        <PlayerStatsRebuilder />
 
-        {/* Keep existing DataIntegrityChecker for compatibility */}
+        {/* Keep existing debug components */}
+        <ComprehensiveDataIntegrityChecker />
         <DataIntegrityChecker />
 
         <Card>
