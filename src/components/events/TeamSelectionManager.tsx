@@ -434,9 +434,27 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       </CardHeader>
                       <CardContent>
                         <PlayerSelectionWithAvailability
-                          availablePlayers={availablePlayers}
-                          playerPositions={playerPositions}
-                          setPlayerPositions={setPlayerPositions}
+                          teamId={event.team_id}
+                          eventId={event.id}
+                          selectedPlayers={playerPositions.map(p => p.playerId)}
+                          substitutePlayers={substitutePlayers}
+                          captainId={captainId || ''}
+                          onPlayersChange={(players) => {
+                            const newPositions = players.map((playerId, index) => ({
+                              playerId,
+                              position: `Position ${index + 1}`,
+                              isSubstitute: false
+                            }));
+                            setPlayerPositions(newPositions);
+                          }}
+                          onSubstitutesChange={setSubstitutePlayers}
+                          onCaptainChange={setCaptainId}
+                          eventType={event.event_type}
+                          formation="4-3-3"
+                          onFormationChange={() => {}}
+                          gameFormat={event.game_format as any || '11v11'}
+                          teamNumber={teamNumber}
+                          periodNumber={periodNumber}
                         />
                       </CardContent>
                     </Card>
