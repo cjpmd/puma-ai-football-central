@@ -48,6 +48,7 @@ const CalendarEventsPage = () => {
   const [eventOpponent, setEventOpponent] = useState('');
   const [eventGameFormat, setEventGameFormat] = useState<GameFormat>('7-a-side');
   const [eventGameDuration, setEventGameDuration] = useState<number>(90);
+  const [eventKitSelection, setEventKitSelection] = useState('home');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
   
