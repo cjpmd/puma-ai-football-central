@@ -20,17 +20,17 @@ export const eventPlayerStatsService = {
   },
 
   /**
-   * Create event_player_stats from event_selections using the improved database function
+   * Create event_player_stats from event_selections using the FIXED database function
    */
   async regenerateFromSelections(): Promise<void> {
-    console.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS ===');
+    console.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS WITH FIXED FUNCTION ===');
     
     try {
-      // Use the improved database function instead of manual processing
+      // Use the FIXED database function
       const { error } = await supabase.rpc('regenerate_all_event_player_stats');
       
       if (error) {
-        console.error('Error in database regeneration function:', error);
+        console.error('Error in FIXED regeneration function:', error);
         throw error;
       }
       
@@ -42,10 +42,10 @@ export const eventPlayerStatsService = {
       if (verifyError) {
         console.error('Error verifying regenerated data:', verifyError);
       } else {
-        console.log(`📊 REGENERATION SUMMARY: ${statsCount?.length || 0} records created`);
+        console.log(`📊 REGENERATION SUMMARY: ${statsCount?.length || 0} records created with FIXED functions`);
       }
       
-      console.log('🎉 SUCCESSFULLY REGENERATED EVENT_PLAYER_STATS FROM SELECTIONS');
+      console.log('🎉 SUCCESSFULLY REGENERATED EVENT_PLAYER_STATS WITH FIXED DATABASE FUNCTION');
     } catch (error) {
       console.error('Error in regeneration:', error);
       throw error;
