@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { playerStatsRebuilder } from '@/services/stats/playerStatsRebuilder';
 import { toast } from 'sonner';
@@ -38,6 +38,98 @@ export const PlayerStatsRebuilder: React.FC = () => {
       toast.error('Failed to rebuild player statistics. Check console for details.');
     } finally {
       setIsRebuilding(false);
+    }
+  };
+
+  const handleDebugMasonFerryPositions = async () => {
+    try {
+      toast.info('Debugging Mason vs Ferry positions...');
+      
+      console.log('🔍 DEBUGGING MASON VS FERRY ATHLETIC POSITIONS:');
+      
+      // Check event_selections for Ferry Athletic matches
+      const { data: selections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select(`
+          id,
+          player_positions,
+          duration_minutes,
+          team_number,
+          period_number,
+          events (id, title, opponent, date)
+        `)
+        .or('events.opponent.ilike.%ferry%,events.title.ilike.%ferry%')
+        .order('events(date)', { ascending: false });
+
+      if (selectionsError) {
+        console.error('Error fetching Ferry selections:', selectionsError);
+        throw selectionsError;
+      }
+
+      console.log(`Found ${selections?.length || 0} Ferry Athletic event selections`);
+      
+      selections?.forEach(selection => {
+        const event = selection.events;
+        console.log(`\n=== EVENT: ${event?.title} vs ${event?.opponent} (${event?.date}) ===`);
+        console.log(`Selection ID: ${selection.id}`);
+        console.log(`Team Number: ${selection.team_number}, Period: ${selection.period_number}`);
+        
+        const playerPositions = selection.player_positions as any[];
+        console.log(`Total players in selection: ${playerPositions?.length || 0}`);
+        
+        // Find Mason in this selection
+        const masonData = playerPositions?.find(p => 
+          p.playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4' || 
+          p.player_id === 'bb4de0de-c98c-485b-85b6-b70dd67736e4'
+        );
+        
+        if (masonData) {
+          console.log('🎯 MASON FOUND IN SELECTION:');
+          console.log(`  - Position: "${masonData.position}"`);
+          console.log(`  - Minutes: ${masonData.minutes || selection.duration_minutes}`);
+          console.log(`  - Is Substitute: ${masonData.isSubstitute || false}`);
+          console.log(`  - Raw Data:`, JSON.stringify(masonData, null, 2));
+        } else {
+          console.log('❌ Mason NOT found in this selection');
+        }
+        
+        // Show all positions in this selection for context
+        console.log('\nAll positions in this selection:');
+        playerPositions?.forEach((player, index) => {
+          console.log(`  ${index + 1}. Player ID: ${player.playerId || player.player_id}, Position: "${player.position}", Minutes: ${player.minutes || selection.duration_minutes}`);
+        });
+      });
+
+      // Also check what's currently in event_player_stats for Ferry matches
+      console.log('\n🔍 CHECKING EVENT_PLAYER_STATS FOR FERRY MATCHES:');
+      const { data: stats, error: statsError } = await supabase
+        .from('event_player_stats')
+        .select(`
+          position,
+          minutes_played,
+          is_substitute,
+          team_number,
+          period_number,
+          events (title, opponent, date)
+        `)
+        .eq('player_id', 'bb4de0de-c98c-485b-85b6-b70dd67736e4')
+        .or('events.opponent.ilike.%ferry%,events.title.ilike.%ferry%')
+        .order('events(date)', { ascending: false });
+
+      if (statsError) {
+        console.error('Error fetching Ferry stats:', statsError);
+      } else {
+        console.log(`Found ${stats?.length || 0} Ferry stats records for Mason:`);
+        stats?.forEach((stat, index) => {
+          const event = stat.events;
+          console.log(`  ${index + 1}. ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}, Sub=${stat.is_substitute}, Team=${stat.team_number}, Period=${stat.period_number}`);
+        });
+      }
+
+      toast.success('Ferry position debug complete - check console for details');
+    } catch (error) {
+      console.error('Error debugging Ferry positions:', error);
+      toast.error('Ferry debug failed');
     }
   };
 
@@ -118,13 +210,13 @@ export const PlayerStatsRebuilder: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-green-700">
-          <p className="font-medium mb-2">Safe Database Function Rebuild</p>
-          <p>Uses ONLY database functions to safely regenerate all player statistics.</p>
+          <p className="font-medium mb-2">Simple Position Tracking</p>
+          <p>Positions and minutes should exactly match what was selected in Team Selection.</p>
           <p className="mt-2 font-medium">Process:</p>
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li>Uses database function to safely clear and regenerate data</li>
-            <li>Enhanced position extraction and validation</li>
-            <li>Comprehensive logging for Mason's data verification</li>
+            <li>Copies exact positions from event_selections to event_player_stats</li>
+            <li>No position mapping or transformation - direct 1:1 copy</li>
             <li>Updates all player match_stats using proven database functions</li>
           </ul>
         </div>
@@ -138,6 +230,15 @@ export const PlayerStatsRebuilder: React.FC = () => {
           >
             <RefreshCw className={`h-4 w-4 ${isRebuilding ? 'animate-spin' : ''}`} />
             {isRebuilding ? 'Rebuilding...' : 'Safe Database Rebuild'}
+          </Button>
+
+          <Button
+            onClick={handleDebugMasonFerryPositions}
+            variant="outline"
+            className="flex items-center gap-2 border-blue-300 text-blue-700"
+          >
+            <Search className="h-4 w-4" />
+            Debug Ferry Positions
           </Button>
 
           <Button
@@ -165,7 +266,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
         )}
 
         <Badge variant="outline" className="text-xs bg-green-100">
-          Safe approach using only database functions
+          Direct position copy - no transformations
         </Badge>
       </CardContent>
     </Card>
