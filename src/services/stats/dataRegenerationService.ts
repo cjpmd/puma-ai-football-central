@@ -72,26 +72,32 @@ export const dataRegenerationService = {
     try {
       console.log(`🔍 Debugging positions for ${playerName} (${playerId})`);
       
-      const { error } = await supabase.rpc('debug_player_positions', {
-        p_player_id: playerId,
-        p_player_name: playerName
-      });
-      
-      if (error) {
-        console.error('Error running debug function:', error);
+      // FIRST: Verify the player exists in the database
+      console.log('🔍 PLAYER VERIFICATION:');
+      const { data: playerCheck, error: playerCheckError } = await supabase
+        .from('players')
+        .select('id, name, team_id')
+        .eq('id', playerId)
+        .maybeSingle();
+
+      if (playerCheckError) {
+        console.error('❌ Error checking player existence:', playerCheckError);
+      } else if (!playerCheck) {
+        console.log('❌ CRITICAL: Player not found in players table!');
+        return;
+      } else {
+        console.log(`✅ Player found: ${playerCheck.name} (Team ID: ${playerCheck.team_id})`);
       }
-      
-      // COMPREHENSIVE DEBUG FOR FERRY ATHLETIC MATCH
-      console.log('🚢 COMPREHENSIVE FERRY ATHLETIC DEBUG:');
-      
-      // First, let's find ALL events with "ferry" in the name
+
+      // SECOND: Check for Ferry Athletic events
+      console.log('🚢 FERRY ATHLETIC EVENT VERIFICATION:');
       const { data: ferryEvents, error: ferryEventsError } = await supabase
         .from('events')
         .select('*')
         .or('opponent.ilike.%ferry%,title.ilike.%ferry%');
 
       if (ferryEventsError) {
-        console.error('Error fetching Ferry events:', ferryEventsError);
+        console.error('❌ Error fetching Ferry events:', ferryEventsError);
       } else {
         console.log(`🚢 Found ${ferryEvents?.length || 0} Ferry Athletic events in database:`);
         ferryEvents?.forEach(event => {
@@ -99,85 +105,81 @@ export const dataRegenerationService = {
         });
       }
 
-      // Now let's get ALL event_selections and search through them manually
-      const { data: allSelections, error: allSelectionsError } = await supabase
-        .from('event_selections')
-        .select(`
-          *,
-          events!inner(id, title, opponent, date)
-        `)
-        .order('created_at', { ascending: false });
+      // THIRD: Examine ALL event_selections for this team
+      console.log('🔍 TEAM EVENT SELECTIONS ANALYSIS:');
+      if (playerCheck?.team_id) {
+        const { data: teamSelections, error: teamSelectionsError } = await supabase
+          .from('event_selections')
+          .select(`
+            *,
+            events!inner(id, title, opponent, date, team_id)
+          `)
+          .eq('events.team_id', playerCheck.team_id)
+          .order('events.date', { ascending: false })
+          .limit(20);
 
-      if (allSelectionsError) {
-        console.error('Error fetching all selections:', allSelectionsError);
-      } else if (allSelections) {
-        console.log(`🔍 Searching through ${allSelections.length} total selections...`);
-        
-        // Let's look for ANY selections that might contain Mason
-        const masonSelections = allSelections.filter(selection => {
-          const playerPositions = selection.player_positions as any[];
-          if (!playerPositions || !Array.isArray(playerPositions)) return false;
+        if (teamSelectionsError) {
+          console.error('❌ Error fetching team selections:', teamSelectionsError);
+        } else if (teamSelections) {
+          console.log(`📋 Found ${teamSelections.length} selections for this team. Analyzing each one...`);
           
-          return playerPositions.some((p: any) => 
-            p.playerId === playerId || p.player_id === playerId
-          );
-        });
-
-        console.log(`👤 Found ${masonSelections.length} total selections containing ${playerName}:`);
-        
-        masonSelections.forEach((selection, index) => {
-          const event = selection.events as any;
-          console.log(`\n👤 Selection ${index + 1}: ${event.title} vs ${event.opponent} (${event.date})`);
-          console.log(`    Event ID: ${event.id}`);
+          let masonFoundCount = 0;
+          let ferrySelectionFound = false;
           
-          const playerPositions = selection.player_positions as any[];
-          const masonData = playerPositions?.find(p => p.playerId === playerId || p.player_id === playerId);
+          teamSelections.forEach((selection, index) => {
+            const event = selection.events as any;
+            const isFerryEvent = event?.opponent?.toLowerCase().includes('ferry') || 
+                               event?.title?.toLowerCase().includes('ferry');
+            
+            console.log(`\n📋 Selection ${index + 1}: "${event.title}" vs "${event.opponent}" (${event.date})`);
+            console.log(`    Event ID: ${event.id}`);
+            console.log(`    Is Ferry Event: ${isFerryEvent}`);
+            
+            const playerPositions = selection.player_positions as any[];
+            console.log(`    Total players in selection: ${playerPositions?.length || 0}`);
+            
+            // Check each player in this selection
+            if (playerPositions && Array.isArray(playerPositions)) {
+              playerPositions.forEach((player, playerIndex) => {
+                const currentPlayerId = player.playerId || player.player_id;
+                if (currentPlayerId === playerId) {
+                  console.log(`    ✅ FOUND MASON at index ${playerIndex}:`);
+                  console.log(`       Position: "${player.position}"`);
+                  console.log(`       IsSubstitute: ${player.isSubstitute}`);
+                  console.log(`       Minutes: ${player.minutes || 'not specified'}`);
+                  console.log(`       Raw Data: ${JSON.stringify(player)}`);
+                  masonFoundCount++;
+                  
+                  if (isFerryEvent) {
+                    ferrySelectionFound = true;
+                    console.log(`    🚢 THIS IS THE FERRY ATHLETIC SELECTION!`);
+                  }
+                }
+              });
+              
+              // If this is Ferry and Mason wasn't found, log all players
+              if (isFerryEvent && !playerPositions.some(p => (p.playerId || p.player_id) === playerId)) {
+                console.log(`    🚢 FERRY EVENT - Mason NOT found. All players in this selection:`);
+                playerPositions.forEach((player, playerIndex) => {
+                  console.log(`       Player ${playerIndex + 1}: ID=${player.playerId || player.player_id}, Position="${player.position}"`);
+                });
+              }
+            } else {
+              console.log(`    ⚠️ Invalid player_positions data: ${typeof playerPositions}`);
+            }
+          });
           
-          if (masonData) {
-            console.log(`    Mason's Position: "${masonData.position}"`);
-            console.log(`    Mason's IsSubstitute: ${masonData.isSubstitute}`);
-            console.log(`    Mason's Minutes: ${masonData.minutes || 'not specified'}`);
-            console.log(`    Raw Mason Data:`, JSON.stringify(masonData, null, 2));
+          console.log(`\n📊 SUMMARY:`);
+          console.log(`   Mason found in ${masonFoundCount} selections`);
+          console.log(`   Ferry selection with Mason found: ${ferrySelectionFound}`);
+          
+          if (!ferrySelectionFound && ferryEvents && ferryEvents.length > 0) {
+            console.log(`\n🚨 PROBLEM IDENTIFIED: Ferry event exists but Mason not found in any Ferry selections!`);
           }
-        });
-
-        // Now specifically filter for Ferry Athletic from Mason's selections
-        const ferrySelections = masonSelections.filter(selection => {
-          const event = selection.events as any;
-          const isFerryEvent = event?.opponent?.toLowerCase().includes('ferry') || 
-                             event?.title?.toLowerCase().includes('ferry');
-          return isFerryEvent;
-        });
-
-        console.log(`\n🚢 Found ${ferrySelections.length} Ferry Athletic selections for ${playerName}:`);
-        
-        ferrySelections.forEach((selection, index) => {
-          const event = selection.events as any;
-          console.log(`\n🚢 Ferry Selection ${index + 1}: ${event.title} vs ${event.opponent} (${event.date})`);
-          console.log(`    Event ID: ${event.id}`);
-          console.log(`    Team Number: ${selection.team_number}, Period: ${selection.period_number}`);
-          console.log(`    Duration Minutes: ${selection.duration_minutes}`);
-          console.log(`    Performance Category ID: ${selection.performance_category_id}`);
-          console.log(`    Captain ID: ${selection.captain_id}`);
-          
-          const playerPositions = selection.player_positions as any[];
-          console.log(`    Total players in selection: ${playerPositions?.length || 0}`);
-          
-          const playerData = playerPositions?.find(p => p.playerId === playerId || p.player_id === playerId);
-          
-          if (playerData) {
-            console.log(`    ✅ FOUND MASON IN FERRY SELECTION:`);
-            console.log(`    RAW Player Data:`, JSON.stringify(playerData, null, 2));
-            console.log(`    Position: "${playerData.position}"`);
-            console.log(`    IsSubstitute: ${playerData.isSubstitute}`);
-            console.log(`    Minutes: ${playerData.minutes || 'not specified'}`);
-          } else {
-            console.log(`    ❌ Mason not found in this Ferry selection`);
-          }
-        });
+        }
       }
 
-      // Check what's in event_player_stats for Ferry matches
+      // FOURTH: Check current event_player_stats for Ferry matches
       console.log('\n🚢 FERRY ATHLETIC STATS RECORDS:');
       const { data: ferryStats, error: ferryStatsError } = await supabase
         .from('event_player_stats')
@@ -188,7 +190,7 @@ export const dataRegenerationService = {
         .eq('player_id', playerId);
 
       if (ferryStatsError) {
-        console.error('Error fetching Ferry stats:', ferryStatsError);
+        console.error('❌ Error fetching Ferry stats:', ferryStatsError);
       } else if (ferryStats) {
         const actualFerryStats = ferryStats.filter(stat => {
           const event = stat.events as any;
@@ -207,11 +209,10 @@ export const dataRegenerationService = {
           console.log(`    Is Substitute: ${stat.is_substitute}`);
           console.log(`    Team: ${stat.team_number}, Period: ${stat.period_number}`);
           console.log(`    Performance Category ID: ${stat.performance_category_id}`);
-          console.log(`    Record ID: ${stat.id}`);
         });
       }
 
-      // Get current player match stats - use maybeSingle to avoid the error
+      // FIFTH: Get current player match_stats
       const { data: player, error: playerError } = await supabase
         .from('players')
         .select('name, match_stats')
@@ -219,28 +220,28 @@ export const dataRegenerationService = {
         .maybeSingle();
 
       if (playerError) {
-        console.error('Error fetching player:', playerError);
+        console.error('❌ Error fetching player match stats:', playerError);
       } else if (player) {
         console.log('\n🎯 CURRENT PLAYER MATCH_STATS:');
         
         const matchStats = player.match_stats as any;
         if (matchStats?.minutesByPosition) {
           console.log('🎯 Minutes by position in match_stats:', matchStats.minutesByPosition);
-          console.log('🎯 STC minutes:', matchStats.minutesByPosition.STC || 0);
-          console.log('🎯 CM minutes:', matchStats.minutesByPosition.CM || 0);
-          console.log('🎯 SUB minutes:', matchStats.minutesByPosition.SUB || 0);
+          Object.entries(matchStats.minutesByPosition).forEach(([position, minutes]) => {
+            console.log(`   ${position}: ${minutes} minutes`);
+          });
         } else {
           console.log('❌ NO minutesByPosition data in match_stats');
         }
         
-        console.log('🎯 Total games:', matchStats?.totalGames || 0);
-        console.log('🎯 Total minutes:', matchStats?.totalMinutes || 0);
+        console.log(`🎯 Total games: ${matchStats?.totalGames || 0}`);
+        console.log(`🎯 Total minutes: ${matchStats?.totalMinutes || 0}`);
       } else {
-        console.log('❌ Player not found in database');
+        console.log('❌ Player not found when fetching match stats');
       }
       
     } catch (error) {
-      console.error('Error debugging player positions:', error);
+      console.error('❌ Error debugging player positions:', error);
     }
   }
 };
