@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Define types for the JSON data structures
@@ -20,14 +21,74 @@ interface MatchStats {
 
 export const playerStatsRebuilder = {
   /**
-   * Complete rebuild of player statistics with FIXED minutes calculation
+   * Complete rebuild of player statistics with FIXED position extraction
    */
   async rebuildAllPlayerStats(): Promise<void> {
-    console.log('🔄 STARTING COMPLETE PLAYER STATS REBUILD WITH FIXED MINUTES');
+    console.log('🔄 STARTING COMPLETE PLAYER STATS REBUILD WITH POSITION FIX');
     
     try {
-      // Step 1: Debug current event_selections data with detailed position logging
-      console.log('Step 1: Analyzing event_selections data...');
+      // Step 1: Debug Mason's event_selections data specifically
+      console.log('Step 1: Debugging Mason\'s event_selections data...');
+      const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
+      
+      const { data: masonSelections, error: masonSelectionsError } = await supabase
+        .from('event_selections')
+        .select(`
+          id,
+          event_id,
+          player_positions,
+          events!inner(title, opponent, date)
+        `)
+        .or('events.opponent.ilike.%ferry%,events.title.ilike.%ferry%');
+
+      if (masonSelectionsError) {
+        console.error('Error fetching Mason\'s selections:', masonSelectionsError);
+      } else if (masonSelections) {
+        console.log(`Found ${masonSelections.length} Ferry Athletic selections`);
+        
+        for (const selection of masonSelections) {
+          console.log(`\n🎯 FERRY SELECTION ANALYSIS:`);
+          console.log(`Event: ${selection.events?.title} vs ${selection.events?.opponent}`);
+          console.log(`Event ID: ${selection.event_id}`);
+          console.log(`Selection ID: ${selection.id}`);
+          
+          const playerPositions = selection.player_positions as PlayerPosition[];
+          console.log(`Total players in selection: ${playerPositions?.length || 0}`);
+          
+          // Find Mason in this selection
+          const masonPosition = playerPositions?.find(pp => 
+            pp.playerId === masonPlayerId || pp.player_id === masonPlayerId
+          );
+          
+          if (masonPosition) {
+            console.log(`🎯 MASON FOUND IN SELECTION:`);
+            console.log(`  Position: "${masonPosition.position}"`);
+            console.log(`  PlayerId: ${masonPosition.playerId || masonPosition.player_id}`);
+            console.log(`  Minutes: ${masonPosition.minutes}`);
+            console.log(`  IsSubstitute: ${masonPosition.isSubstitute}`);
+            console.log(`  Raw object:`, JSON.stringify(masonPosition, null, 2));
+          } else {
+            console.log(`❌ Mason NOT found in this selection`);
+            console.log(`Available player IDs:`, playerPositions?.map(pp => pp.playerId || pp.player_id));
+          }
+        }
+      }
+
+      // Step 2: Clear all existing event_player_stats
+      console.log('Step 2: Clearing existing event_player_stats...');
+      const { error: clearError } = await supabase
+        .from('event_player_stats')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (clearError) {
+        console.error('Error clearing event_player_stats:', clearError);
+        throw clearError;
+      }
+
+      console.log('✅ Cleared existing event_player_stats');
+
+      // Step 3: Get all event_selections and process them
       const { data: selections, error: selectionsError } = await supabase
         .from('event_selections')
         .select(`
@@ -52,25 +113,10 @@ export const playerStatsRebuilder = {
         throw selectionsError;
       }
 
-      console.log(`Found ${selections?.length || 0} event selections`);
+      console.log(`Found ${selections?.length || 0} event selections to process`);
 
-      // Step 2: Clear all existing event_player_stats
-      console.log('Step 2: Clearing existing event_player_stats...');
-      const { error: clearError } = await supabase
-        .from('event_player_stats')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000');
-
-      if (clearError) {
-        console.error('Error clearing event_player_stats:', clearError);
-        throw clearError;
-      }
-
-      console.log('✅ Cleared existing event_player_stats');
-
-      // Step 3: Process each selection manually with CORRECTED minutes logic
+      // Step 4: Process each selection with enhanced position validation
       let processedRecords = 0;
-      const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
       
       for (const selection of selections || []) {
         const event = selection.events;
@@ -81,7 +127,6 @@ export const playerStatsRebuilder = {
           continue;
         }
 
-        // Cast to proper type
         const playerPositions = selection.player_positions as PlayerPosition[];
 
         for (const playerPosition of playerPositions) {
@@ -92,34 +137,39 @@ export const playerStatsRebuilder = {
             continue;
           }
 
-          // Extract position with detailed logging for Mason
-          const position = playerPosition.position;
-          if (!position) {
-            console.warn('No position found for player:', playerId);
+          // CRITICAL: Extract position with strict validation and trimming
+          let position = playerPosition.position;
+          if (!position || typeof position !== 'string') {
+            console.warn(`Invalid position for player ${playerId}:`, position);
+            continue;
+          }
+          
+          // Trim whitespace and validate
+          position = position.trim();
+          if (position === '') {
+            console.warn(`Empty position after trim for player ${playerId}`);
             continue;
           }
 
-          // CRITICAL FIX: Use the minutes from the playerPosition object, NOT the event duration
-          // This is where the bug was - we were using event duration instead of actual playing time
+          // FIXED: Use actual minutes from playerPosition, not event duration
           const minutesPlayedForThisPosition = playerPosition.minutes || 0;
           
-          // Special logging for Mason to track the exact data flow
-          if (playerId === masonPlayerId) {
-            console.log('🎯 PROCESSING MASON - MINUTES CALCULATION TRACE:');
+          // Enhanced logging for Mason and Ferry matches
+          if (playerId === masonPlayerId && event?.opponent?.toLowerCase().includes('ferry')) {
+            console.log('🎯 PROCESSING MASON FOR FERRY MATCH:');
             console.log('  Event:', event?.title, 'vs', event?.opponent);
-            console.log('  Raw playerPosition object:', JSON.stringify(playerPosition, null, 2));
-            console.log('  Position:', position);
-            console.log('  playerPosition.minutes:', playerPosition.minutes);
-            console.log('  selection.duration_minutes:', selection.duration_minutes);
-            console.log('  USING minutesPlayedForThisPosition:', minutesPlayedForThisPosition);
+            console.log('  Raw playerPosition:', JSON.stringify(playerPosition, null, 2));
+            console.log('  Extracted position:', `"${position}"`);
+            console.log('  Position type:', typeof position);
+            console.log('  Position length:', position.length);
+            console.log('  Minutes from playerPosition:', playerPosition.minutes);
+            console.log('  Using minutes:', minutesPlayedForThisPosition);
           }
 
           const isCaptain = playerId === selection.captain_id;
           const isSubstitute = playerPosition.isSubstitute || position === 'SUB' || position === 'Substitute';
 
-          console.log(`  Player ${playerId}: "${position}" for ${minutesPlayedForThisPosition} minutes`);
-
-          // Insert the record with CORRECT minutes calculation
+          // Insert the record with the EXACT position from selection
           const { error: insertError } = await supabase
             .from('event_player_stats')
             .insert({
@@ -127,8 +177,8 @@ export const playerStatsRebuilder = {
               player_id: playerId,
               team_number: selection.team_number || 1,
               period_number: selection.period_number || 1,
-              position: position,
-              minutes_played: minutesPlayedForThisPosition, // Use actual playing time, not event duration
+              position: position, // Use the exact trimmed position
+              minutes_played: minutesPlayedForThisPosition,
               is_captain: isCaptain,
               is_substitute: isSubstitute,
               substitution_time: playerPosition.substitution_time,
@@ -146,8 +196,8 @@ export const playerStatsRebuilder = {
             throw insertError;
           }
 
-          // Immediately verify Mason's insertion
-          if (playerId === masonPlayerId) {
+          // Immediate verification for Mason in Ferry matches
+          if (playerId === masonPlayerId && event?.opponent?.toLowerCase().includes('ferry')) {
             const { data: verifyData } = await supabase
               .from('event_player_stats')
               .select('position, minutes_played')
@@ -155,7 +205,7 @@ export const playerStatsRebuilder = {
               .eq('player_id', playerId)
               .single();
               
-            console.log('🔍 IMMEDIATE VERIFICATION - Mason record inserted with minutes:', verifyData);
+            console.log('🔍 IMMEDIATE VERIFICATION - Mason Ferry record:', verifyData);
           }
 
           processedRecords++;
@@ -164,30 +214,31 @@ export const playerStatsRebuilder = {
 
       console.log(`✅ Processed ${processedRecords} player stat records`);
 
-      // Step 4: Verify ALL of Mason's data after processing
-      console.log('🔍 FINAL VERIFICATION - ALL MASON DATA IN DATABASE:');
-      const { data: allMasonStats, error: masonStatsError } = await supabase
+      // Step 5: Final verification of Mason's Ferry data
+      console.log('🔍 FINAL VERIFICATION - Mason\'s Ferry data in event_player_stats:');
+      const { data: masonFerryStats, error: ferryStatsError } = await supabase
         .from('event_player_stats')
         .select(`
           position,
           minutes_played,
-          events (title, opponent, date)
+          is_substitute,
+          events!inner(title, opponent, date)
         `)
         .eq('player_id', masonPlayerId)
-        .order('events(date)', { ascending: false });
+        .or('events.opponent.ilike.%ferry%,events.title.ilike.%ferry%');
 
-      if (masonStatsError) {
-        console.error('Error fetching Mason stats for verification:', masonStatsError);
+      if (ferryStatsError) {
+        console.error('Error fetching Mason Ferry stats:', ferryStatsError);
       } else {
-        console.log(`Found ${allMasonStats?.length || 0} Mason records in database:`);
-        allMasonStats?.forEach((stat, index) => {
+        console.log(`Found ${masonFerryStats?.length || 0} Mason Ferry records:`);
+        masonFerryStats?.forEach((stat, index) => {
           const event = stat.events;
-          console.log(`  ${index + 1}. ${event?.title} vs ${event?.opponent} (${event?.date}): Position="${stat.position}", Minutes=${stat.minutes_played}`);
+          console.log(`  ${index + 1}. ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}`);
         });
       }
 
-      // Step 5: Rebuild individual player match stats with FIXED aggregation
-      console.log('Step 5: Rebuilding individual player match stats...');
+      // Step 6: Rebuild individual player match stats
+      console.log('Step 6: Rebuilding individual player match stats...');
       const { data: players, error: playersError } = await supabase
         .from('players')
         .select('id, name')
@@ -211,7 +262,7 @@ export const playerStatsRebuilder = {
   },
 
   /**
-   * Rebuild match stats for a specific player with CORRECTED aggregation logic
+   * Rebuild match stats for a specific player
    */
   async rebuildPlayerMatchStats(playerId: string, playerName: string): Promise<void> {
     console.log(`📊 Rebuilding match stats for ${playerName}...`);
@@ -244,20 +295,7 @@ export const playerStatsRebuilder = {
         return;
       }
 
-      // Special debugging for Mason
-      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON MATCH STATS AGGREGATION DEBUG:');
-        console.log(`Found ${playerStats.length} event_player_stats records for Mason`);
-        
-        playerStats.forEach((stat, index) => {
-          const event = stat.events;
-          console.log(`  Record ${index + 1}: ${event?.title} vs ${event?.opponent}`);
-          console.log(`    - Position: "${stat.position}"`);
-          console.log(`    - Minutes: ${stat.minutes_played}`);
-        });
-      }
-
-      // Get performance categories separately to avoid relation issues
+      // Get performance categories separately
       const { data: performanceCategories, error: categoriesError } = await supabase
         .from('performance_categories')
         .select('id, name');
@@ -267,40 +305,28 @@ export const playerStatsRebuilder = {
         throw categoriesError;
       }
 
-      // Create a map for quick category lookup
       const categoryMap = new Map(
         performanceCategories?.map(cat => [cat.id, cat.name]) || []
       );
 
-      // Calculate totals - CORRECTED: sum actual minutes, not use event duration
+      // Calculate totals
       const totalGames = new Set(playerStats.map(s => s.event_id)).size;
       const totalMinutes = playerStats.reduce((sum, stat) => sum + (stat.minutes_played || 0), 0);
       const captainGames = new Set(playerStats.filter(s => s.is_captain).map(s => s.event_id)).size;
       const potmCount = new Set(playerStats.filter(s => s.events?.player_of_match_id === playerId).map(s => s.event_id)).size;
 
-      // Calculate minutes by position - CORRECTED: sum actual playing minutes per position
+      // Calculate minutes by position - sum actual playing minutes per position
       const minutesByPosition: Record<string, number> = {};
       
-      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON POSITION AGGREGATION (CORRECTED):');
-      }
-      
-      playerStats.forEach((stat, index) => {
+      playerStats.forEach(stat => {
         if (stat.position && stat.minutes_played > 0) {
-          const currentMinutes = minutesByPosition[stat.position] || 0;
-          const newMinutes = currentMinutes + stat.minutes_played; // Use actual minutes_played
-          minutesByPosition[stat.position] = newMinutes;
-          
-          if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-            console.log(`  Step ${index + 1}: Adding "${stat.position}" + ${stat.minutes_played} minutes`);
-            console.log(`    - Previous total for "${stat.position}": ${currentMinutes}`);
-            console.log(`    - New total for "${stat.position}": ${newMinutes}`);
-          }
+          minutesByPosition[stat.position] = (minutesByPosition[stat.position] || 0) + stat.minutes_played;
         }
       });
 
-      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON FINAL CORRECTED POSITIONS:', JSON.stringify(minutesByPosition, null, 2));
+      // Special logging for Mason
+      if (playerId === masonPlayerId) {
+        console.log('🔍 MASON FINAL POSITIONS:', JSON.stringify(minutesByPosition, null, 2));
       }
 
       // Calculate performance category stats
@@ -338,7 +364,7 @@ export const playerStatsRebuilder = {
         };
       });
 
-      // Get recent games data with CORRECTED minutes per game
+      // Get recent games data
       const gameAggregates = playerStats.reduce((games, stat) => {
         const eventId = stat.event_id;
         if (!games[eventId]) {
@@ -349,7 +375,7 @@ export const playerStatsRebuilder = {
             opponent: stat.events?.opponent || 'Unknown',
             title: stat.events?.title,
             performanceCategory: categoryName,
-            minutes: 0, // Will be summed from actual playing minutes
+            minutes: 0,
             minutesByPosition: {} as Record<string, number>,
             captain: false,
             playerOfTheMatch: stat.events?.player_of_match_id === playerId,
@@ -357,7 +383,6 @@ export const playerStatsRebuilder = {
           };
         }
         
-        // CORRECTED: Sum actual minutes played, not use event duration
         games[eventId].minutes += stat.minutes_played || 0;
         if (stat.position && stat.minutes_played > 0) {
           games[eventId].minutesByPosition[stat.position] = (games[eventId].minutesByPosition[stat.position] || 0) + stat.minutes_played;
@@ -383,10 +408,6 @@ export const playerStatsRebuilder = {
         recentGames
       };
 
-      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON FINAL CORRECTED MATCH STATS:', JSON.stringify(matchStats, null, 2));
-      }
-
       const { error: updateError } = await supabase
         .from('players')
         .update({ 
@@ -406,63 +427,6 @@ export const playerStatsRebuilder = {
     } catch (error) {
       console.error(`Error rebuilding stats for ${playerName}:`, error);
       throw error;
-    }
-  },
-
-  /**
-   * Debug a specific player's data transformation
-   */
-  async debugPlayerDataFlow(playerId: string, playerName: string): Promise<void> {
-    console.log(`🔍 DEBUGGING DATA FLOW FOR ${playerName} (${playerId})`);
-    
-    try {
-      // Check event_selections
-      const { data: selections } = await supabase
-        .from('event_selections')
-        .select(`
-          id,
-          player_positions,
-          duration_minutes,
-          events (title, opponent, date)
-        `)
-        .contains('player_positions', [{ playerId }])
-        .order('events(date)', { ascending: false })
-        .limit(5);
-
-      console.log('EVENT SELECTIONS:');
-      selections?.forEach(selection => {
-        const event = selection.events;
-        console.log(`  ${event?.title} vs ${event?.opponent} (${event?.date})`);
-        
-        const playerPositions = selection.player_positions as PlayerPosition[];
-        const playerPos = playerPositions?.find(p => p.playerId === playerId || p.player_id === playerId);
-        if (playerPos) {
-          console.log(`    Selection: ${playerPos.position} for ${playerPos.minutes || selection.duration_minutes || 90} minutes`);
-        }
-      });
-
-      // Check event_player_stats
-      const { data: stats } = await supabase
-        .from('event_player_stats')
-        .select(`
-          position,
-          minutes_played,
-          is_substitute,
-          events (title, opponent, date)
-        `)
-        .eq('player_id', playerId)
-        .order('events(date)', { ascending: false })
-        .limit(5);
-
-      console.log('EVENT PLAYER STATS:');
-      stats?.forEach(stat => {
-        const event = stat.events;
-        console.log(`  ${event?.title} vs ${event?.opponent} (${event?.date})`);
-        console.log(`    Stats: ${stat.position} for ${stat.minutes_played} minutes (substitute: ${stat.is_substitute})`);
-      });
-
-    } catch (error) {
-      console.error('Error in debug:', error);
     }
   }
 };
