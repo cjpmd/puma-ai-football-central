@@ -1,6 +1,16 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
+// Define types for the JSON data structures
+interface PlayerPosition {
+  playerId?: string;
+  player_id?: string;
+  position?: string;
+  minutes?: number;
+  isSubstitute?: boolean;
+  substitution_time?: number;
+}
+
 export const playerStatsRebuilder = {
   /**
    * Complete rebuild of player statistics with detailed logging
@@ -63,7 +73,10 @@ export const playerStatsRebuilder = {
           continue;
         }
 
-        for (const playerPosition of selection.player_positions) {
+        // Cast to proper type
+        const playerPositions = selection.player_positions as PlayerPosition[];
+
+        for (const playerPosition of playerPositions) {
           const playerId = playerPosition.playerId || playerPosition.player_id;
           
           if (!playerId) {
@@ -141,7 +154,7 @@ export const playerStatsRebuilder = {
     console.log(`📊 Rebuilding match stats for ${playerName}...`);
     
     try {
-      // Get all player stats from event_player_stats
+      // Get all player stats from event_player_stats - fix the relation issue
       const { data: playerStats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
@@ -153,9 +166,6 @@ export const playerStatsRebuilder = {
             title,
             start_time,
             player_of_match_id
-          ),
-          performance_categories (
-            name
           )
         `)
         .eq('player_id', playerId)
@@ -170,6 +180,21 @@ export const playerStatsRebuilder = {
         console.log(`No stats found for ${playerName}`);
         return;
       }
+
+      // Get performance categories separately to avoid relation issues
+      const { data: performanceCategories, error: categoriesError } = await supabase
+        .from('performance_categories')
+        .select('id, name');
+
+      if (categoriesError) {
+        console.error('Error fetching performance categories:', categoriesError);
+        throw categoriesError;
+      }
+
+      // Create a map for quick category lookup
+      const categoryMap = new Map(
+        performanceCategories?.map(cat => [cat.id, cat.name]) || []
+      );
 
       // Calculate totals
       const totalGames = new Set(playerStats.map(s => s.event_id)).size;
@@ -188,7 +213,7 @@ export const playerStatsRebuilder = {
       // Calculate performance category stats
       const performanceCategoryStats: Record<string, any> = {};
       const categoryGroups = playerStats.reduce((groups, stat) => {
-        const categoryName = stat.performance_categories?.name;
+        const categoryName = categoryMap.get(stat.performance_category_id || '');
         if (categoryName) {
           if (!groups[categoryName]) {
             groups[categoryName] = [];
@@ -224,12 +249,13 @@ export const playerStatsRebuilder = {
       const gameAggregates = playerStats.reduce((games, stat) => {
         const eventId = stat.event_id;
         if (!games[eventId]) {
+          const categoryName = categoryMap.get(stat.performance_category_id || '');
           games[eventId] = {
             id: eventId,
             date: stat.events?.date,
             opponent: stat.events?.opponent || 'Unknown',
             title: stat.events?.title,
-            performanceCategory: stat.performance_categories?.name,
+            performanceCategory: categoryName,
             minutes: 0,
             minutesByPosition: {} as Record<string, number>,
             captain: false,
@@ -310,7 +336,7 @@ export const playerStatsRebuilder = {
         const event = selection.events;
         console.log(`  ${event?.title} vs ${event?.opponent} (${event?.date})`);
         
-        const playerPositions = selection.player_positions as any[];
+        const playerPositions = selection.player_positions as PlayerPosition[];
         const playerPos = playerPositions?.find(p => p.playerId === playerId || p.player_id === playerId);
         if (playerPos) {
           console.log(`    Selection: ${playerPos.position} for ${playerPos.minutes || selection.duration_minutes || 90} minutes`);
