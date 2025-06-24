@@ -26,6 +26,7 @@ import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performance
 import { DataIntegrityChecker } from '@/components/debug/DataIntegrityChecker';
 import { ComprehensiveDataIntegrityChecker } from '@/components/debug/ComprehensiveDataIntegrityChecker';
 import { SimpleStatsRebuilder } from '@/components/debug/SimpleStatsRebuilder';
+import { DirectCopyRebuilder } from '@/components/debug/DirectCopyRebuilder';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -413,10 +414,11 @@ const PlayerManagementTab = () => {
           </div>
         </div>
 
-        {/* Add the new SimpleStatsRebuilder component */}
-        <SimpleStatsRebuilder />
+        {/* Add the new DirectCopyRebuilder component at the top */}
+        <DirectCopyRebuilder />
 
         {/* Keep existing debug components */}
+        <SimpleStatsRebuilder />
         <ComprehensiveDataIntegrityChecker />
         <DataIntegrityChecker />
 
