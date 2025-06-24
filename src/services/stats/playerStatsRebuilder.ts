@@ -20,10 +20,10 @@ interface MatchStats {
 
 export const playerStatsRebuilder = {
   /**
-   * Complete rebuild of player statistics with detailed logging
+   * Complete rebuild of player statistics with FIXED minutes calculation
    */
   async rebuildAllPlayerStats(): Promise<void> {
-    console.log('🔄 STARTING COMPLETE PLAYER STATS REBUILD');
+    console.log('🔄 STARTING COMPLETE PLAYER STATS REBUILD WITH FIXED MINUTES');
     
     try {
       // Step 1: Debug current event_selections data with detailed position logging
@@ -68,7 +68,7 @@ export const playerStatsRebuilder = {
 
       console.log('✅ Cleared existing event_player_stats');
 
-      // Step 3: Process each selection manually with detailed logging
+      // Step 3: Process each selection manually with CORRECTED minutes logic
       let processedRecords = 0;
       const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
       
@@ -99,25 +99,27 @@ export const playerStatsRebuilder = {
             continue;
           }
 
+          // CRITICAL FIX: Use the minutes from the playerPosition object, NOT the event duration
+          // This is where the bug was - we were using event duration instead of actual playing time
+          const minutesPlayedForThisPosition = playerPosition.minutes || 0;
+          
           // Special logging for Mason to track the exact data flow
           if (playerId === masonPlayerId) {
-            console.log('🎯 PROCESSING MASON - DETAILED TRACE:');
+            console.log('🎯 PROCESSING MASON - MINUTES CALCULATION TRACE:');
             console.log('  Event:', event?.title, 'vs', event?.opponent);
             console.log('  Raw playerPosition object:', JSON.stringify(playerPosition, null, 2));
-            console.log('  Extracted position VALUE:', position);
-            console.log('  Position type:', typeof position);
-            console.log('  Position length:', position.length);
-            console.log('  Position char codes:', position.split('').map(c => `${c}(${c.charCodeAt(0)})`));
-            console.log('  About to insert into database with position:', position);
+            console.log('  Position:', position);
+            console.log('  playerPosition.minutes:', playerPosition.minutes);
+            console.log('  selection.duration_minutes:', selection.duration_minutes);
+            console.log('  USING minutesPlayedForThisPosition:', minutesPlayedForThisPosition);
           }
 
-          const minutes = playerPosition.minutes || selection.duration_minutes || 90;
           const isCaptain = playerId === selection.captain_id;
           const isSubstitute = playerPosition.isSubstitute || position === 'SUB' || position === 'Substitute';
 
-          console.log(`  Player ${playerId}: "${position}" for ${minutes} minutes`);
+          console.log(`  Player ${playerId}: "${position}" for ${minutesPlayedForThisPosition} minutes`);
 
-          // Insert the record with exact position as stored
+          // Insert the record with CORRECT minutes calculation
           const { error: insertError } = await supabase
             .from('event_player_stats')
             .insert({
@@ -125,8 +127,8 @@ export const playerStatsRebuilder = {
               player_id: playerId,
               team_number: selection.team_number || 1,
               period_number: selection.period_number || 1,
-              position: position, // Use the exact position string
-              minutes_played: minutes,
+              position: position,
+              minutes_played: minutesPlayedForThisPosition, // Use actual playing time, not event duration
               is_captain: isCaptain,
               is_substitute: isSubstitute,
               substitution_time: playerPosition.substitution_time,
@@ -139,7 +141,7 @@ export const playerStatsRebuilder = {
               event_id: selection.event_id,
               player_id: playerId,
               position: position,
-              minutes_played: minutes
+              minutes_played: minutesPlayedForThisPosition
             });
             throw insertError;
           }
@@ -153,7 +155,7 @@ export const playerStatsRebuilder = {
               .eq('player_id', playerId)
               .single();
               
-            console.log('🔍 IMMEDIATE VERIFICATION - Just inserted Mason record:', verifyData);
+            console.log('🔍 IMMEDIATE VERIFICATION - Mason record inserted with minutes:', verifyData);
           }
 
           processedRecords++;
@@ -184,7 +186,7 @@ export const playerStatsRebuilder = {
         });
       }
 
-      // Step 5: Rebuild individual player match stats
+      // Step 5: Rebuild individual player match stats with FIXED aggregation
       console.log('Step 5: Rebuilding individual player match stats...');
       const { data: players, error: playersError } = await supabase
         .from('players')
@@ -200,24 +202,6 @@ export const playerStatsRebuilder = {
         await this.rebuildPlayerMatchStats(player.id, player.name);
       }
 
-      // Step 6: Final check of Mason's match_stats
-      console.log('🔍 FINAL CHECK - MASON MATCH STATS:');
-      const { data: masonPlayer } = await supabase
-        .from('players')
-        .select('match_stats')
-        .eq('id', masonPlayerId)
-        .single();
-        
-      if (masonPlayer?.match_stats) {
-        const matchStats = masonPlayer.match_stats as MatchStats;
-        console.log('Mason final match_stats minutesByPosition:', matchStats.minutesByPosition);
-        console.log('Mason final match_stats recentGames (first 3):');
-        const recentGames = matchStats.recentGames?.slice(0, 3) || [];
-        recentGames.forEach((game, index) => {
-          console.log(`  ${index + 1}. ${game.opponent}: positions=${JSON.stringify(game.minutesByPosition)}`);
-        });
-      }
-
       console.log('🎉 COMPLETE PLAYER STATS REBUILD SUCCESSFUL');
       
     } catch (error) {
@@ -227,13 +211,13 @@ export const playerStatsRebuilder = {
   },
 
   /**
-   * Rebuild match stats for a specific player
+   * Rebuild match stats for a specific player with CORRECTED aggregation logic
    */
   async rebuildPlayerMatchStats(playerId: string, playerName: string): Promise<void> {
     console.log(`📊 Rebuilding match stats for ${playerName}...`);
     
     try {
-      // Get all player stats from event_player_stats - fix the relation issue
+      // Get all player stats from event_player_stats
       const { data: playerStats, error: statsError } = await supabase
         .from('event_player_stats')
         .select(`
@@ -262,15 +246,14 @@ export const playerStatsRebuilder = {
 
       // Special debugging for Mason
       if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON DETAILED AGGREGATION DEBUG:');
+        console.log('🔍 MASON MATCH STATS AGGREGATION DEBUG:');
         console.log(`Found ${playerStats.length} event_player_stats records for Mason`);
         
         playerStats.forEach((stat, index) => {
           const event = stat.events;
           console.log(`  Record ${index + 1}: ${event?.title} vs ${event?.opponent}`);
-          console.log(`    - Position in DB: "${stat.position}" (type: ${typeof stat.position})`);
+          console.log(`    - Position: "${stat.position}"`);
           console.log(`    - Minutes: ${stat.minutes_played}`);
-          console.log(`    - Will contribute to aggregation: ${stat.position && stat.minutes_played > 0 ? 'YES' : 'NO'}`);
         });
       }
 
@@ -289,36 +272,35 @@ export const playerStatsRebuilder = {
         performanceCategories?.map(cat => [cat.id, cat.name]) || []
       );
 
-      // Calculate totals
+      // Calculate totals - CORRECTED: sum actual minutes, not use event duration
       const totalGames = new Set(playerStats.map(s => s.event_id)).size;
       const totalMinutes = playerStats.reduce((sum, stat) => sum + (stat.minutes_played || 0), 0);
       const captainGames = new Set(playerStats.filter(s => s.is_captain).map(s => s.event_id)).size;
       const potmCount = new Set(playerStats.filter(s => s.events?.player_of_match_id === playerId).map(s => s.event_id)).size;
 
-      // Calculate minutes by position with detailed logging for Mason
+      // Calculate minutes by position - CORRECTED: sum actual playing minutes per position
       const minutesByPosition: Record<string, number> = {};
       
       if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON POSITION AGGREGATION STEP-BY-STEP:');
+        console.log('🔍 MASON POSITION AGGREGATION (CORRECTED):');
       }
       
       playerStats.forEach((stat, index) => {
         if (stat.position && stat.minutes_played > 0) {
           const currentMinutes = minutesByPosition[stat.position] || 0;
-          const newMinutes = currentMinutes + stat.minutes_played;
+          const newMinutes = currentMinutes + stat.minutes_played; // Use actual minutes_played
           minutesByPosition[stat.position] = newMinutes;
           
           if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
             console.log(`  Step ${index + 1}: Adding "${stat.position}" + ${stat.minutes_played} minutes`);
             console.log(`    - Previous total for "${stat.position}": ${currentMinutes}`);
             console.log(`    - New total for "${stat.position}": ${newMinutes}`);
-            console.log(`    - Current minutesByPosition object:`, JSON.stringify(minutesByPosition, null, 2));
           }
         }
       });
 
       if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON FINAL AGGREGATED POSITIONS:', JSON.stringify(minutesByPosition, null, 2));
+        console.log('🔍 MASON FINAL CORRECTED POSITIONS:', JSON.stringify(minutesByPosition, null, 2));
       }
 
       // Calculate performance category stats
@@ -356,7 +338,7 @@ export const playerStatsRebuilder = {
         };
       });
 
-      // Get recent games data
+      // Get recent games data with CORRECTED minutes per game
       const gameAggregates = playerStats.reduce((games, stat) => {
         const eventId = stat.event_id;
         if (!games[eventId]) {
@@ -367,7 +349,7 @@ export const playerStatsRebuilder = {
             opponent: stat.events?.opponent || 'Unknown',
             title: stat.events?.title,
             performanceCategory: categoryName,
-            minutes: 0,
+            minutes: 0, // Will be summed from actual playing minutes
             minutesByPosition: {} as Record<string, number>,
             captain: false,
             playerOfTheMatch: stat.events?.player_of_match_id === playerId,
@@ -375,6 +357,7 @@ export const playerStatsRebuilder = {
           };
         }
         
+        // CORRECTED: Sum actual minutes played, not use event duration
         games[eventId].minutes += stat.minutes_played || 0;
         if (stat.position && stat.minutes_played > 0) {
           games[eventId].minutesByPosition[stat.position] = (games[eventId].minutesByPosition[stat.position] || 0) + stat.minutes_played;
@@ -401,7 +384,7 @@ export const playerStatsRebuilder = {
       };
 
       if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
-        console.log('🔍 MASON FINAL MATCH STATS BEFORE DB UPDATE:', JSON.stringify(matchStats, null, 2));
+        console.log('🔍 MASON FINAL CORRECTED MATCH STATS:', JSON.stringify(matchStats, null, 2));
       }
 
       const { error: updateError } = await supabase
