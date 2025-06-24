@@ -89,7 +89,7 @@ export const dataRegenerationService = {
           events!inner(title, opponent, date)
         `)
         .contains('player_positions', [{ playerId }])
-        .order('events.date', { ascending: false })
+        .order('events(date)', { ascending: false })
         .limit(3);
 
       if (selectionsError) {
@@ -114,7 +114,7 @@ export const dataRegenerationService = {
           events!inner(title, opponent, date)
         `)
         .eq('player_id', playerId)
-        .order('events.date', { ascending: false })
+        .order('events(date)', { ascending: false })
         .limit(3);
 
       if (statsError) {
