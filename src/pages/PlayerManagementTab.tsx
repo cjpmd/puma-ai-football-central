@@ -25,7 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
 import { DataIntegrityChecker } from '@/components/debug/DataIntegrityChecker';
 import { ComprehensiveDataIntegrityChecker } from '@/components/debug/ComprehensiveDataIntegrityChecker';
-import { PlayerStatsRebuilder } from '@/components/debug/PlayerStatsRebuilder';
+import { SimpleStatsRebuilder } from '@/components/debug/SimpleStatsRebuilder';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -413,8 +413,8 @@ const PlayerManagementTab = () => {
           </div>
         </div>
 
-        {/* Add the new PlayerStatsRebuilder component */}
-        <PlayerStatsRebuilder />
+        {/* Add the new SimpleStatsRebuilder component */}
+        <SimpleStatsRebuilder />
 
         {/* Keep existing debug components */}
         <ComprehensiveDataIntegrityChecker />
