@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -68,6 +67,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const [availablePlayers, setAvailablePlayers] = useState<DatabasePlayer[]>([]);
   const [availableStaff, setAvailableStaff] = useState<DatabaseStaff[]>([]);
   const [performanceCategories, setPerformanceCategories] = useState<{ id: string; name: string; }[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
 
   useEffect(() => {
     loadInitialData();
@@ -92,7 +92,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         setPlayerPositions((existingSelection.player_positions as any[]) || []);
         setSubstitutes(Array.isArray(existingSelection.substitutes) ? existingSelection.substitutes as string[] : []);
         setSubstitutePlayers(Array.isArray(existingSelection.substitute_players) ? existingSelection.substitute_players as string[] : []);
-        setStaffAssignments((existingSelection.staff_assignments as any[]) || []);
+        setStaffAssignments((existingSelection.staff_selection as any[]) || []);
         setCaptainId(existingSelection.captain_id);
         setPlayerOfTheMatchId(event.player_of_match_id || null);
         setNotes('');
@@ -125,7 +125,22 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       if (playersError) {
         console.error('Error fetching available players:', playersError);
       } else {
-        setAvailablePlayers(playersData || []);
+        // Transform the data to match our interface
+        const transformedPlayers: DatabasePlayer[] = (playersData || []).map(player => ({
+          id: player.id,
+          name: player.name,
+          date_of_birth: player.date_of_birth,
+          squad_number: player.squad_number,
+          type: (player.type as 'goalkeeper' | 'outfield') || 'outfield',
+          availability: (player.availability as 'green' | 'amber' | 'red') || 'green',
+          team_id: player.team_id,
+          status: player.status,
+          subscription_status: player.subscription_status,
+          subscription_type: player.subscription_type,
+          created_at: player.created_at,
+          updated_at: player.updated_at,
+        }));
+        setAvailablePlayers(transformedPlayers);
       }
 
       // Load available staff
@@ -138,7 +153,25 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       if (staffError) {
         console.error('Error fetching available staff:', staffError);
       } else {
-        setAvailableStaff(staffData || []);
+        // Transform the data to match our interface
+        const transformedStaff: DatabaseStaff[] = (staffData || []).map(staff => ({
+          id: staff.id,
+          name: staff.name,
+          email: staff.email,
+          phone: staff.phone,
+          role: staff.role,
+          team_id: staff.team_id,
+          user_id: staff.user_id,
+          linking_code: staff.linking_code,
+          coaching_badges: Array.isArray(staff.coaching_badges) ? staff.coaching_badges : [],
+          certificates: Array.isArray(staff.certificates) ? staff.certificates : [],
+          pvg_checked: staff.pvg_checked,
+          pvg_checked_at: staff.pvg_checked_at,
+          pvg_checked_by: staff.pvg_checked_by,
+          created_at: staff.created_at,
+          updated_at: staff.updated_at,
+        }));
+        setAvailableStaff(transformedStaff);
       }
 
       // Load performance categories
@@ -176,7 +209,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         player_positions: playerPositions as any,
         substitutes: substitutes as any,
         substitute_players: substitutePlayers as any,
-        staff_assignments: staffAssignments as any,
+        staff_selection: staffAssignments as any,
         captain_id: captainId,
         duration_minutes: durationMinutes,
         performance_category_id: performanceCategoryId,
@@ -451,9 +484,9 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       </CardHeader>
                       <CardContent>
                         <StaffSelectionSection
-                          availableStaff={availableStaff}
-                          staffAssignments={{}}
-                          setStaffAssignments={(assignments) => console.log('Staff assignments:', assignments)}
+                          teamId={event.team_id}
+                          selectedStaff={selectedStaff}
+                          onStaffChange={setSelectedStaff}
                         />
                       </CardContent>
                     </Card>
