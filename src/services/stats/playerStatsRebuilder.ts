@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Define types for the JSON data structures
@@ -261,6 +260,20 @@ export const playerStatsRebuilder = {
         return;
       }
 
+      // Special debugging for Mason
+      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
+        console.log('🔍 MASON DETAILED AGGREGATION DEBUG:');
+        console.log(`Found ${playerStats.length} event_player_stats records for Mason`);
+        
+        playerStats.forEach((stat, index) => {
+          const event = stat.events;
+          console.log(`  Record ${index + 1}: ${event?.title} vs ${event?.opponent}`);
+          console.log(`    - Position in DB: "${stat.position}" (type: ${typeof stat.position})`);
+          console.log(`    - Minutes: ${stat.minutes_played}`);
+          console.log(`    - Will contribute to aggregation: ${stat.position && stat.minutes_played > 0 ? 'YES' : 'NO'}`);
+        });
+      }
+
       // Get performance categories separately to avoid relation issues
       const { data: performanceCategories, error: categoriesError } = await supabase
         .from('performance_categories')
@@ -282,13 +295,31 @@ export const playerStatsRebuilder = {
       const captainGames = new Set(playerStats.filter(s => s.is_captain).map(s => s.event_id)).size;
       const potmCount = new Set(playerStats.filter(s => s.events?.player_of_match_id === playerId).map(s => s.event_id)).size;
 
-      // Calculate minutes by position
+      // Calculate minutes by position with detailed logging for Mason
       const minutesByPosition: Record<string, number> = {};
-      playerStats.forEach(stat => {
+      
+      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
+        console.log('🔍 MASON POSITION AGGREGATION STEP-BY-STEP:');
+      }
+      
+      playerStats.forEach((stat, index) => {
         if (stat.position && stat.minutes_played > 0) {
-          minutesByPosition[stat.position] = (minutesByPosition[stat.position] || 0) + stat.minutes_played;
+          const currentMinutes = minutesByPosition[stat.position] || 0;
+          const newMinutes = currentMinutes + stat.minutes_played;
+          minutesByPosition[stat.position] = newMinutes;
+          
+          if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
+            console.log(`  Step ${index + 1}: Adding "${stat.position}" + ${stat.minutes_played} minutes`);
+            console.log(`    - Previous total for "${stat.position}": ${currentMinutes}`);
+            console.log(`    - New total for "${stat.position}": ${newMinutes}`);
+            console.log(`    - Current minutesByPosition object:`, JSON.stringify(minutesByPosition, null, 2));
+          }
         }
       });
+
+      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
+        console.log('🔍 MASON FINAL AGGREGATED POSITIONS:', JSON.stringify(minutesByPosition, null, 2));
+      }
 
       // Calculate performance category stats
       const performanceCategoryStats: Record<string, any> = {};
@@ -368,6 +399,10 @@ export const playerStatsRebuilder = {
         performanceCategoryStats,
         recentGames
       };
+
+      if (playerId === 'bb4de0de-c98c-485b-85b6-b70dd67736e4') {
+        console.log('🔍 MASON FINAL MATCH STATS BEFORE DB UPDATE:', JSON.stringify(matchStats, null, 2));
+      }
 
       const { error: updateError } = await supabase
         .from('players')
