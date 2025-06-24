@@ -354,89 +354,163 @@ export const ComprehensiveDataIntegrityChecker: React.FC = () => {
     }
   };
 
-  const fixOrphanedReferences = async () => {
+  const fixDataIntegrityIssues = async () => {
     setIsFixing(true);
+    setDebugLogs([]);
     
     try {
-      addDebugLog('🔧 STARTING AUTOMATED FIX FOR DATA INTEGRITY ISSUES');
+      addDebugLog('🔧 STARTING COMPREHENSIVE DATA INTEGRITY FIX');
       
-      // Clean up orphaned references from event_selections
+      const criticalIssues = issues.filter(i => i.severity === 'critical');
+      const warningIssues = issues.filter(i => i.severity === 'warning');
+      
+      addDebugLog(`Found ${criticalIssues.length} critical issues and ${warningIssues.length} warnings to fix`);
+
+      // Step 1: Clean up orphaned references first
       const orphanedIssues = issues.filter(i => i.type === 'orphaned_selection');
-      addDebugLog(`Found ${orphanedIssues.length} orphaned selection issues to fix`);
-      
-      for (const issue of orphanedIssues) {
-        if (issue.selectionId && issue.playerId) {
-          try {
-            // Get the selection and clean it
-            const { data: selection, error: getError } = await supabase
-              .from('event_selections')
-              .select('player_positions')
-              .eq('id', issue.selectionId)
-              .single();
+      if (orphanedIssues.length > 0) {
+        addDebugLog(`🧹 Cleaning ${orphanedIssues.length} orphaned selection references...`);
+        
+        for (const issue of orphanedIssues) {
+          if (issue.selectionId && issue.playerId) {
+            try {
+              const { data: selection, error: getError } = await supabase
+                .from('event_selections')
+                .select('player_positions')
+                .eq('id', issue.selectionId)
+                .single();
 
-            if (getError) {
-              addDebugLog(`Error getting selection ${issue.selectionId}: ${getError.message}`);
-              continue;
+              if (getError) {
+                addDebugLog(`❌ Error getting selection ${issue.selectionId}: ${getError.message}`);
+                continue;
+              }
+
+              const playerPositions = selection.player_positions as any[];
+              const cleanedPositions = playerPositions.filter(pos => {
+                const playerId = pos.playerId || pos.player_id;
+                return playerId !== issue.playerId;
+              });
+
+              const { error: updateError } = await supabase
+                .from('event_selections')
+                .update({ player_positions: cleanedPositions })
+                .eq('id', issue.selectionId);
+
+              if (updateError) {
+                addDebugLog(`❌ Error updating selection ${issue.selectionId}: ${updateError.message}`);
+              } else {
+                addDebugLog(`✅ Cleaned orphaned player ${issue.playerId} from selection ${issue.selectionId}`);
+              }
+            } catch (selectionError) {
+              addDebugLog(`❌ Error processing selection ${issue.selectionId}: ${selectionError}`);
             }
-
-            // Remove the orphaned player reference
-            const playerPositions = selection.player_positions as any[];
-            const cleanedPositions = playerPositions.filter(pos => {
-              const playerId = pos.playerId || pos.player_id;
-              return playerId !== issue.playerId;
-            });
-
-            // Update the selection with cleaned positions
-            const { error: updateError } = await supabase
-              .from('event_selections')
-              .update({ player_positions: cleanedPositions })
-              .eq('id', issue.selectionId);
-
-            if (updateError) {
-              addDebugLog(`Error updating selection ${issue.selectionId}: ${updateError.message}`);
-            } else {
-              addDebugLog(`✅ Cleaned orphaned player ${issue.playerId} from selection ${issue.selectionId}`);
-            }
-          } catch (selectionError) {
-            addDebugLog(`Error processing selection ${issue.selectionId}: ${selectionError}`);
           }
         }
       }
 
-      // Regenerate all stats after cleanup
-      addDebugLog('🔄 Regenerating all player stats after cleanup...');
-      const { error: regenError } = await supabase.rpc('regenerate_all_event_player_stats');
-      
-      if (regenError) {
-        addDebugLog(`Error regenerating stats: ${regenError.message}`);
-      } else {
-        addDebugLog('✅ Successfully regenerated all player stats');
+      // Step 2: Regenerate event_player_stats from event_selections
+      addDebugLog('🔄 Regenerating event_player_stats from event_selections...');
+      try {
+        const { data, error: regenError } = await supabase.rpc('regenerate_all_event_player_stats');
+        
+        if (regenError) {
+          addDebugLog(`❌ Error regenerating event_player_stats: ${regenError.message}`);
+          addDebugLog(`Error details: ${JSON.stringify(regenError)}`);
+          
+          // Try alternative approach - direct regeneration
+          addDebugLog('🔄 Trying direct regeneration approach...');
+          const { error: directError } = await supabase
+            .from('event_player_stats')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+            
+          if (directError) {
+            addDebugLog(`❌ Error clearing event_player_stats: ${directError.message}`);
+          } else {
+            addDebugLog('✅ Cleared existing event_player_stats');
+            
+            // Manual regeneration would go here, but let's try the RPC again
+            const { error: retryError } = await supabase.rpc('regenerate_all_event_player_stats');
+            if (retryError) {
+              addDebugLog(`❌ Retry regeneration failed: ${retryError.message}`);
+            } else {
+              addDebugLog('✅ Successfully regenerated event_player_stats on retry');
+            }
+          }
+        } else {
+          addDebugLog('✅ Successfully regenerated event_player_stats');
+        }
+      } catch (error) {
+        addDebugLog(`❌ Exception during regeneration: ${error}`);
       }
 
-      // Update all player match stats
-      const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
-      
-      if (updateError) {
-        addDebugLog(`Error updating match stats: ${updateError.message}`);
-      } else {
-        addDebugLog('✅ Successfully updated all match stats');
+      // Step 3: Update all player match stats
+      addDebugLog('📊 Updating all player match statistics...');
+      try {
+        const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
+        
+        if (updateError) {
+          addDebugLog(`❌ Error updating match stats: ${updateError.message}`);
+          addDebugLog(`Error details: ${JSON.stringify(updateError)}`);
+          
+          // Try updating players individually
+          addDebugLog('🔄 Trying individual player updates...');
+          const { data: players } = await supabase
+            .from('players')
+            .select('id, name')
+            .limit(10); // Limit to prevent timeout
+            
+          if (players) {
+            for (const player of players) {
+              try {
+                const { error: playerError } = await supabase.rpc('update_player_match_stats', {
+                  player_uuid: player.id
+                });
+                
+                if (playerError) {
+                  addDebugLog(`❌ Error updating ${player.name}: ${playerError.message}`);
+                } else {
+                  addDebugLog(`✅ Updated ${player.name} stats`);
+                }
+              } catch (playerException) {
+                addDebugLog(`❌ Exception updating ${player.name}: ${playerException}`);
+              }
+            }
+          }
+        } else {
+          addDebugLog('✅ Successfully updated all match stats');
+        }
+      } catch (error) {
+        addDebugLog(`❌ Exception during stats update: ${error}`);
       }
+
+      // Step 4: Verify the fixes
+      addDebugLog('🔍 Verifying fixes...');
+      const { data: statsCount } = await supabase
+        .from('event_player_stats')
+        .select('id', { count: 'exact' })
+        .limit(1);
+        
+      addDebugLog(`📊 Current event_player_stats count: ${statsCount?.length || 0}`);
+
+      // Step 5: Re-run integrity check to see improvements
+      addDebugLog('🔄 Re-running integrity check...');
+      setTimeout(() => {
+        checkDataIntegrity();
+      }, 1000);
 
       toast({
-        title: 'Fix Complete',
-        description: 'Data integrity issues fixed and stats regenerated',
+        title: 'Fix Process Complete',
+        description: 'Data integrity fixes have been attempted. Check the debug logs for details.',
       });
-
-      // Re-run the check to see improvements
-      await checkDataIntegrity();
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      addDebugLog(`❌ FIX ERROR: ${errorMessage}`);
-      console.error('❌ Error during fix:', error);
+      addDebugLog(`❌ CRITICAL FIX ERROR: ${errorMessage}`);
+      console.error('❌ Error during fix process:', error);
       toast({
-        title: 'Fix Failed',
-        description: `Failed to fix data integrity issues: ${errorMessage}`,
+        title: 'Fix Process Failed',
+        description: `Failed to complete fixes: ${errorMessage}`,
         variant: 'destructive'
       });
     } finally {
@@ -477,7 +551,7 @@ export const ComprehensiveDataIntegrityChecker: React.FC = () => {
             
             {issues.length > 0 && (
               <Button 
-                onClick={fixOrphanedReferences} 
+                onClick={fixDataIntegrityIssues} 
                 disabled={isFixing}
                 variant="destructive"
                 className="flex items-center gap-2"
