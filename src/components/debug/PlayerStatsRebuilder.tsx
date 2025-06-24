@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { playerStatsRebuilder } from '@/services/stats/playerStatsRebuilder';
 import { toast } from 'sonner';
 
 export const PlayerStatsRebuilder: React.FC = () => {
@@ -16,18 +17,29 @@ export const PlayerStatsRebuilder: React.FC = () => {
     setRebuildStatus('idle');
     
     try {
-      console.log('🚀 Starting complete player stats rebuild using improved database function...');
+      console.log('🚀 Starting complete player stats rebuild...');
       toast.info('Starting complete rebuild of all player statistics...');
       
-      // Use the improved database function
-      const { error: regenerateError } = await supabase.rpc('regenerate_all_event_player_stats');
-      
-      if (regenerateError) {
-        console.error('Error in regenerate function:', regenerateError);
-        throw regenerateError;
+      // First try the database function approach
+      console.log('Attempting database function regeneration...');
+      try {
+        const { error: regenerateError } = await supabase.rpc('regenerate_all_event_player_stats');
+        
+        if (regenerateError) {
+          console.warn('Database function failed, falling back to TypeScript rebuild:', regenerateError);
+          throw regenerateError;
+        }
+        
+        console.log('✅ Database function regeneration successful');
+        
+      } catch (dbError) {
+        console.warn('Database function approach failed, using TypeScript fallback:', dbError);
+        
+        // Fallback to TypeScript-based rebuild
+        console.log('🔄 Using TypeScript-based rebuild as fallback...');
+        await playerStatsRebuilder.rebuildAllPlayerStats();
+        console.log('✅ TypeScript-based rebuild completed');
       }
-      
-      console.log('✅ Successfully regenerated event_player_stats');
       
       // Update all player match stats
       console.log('📊 Updating all player match statistics...');
@@ -64,7 +76,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
       }
       
       setRebuildStatus('success');
-      toast.success('Successfully rebuilt all player statistics with improved data accuracy!');
+      toast.success('Successfully rebuilt all player statistics!');
       
       // Refresh the page to show updated data
       setTimeout(() => {
@@ -147,18 +159,46 @@ export const PlayerStatsRebuilder: React.FC = () => {
     }
   };
 
+  const handleTypeScriptRebuild = async () => {
+    setIsRebuilding(true);
+    setRebuildStatus('idle');
+    
+    try {
+      console.log('🔄 Starting TypeScript-based rebuild...');
+      toast.info('Starting TypeScript-based player statistics rebuild...');
+      
+      await playerStatsRebuilder.rebuildAllPlayerStats();
+      
+      console.log('✅ TypeScript rebuild completed successfully');
+      setRebuildStatus('success');
+      toast.success('Successfully rebuilt all player statistics using TypeScript method!');
+      
+      // Refresh the page to show updated data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error in TypeScript rebuild:', error);
+      setRebuildStatus('error');
+      toast.error('Failed to rebuild player statistics. Check console for details.');
+    } finally {
+      setIsRebuilding(false);
+    }
+  };
+
   return (
     <Card className="border-orange-200 bg-orange-50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-orange-800">
           <RefreshCw className="h-5 w-5" />
-          Player Statistics Rebuilder (Database Function)
+          Player Statistics Rebuilder
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="text-sm text-orange-700">
-          <p className="font-medium mb-2">Complete Stats Rebuild with Improved Database Function</p>
-          <p>This uses the improved database function to completely rebuild all player statistics with enhanced data accuracy.</p>
+          <p className="font-medium mb-2">Complete Stats Rebuild Options</p>
+          <p>Multiple approaches to rebuild all player statistics with enhanced data accuracy.</p>
           <p className="mt-2 font-medium">Process:</p>
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li>Clear all existing event_player_stats records completely</li>
@@ -177,7 +217,17 @@ export const PlayerStatsRebuilder: React.FC = () => {
             variant="default"
           >
             <RefreshCw className={`h-4 w-4 ${isRebuilding ? 'animate-spin' : ''}`} />
-            {isRebuilding ? 'Rebuilding...' : 'Rebuild All Stats (DB Function)'}
+            {isRebuilding ? 'Rebuilding...' : 'Smart Rebuild (DB + Fallback)'}
+          </Button>
+
+          <Button
+            onClick={handleTypeScriptRebuild}
+            disabled={isRebuilding}
+            className="flex items-center gap-2"
+            variant="outline"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRebuilding ? 'animate-spin' : ''}`} />
+            {isRebuilding ? 'Rebuilding...' : 'TypeScript Rebuild'}
           </Button>
 
           <Button
@@ -193,7 +243,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
         {rebuildStatus === 'success' && (
           <div className="flex items-center gap-2 text-green-700">
             <CheckCircle className="h-4 w-4" />
-            <span className="text-sm">Rebuild completed successfully with improved accuracy! Page will refresh shortly.</span>
+            <span className="text-sm">Rebuild completed successfully! Page will refresh shortly.</span>
           </div>
         )}
 
@@ -205,7 +255,7 @@ export const PlayerStatsRebuilder: React.FC = () => {
         )}
 
         <Badge variant="outline" className="text-xs">
-          Using improved database function with enhanced position validation
+          Improved with database function + TypeScript fallback
         </Badge>
       </CardContent>
     </Card>
