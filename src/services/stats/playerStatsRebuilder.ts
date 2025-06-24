@@ -46,30 +46,6 @@ export const playerStatsRebuilder = {
 
       console.log(`Found ${selections?.length || 0} event selections`);
 
-      // Debug Mason's specific data before processing
-      const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
-      console.log('🔍 DEBUGGING MASON\'S RAW DATA BEFORE PROCESSING:');
-      
-      for (const selection of selections?.slice(0, 3) || []) {
-        const event = selection.events;
-        console.log(`Event: ${event?.title} vs ${event?.opponent} (${event?.date})`);
-        console.log('Raw player_positions:', JSON.stringify(selection.player_positions, null, 2));
-        
-        if (selection.player_positions && Array.isArray(selection.player_positions)) {
-          const playerPositions = selection.player_positions as PlayerPosition[];
-          const masonPosition = playerPositions.find(p => 
-            (p.playerId === masonPlayerId || p.player_id === masonPlayerId)
-          );
-          
-          if (masonPosition) {
-            console.log('🎯 MASON FOUND IN SELECTION:');
-            console.log('  Raw position data:', JSON.stringify(masonPosition, null, 2));
-            console.log('  Position value:', masonPosition.position);
-            console.log('  Position type:', typeof masonPosition.position);
-          }
-        }
-      }
-
       // Step 2: Clear all existing event_player_stats
       console.log('Step 2: Clearing existing event_player_stats...');
       const { error: clearError } = await supabase
@@ -86,6 +62,7 @@ export const playerStatsRebuilder = {
 
       // Step 3: Process each selection manually with detailed logging
       let processedRecords = 0;
+      const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
       
       for (const selection of selections || []) {
         const event = selection.events;
@@ -114,15 +91,16 @@ export const playerStatsRebuilder = {
             continue;
           }
 
-          // Special logging for Mason
+          // Special logging for Mason to track the exact data flow
           if (playerId === masonPlayerId) {
-            console.log('🎯 PROCESSING MASON:');
+            console.log('🎯 PROCESSING MASON - DETAILED TRACE:');
             console.log('  Event:', event?.title, 'vs', event?.opponent);
             console.log('  Raw playerPosition object:', JSON.stringify(playerPosition, null, 2));
-            console.log('  Extracted position:', position);
+            console.log('  Extracted position VALUE:', position);
             console.log('  Position type:', typeof position);
             console.log('  Position length:', position.length);
-            console.log('  Position chars:', position.split('').map(c => c.charCodeAt(0)));
+            console.log('  Position char codes:', position.split('').map(c => `${c}(${c.charCodeAt(0)})`));
+            console.log('  About to insert into database with position:', position);
           }
 
           const minutes = playerPosition.minutes || selection.duration_minutes || 90;
@@ -158,15 +136,27 @@ export const playerStatsRebuilder = {
             throw insertError;
           }
 
+          // Immediately verify Mason's insertion
+          if (playerId === masonPlayerId) {
+            const { data: verifyData } = await supabase
+              .from('event_player_stats')
+              .select('position, minutes_played')
+              .eq('event_id', selection.event_id)
+              .eq('player_id', playerId)
+              .single();
+              
+            console.log('🔍 IMMEDIATE VERIFICATION - Just inserted Mason record:', verifyData);
+          }
+
           processedRecords++;
         }
       }
 
       console.log(`✅ Processed ${processedRecords} player stat records`);
 
-      // Step 4: Verify Mason's data after processing
-      console.log('🔍 VERIFYING MASON\'S DATA AFTER PROCESSING:');
-      const { data: masonStats, error: masonStatsError } = await supabase
+      // Step 4: Verify ALL of Mason's data after processing
+      console.log('🔍 FINAL VERIFICATION - ALL MASON DATA IN DATABASE:');
+      const { data: allMasonStats, error: masonStatsError } = await supabase
         .from('event_player_stats')
         .select(`
           position,
@@ -174,15 +164,15 @@ export const playerStatsRebuilder = {
           events (title, opponent, date)
         `)
         .eq('player_id', masonPlayerId)
-        .order('events(date)', { ascending: false })
-        .limit(3);
+        .order('events(date)', { ascending: false });
 
       if (masonStatsError) {
         console.error('Error fetching Mason stats for verification:', masonStatsError);
       } else {
-        masonStats?.forEach(stat => {
+        console.log(`Found ${allMasonStats?.length || 0} Mason records in database:`);
+        allMasonStats?.forEach((stat, index) => {
           const event = stat.events;
-          console.log(`  ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}`);
+          console.log(`  ${index + 1}. ${event?.title} vs ${event?.opponent} (${event?.date}): Position="${stat.position}", Minutes=${stat.minutes_played}`);
         });
       }
 
@@ -200,6 +190,23 @@ export const playerStatsRebuilder = {
 
       for (const player of players || []) {
         await this.rebuildPlayerMatchStats(player.id, player.name);
+      }
+
+      // Step 6: Final check of Mason's match_stats
+      console.log('🔍 FINAL CHECK - MASON MATCH STATS:');
+      const { data: masonPlayer } = await supabase
+        .from('players')
+        .select('match_stats')
+        .eq('id', masonPlayerId)
+        .single();
+        
+      if (masonPlayer?.match_stats) {
+        console.log('Mason final match_stats minutesByPosition:', masonPlayer.match_stats.minutesByPosition);
+        console.log('Mason final match_stats recentGames (first 3):');
+        const recentGames = masonPlayer.match_stats.recentGames?.slice(0, 3) || [];
+        recentGames.forEach((game: any, index: number) => {
+          console.log(`  ${index + 1}. ${game.opponent}: positions=${JSON.stringify(game.minutesByPosition)}`);
+        });
       }
 
       console.log('🎉 COMPLETE PLAYER STATS REBUILD SUCCESSFUL');
