@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 // Define types for the JSON data structures
@@ -19,7 +18,7 @@ export const playerStatsRebuilder = {
     console.log('🔄 STARTING COMPLETE PLAYER STATS REBUILD');
     
     try {
-      // Step 1: Debug current event_selections data
+      // Step 1: Debug current event_selections data with detailed position logging
       console.log('Step 1: Analyzing event_selections data...');
       const { data: selections, error: selectionsError } = await supabase
         .from('event_selections')
@@ -46,6 +45,30 @@ export const playerStatsRebuilder = {
       }
 
       console.log(`Found ${selections?.length || 0} event selections`);
+
+      // Debug Mason's specific data before processing
+      const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
+      console.log('🔍 DEBUGGING MASON\'S RAW DATA BEFORE PROCESSING:');
+      
+      for (const selection of selections?.slice(0, 3) || []) {
+        const event = selection.events;
+        console.log(`Event: ${event?.title} vs ${event?.opponent} (${event?.date})`);
+        console.log('Raw player_positions:', JSON.stringify(selection.player_positions, null, 2));
+        
+        if (selection.player_positions && Array.isArray(selection.player_positions)) {
+          const playerPositions = selection.player_positions as PlayerPosition[];
+          const masonPosition = playerPositions.find(p => 
+            (p.playerId === masonPlayerId || p.player_id === masonPlayerId)
+          );
+          
+          if (masonPosition) {
+            console.log('🎯 MASON FOUND IN SELECTION:');
+            console.log('  Raw position data:', JSON.stringify(masonPosition, null, 2));
+            console.log('  Position value:', masonPosition.position);
+            console.log('  Position type:', typeof masonPosition.position);
+          }
+        }
+      }
 
       // Step 2: Clear all existing event_player_stats
       console.log('Step 2: Clearing existing event_player_stats...');
@@ -84,19 +107,31 @@ export const playerStatsRebuilder = {
             continue;
           }
 
+          // Extract position with detailed logging for Mason
           const position = playerPosition.position;
           if (!position) {
             console.warn('No position found for player:', playerId);
             continue;
           }
 
+          // Special logging for Mason
+          if (playerId === masonPlayerId) {
+            console.log('🎯 PROCESSING MASON:');
+            console.log('  Event:', event?.title, 'vs', event?.opponent);
+            console.log('  Raw playerPosition object:', JSON.stringify(playerPosition, null, 2));
+            console.log('  Extracted position:', position);
+            console.log('  Position type:', typeof position);
+            console.log('  Position length:', position.length);
+            console.log('  Position chars:', position.split('').map(c => c.charCodeAt(0)));
+          }
+
           const minutes = playerPosition.minutes || selection.duration_minutes || 90;
           const isCaptain = playerId === selection.captain_id;
           const isSubstitute = playerPosition.isSubstitute || position === 'SUB' || position === 'Substitute';
 
-          console.log(`  Player ${playerId}: ${position} for ${minutes} minutes`);
+          console.log(`  Player ${playerId}: "${position}" for ${minutes} minutes`);
 
-          // Insert the record
+          // Insert the record with exact position as stored
           const { error: insertError } = await supabase
             .from('event_player_stats')
             .insert({
@@ -104,7 +139,7 @@ export const playerStatsRebuilder = {
               player_id: playerId,
               team_number: selection.team_number || 1,
               period_number: selection.period_number || 1,
-              position: position,
+              position: position, // Use the exact position string
               minutes_played: minutes,
               is_captain: isCaptain,
               is_substitute: isSubstitute,
@@ -114,6 +149,12 @@ export const playerStatsRebuilder = {
 
           if (insertError) {
             console.error('Error inserting player stat:', insertError);
+            console.error('Failed data:', {
+              event_id: selection.event_id,
+              player_id: playerId,
+              position: position,
+              minutes_played: minutes
+            });
             throw insertError;
           }
 
@@ -123,8 +164,30 @@ export const playerStatsRebuilder = {
 
       console.log(`✅ Processed ${processedRecords} player stat records`);
 
-      // Step 4: Rebuild individual player match stats
-      console.log('Step 4: Rebuilding individual player match stats...');
+      // Step 4: Verify Mason's data after processing
+      console.log('🔍 VERIFYING MASON\'S DATA AFTER PROCESSING:');
+      const { data: masonStats, error: masonStatsError } = await supabase
+        .from('event_player_stats')
+        .select(`
+          position,
+          minutes_played,
+          events (title, opponent, date)
+        `)
+        .eq('player_id', masonPlayerId)
+        .order('events(date)', { ascending: false })
+        .limit(3);
+
+      if (masonStatsError) {
+        console.error('Error fetching Mason stats for verification:', masonStatsError);
+      } else {
+        masonStats?.forEach(stat => {
+          const event = stat.events;
+          console.log(`  ${event?.title} vs ${event?.opponent}: Position="${stat.position}", Minutes=${stat.minutes_played}`);
+        });
+      }
+
+      // Step 5: Rebuild individual player match stats
+      console.log('Step 5: Rebuilding individual player match stats...');
       const { data: players, error: playersError } = await supabase
         .from('players')
         .select('id, name')
