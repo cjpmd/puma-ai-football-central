@@ -31,36 +31,3 @@ export interface DatabaseEvent {
   created_at: string;
   updated_at: string;
 }
-
-export interface DatabasePlayer {
-  id: string;
-  name: string;
-  date_of_birth?: string;
-  squad_number?: number;
-  type?: 'goalkeeper' | 'outfield';
-  availability?: 'green' | 'amber' | 'red';
-  team_id: string;
-  status?: string;
-  subscription_status?: string;
-  subscription_type?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface DatabaseStaff {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role: string;
-  team_id: string;
-  user_id?: string;
-  linking_code?: string;
-  coaching_badges?: any[];
-  certificates?: any[];
-  pvg_checked?: boolean;
-  pvg_checked_at?: string;
-  pvg_checked_by?: string;
-  created_at: string;
-  updated_at: string;
-}

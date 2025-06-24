@@ -21,7 +21,6 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
-import { comprehensiveStatsRebuild } from '@/utils/comprehensiveStatsRebuild';
 
 interface PlayerStatsModalProps {
   player: Player | null;
@@ -158,17 +157,24 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const handleRegenerateStats = async () => {
     setIsRegenerating(true);
     try {
-      console.log('🎯 STARTING COMPREHENSIVE STATS REBUILD FOR ALL PLAYERS');
+      console.log('🎯 STARTING MANUAL DATA REGENERATION');
       
-      // Use the comprehensive rebuild utility
-      await comprehensiveStatsRebuild();
+      // Debug current player positions before regeneration
+      await debugPlayerPositions(player.id, player.name);
+      
+      // Use the service method instead of calling supabase directly
+      await playerStatsService.regenerateAllPlayerStats();
+      
+      // Debug positions after regeneration
+      console.log('🎯 POST-REGENERATION DEBUG:');
+      await debugPlayerPositions(player.id, player.name);
       
       // Invalidate and refetch player data
       queryClient.invalidateQueries({ queryKey: ['players'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
       queryClient.invalidateQueries({ queryKey: ['active-players'] });
       
-      toast.success('All player statistics have been completely rebuilt from team selections!');
+      toast.success('All player statistics regenerated successfully - positions should now be accurate');
     } catch (error) {
       console.error('Error regenerating player stats:', error);
       toast.error('Failed to regenerate statistics');
@@ -205,11 +211,11 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       className="flex items-center gap-2"
                     >
                       <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                      Rebuild All Stats
+                      Fix All Data
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Completely rebuild all statistics from team selection data for all players</p>
+                    <p>This will rebuild all statistics from the correct team selection data</p>
                   </TooltipContent>
                 </Tooltip>
               </div>

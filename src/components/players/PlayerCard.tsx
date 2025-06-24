@@ -5,10 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Player } from '@/types';
-import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Brain, Target, MessageSquare, History, Camera, Upload, RefreshCw } from 'lucide-react';
-import { comprehensiveStatsRebuild } from '@/utils/comprehensiveStatsRebuild';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from 'sonner';
+import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Brain, Target, MessageSquare, History, Camera, Upload } from 'lucide-react';
 
 interface PlayerCardProps {
   player: Player;
@@ -46,7 +43,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   showSubscription = true
 }) => {
   const [showSettings, setShowSettings] = useState(false);
-  const queryClient = useQueryClient();
 
   const getAvailabilityColor = (availability: string) => {
     switch (availability) {
@@ -144,19 +140,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   const displayName = player.kit_sizes?.nameOnShirt || player.name || 'No Name';
 
-  const handleRebuildStats = async () => {
-    try {
-      await comprehensiveStatsRebuild();
-      queryClient.invalidateQueries({ queryKey: ['players'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
-      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-      toast.success('All player statistics rebuilt from team selections!');
-    } catch (error) {
-      console.error('Error rebuilding stats:', error);
-      toast.error('Failed to rebuild statistics');
-    }
-  };
-
   return (
     <Card className={`hover:shadow-lg transition-shadow h-[300px] flex flex-col ${inactive ? 'opacity-75' : ''}`}>
       <CardHeader className="pb-2 flex-shrink-0 p-3">
@@ -244,7 +227,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-6 w-6 p-0 absolute top-3 right-3"
+                    className="h-6 w-6 p-0"
                     title="Settings"
                   >
                     <Settings className="h-3 w-3" />
@@ -306,15 +289,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         Leave Team
                       </Button>
                     )}
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => {handleRebuildStats(); setShowSettings(false);}} 
-                      className="justify-start text-xs h-7 text-orange-600"
-                    >
-                      <RefreshCw className="h-3 w-3 mr-2" />
-                      Rebuild All Stats
-                    </Button>
                   </div>
                 </PopoverContent>
               </Popover>
