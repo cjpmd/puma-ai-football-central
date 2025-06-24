@@ -8,6 +8,7 @@ import { Player } from '@/types';
 import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Brain, Target, MessageSquare, History, Camera, Upload, RefreshCw } from 'lucide-react';
 import { comprehensiveStatsRebuild } from '@/utils/comprehensiveStatsRebuild';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 interface PlayerCardProps {
   player: Player;
