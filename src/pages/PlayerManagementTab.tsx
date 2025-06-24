@@ -24,6 +24,7 @@ import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { calculatePerformanceTrend, PerformanceTrend } from '@/utils/performanceUtils';
 import { DataIntegrityChecker } from '@/components/debug/DataIntegrityChecker';
+import { ComprehensiveDataIntegrityChecker } from '@/components/debug/ComprehensiveDataIntegrityChecker';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -411,7 +412,10 @@ const PlayerManagementTab = () => {
           </div>
         </div>
 
-        {/* Add Data Integrity Checker */}
+        {/* Add Comprehensive Data Integrity Checker */}
+        <ComprehensiveDataIntegrityChecker />
+
+        {/* Keep existing DataIntegrityChecker for compatibility */}
         <DataIntegrityChecker />
 
         <Card>
