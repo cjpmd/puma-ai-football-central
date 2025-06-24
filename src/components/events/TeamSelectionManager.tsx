@@ -434,7 +434,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       </CardHeader>
                       <CardContent>
                         <PlayerSelectionWithAvailability
-                          players={availablePlayers}
+                          availablePlayers={availablePlayers}
                           playerPositions={playerPositions}
                           setPlayerPositions={setPlayerPositions}
                         />
