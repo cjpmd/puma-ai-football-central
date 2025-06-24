@@ -1,5 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
+
+// Define Mason's player ID for debugging
+const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
 
 // Define types for the JSON data structures
 interface PlayerPosition {
@@ -29,7 +31,6 @@ export const playerStatsRebuilder = {
     try {
       // Step 1: Debug Mason's event_selections data specifically
       console.log('Step 1: Debugging Mason\'s event_selections data...');
-      const masonPlayerId = 'bb4de0de-c98c-485b-85b6-b70dd67736e4';
       
       const { data: masonSelections, error: masonSelectionsError } = await supabase
         .from('event_selections')
