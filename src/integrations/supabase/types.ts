@@ -1936,6 +1936,10 @@ export type Database = {
       }
     }
     Functions: {
+      debug_player_positions: {
+        Args: { p_player_id: string; p_player_name?: string }
+        Returns: undefined
+      }
       generate_club_serial: {
         Args: Record<PropertyKey, never>
         Returns: string

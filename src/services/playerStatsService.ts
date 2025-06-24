@@ -16,5 +16,8 @@ export const playerStatsService = {
   debugAndRegenerateForPlayer: dataRegenerationService.debugAndRegenerateForPlayer,
   
   // Event completion check
-  isEventCompleted: eventPlayerStatsService.isEventCompleted
+  isEventCompleted: eventPlayerStatsService.isEventCompleted,
+  
+  // Debug functions
+  debugPlayerPositions: dataRegenerationService.debugPlayerPositions
 };

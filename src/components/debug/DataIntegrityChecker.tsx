@@ -1,189 +1,215 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { AlertTriangle, RefreshCw, Search, Database } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import { playerStatsService } from '@/services/playerStatsService';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
 
-export const DataIntegrityChecker: React.FC = () => {
-  const [isChecking, setIsChecking] = useState(false);
-  const [isFixing, setIsFixing] = useState(false);
-  const [issues, setIssues] = useState<string[]>([]);
+export const DataIntegrityChecker = () => {
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [debugPlayerId, setDebugPlayerId] = useState('bb4de0de-c98c-485b-85b6-b70dd67736e4'); // Mason's ID as default
+  const [debugPlayerName, setDebugPlayerName] = useState('Mason McPherson');
+  const [isDebugging, setIsDebugging] = useState(false);
+  const { toast } = useToast();
 
-  const checkDataIntegrity = async () => {
-    setIsChecking(true);
-    setIssues([]);
-    const foundIssues: string[] = [];
-
+  const handleFullRegeneration = async () => {
+    setIsRegenerating(true);
     try {
-      // Check for duplicate entries by looking for multiple stats for same player/event/period/position
-      const { data: duplicateCheck, error: duplicateError } = await supabase
-        .from('event_player_stats')
-        .select('player_id, event_id, period_number, position, team_number')
-        .not('position', 'is', null);
-
-      if (duplicateError) {
-        console.error('Error checking for duplicates:', duplicateError);
-        foundIssues.push('Failed to check for duplicate entries');
-      } else if (duplicateCheck) {
-        // Group by player_id, event_id, period_number, position, team_number and count
-        const duplicateMap = new Map<string, number>();
-        
-        duplicateCheck.forEach(stat => {
-          const key = `${stat.player_id}-${stat.event_id}-${stat.period_number}-${stat.position}-${stat.team_number}`;
-          duplicateMap.set(key, (duplicateMap.get(key) || 0) + 1);
-        });
-
-        const duplicates = Array.from(duplicateMap.entries()).filter(([, count]) => count > 1);
-        
-        if (duplicates.length > 0) {
-          foundIssues.push(`Found ${duplicates.length} duplicate player-event-position combinations`);
-          console.log('🚨 DUPLICATE ENTRIES FOUND:');
-          duplicates.forEach(([key, count]) => {
-            console.log(`🚨 ${key}: ${count} entries`);
-          });
-        }
-      }
-
-      // Check for position inconsistencies
-      const { data: playerStats, error } = await supabase
-        .from('event_player_stats')
-        .select(`
-          *,
-          events!inner(date, opponent),
-          players!inner(name)
-        `)
-        .not('position', 'is', null);
-
-      if (error) {
-        console.error('Error fetching player stats:', error);
-        foundIssues.push('Failed to fetch player stats for analysis');
-      } else if (playerStats) {
-        // Check for substitutes with playing positions
-        const subsWithPositions = playerStats.filter(stat => 
-          stat.is_substitute && stat.position && stat.position !== 'SUB'
-        );
-        
-        if (subsWithPositions.length > 0) {
-          foundIssues.push(`Found ${subsWithPositions.length} substitute entries with playing positions`);
-        }
-
-        // Check for players with 0 minutes but playing positions
-        const zeroMinutesWithPositions = playerStats.filter(stat =>
-          stat.minutes_played === 0 && stat.position && !stat.is_substitute
-        );
-
-        if (zeroMinutesWithPositions.length > 0) {
-          foundIssues.push(`Found ${zeroMinutesWithPositions.length} players with 0 minutes but playing positions`);
-        }
-
-        console.log('Data integrity check results:', {
-          totalStats: playerStats.length,
-          subsWithPositions: subsWithPositions.length,
-          zeroMinutesWithPositions: zeroMinutesWithPositions.length
-        });
-      }
-
-      setIssues(foundIssues);
-      
-      if (foundIssues.length === 0) {
-        toast.success('No data integrity issues found');
-      } else {
-        toast.warning(`Found ${foundIssues.length} data integrity issues`);
-      }
-
+      console.log('🔄 Starting full data regeneration...');
+      await playerStatsService.regenerateAllPlayerStats();
+      toast({
+        title: 'Success',
+        description: 'All player statistics have been regenerated successfully.',
+      });
     } catch (error) {
-      console.error('Error during data integrity check:', error);
-      toast.error('Failed to complete data integrity check');
+      console.error('Error during regeneration:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to regenerate player statistics. Check console for details.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsChecking(false);
+      setIsRegenerating(false);
     }
   };
 
-  const fixDataIntegrity = async () => {
-    setIsFixing(true);
-    
+  const handleDebugPlayer = async () => {
+    if (!debugPlayerId.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a player ID.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsDebugging(true);
     try {
-      // Regenerate all player stats from scratch
-      await playerStatsService.regenerateAllPlayerStats();
-      
-      toast.success('Data integrity fixed - all player stats regenerated');
-      
-      // Recheck after fixing
-      await checkDataIntegrity();
-      
+      console.log(`🔍 Debugging player: ${debugPlayerName} (${debugPlayerId})`);
+      await playerStatsService.debugPlayerPositions(debugPlayerId, debugPlayerName);
+      toast({
+        title: 'Debug Complete',
+        description: `Position debugging complete for ${debugPlayerName}. Check console for details.`,
+      });
     } catch (error) {
-      console.error('Error fixing data integrity:', error);
-      toast.error('Failed to fix data integrity issues');
+      console.error('Error during debug:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to debug player positions. Check console for details.',
+        variant: 'destructive',
+      });
     } finally {
-      setIsFixing(false);
+      setIsDebugging(false);
+    }
+  };
+
+  const handleDebugAndRegenerate = async () => {
+    if (!debugPlayerId.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a player ID.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsDebugging(true);
+    try {
+      console.log(`🎯 Starting comprehensive debug and regeneration for: ${debugPlayerName}`);
+      await playerStatsService.debugAndRegenerateForPlayer(debugPlayerId, debugPlayerName);
+      toast({
+        title: 'Debug & Regeneration Complete',
+        description: `Complete analysis and regeneration finished for ${debugPlayerName}. Check console for detailed logs.`,
+      });
+    } catch (error) {
+      console.error('Error during debug and regeneration:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to complete debug and regeneration. Check console for details.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDebugging(false);
     }
   };
 
   return (
-    <Card className="w-full max-w-2xl">
+    <Card className="border-orange-200 bg-orange-50">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-orange-800">
           <AlertTriangle className="h-5 w-5" />
-          Data Integrity Checker
+          Data Integrity & Debug Tools
         </CardTitle>
-        <CardDescription>
-          Check and fix player statistics data integrity issues
-        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex gap-2">
+      <CardContent className="space-y-6">
+        {/* Full Regeneration Section */}
+        <div>
+          <h3 className="font-semibold mb-2 flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            Full Data Regeneration
+          </h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Completely regenerate all player statistics from event selections. This will fix any position mapping issues.
+          </p>
           <Button 
-            onClick={checkDataIntegrity} 
-            disabled={isChecking || isFixing}
-            variant="outline"
+            onClick={handleFullRegeneration}
+            disabled={isRegenerating}
+            className="bg-orange-600 hover:bg-orange-700"
           >
-            {isChecking ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+            {isRegenerating ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Regenerating...
+              </>
             ) : (
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Regenerate All Player Stats
+              </>
             )}
-            Check Data Integrity
-          </Button>
-          
-          <Button 
-            onClick={fixDataIntegrity} 
-            disabled={isFixing || isChecking || issues.length === 0}
-            variant="default"
-          >
-            {isFixing ? (
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <AlertTriangle className="h-4 w-4 mr-2" />
-            )}
-            Fix Issues
           </Button>
         </div>
 
-        {issues.length > 0 && (
-          <div className="space-y-2">
-            <h4 className="font-medium text-destructive">Issues Found:</h4>
-            <ul className="space-y-1">
-              {issues.map((issue, index) => (
-                <li key={index} className="text-sm flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-destructive" />
-                  {issue}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+        <Separator />
 
-        <div className="text-sm text-muted-foreground">
-          <p><strong>What this checks:</strong></p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Duplicate entries for same player/event/position combinations</li>
-            <li>Substitutes incorrectly recorded with playing positions</li>
-            <li>Players with 0 minutes but assigned positions</li>
-            <li>Position recording accuracy vs team selections</li>
-          </ul>
+        {/* Player Debug Section */}
+        <div>
+          <h3 className="font-semibold mb-2 flex items-center gap-2">
+            <Search className="h-4 w-4" />
+            Player Position Debug
+          </h3>
+          <p className="text-sm text-muted-foreground mb-3">
+            Debug a specific player's position data to identify issues.
+          </p>
+          
+          <div className="grid grid-cols-2 gap-4 mb-3">
+            <div>
+              <Label htmlFor="playerName">Player Name</Label>
+              <Input
+                id="playerName"
+                value={debugPlayerName}
+                onChange={(e) => setDebugPlayerName(e.target.value)}
+                placeholder="Enter player name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="playerId">Player ID</Label>
+              <Input
+                id="playerId"
+                value={debugPlayerId}
+                onChange={(e) => setDebugPlayerId(e.target.value)}
+                placeholder="Enter player UUID"
+              />
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button 
+              onClick={handleDebugPlayer}
+              disabled={isDebugging}
+              variant="outline"
+              size="sm"
+            >
+              {isDebugging ? (
+                <>
+                  <Search className="mr-2 h-4 w-4 animate-spin" />
+                  Debugging...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Debug Positions Only
+                </>
+              )}
+            </Button>
+            
+            <Button 
+              onClick={handleDebugAndRegenerate}
+              disabled={isDebugging}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isDebugging ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Debug & Regenerate
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+
+        <div className="text-xs text-muted-foreground">
+          💡 Tip: Open browser console (F12) to see detailed debug information
         </div>
       </CardContent>
     </Card>
