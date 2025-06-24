@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 // Define types for the JSON data structures
@@ -8,6 +9,14 @@ interface PlayerPosition {
   minutes?: number;
   isSubstitute?: boolean;
   substitution_time?: number;
+}
+
+interface MatchStats {
+  minutesByPosition?: Record<string, number>;
+  recentGames?: Array<{
+    opponent: string;
+    minutesByPosition: Record<string, number>;
+  }>;
 }
 
 export const playerStatsRebuilder = {
@@ -201,10 +210,11 @@ export const playerStatsRebuilder = {
         .single();
         
       if (masonPlayer?.match_stats) {
-        console.log('Mason final match_stats minutesByPosition:', masonPlayer.match_stats.minutesByPosition);
+        const matchStats = masonPlayer.match_stats as MatchStats;
+        console.log('Mason final match_stats minutesByPosition:', matchStats.minutesByPosition);
         console.log('Mason final match_stats recentGames (first 3):');
-        const recentGames = masonPlayer.match_stats.recentGames?.slice(0, 3) || [];
-        recentGames.forEach((game: any, index: number) => {
+        const recentGames = matchStats.recentGames?.slice(0, 3) || [];
+        recentGames.forEach((game, index) => {
           console.log(`  ${index + 1}. ${game.opponent}: positions=${JSON.stringify(game.minutesByPosition)}`);
         });
       }
