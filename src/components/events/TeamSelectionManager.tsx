@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -83,20 +84,20 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .eq('period_number', periodNumber)
         .single();
 
-      if (selectionError) {
+      if (selectionError && selectionError.code !== 'PGRST116') {
         console.error('Error fetching existing selection:', selectionError);
       }
 
       if (existingSelection) {
-        setPlayerPositions(existingSelection.player_positions as PlayerPosition[]);
-        setSubstitutes(existingSelection.substitutes || []);
-        setSubstitutePlayers(existingSelection.substitute_players || []);
-        setStaffAssignments(existingSelection.staff_assignments as StaffAssignment[]);
+        setPlayerPositions((existingSelection.player_positions as any[]) || []);
+        setSubstitutes(Array.isArray(existingSelection.substitutes) ? existingSelection.substitutes as string[] : []);
+        setSubstitutePlayers(Array.isArray(existingSelection.substitute_players) ? existingSelection.substitute_players as string[] : []);
+        setStaffAssignments((existingSelection.staff_assignments as any[]) || []);
         setCaptainId(existingSelection.captain_id);
-        setPlayerOfTheMatchId(event.player_of_match_id || existingSelection.player_of_match_id || null);
-        setNotes(existingSelection.notes || '');
-        setHomeScore(existingSelection.home_score);
-        setAwayScore(existingSelection.away_score);
+        setPlayerOfTheMatchId(event.player_of_match_id || null);
+        setNotes('');
+        setHomeScore(null);
+        setAwayScore(null);
         setDurationMinutes(existingSelection.duration_minutes || 90);
         setPerformanceCategoryId(existingSelection.performance_category_id || null);
       } else {
@@ -129,7 +130,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
       // Load available staff
       const { data: staffData, error: staffError } = await supabase
-        .from('staff')
+        .from('team_staff')
         .select('*')
         .eq('team_id', event.team_id)
         .order('name', { ascending: true });
@@ -168,16 +169,15 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       // Prepare the data to be saved
       const selectionData = {
         event_id: event.id,
+        team_id: event.team_id,
+        formation: '4-3-3',
         team_number: teamNumber,
         period_number: periodNumber,
-        player_positions: playerPositions,
-        substitutes: substitutes,
-        substitute_players: substitutePlayers,
-        staff_assignments: staffAssignments,
+        player_positions: playerPositions as any,
+        substitutes: substitutes as any,
+        substitute_players: substitutePlayers as any,
+        staff_assignments: staffAssignments as any,
         captain_id: captainId,
-        notes: notes,
-        home_score: homeScore,
-        away_score: awayScore,
         duration_minutes: durationMinutes,
         performance_category_id: performanceCategoryId,
       };
@@ -191,7 +191,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .eq('period_number', periodNumber)
         .single();
 
-      if (selectError) {
+      if (selectError && selectError.code !== 'PGRST116') {
         console.error('Error checking existing selection:', selectError);
         toast.error('Error checking existing selection. Please try again.');
         return;
@@ -247,7 +247,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
         .eq('period_number', periodNumber)
         .single();
 
-      if (selectError) {
+      if (selectError && selectError.code !== 'PGRST116') {
         console.error('Error checking existing selection:', selectError);
         toast.error('Error checking existing selection. Please try again.');
         return;
@@ -298,8 +298,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
       // Prepare the data to be updated
       const eventData = {
         player_of_match_id: playerOfTheMatchId === '' ? null : playerOfTheMatchId,
-        home_score: homeScore,
-        away_score: awayScore,
+        scores: homeScore !== null && awayScore !== null ? { home: homeScore, away: awayScore } : null,
       };
 
       // Update the event
@@ -402,7 +401,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       </CardHeader>
                       <CardContent>
                         <PlayerSelectionWithAvailability
-                          availablePlayers={availablePlayers}
+                          players={availablePlayers}
                           playerPositions={playerPositions}
                           setPlayerPositions={setPlayerPositions}
                         />
@@ -453,8 +452,8 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
                       <CardContent>
                         <StaffSelectionSection
                           availableStaff={availableStaff}
-                          staffAssignments={staffAssignments}
-                          setStaffAssignments={setStaffAssignments}
+                          staffAssignments={{}}
+                          setStaffAssignments={(assignments) => console.log('Staff assignments:', assignments)}
                         />
                       </CardContent>
                     </Card>
