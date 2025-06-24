@@ -22,6 +22,7 @@ import { debugMasonCMIssue } from '@/utils/debugMasonCMIssue';
 import { fixMasonIssue } from '@/utils/fixMasonIssue';
 import { DataRepairPanel } from './DataRepairPanel';
 import { StatsRebuildPanel } from './StatsRebuildPanel';
+import { FerryDiagnosticPanel } from './FerryDiagnosticPanel';
 import { Trash2, Users, FileText, Trophy, Clock, Settings, Bug, Wrench, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
@@ -602,6 +603,7 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
 
                 <TabsContent value="debug" className="h-full mt-0 p-4 overflow-auto">
                   <div className="space-y-4">
+                    <FerryDiagnosticPanel />
                     <StatsRebuildPanel />
                     <DataRepairPanel />
                     
