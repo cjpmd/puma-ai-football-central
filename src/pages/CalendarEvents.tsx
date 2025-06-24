@@ -48,7 +48,6 @@ const CalendarEventsPage = () => {
   const [eventOpponent, setEventOpponent] = useState('');
   const [eventGameFormat, setEventGameFormat] = useState<GameFormat>('7-a-side');
   const [eventGameDuration, setEventGameDuration] = useState<number>(90);
-  const [eventKitSelection, setEventKitSelection] = useState('home');
   const queryClient = useQueryClient();
   const [postGameEventId, setPostGameEventId] = useState<string | null>(null);
   
@@ -397,6 +396,9 @@ const CalendarEventsPage = () => {
   const gameFormats: GameFormat[] = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
   const kitOptions = ['home', 'away', 'training'];
 
+  // Filter teams to ensure we have valid values
+  const validTeams = teams.filter(team => team && team.id && team.name);
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -409,16 +411,16 @@ const CalendarEventsPage = () => {
           </div>
 
           <div className="flex items-center space-x-4">
-            {teams.length > 1 && (
+            {validTeams.length > 1 && (
               <div className="min-w-[250px]">
                 <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select team" />
                   </SelectTrigger>
                   <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name}
+                    {validTeams.map((team) => (
+                      <SelectItem key={team.id} value={team.id || 'unknown'}>
+                        {team.name || 'Unknown Team'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -682,7 +684,7 @@ const CalendarEventsPage = () => {
                     <SelectValue placeholder="Select event type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {eventTypes.map((type) => (
+                    {eventTypes.filter(type => type.value && type.value.trim() !== '').map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}
                       </SelectItem>
@@ -714,7 +716,7 @@ const CalendarEventsPage = () => {
                     <SelectValue placeholder="Select kit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {kitOptions.map((kit) => (
+                    {kitOptions.filter(kit => kit && kit.trim() !== '').map((kit) => (
                       <SelectItem key={kit} value={kit}>
                         {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
                       </SelectItem>
@@ -732,7 +734,7 @@ const CalendarEventsPage = () => {
                     <SelectValue placeholder="Select game format" />
                   </SelectTrigger>
                   <SelectContent>
-                    {gameFormats.map((format) => (
+                    {gameFormats.filter(format => format && format.trim() !== '').map((format) => (
                       <SelectItem key={format} value={format}>
                         {format} {format === freshTeamDefaults.gameFormat ? '(Team Default)' : ''}
                       </SelectItem>
@@ -863,7 +865,7 @@ const CalendarEventsPage = () => {
                     <SelectValue placeholder="Select event type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {eventTypes.map((type) => (
+                    {eventTypes.filter(type => type.value && type.value.trim() !== '').map((type) => (
                       <SelectItem key={type.value} value={type.value}>
                         {type.label}
                       </SelectItem>
@@ -895,7 +897,7 @@ const CalendarEventsPage = () => {
                     <SelectValue placeholder="Select kit" />
                   </SelectTrigger>
                   <SelectContent>
-                    {kitOptions.map((kit) => (
+                    {kitOptions.filter(kit => kit && kit.trim() !== '').map((kit) => (
                       <SelectItem key={kit} value={kit}>
                         {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
                       </SelectItem>
@@ -913,7 +915,7 @@ const CalendarEventsPage = () => {
                     <SelectValue placeholder="Select game format" />
                   </SelectTrigger>
                   <SelectContent>
-                    {gameFormats.map((format) => (
+                    {gameFormats.filter(format => format && format.trim() !== '').map((format) => (
                       <SelectItem key={format} value={format}>
                         {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
                       </SelectItem>
