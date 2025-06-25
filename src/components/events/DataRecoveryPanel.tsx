@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,17 +6,18 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, RefreshCw, CheckCircle, AlertTriangle, Copy, Calendar, Users } from 'lucide-react';
+import { Search, RefreshCw, CheckCircle, AlertTriangle, Copy, Calendar, Users, Database } from 'lucide-react';
 import { 
   comprehensiveDataCheck, 
   restoreEventSelections, 
   createSelectionsFromTemplate,
   type DataRecoveryResults 
 } from '@/utils/dataRecovery';
+import { recoverTeamSelectionFromStats } from '@/utils/teamSelectionRecovery';
 import { toast } from 'sonner';
 
 export const DataRecoveryPanel: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('Messi Training . Ronaldo Game');
+  const [searchTerm, setSearchTerm] = useState('3 tiers Dundee West Royals');
   const [loading, setLoading] = useState(false);
   const [searchResults, setSearchResults] = useState<DataRecoveryResults | null>(null);
 
@@ -78,6 +78,30 @@ export const DataRecoveryPanel: React.FC = () => {
     } catch (error) {
       console.error('Template restore error:', error);
       toast.error('Error creating selection from template');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecoverFromStats = async () => {
+    if (!searchResults?.event) {
+      toast.error('No target event selected');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await recoverTeamSelectionFromStats(searchResults.event.id);
+      toast.success(`${result.message} - ${result.playersRecovered} players recovered`);
+      
+      // Refresh the search to show updated data
+      setTimeout(() => {
+        handleComprehensiveSearch();
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Recovery from stats error:', error);
+      toast.error(`Failed to recover from stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -170,9 +194,10 @@ export const DataRecoveryPanel: React.FC = () => {
 
         {searchResults && (
           <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="selections">Current Selections</TabsTrigger>
+              <TabsTrigger value="recovery">Stats Recovery</TabsTrigger>
               <TabsTrigger value="recent">Recent Activity</TabsTrigger>
               <TabsTrigger value="templates">Recovery Templates</TabsTrigger>
             </TabsList>
@@ -271,6 +296,57 @@ export const DataRecoveryPanel: React.FC = () => {
                   <CardContent className="flex items-center gap-2 text-muted-foreground p-4">
                     <AlertTriangle className="h-5 w-5" />
                     No player selections found for this event
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
+            <TabsContent value="recovery" className="space-y-4">
+              {searchResults.playerStats.length > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Database className="h-5 w-5 text-blue-500" />
+                        Recover from Player Stats ({searchResults.playerStats.length} records)
+                      </span>
+                      <Button 
+                        onClick={handleRecoverFromStats}
+                        disabled={loading}
+                        className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                      >
+                        {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Database className="h-4 w-4" />}
+                        Recover from Stats
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground space-y-2">
+                      <p>
+                        Found {searchResults.playerStats.length} player statistics records for this event.
+                        This recovery method will reconstruct team selections from the existing player stats data.
+                      </p>
+                      <p className="font-medium">Recovery process:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs ml-4">
+                        <li>Extract player positions from event_player_stats table</li>
+                        <li>Group players by team and period</li>
+                        <li>Identify captain and substitute players</li>
+                        <li>Determine formation based on positions</li>
+                        <li>Create new event_selections records</li>
+                      </ul>
+                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                        <p className="text-xs text-yellow-800">
+                          <strong>Note:</strong> This will overwrite any existing team selections for this event.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="flex items-center gap-2 text-muted-foreground p-4">
+                    <AlertTriangle className="h-5 w-5" />
+                    No player stats found for recovery
                   </CardContent>
                 </Card>
               )}
