@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PlayerStatsData {
@@ -13,7 +14,7 @@ export interface PlayerStatsData {
 
 export const recoverTeamSelectionFromStats = async (eventId: string) => {
   try {
-    console.log('Starting optimized team selection recovery for event:', eventId);
+    console.log('Starting team selection recovery for event:', eventId);
     
     // Get event details first
     const { data: event, error: eventError } = await supabase
@@ -26,7 +27,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       throw new Error(`Event not found: ${eventError?.message}`);
     }
 
-    // Get all player stats for this event in a more efficient way
+    // Get all player stats for this event with detailed logging
     const { data: playerStats, error: statsError } = await supabase
       .from('event_player_stats')
       .select(`
@@ -50,7 +51,10 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       throw new Error('No player stats found for this event');
     }
 
-    console.log(`Found ${playerStats.length} player stats records to recover from`);
+    console.log(`Found ${playerStats.length} player stats records`);
+    
+    // Debug: Log first few records to see actual data structure
+    console.log('Sample player stats data:', playerStats.slice(0, 3));
 
     // Delete existing selections for this event first to avoid conflicts
     console.log('Clearing existing selections...');
@@ -63,7 +67,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       console.warn('Warning deleting existing selections:', deleteError);
     }
 
-    // Group by team_number and period_number more efficiently
+    // Group by team_number and period_number
     const groupedStats = playerStats.reduce((acc, stat) => {
       const key = `${stat.team_number}-${stat.period_number}`;
       if (!acc[key]) {
@@ -75,7 +79,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
 
     console.log(`Processing ${Object.keys(groupedStats).length} team/period combinations`);
 
-    // Process each group and create selections in smaller batches
+    // Process each group and create selections
     const selectionsToCreate = [];
     
     for (const [key, stats] of Object.entries(groupedStats)) {
@@ -83,31 +87,42 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       
       console.log(`Processing team ${teamNumber}, period ${periodNumber} with ${stats.length} players`);
       
+      // Debug: Log positions for this group
+      console.log('Positions in this group:', stats.map(s => ({ 
+        player_id: s.player_id, 
+        position: s.position, 
+        is_substitute: s.is_substitute 
+      })));
+      
       // Find captain
       const captainStat = stats.find(s => s.is_captain);
       
-      // Separate starting players and substitutes
-      const startingPlayers = stats.filter(s => !s.is_substitute && s.position && s.position.trim() !== '');
-      const substitutePlayers = stats.filter(s => s.is_substitute || s.position === 'SUB');
+      // Separate starting players and substitutes based on the is_substitute flag from database
+      const startingPlayers = stats.filter(s => !s.is_substitute);
+      const substitutePlayers = stats.filter(s => s.is_substitute);
       
-      // Create player positions array for starting players
+      console.log(`Starting players: ${startingPlayers.length}, Substitutes: ${substitutePlayers.length}`);
+      
+      // Create player positions array for starting players - use exact position from database
       const playerPositions = startingPlayers.map(stat => ({
         playerId: stat.player_id,
-        position: stat.position.trim(),
+        position: stat.position || 'Unknown', // Use exact position from database
         minutes: stat.minutes_played,
         isSubstitute: false
       }));
 
-      // Create substitute players array
+      // Create substitute players array - use exact position from database
       const substitutePositions = substitutePlayers.map(stat => ({
         playerId: stat.player_id,
-        position: stat.position?.trim() || 'SUB',
+        position: stat.position || 'SUB', // Use exact position from database
         minutes: stat.minutes_played,
         isSubstitute: true
       }));
 
       // Determine formation based on starting positions only
       const formation = determineFormation(startingPlayers);
+
+      console.log(`Team ${teamNumber}: Formation ${formation}, Starting: ${playerPositions.length}, Subs: ${substitutePositions.length}`);
 
       const selectionData = {
         event_id: eventId,
@@ -127,9 +142,9 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       selectionsToCreate.push(selectionData);
     }
 
-    console.log(`Creating ${selectionsToCreate.length} team selections in optimized batch...`);
+    console.log(`Creating ${selectionsToCreate.length} team selections...`);
 
-    // Insert all selections in a single transaction
+    // Insert all selections
     const { data: createdSelections, error: insertError } = await supabase
       .from('event_selections')
       .insert(selectionsToCreate)
@@ -163,39 +178,47 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
 };
 
 const determineFormation = (startingPlayers: PlayerStatsData[]): string => {
-  // Simple formation detection based on positions
-  const positions = startingPlayers.map(p => p.position?.toLowerCase() || '');
+  // Use actual positions from database to determine formation
+  const positions = startingPlayers
+    .map(p => p.position?.toLowerCase() || '')
+    .filter(p => p && p !== 'unknown');
   
   console.log('Determining formation from positions:', positions);
   
-  // Count position types more accurately
+  // Count position types based on actual position data
   const defenders = positions.filter(p => 
     p.includes('cb') || p.includes('lb') || p.includes('rb') || 
     p.includes('def') || p.includes('back') || p.includes('centre back') ||
-    p.includes('left back') || p.includes('right back')
+    p.includes('left back') || p.includes('right back') || p.includes('dl') || p.includes('dr') || p.includes('dc')
   ).length;
   
   const midfielders = positions.filter(p => 
     p.includes('cm') || p.includes('cdm') || p.includes('cam') || 
     p.includes('lm') || p.includes('rm') || p.includes('mid') ||
-    p.includes('centre mid') || p.includes('left mid') || p.includes('right mid')
+    p.includes('centre mid') || p.includes('left mid') || p.includes('right mid') ||
+    p.includes('ml') || p.includes('mr') || p.includes('mc') || p.includes('aml') || p.includes('amr') || p.includes('amc')
   ).length;
   
   const forwards = positions.filter(p => 
     p.includes('cf') || p.includes('lw') || p.includes('rw') || 
     p.includes('st') || p.includes('forward') || p.includes('striker') ||
-    p.includes('centre forward') || p.includes('left wing') || p.includes('right wing')
+    p.includes('centre forward') || p.includes('left wing') || p.includes('right wing') ||
+    p.includes('stc') || p.includes('stl') || p.includes('str')
   ).length;
 
-  console.log(`Formation analysis: ${defenders} defenders, ${midfielders} midfielders, ${forwards} forwards`);
-
-  // Determine formation based on outfield players (excluding goalkeeper)
-  const outfieldPlayers = startingPlayers.filter(p => 
-    !p.position?.toLowerCase().includes('gk') && 
-    !p.position?.toLowerCase().includes('goalkeeper')
+  const goalkeepers = positions.filter(p => 
+    p.includes('gk') || p.includes('goalkeeper')
   ).length;
 
-  // Basic formation patterns based on typical team structures
+  console.log(`Formation analysis: ${goalkeepers} GK, ${defenders} defenders, ${midfielders} midfielders, ${forwards} forwards`);
+
+  // Determine formation based on outfield players
+  const outfieldPlayers = startingPlayers.filter(p => {
+    const pos = p.position?.toLowerCase() || '';
+    return !pos.includes('gk') && !pos.includes('goalkeeper');
+  }).length;
+
+  // Formation patterns based on typical team structures
   if (outfieldPlayers >= 10) {
     if (defenders >= 4 && midfielders >= 4 && forwards >= 2) {
       return '4-4-2';
@@ -208,7 +231,7 @@ const determineFormation = (startingPlayers: PlayerStatsData[]): string => {
     }
   }
   
-  // For smaller sided games, use simpler formations
+  // For smaller sided games
   if (outfieldPlayers <= 6) {
     return '2-2-2';
   } else if (outfieldPlayers <= 8) {
