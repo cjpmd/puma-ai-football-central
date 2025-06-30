@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,7 +19,7 @@ interface DragDropFormationEditorProps {
   periods: FormationPeriod[];
   gameFormat: string;
   globalCaptainId?: string;
-  nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
+  nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
   onPeriodsChange: (periods: FormationPeriod[]) => void;
   onCaptainChange: (captainId: string) => void;
 }
@@ -45,6 +44,16 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     gameFormat,
     formations: gameFormatFormations.length
   });
+
+  // Calculate game time for a period based on previous periods
+  const calculateGameTime = (periodIndex: number) => {
+    let startTime = 0;
+    for (let i = 0; i < periodIndex; i++) {
+      startTime += periods[i]?.duration || 0;
+    }
+    const endTime = startTime + (periods[periodIndex]?.duration || 0);
+    return `${startTime}-${endTime}m`;
+  };
 
   const addPeriod = () => {
     const newPeriodNumber = periods.length + 1;
@@ -124,7 +133,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const getDefaultAbbreviation = (positionName: string): string => {
-    // Map common position names to correct abbreviations
     const positionMap: Record<string, string> = {
       'Goalkeeper': 'GK',
       'Defender Left': 'DL',
@@ -358,23 +366,33 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
         {/* Available Players Pool */}
         <div className="space-y-2">
-          <h4 className="text-sm font-medium">Available Players</h4>
+          <h4 className="text-sm font-medium">Available Players ({squadPlayers.filter(p => p.availabilityStatus === 'available').length})</h4>
           <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[100px]">
-            {getUnusedPlayers().map((player) => (
-              <div 
-                key={player.id} 
-                id={player.id}
-                className="cursor-grab"
-                draggable
-              >
-                <PlayerIcon 
-                  player={player} 
-                  isCaptain={player.id === globalCaptainId}
-                  nameDisplayOption={nameDisplayOption}
-                  isCircular={true}
-                />
-              </div>
-            ))}
+            {squadPlayers.filter(p => p.availabilityStatus === 'available').map((player) => {
+              // Check if player is used in any period
+              const isUsed = periods.some(period => 
+                period.positions.some(pos => pos.playerId === player.id) ||
+                period.substitutes.includes(player.id)
+              );
+              
+              if (isUsed) return null;
+              
+              return (
+                <div 
+                  key={player.id} 
+                  id={player.id}
+                  className="cursor-grab"
+                  draggable
+                >
+                  <PlayerIcon 
+                    player={player} 
+                    isCaptain={player.id === globalCaptainId}
+                    nameDisplayOption={nameDisplayOption}
+                    isCircular={true}
+                  />
+                </div>
+              );
+            })}
             {getUnusedPlayers().length === 0 && (
               <div className="text-sm text-muted-foreground">All available players are assigned</div>
             )}
@@ -383,14 +401,19 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
         {/* Formation Periods - Side by Side Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-          {periods.map((period) => (
+          {periods.map((period, index) => (
             <Card key={period.id} className="min-h-[600px]">
               <CardHeader className="pb-4">
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg">
-                      {period.formation} ({period.duration} min)
-                    </CardTitle>
+                    <div>
+                      <CardTitle className="text-lg">
+                        Period {period.periodNumber}
+                      </CardTitle>
+                      <div className="text-sm text-muted-foreground">
+                        Game Time: {calculateGameTime(index)}
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
@@ -407,11 +430,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     </div>
                   </div>
                   
-                  {/* Formation Selector */}
+                  {/* Formation Selector - Smaller size */}
                   <div>
                     <Label className="text-sm">Formation</Label>
                     <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-                      <SelectTrigger className="mt-1">
+                      <SelectTrigger className="mt-1 h-8">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
