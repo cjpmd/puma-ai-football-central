@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -133,44 +134,23 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               periodNumber: selection.period_number,
               formation: selection.formation,
               duration: selection.duration_minutes,
-              positions: [],
+              positions: (selection.player_positions || []).map((pos: any, index: number) => ({
+                id: `position-${index}`,
+                positionName: pos.position,
+                abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
+                positionGroup: pos.positionGroup || 'midfielder',
+                x: pos.x || 50,
+                y: pos.y || 50,
+                playerId: pos.playerId || pos.player_id
+              })),
               substitutes: selection.substitute_players || [],
               captainId: selection.captain_id || undefined
             }));
 
-            // Load squad for this team
-            const teamEventId = parseInt(teamNum) === 1 ? event.id : `${event.id}-team-${teamNum}`;
-            console.log('Loading squad for team', teamNum, 'with eventId:', teamEventId);
-            
+            // For team 1, use main squad. For additional teams, start with empty squad
             let squadForTeam: SquadPlayer[] = [];
             if (parseInt(teamNum) === 1) {
               squadForTeam = mainSquadPlayers;
-            } else {
-              // Load squad for additional teams
-              const { data: teamSquadData } = await supabase
-                .from('team_squads')
-                .select(`
-                  id,
-                  squad_role,
-                  availability_status,
-                  players!inner(
-                    id,
-                    name,
-                    squad_number,
-                    type
-                  )
-                `)
-                .eq('team_id', teamId)
-                .eq('event_id', teamEventId);
-
-              squadForTeam = teamSquadData?.map(squad => ({
-                id: squad.players.id,
-                name: squad.players.name,
-                squadNumber: squad.players.squad_number,
-                type: squad.players.type as 'goalkeeper' | 'outfield',
-                availabilityStatus: squad.availability_status as 'available' | 'unavailable' | 'pending' | 'maybe',
-                squadRole: squad.squad_role as 'player' | 'captain' | 'vice_captain'
-              })) || [];
             }
 
             loadedTeamSelections.push({
@@ -201,7 +181,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     const newTeamNumber = teamSelections.length + 1;
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
-      squadPlayers: [],
+      squadPlayers: [], // Start with empty squad for additional teams
       periods: [],
       globalCaptainId: undefined,
       performanceCategory: 'none'
@@ -246,10 +226,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     updateCurrentTeam({ performanceCategory: categoryId });
   };
 
-  const getTeamEventId = (teamNumber: number) => {
-    return teamNumber === 1 ? event.id : `${event.id}-team-${teamNumber}`;
-  };
-
   const saveSelections = async () => {
     if (teamSelections.length === 0) {
       toast.error('Please create at least one team before saving');
@@ -288,7 +264,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             .filter(pos => pos.playerId) // Only include positions with players
             .map(pos => ({
               playerId: pos.playerId,
-              position: pos.positionName, // Use full position name
+              player_id: pos.playerId, // Include both formats for compatibility
+              position: pos.positionName,
+              abbreviation: pos.abbreviation,
+              positionGroup: pos.positionGroup,
+              x: pos.x,
+              y: pos.y,
               isSubstitute: false,
               minutes: period.duration
             }));
@@ -431,7 +412,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               <TabsContent value="squad" className="h-full mt-0">
                 <SquadManagement
                   teamId={teamId}
-                  eventId={getTeamEventId(currentTeam?.teamNumber || 1)}
+                  eventId={currentTeam?.teamNumber === 1 ? event.id : null}
                   onSquadChange={handleSquadChange}
                 />
               </TabsContent>

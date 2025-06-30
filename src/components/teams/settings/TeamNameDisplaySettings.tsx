@@ -33,13 +33,19 @@ export const TeamNameDisplaySettings: React.FC<TeamNameDisplaySettingsProps> = (
   const handleSave = async () => {
     setSaving(true);
     try {
+      console.log('Saving name display option:', nameDisplayOption, 'for team:', team.id);
+      
       const { error } = await supabase
         .from('teams')
         .update({ name_display_option: nameDisplayOption })
         .eq('id', team.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating name display setting:', error);
+        throw error;
+      }
 
+      console.log('Name display option saved successfully');
       onUpdate({ nameDisplayOption });
       toast.success('Name display setting updated successfully');
     } catch (error) {

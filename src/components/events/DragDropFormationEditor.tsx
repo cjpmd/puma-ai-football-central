@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -194,19 +195,20 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       if (period.id === periodId) {
         const newPositions = [...period.positions];
         
-        // Clear the player from any existing position
+        // Clear the player from any existing position in this period
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
           }
         });
         
-        // Remove from substitutes
+        // Remove from substitutes in this period
         const newSubstitutes = period.substitutes.filter(id => id !== playerId);
         
         // Assign to new position
         if (newPositions[positionIndex]) {
           newPositions[positionIndex].playerId = playerId;
+          console.log('Assigned player to position:', newPositions[positionIndex]);
         }
         
         return {
@@ -218,6 +220,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       return period;
     });
     
+    console.log('Updated periods after position change:', updatedPeriods);
     onPeriodsChange(updatedPeriods);
   };
 
@@ -275,9 +278,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           playerTimes[pos.playerId] = (playerTimes[pos.playerId] || 0) + period.duration;
         }
       });
-      
-      // Substitutes get 0 minutes unless they're actually in a position
-      // This is handled above - substitutes only get time when they're moved to positions
     });
     
     return playerTimes;
