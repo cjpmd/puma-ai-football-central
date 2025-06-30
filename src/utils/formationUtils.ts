@@ -1,5 +1,4 @@
-
-import { GameFormat, Formation, Position } from '@/types';
+import { GameFormat } from '@/types';
 
 export interface FormationConfig {
   id: string;
@@ -144,10 +143,10 @@ export const formations: Record<string, FormationConfig[]> = {
 };
 
 export const getFormationsByFormat = (gameFormat: GameFormat): FormationConfig[] => {
-  return formations[gameFormat] || formations11ASide;
+  return formations[gameFormat] || formations['11-a-side'];
 };
 
-export const getPositionsForFormation = (formationId: string, gameFormat: GameFormat): Position[] => {
+export const getPositionsForFormation = (formationId: string, gameFormat: GameFormat): Array<{position: string; x: number; y: number}> => {
   const gameFormatFormations = getFormationsByFormat(gameFormat);
   const formation = gameFormatFormations.find(f => f.id === formationId);
   return formation?.positions || [];
