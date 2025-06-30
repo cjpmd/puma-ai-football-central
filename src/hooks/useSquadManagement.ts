@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -96,7 +95,7 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
       const userRole = userTeams[0].role;
       console.log('User role:', userRole);
 
-      if (!['manager', 'coach', 'admin'].includes(userRole)) {
+      if (!['manager', 'coach', 'admin', 'team_manager'].includes(userRole)) {
         console.error('User does not have permission to manage squad');
         throw new Error('You do not have permission to manage the squad');
       }
