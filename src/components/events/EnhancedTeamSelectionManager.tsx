@@ -61,7 +61,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Load main squad for initial team
+  // Load main squad for initial team - use base eventId without team suffix
   const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
 
   // Initialize first team with main squad
@@ -276,6 +276,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   const currentTeam = getCurrentTeam();
 
+  // Create unique event ID for each team's squad management
+  const getTeamEventId = (teamNumber: number) => {
+    return `${event.id}-team-${teamNumber}`;
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-7xl h-[90vh] flex flex-col">
@@ -368,7 +373,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               <TabsContent value="squad" className="h-full mt-0">
                 <SquadManagement
                   teamId={teamId}
-                  eventId={`${event.id}-team-${currentTeam?.teamNumber || 1}`}
+                  eventId={getTeamEventId(currentTeam?.teamNumber || 1)}
                   onSquadChange={handleSquadChange}
                 />
               </TabsContent>

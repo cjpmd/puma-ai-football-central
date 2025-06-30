@@ -11,6 +11,7 @@ interface PlayerIconProps {
   nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
   isCircular?: boolean;
   positionAbbreviation?: string;
+  showPositionLabel?: boolean;
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
@@ -19,7 +20,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   isCaptain = false,
   nameDisplayOption = 'surname',
   isCircular = false,
-  positionAbbreviation
+  positionAbbreviation,
+  showPositionLabel = false
 }) => {
   const {
     attributes,
@@ -89,17 +91,17 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
           <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />
         )}
         
+        {/* Position abbreviation at top if provided and showPositionLabel is true */}
+        {showPositionLabel && positionAbbreviation && (
+          <div className="text-xs font-bold text-center text-blue-600 mb-1">
+            {positionAbbreviation}
+          </div>
+        )}
+        
         {/* Squad number */}
         <div className="text-xs font-bold text-center">
           #{player.squadNumber}
         </div>
-        
-        {/* Position abbreviation if provided */}
-        {positionAbbreviation && (
-          <div className="text-xs font-medium text-center text-blue-600">
-            {positionAbbreviation}
-          </div>
-        )}
         
         {/* Player name */}
         <div className="text-xs text-center leading-tight mt-1">

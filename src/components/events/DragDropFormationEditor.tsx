@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -446,21 +445,26 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               <CardTitle>Playing Time Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Object.entries(playingTimeSummary).map(([playerId, minutes]) => {
-                  const player = squadPlayers.find(p => p.id === playerId);
-                  if (!player) return null;
-                  
-                  return (
-                    <div key={playerId} className="flex items-center justify-between p-2 border rounded">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">#{player.squadNumber}</Badge>
-                        <span className="text-sm font-medium">{player.name}</span>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+                {Object.entries(playingTimeSummary)
+                  .sort(([, a], [, b]) => b - a) // Sort by minutes descending
+                  .map(([playerId, minutes]) => {
+                    const player = squadPlayers.find(p => p.id === playerId);
+                    if (!player) return null;
+                    
+                    return (
+                      <div key={playerId} className="flex flex-col items-center gap-2 p-3 border rounded-lg bg-gray-50">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-xs">#{player.squadNumber}</Badge>
+                          {player.id === globalCaptainId && (
+                            <Crown className="h-3 w-3 text-yellow-500" />
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-center">{player.name}</span>
+                        <Badge variant="secondary" className="text-xs">{minutes} min</Badge>
                       </div>
-                      <Badge variant="secondary">{minutes}min</Badge>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             </CardContent>
           </Card>

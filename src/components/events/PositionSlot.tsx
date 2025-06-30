@@ -80,6 +80,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
               nameDisplayOption={nameDisplayOption}
               isCircular={true}
               positionAbbreviation={position.abbreviation}
+              showPositionLabel={true}
             />
           </div>
         ) : (
