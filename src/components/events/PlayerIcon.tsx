@@ -1,4 +1,5 @@
 
+import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
 import { SquadPlayer } from '@/types/teamSelection';
@@ -16,6 +17,21 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   isCaptain = false,
   nameDisplayOption = 'surname'
 }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging: dndIsDragging,
+  } = useDraggable({
+    id: player.id,
+    disabled: player.availabilityStatus !== 'available',
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+  } : undefined;
+
   const getDisplayName = () => {
     const nameParts = player.name.split(' ');
     
@@ -45,12 +61,18 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     }
   };
 
+  const actualIsDragging = isDragging || dndIsDragging;
+
   return (
     <div 
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
       className={`
         relative flex flex-col items-center p-2 rounded-lg border-2 min-w-[80px] max-w-[100px]
         ${getAvailabilityStyle()}
-        ${isDragging ? 'shadow-lg transform rotate-2' : 'shadow-sm'}
+        ${actualIsDragging ? 'shadow-lg transform rotate-2' : 'shadow-sm'}
         ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab'}
         transition-all duration-200
       `}

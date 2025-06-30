@@ -131,7 +131,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const handleDragStart = (event: DragStartEvent) => {
     const playerId = event.active.id as string;
     const player = squadPlayers.find(p => p.id === playerId);
-    console.log('Drag started for player:', player?.name);
+    console.log('Drag started for player:', player?.name, 'ID:', playerId);
     setDraggedPlayer(player || null);
   };
 
@@ -165,14 +165,17 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       if (period.id === periodId) {
         const newPositions = [...period.positions];
         
+        // Clear the player from any existing position
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
           }
         });
         
+        // Remove from substitutes
         const newSubstitutes = period.substitutes.filter(id => id !== playerId);
         
+        // Assign to new position
         if (newPositions[positionIndex]) {
           newPositions[positionIndex].playerId = playerId;
         }
@@ -194,11 +197,13 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     
     const updatedPeriods = periods.map(period => {
       if (period.id === periodId) {
+        // Clear player from positions
         const newPositions = period.positions.map(pos => ({
           ...pos,
           playerId: pos.playerId === playerId ? undefined : pos.playerId
         }));
         
+        // Add to substitutes if not already there
         const newSubstitutes = period.substitutes.includes(playerId) 
           ? period.substitutes 
           : [...period.substitutes, playerId];
@@ -318,20 +323,20 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Available Players</h4>
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[100px]">
-                  <SortableContext 
-                    items={getUnusedPlayers(period.id).map(p => p.id)} 
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {getUnusedPlayers(period.id).map((player) => (
-                      <div key={player.id} id={player.id}>
-                        <PlayerIcon 
-                          player={player} 
-                          isCaptain={player.id === globalCaptainId}
-                          nameDisplayOption={nameDisplayOption}
-                        />
-                      </div>
-                    ))}
-                  </SortableContext>
+                  {getUnusedPlayers(period.id).map((player) => (
+                    <div 
+                      key={player.id} 
+                      id={player.id}
+                      className="cursor-grab"
+                      draggable
+                    >
+                      <PlayerIcon 
+                        player={player} 
+                        isCaptain={player.id === globalCaptainId}
+                        nameDisplayOption={nameDisplayOption}
+                      />
+                    </div>
+                  ))}
                   {getUnusedPlayers(period.id).length === 0 && (
                     <div className="text-sm text-muted-foreground">All available players are assigned</div>
                   )}

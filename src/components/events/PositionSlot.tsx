@@ -72,7 +72,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
             style={style}
             {...listeners}
             {...attributes}
-            className={isDragging ? 'opacity-50' : ''}
+            className={`cursor-grab ${isDragging ? 'opacity-50' : ''}`}
           >
             <PlayerIcon 
               player={player} 
