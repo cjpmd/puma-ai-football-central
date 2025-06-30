@@ -93,19 +93,19 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         
         {/* Position abbreviation at top if provided and showPositionLabel is true */}
         {showPositionLabel && positionAbbreviation && (
-          <div className="text-xs font-bold text-center text-blue-600 mb-1">
+          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-600 bg-white px-1 rounded border">
             {positionAbbreviation}
           </div>
         )}
         
-        {/* Squad number */}
-        <div className="text-xs font-bold text-center">
-          #{player.squadNumber}
+        {/* Player name centered */}
+        <div className="text-xs text-center leading-tight font-medium">
+          {getDisplayName()}
         </div>
         
-        {/* Player name */}
-        <div className="text-xs text-center leading-tight mt-1">
-          {getDisplayName()}
+        {/* Squad number below name */}
+        <div className="text-xs font-bold text-center text-gray-600">
+          #{player.squadNumber}
         </div>
       </div>
     );

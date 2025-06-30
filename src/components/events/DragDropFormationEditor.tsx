@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -113,13 +114,40 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       return {
         id: `position-${index}`,
         positionName: pos.position,
-        abbreviation: positionData?.abbreviation || pos.position.slice(0, 2).toUpperCase(),
+        abbreviation: positionData?.abbreviation || getDefaultAbbreviation(pos.position),
         positionGroup: positionData?.positionGroup || getPositionGroup(pos.position),
         x: pos.x,
         y: pos.y,
         playerId: undefined
       };
     });
+  };
+
+  const getDefaultAbbreviation = (positionName: string): string => {
+    // Map common position names to correct abbreviations
+    const positionMap: Record<string, string> = {
+      'Goalkeeper': 'GK',
+      'Defender Left': 'DL',
+      'Defender Right': 'DR', 
+      'Defender Centre': 'DC',
+      'Defender Centre Left': 'DCL',
+      'Defender Centre Right': 'DCR',
+      'Midfielder Left': 'ML',
+      'Midfielder Right': 'MR',
+      'Midfielder Centre': 'MC',
+      'Midfielder Centre Left': 'MCL',
+      'Midfielder Centre Right': 'MCR',
+      'Attacking Midfielder Centre': 'AMC',
+      'Attacking Midfielder Left': 'AML',
+      'Attacking Midfielder Right': 'AMR',
+      'Striker Centre': 'STC',
+      'Striker Left': 'STL',
+      'Striker Right': 'STR',
+      'Striker Centre Left': 'SCL',
+      'Striker Centre Right': 'SCR'
+    };
+    
+    return positionMap[positionName] || positionName.slice(0, 2).toUpperCase();
   };
 
   const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
@@ -249,10 +277,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         }
       });
       
-      // Substitutes get partial time (assuming they play half the period)
-      period.substitutes.forEach(playerId => {
-        playerTimes[playerId] = (playerTimes[playerId] || 0) + Math.floor(period.duration / 2);
-      });
+      // Substitutes DO NOT get any time automatically - they only get time when they actually play
+      // This should be managed separately when subs come on
     });
     
     return playerTimes;

@@ -61,7 +61,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Load main squad for initial team - use base eventId without team suffix
+  // Load main squad for initial team
   const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
 
   // Initialize first team with main squad
@@ -110,29 +110,65 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             return acc;
           }, {} as Record<number, any[]>);
 
-          const loadedTeamSelections: TeamSelection[] = Object.entries(groupedSelections).map(([teamNum, selections]) => {
+          const loadedTeamSelections: TeamSelection[] = [];
+
+          for (const [teamNum, selections] of Object.entries(groupedSelections)) {
             const periods: FormationPeriod[] = selections.map(selection => ({
               id: `period-${selection.period_number}`,
               periodNumber: selection.period_number,
               formation: selection.formation,
               duration: selection.duration_minutes,
               positions: [],
-              substitutes: [],
+              substitutes: selection.substitute_players || [],
               captainId: selection.captain_id || undefined
             }));
 
-            // For team 1, use main squad. For others, use empty squad (will be managed independently)
-            const squadForTeam = parseInt(teamNum) === 1 ? mainSquadPlayers : [];
+            // Load squad for this team
+            const teamEventId = parseInt(teamNum) === 1 ? event.id : `${event.id}-team-${teamNum}`;
+            console.log('Loading squad for team', teamNum, 'with eventId:', teamEventId);
+            
+            let squadForTeam: SquadPlayer[] = [];
+            if (parseInt(teamNum) === 1) {
+              squadForTeam = mainSquadPlayers;
+            } else {
+              // Load squad for additional teams
+              const { data: teamSquadData } = await supabase
+                .from('team_squads')
+                .select(`
+                  id,
+                  squad_role,
+                  availability_status,
+                  players!inner(
+                    id,
+                    name,
+                    squad_number,
+                    type
+                  )
+                `)
+                .eq('team_id', teamId)
+                .eq('event_id', teamEventId);
 
-            return {
+              squadForTeam = teamSquadData?.map(squad => ({
+                id: squad.players.id,
+                name: squad.players.name,
+                squadNumber: squad.players.squad_number,
+                type: squad.players.type as 'goalkeeper' | 'outfield',
+                availabilityStatus: squad.availability_status as 'available' | 'unavailable' | 'pending' | 'maybe',
+                squadRole: squad.squad_role as 'player' | 'captain' | 'vice_captain'
+              })) || [];
+            }
+
+            loadedTeamSelections.push({
               teamNumber: parseInt(teamNum),
               squadPlayers: squadForTeam,
               periods,
               globalCaptainId: periods[0]?.captainId,
               performanceCategory: selections[0]?.performance_category_id || 'none'
-            };
-          });
+            });
+          }
 
+          // Sort by team number
+          loadedTeamSelections.sort((a, b) => a.teamNumber - b.teamNumber);
           setTeamSelections(loadedTeamSelections);
         }
       } catch (error) {
@@ -150,14 +186,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     const newTeamNumber = teamSelections.length + 1;
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
-      squadPlayers: [], // Start with empty squad for independent management
+      squadPlayers: [],
       periods: [],
       globalCaptainId: undefined,
       performanceCategory: 'none'
     };
     setTeamSelections([...teamSelections, newTeam]);
     setCurrentTeamIndex(teamSelections.length);
-    setActiveTab('squad'); // Switch to squad tab for new team
+    setActiveTab('squad');
   };
 
   const getCurrentTeam = (): TeamSelection | null => {
@@ -195,13 +231,16 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     updateCurrentTeam({ performanceCategory: categoryId });
   };
 
+  const getTeamEventId = (teamNumber: number) => {
+    return teamNumber === 1 ? event.id : `${event.id}-team-${teamNumber}`;
+  };
+
   const saveSelections = async () => {
     if (teamSelections.length === 0) {
       toast.error('Please create at least one team before saving');
       return;
     }
 
-    // Check if any team has periods
     const hasAnyPeriods = teamSelections.some(team => team.periods.length > 0);
     if (!hasAnyPeriods) {
       toast.error('Please create at least one period for any team before saving');
@@ -275,11 +314,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   if (!isOpen) return null;
 
   const currentTeam = getCurrentTeam();
-
-  // Create unique event ID for each team's squad management
-  const getTeamEventId = (teamNumber: number) => {
-    return `${event.id}-team-${teamNumber}`;
-  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
