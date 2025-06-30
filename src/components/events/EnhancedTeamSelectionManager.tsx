@@ -41,7 +41,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   });
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
-  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<string>('');
+  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<string>('none');
 
   const { squadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
 
@@ -215,7 +215,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         formation: period.formation,
         duration_minutes: period.duration,
         captain_id: selectionState.globalCaptainId || null,
-        performance_category_id: selectedPerformanceCategory || null,
+        performance_category_id: selectedPerformanceCategory === 'none' ? null : selectedPerformanceCategory,
         player_positions: period.positions.map(pos => ({
           playerId: pos.playerId,
           position: pos.positionName,
@@ -302,7 +302,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <SelectValue placeholder="Select performance category (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific category</SelectItem>
+                  <SelectItem value="none">No specific category</SelectItem>
                   {performanceCategories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
