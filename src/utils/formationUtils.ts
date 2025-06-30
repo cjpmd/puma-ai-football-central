@@ -1,3 +1,4 @@
+
 import { GameFormat } from '@/types';
 
 export interface FormationConfig {
@@ -74,6 +75,19 @@ const formations7ASide: FormationConfig[] = [
       { position: "Midfielder Left", x: 30, y: 45 },
       { position: "Midfielder Right", x: 70, y: 45 },
       { position: "Striker Centre", x: 50, y: 15 }
+    ]
+  },
+  {
+    id: "1-1-3-2",
+    name: "1-1-3-2",
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Centre", x: 50, y: 75 },
+      { position: "Midfielder Left", x: 20, y: 50 },
+      { position: "Midfielder Centre", x: 50, y: 50 },
+      { position: "Midfielder Right", x: 80, y: 50 },
+      { position: "Striker Left", x: 35, y: 20 },
+      { position: "Striker Right", x: 65, y: 20 }
     ]
   }
 ];

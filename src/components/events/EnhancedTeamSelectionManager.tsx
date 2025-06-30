@@ -4,7 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, Users, Gamepad2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Save, Users, Gamepad2, Target } from 'lucide-react';
 import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
@@ -13,6 +15,7 @@ import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 
 interface EnhancedTeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -38,8 +41,25 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   });
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
+  const [selectedPerformanceCategory, setSelectedPerformanceCategory] = useState<string>('');
 
   const { squadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
+
+  // Load performance categories for the team
+  const { data: performanceCategories = [] } = useQuery({
+    queryKey: ['performance-categories', teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .eq('team_id', teamId)
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!teamId,
+  });
 
   // Debug current user and team relationship
   useEffect(() => {
@@ -95,14 +115,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         console.log('Existing selections loaded:', existingSelections);
 
         if (existingSelections && existingSelections.length > 0) {
-          // Convert existing selections to FormationPeriod format
           const periods: FormationPeriod[] = existingSelections.map(selection => ({
             id: `period-${selection.period_number}`,
             periodNumber: selection.period_number,
             formation: selection.formation,
             duration: selection.duration_minutes,
-            positions: [], // Will be populated from player_positions
-            substitutes: [], // Will be populated from substitute_players
+            positions: [],
+            substitutes: [],
             captainId: selection.captain_id || undefined
           }));
 
@@ -113,6 +132,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             periods,
             globalCaptainId: periods[0]?.captainId
           }));
+
+          // Set performance category if available
+          if (existingSelections[0]?.performance_category_id) {
+            setSelectedPerformanceCategory(existingSelections[0].performance_category_id);
+          }
         }
       } catch (error) {
         console.error('Error loading existing selections:', error);
@@ -186,25 +210,20 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       const selectionsToInsert = selectionState.periods.map(period => ({
         event_id: event.id,
         team_id: teamId,
-        team_number: 1, // Default team number
+        team_number: 1,
         period_number: period.periodNumber,
         formation: period.formation,
         duration_minutes: period.duration,
-        captain_id: selectionState.globalCaptainId,
+        captain_id: selectionState.globalCaptainId || null,
+        performance_category_id: selectedPerformanceCategory || null,
         player_positions: period.positions.map(pos => ({
           playerId: pos.playerId,
           position: pos.positionName,
           isSubstitute: false,
           minutes: period.duration
         })).filter(p => p.playerId),
-        substitute_players: period.substitutes.map(playerId => ({
-          playerId,
-          position: 'SUB',
-          isSubstitute: true,
-          minutes: 0
-        })),
-        staff_selection: [],
-        performance_category_id: null
+        substitute_players: period.substitutes,
+        staff_selection: []
       }));
 
       console.log('Inserting selections:', selectionsToInsert);
@@ -234,7 +253,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     eventId: event.id,
     squadPlayersCount: selectionState.squadPlayers.length,
     periodsCount: selectionState.periods.length,
-    user: user?.id
+    user: user?.id,
+    performanceCategories: performanceCategories.length
   });
 
   return (
@@ -269,6 +289,29 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               </Button>
             </div>
           </div>
+
+          {/* Performance Category Selection */}
+          {performanceCategories.length > 0 && (
+            <div className="mt-4">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Performance Category
+              </Label>
+              <Select value={selectedPerformanceCategory} onValueChange={setSelectedPerformanceCategory}>
+                <SelectTrigger className="w-64 mt-1">
+                  <SelectValue placeholder="Select performance category (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No specific category</SelectItem>
+                  {performanceCategories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-hidden">
