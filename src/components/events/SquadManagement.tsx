@@ -9,6 +9,7 @@ import { useSquadManagement } from '@/hooks/useSquadManagement';
 import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { SquadPlayer } from '@/types/teamSelection';
+import { toast } from 'sonner';
 
 interface SquadManagementProps {
   teamId: string;
@@ -32,10 +33,19 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
   // Get all team players for adding to squad
-  const { data: allPlayers = [] } = useQuery({
+  const { data: allPlayers = [], isLoading: playersLoading, error: playersError } = useQuery({
     queryKey: ['team-players', teamId],
     queryFn: () => playersService.getActivePlayersByTeamId(teamId),
     enabled: !!teamId,
+  });
+
+  console.log('SquadManagement render:', {
+    teamId,
+    eventId,
+    squadPlayers: squadPlayers.length,
+    allPlayers: allPlayers.length,
+    playersLoading,
+    playersError
   });
 
   // Filter out players already in squad
@@ -43,33 +53,47 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
     player => !squadPlayers.some(squadPlayer => squadPlayer.id === player.id)
   );
 
+  console.log('Available players to add:', availableToAdd.length);
+
   const handleAddPlayer = async () => {
-    if (!selectedPlayerId) return;
+    if (!selectedPlayerId) {
+      toast.error('Please select a player to add');
+      return;
+    }
     
     try {
+      console.log('Adding player to squad:', selectedPlayerId);
       await addPlayerToSquad(selectedPlayerId);
       setSelectedPlayerId('');
       onSquadChange?.(squadPlayers);
-    } catch (error) {
+      toast.success('Player added to squad successfully');
+    } catch (error: any) {
       console.error('Error adding player to squad:', error);
+      toast.error(error.message || 'Failed to add player to squad');
     }
   };
 
   const handleRemovePlayer = async (playerId: string) => {
     try {
+      console.log('Removing player from squad:', playerId);
       await removePlayerFromSquad(playerId);
       onSquadChange?.(squadPlayers);
-    } catch (error) {
+      toast.success('Player removed from squad');
+    } catch (error: any) {
       console.error('Error removing player from squad:', error);
+      toast.error(error.message || 'Failed to remove player from squad');
     }
   };
 
   const handleAvailabilityChange = async (playerId: string, status: string) => {
     try {
+      console.log('Updating availability:', { playerId, status });
       await updatePlayerAvailability(playerId, status as 'available' | 'unavailable' | 'pending' | 'maybe');
       onSquadChange?.(squadPlayers);
-    } catch (error) {
+      toast.success('Availability updated');
+    } catch (error: any) {
       console.error('Error updating availability:', error);
+      toast.error(error.message || 'Failed to update availability');
     }
   };
 
@@ -82,8 +106,25 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
     }
   };
 
-  if (squadLoading) {
-    return <div className="text-center py-4">Loading squad...</div>;
+  if (squadLoading || playersLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading squad...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (playersError) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-red-600">Error loading players: {playersError.message}</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -94,10 +135,13 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
           Squad Management
           <Badge variant="secondary">{squadPlayers.length} players</Badge>
         </CardTitle>
+        <p className="text-sm text-muted-foreground">
+          Team: {teamId} | Event: {eventId || 'General Squad'}
+        </p>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Add Player Section */}
-        {availableToAdd.length > 0 && (
+        {availableToAdd.length > 0 ? (
           <div className="flex gap-2">
             <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
               <SelectTrigger className="flex-1">
@@ -119,6 +163,13 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
               <UserPlus className="h-4 w-4 mr-1" />
               Add
             </Button>
+          </div>
+        ) : (
+          <div className="text-center py-4 text-muted-foreground">
+            {allPlayers.length === 0 
+              ? 'No players found in this team'
+              : 'All players are already in the squad'
+            }
           </div>
         )}
 

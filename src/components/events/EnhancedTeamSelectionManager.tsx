@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +12,7 @@ import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSe
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EnhancedTeamSelectionManagerProps {
   event: DatabaseEvent;
@@ -25,6 +27,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   isOpen,
   onClose
 }) => {
+  const { user } = useAuth();
   const teamId = propTeamId || event.team_id;
   const [selectionState, setSelectionState] = useState<TeamSelectionState>({
     teamId,
@@ -38,10 +41,45 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   const { squadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
 
+  // Debug current user and team relationship
+  useEffect(() => {
+    const checkUserPermissions = async () => {
+      if (!user || !teamId) return;
+      
+      console.log('Checking user permissions for user:', user.id, 'team:', teamId);
+      
+      const { data: userTeams, error } = await supabase
+        .from('user_teams')
+        .select('role')
+        .eq('team_id', teamId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error checking user permissions:', error);
+        return;
+      }
+
+      console.log('User teams data:', userTeams);
+      
+      if (!userTeams || userTeams.length === 0) {
+        console.warn('User is not a member of this team');
+        toast.error('You are not a member of this team');
+      } else {
+        console.log('User role in team:', userTeams[0].role);
+      }
+    };
+
+    checkUserPermissions();
+  }, [user, teamId]);
+
   // Load existing team selections
   useEffect(() => {
     const loadExistingSelections = async () => {
+      if (!event.id || !teamId) return;
+      
       try {
+        console.log('Loading existing selections for event:', event.id, 'team:', teamId);
+        
         const { data: existingSelections, error } = await supabase
           .from('event_selections')
           .select('*')
@@ -49,7 +87,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           .eq('team_id', teamId)
           .order('period_number');
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error loading existing selections:', error);
+          throw error;
+        }
+
+        console.log('Existing selections loaded:', existingSelections);
 
         if (existingSelections && existingSelections.length > 0) {
           // Convert existing selections to FormationPeriod format
@@ -63,6 +106,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             captainId: selection.captain_id || undefined
           }));
 
+          console.log('Converted periods:', periods);
+
           setSelectionState(prev => ({
             ...prev,
             periods,
@@ -71,16 +116,16 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         }
       } catch (error) {
         console.error('Error loading existing selections:', error);
+        toast.error('Failed to load existing team selections');
       }
     };
 
-    if (event.id && teamId) {
-      loadExistingSelections();
-    }
+    loadExistingSelections();
   }, [event.id, teamId]);
 
   // Update squad players when they change
   useEffect(() => {
+    console.log('Squad players updated:', squadPlayers);
     setSelectionState(prev => ({
       ...prev,
       squadPlayers
@@ -88,6 +133,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   }, [squadPlayers]);
 
   const handlePeriodsChange = (periods: FormationPeriod[]) => {
+    console.log('Periods changed:', periods);
     setSelectionState(prev => ({
       ...prev,
       periods
@@ -95,6 +141,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handleCaptainChange = (captainId: string) => {
+    console.log('Captain changed:', captainId);
     setSelectionState(prev => ({
       ...prev,
       globalCaptainId: captainId,
@@ -106,6 +153,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
+    console.log('Squad changed:', newSquadPlayers);
     setSelectionState(prev => ({
       ...prev,
       squadPlayers: newSquadPlayers
@@ -120,6 +168,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
     setSaving(true);
     try {
+      console.log('Saving selections:', selectionState);
+      
       // Delete existing selections for this event
       const { error: deleteError } = await supabase
         .from('event_selections')
@@ -127,7 +177,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         .eq('event_id', event.id)
         .eq('team_id', teamId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Error deleting existing selections:', deleteError);
+        throw deleteError;
+      }
 
       // Create new selections for each period
       const selectionsToInsert = selectionState.periods.map(period => ({
@@ -154,11 +207,16 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         performance_category_id: null
       }));
 
+      console.log('Inserting selections:', selectionsToInsert);
+
       const { error: insertError } = await supabase
         .from('event_selections')
         .insert(selectionsToInsert);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        console.error('Error inserting selections:', insertError);
+        throw insertError;
+      }
 
       toast.success('Team selections saved successfully!');
     } catch (error) {
@@ -171,6 +229,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   if (!isOpen) return null;
 
+  console.log('Rendering EnhancedTeamSelectionManager:', {
+    teamId,
+    eventId: event.id,
+    squadPlayersCount: selectionState.squadPlayers.length,
+    periodsCount: selectionState.periods.length,
+    user: user?.id
+  });
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg w-full max-w-7xl h-[90vh] flex flex-col">
@@ -181,6 +247,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               <p className="text-muted-foreground">
                 {event.date} • {event.game_format} • Enhanced Team Selection
               </p>
+              {user && (
+                <p className="text-xs text-gray-500 mt-1">
+                  User: {user.email} | Team: {teamId}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Badge variant="outline">

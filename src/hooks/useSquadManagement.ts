@@ -14,6 +14,7 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
 
     try {
       setLoading(true);
+      console.log('Loading squad players for team:', teamId, 'event:', eventId);
       
       // If eventId is provided, get squad for specific event
       let query = supabase
@@ -39,7 +40,12 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
 
       const { data: squadData, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading squad players:', error);
+        throw error;
+      }
+
+      console.log('Squad data loaded:', squadData);
 
       const formattedPlayers: SquadPlayer[] = squadData?.map(squad => ({
         id: squad.players.id,
@@ -50,6 +56,7 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
         squadRole: squad.squad_role as 'player' | 'captain' | 'vice_captain'
       })) || [];
 
+      console.log('Formatted players:', formattedPlayers);
       setSquadPlayers(formattedPlayers);
     } catch (error) {
       console.error('Error loading squad players:', error);
@@ -59,9 +66,41 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
   };
 
   const addPlayerToSquad = async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain' = 'player') => {
-    if (!user) return;
+    if (!user) {
+      console.error('No user found');
+      return;
+    }
 
     try {
+      console.log('Adding player to squad:', { teamId, playerId, eventId, squadRole, userId: user.id });
+      
+      // First check if user has permission by checking user_teams table
+      const { data: userTeams, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select('role')
+        .eq('team_id', teamId)
+        .eq('user_id', user.id);
+
+      if (userTeamsError) {
+        console.error('Error checking user teams:', userTeamsError);
+        throw userTeamsError;
+      }
+
+      console.log('User teams data:', userTeams);
+
+      if (!userTeams || userTeams.length === 0) {
+        console.error('User is not a member of this team');
+        throw new Error('You are not a member of this team');
+      }
+
+      const userRole = userTeams[0].role;
+      console.log('User role:', userRole);
+
+      if (!['manager', 'coach', 'admin'].includes(userRole)) {
+        console.error('User does not have permission to manage squad');
+        throw new Error('You do not have permission to manage the squad');
+      }
+
       const { error } = await supabase
         .from('team_squads')
         .insert({
@@ -73,7 +112,12 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
           added_by: user.id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting into team_squads:', error);
+        throw error;
+      }
+      
+      console.log('Player added successfully');
       await loadSquadPlayers();
     } catch (error) {
       console.error('Error adding player to squad:', error);
@@ -83,6 +127,8 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
 
   const removePlayerFromSquad = async (playerId: string) => {
     try {
+      console.log('Removing player from squad:', { teamId, playerId, eventId });
+      
       let query = supabase
         .from('team_squads')
         .delete()
@@ -96,7 +142,12 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
       }
 
       const { error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing player:', error);
+        throw error;
+      }
+      
+      console.log('Player removed successfully');
       await loadSquadPlayers();
     } catch (error) {
       console.error('Error removing player from squad:', error);
@@ -106,6 +157,8 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
 
   const updatePlayerAvailability = async (playerId: string, status: 'available' | 'unavailable' | 'pending' | 'maybe') => {
     try {
+      console.log('Updating player availability:', { teamId, playerId, eventId, status });
+      
       let query = supabase
         .from('team_squads')
         .update({ availability_status: status })
@@ -119,7 +172,12 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
       }
 
       const { error } = await query;
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating availability:', error);
+        throw error;
+      }
+      
+      console.log('Availability updated successfully');
       await loadSquadPlayers();
     } catch (error) {
       console.error('Error updating player availability:', error);
