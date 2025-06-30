@@ -94,11 +94,6 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
       <span className="text-xs font-medium text-center leading-tight">
         {getDisplayName()}
       </span>
-      
-      {/* Position indicator when positioned */}
-      <div className="text-xs text-muted-foreground mt-1 opacity-75">
-        {player.type === 'goalkeeper' ? 'GK' : ''}
-      </div>
     </div>
   );
 };

@@ -1,14 +1,13 @@
 
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Crown, Clock } from 'lucide-react';
+import { Plus, Crown, Clock, X } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
@@ -56,7 +55,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       id: `period-${newPeriodNumber}`,
       periodNumber: newPeriodNumber,
       formation: lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1',
-      duration: 45,
+      duration: 8,
       positions: lastPeriod ? [...lastPeriod.positions] : [],
       substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
       captainId: globalCaptainId
@@ -64,6 +63,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
     console.log('Adding new period:', newPeriod);
     onPeriodsChange([...periods, newPeriod]);
+  };
+
+  const deletePeriod = (periodId: string) => {
+    const updatedPeriods = periods.filter(period => period.id !== periodId);
+    onPeriodsChange(updatedPeriods);
   };
 
   const updatePeriodFormation = (periodId: string, formation: string) => {
@@ -220,17 +224,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     onPeriodsChange(updatedPeriods);
   };
 
-  const getUnusedPlayers = (periodId: string) => {
-    const period = periods.find(p => p.id === periodId);
-    if (!period) return squadPlayers;
+  const getUnusedPlayers = () => {
+    const allUsedPlayerIds = new Set();
     
-    const usedPlayerIds = [
-      ...period.positions.map(pos => pos.playerId).filter(Boolean),
-      ...period.substitutes
-    ] as string[];
+    periods.forEach(period => {
+      period.positions.forEach(pos => {
+        if (pos.playerId) allUsedPlayerIds.add(pos.playerId);
+      });
+      period.substitutes.forEach(id => allUsedPlayerIds.add(id));
+    });
     
     return squadPlayers.filter(player => 
-      !usedPlayerIds.includes(player.id) && 
+      !allUsedPlayerIds.has(player.id) && 
       player.availabilityStatus === 'available'
     );
   };
@@ -282,108 +287,134 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </CardContent>
         </Card>
 
-        {/* Formation Periods */}
-        {periods.map((period) => (
-          <Card key={period.id}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  Period {period.periodNumber}
-                  <Badge variant="outline">
-                    {period.duration} min
-                  </Badge>
-                </CardTitle>
-                
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    <Input
-                      type="number"
-                      value={period.duration}
-                      onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 45)}
-                      className="w-20"
-                      min="1"
-                      max="120"
-                    />
-                    <span className="text-sm text-muted-foreground">min</span>
+        {/* Period Tabs */}
+        <div className="flex items-center gap-2 mb-4">
+          {periods.map((period, index) => (
+            <div key={period.id} className="flex items-center gap-1">
+              <Badge variant="outline" className="px-3 py-1">
+                Period {period.periodNumber}
+              </Badge>
+              {periods.length > 1 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => deletePeriod(period.id)}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+          ))}
+          <Button onClick={addPeriod} variant="outline" size="sm">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Available Players Pool */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium">Available Players</h4>
+          <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[100px]">
+            {getUnusedPlayers().map((player) => (
+              <div 
+                key={player.id} 
+                id={player.id}
+                className="cursor-grab"
+                draggable
+              >
+                <PlayerIcon 
+                  player={player} 
+                  isCaptain={player.id === globalCaptainId}
+                  nameDisplayOption={nameDisplayOption}
+                />
+              </div>
+            ))}
+            {getUnusedPlayers().length === 0 && (
+              <div className="text-sm text-muted-foreground">All available players are assigned</div>
+            )}
+          </div>
+        </div>
+
+        {/* Formation Periods - Side by Side Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          {periods.map((period) => (
+            <Card key={period.id} className="min-h-[600px]">
+              <CardHeader className="pb-4">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">
+                      Period {period.periodNumber}
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-4 w-4" />
+                        <Input
+                          type="number"
+                          value={period.duration}
+                          onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
+                          className="w-16 h-8"
+                          min="1"
+                          max="90"
+                        />
+                        <span className="text-xs text-muted-foreground">min</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Formation Selector */}
+                  <div>
+                    <Label className="text-sm">Formation</Label>
+                    <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {gameFormatFormations.map((formation) => (
+                          <SelectItem key={formation.id} value={formation.id}>
+                            {formation.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4">
-              {/* Formation Selection */}
-              <FormationSelector
-                gameFormat={gameFormat as any}
-                selectedFormation={period.formation}
-                onFormationChange={(formation) => updatePeriodFormation(period.id, formation)}
-              />
-
-              {/* Available Players Pool */}
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Available Players</h4>
-                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[100px]">
-                  {getUnusedPlayers(period.id).map((player) => (
-                    <div 
-                      key={player.id} 
-                      id={player.id}
-                      className="cursor-grab"
-                      draggable
-                    >
-                      <PlayerIcon 
-                        player={player} 
-                        isCaptain={player.id === globalCaptainId}
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                {/* Mini Formation Pitch */}
+                <div className="relative bg-green-100 rounded-lg p-4 h-[300px]">
+                  <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
+                  
+                  {/* Pitch markings */}
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 border-2 border-white rounded-full opacity-50" />
+                  <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
+                  <div className="absolute top-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
+                  <div className="absolute bottom-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
+                  
+                  <div className="relative h-full">
+                    {period.positions.map((position, index) => (
+                      <PositionSlot
+                        key={`${period.id}-position-${index}`}
+                        id={`${period.id}-position-${index}`}
+                        position={position}
+                        player={position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined}
+                        isCaptain={position.playerId === globalCaptainId}
                         nameDisplayOption={nameDisplayOption}
                       />
-                    </div>
-                  ))}
-                  {getUnusedPlayers(period.id).length === 0 && (
-                    <div className="text-sm text-muted-foreground">All available players are assigned</div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              {/* Formation Pitch */}
-              <div className="relative bg-green-100 rounded-lg p-4" style={{ height: '400px' }}>
-                <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-                
-                {/* Pitch markings */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
-                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-                <div className="absolute top-2 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white opacity-50" />
-                <div className="absolute bottom-2 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white opacity-50" />
-                
-                <div className="relative h-full">
-                  {period.positions.map((position, index) => (
-                    <PositionSlot
-                      key={`${period.id}-position-${index}`}
-                      id={`${period.id}-position-${index}`}
-                      position={position}
-                      player={position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined}
-                      isCaptain={position.playerId === globalCaptainId}
-                      nameDisplayOption={nameDisplayOption}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Substitute Bench */}
-              <SubstituteBench
-                id={`substitutes-${period.id}`}
-                substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-                globalCaptainId={globalCaptainId}
-                nameDisplayOption={nameDisplayOption}
-              />
-            </CardContent>
-          </Card>
-        ))}
-
-        {/* Add Period Button */}
-        <div className="flex justify-center">
-          <Button onClick={addPeriod} variant="outline">
-            <Plus className="h-4 w-4 mr-1" />
-            Add Period
-          </Button>
+                {/* Substitute Bench */}
+                <SubstituteBench
+                  id={`substitutes-${period.id}`}
+                  substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
+                  globalCaptainId={globalCaptainId}
+                  nameDisplayOption={nameDisplayOption}
+                />
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Drag Overlay */}
