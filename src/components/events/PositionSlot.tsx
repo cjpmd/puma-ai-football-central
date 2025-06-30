@@ -78,6 +78,8 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
               player={player} 
               isCaptain={isCaptain}
               nameDisplayOption={nameDisplayOption}
+              isCircular={true}
+              positionAbbreviation={position.abbreviation}
             />
           </div>
         ) : (

@@ -11,7 +11,6 @@ import { Plus, Crown, Clock, X } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
-import { FormationSelector } from './FormationSelector';
 import { usePositionAbbreviations } from '@/hooks/usePositionAbbreviations';
 import { SquadPlayer, FormationPeriod, PositionSlot as PositionSlotType } from '@/types/teamSelection';
 import { getFormationsByFormat } from '@/utils/formationUtils';
@@ -240,6 +239,26 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     );
   };
 
+  const calculatePlayingTimeSummary = () => {
+    const playerTimes: Record<string, number> = {};
+    
+    periods.forEach(period => {
+      // Players in positions get full period time
+      period.positions.forEach(pos => {
+        if (pos.playerId) {
+          playerTimes[pos.playerId] = (playerTimes[pos.playerId] || 0) + period.duration;
+        }
+      });
+      
+      // Substitutes get partial time (assuming they play half the period)
+      period.substitutes.forEach(playerId => {
+        playerTimes[playerId] = (playerTimes[playerId] || 0) + Math.floor(period.duration / 2);
+      });
+    });
+    
+    return playerTimes;
+  };
+
   // Initialize first period if none exist
   useEffect(() => {
     if (periods.length === 0 && gameFormatFormations.length > 0) {
@@ -257,6 +276,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       }
     });
   }, [periods]);
+
+  const playingTimeSummary = calculatePlayingTimeSummary();
 
   return (
     <div className="space-y-6">
@@ -326,6 +347,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                   player={player} 
                   isCaptain={player.id === globalCaptainId}
                   nameDisplayOption={nameDisplayOption}
+                  isCircular={true}
                 />
               </div>
             ))}
@@ -343,7 +365,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">
-                      Period {period.periodNumber}
+                      {period.formation} ({period.duration} min)
                     </CardTitle>
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
@@ -417,6 +439,33 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           ))}
         </div>
 
+        {/* Playing Time Summary */}
+        {Object.keys(playingTimeSummary).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Playing Time Summary</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Object.entries(playingTimeSummary).map(([playerId, minutes]) => {
+                  const player = squadPlayers.find(p => p.id === playerId);
+                  if (!player) return null;
+                  
+                  return (
+                    <div key={playerId} className="flex items-center justify-between p-2 border rounded">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">#{player.squadNumber}</Badge>
+                        <span className="text-sm font-medium">{player.name}</span>
+                      </div>
+                      <Badge variant="secondary">{minutes}min</Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Drag Overlay */}
         <DragOverlay>
           {draggedPlayer && (
@@ -425,6 +474,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               isDragging 
               isCaptain={draggedPlayer.id === globalCaptainId}
               nameDisplayOption={nameDisplayOption}
+              isCircular={true}
             />
           )}
         </DragOverlay>

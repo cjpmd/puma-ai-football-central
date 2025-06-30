@@ -45,8 +45,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
 
-  const { squadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
-
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
     queryKey: ['performance-categories', teamId],
@@ -63,19 +61,22 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Initialize team selections when squad players are loaded
+  // Load main squad for initial team
+  const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
+
+  // Initialize first team with main squad
   useEffect(() => {
-    if (squadPlayers.length > 0 && teamSelections.length === 0) {
+    if (mainSquadPlayers.length > 0 && teamSelections.length === 0) {
       const initialTeam: TeamSelection = {
         teamNumber: 1,
-        squadPlayers: squadPlayers,
+        squadPlayers: mainSquadPlayers,
         periods: [],
         globalCaptainId: undefined,
         performanceCategory: 'none'
       };
       setTeamSelections([initialTeam]);
     }
-  }, [squadPlayers]);
+  }, [mainSquadPlayers]);
 
   // Load existing team selections
   useEffect(() => {
@@ -120,9 +121,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               captainId: selection.captain_id || undefined
             }));
 
+            // For team 1, use main squad. For others, use empty squad (will be managed independently)
+            const squadForTeam = parseInt(teamNum) === 1 ? mainSquadPlayers : [];
+
             return {
               teamNumber: parseInt(teamNum),
-              squadPlayers: squadPlayers,
+              squadPlayers: squadForTeam,
               periods,
               globalCaptainId: periods[0]?.captainId,
               performanceCategory: selections[0]?.performance_category_id || 'none'
@@ -137,22 +141,23 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       }
     };
 
-    if (squadPlayers.length > 0) {
+    if (mainSquadPlayers.length > 0) {
       loadExistingSelections();
     }
-  }, [event.id, teamId, squadPlayers]);
+  }, [event.id, teamId, mainSquadPlayers]);
 
   const addTeam = () => {
     const newTeamNumber = teamSelections.length + 1;
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
-      squadPlayers: squadPlayers,
+      squadPlayers: [], // Start with empty squad for independent management
       periods: [],
       globalCaptainId: undefined,
       performanceCategory: 'none'
     };
     setTeamSelections([...teamSelections, newTeam]);
     setCurrentTeamIndex(teamSelections.length);
+    setActiveTab('squad'); // Switch to squad tab for new team
   };
 
   const getCurrentTeam = (): TeamSelection | null => {
@@ -363,7 +368,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               <TabsContent value="squad" className="h-full mt-0">
                 <SquadManagement
                   teamId={teamId}
-                  eventId={event.id}
+                  eventId={`${event.id}-team-${currentTeam?.teamNumber || 1}`}
                   onSquadChange={handleSquadChange}
                 />
               </TabsContent>

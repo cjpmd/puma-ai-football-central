@@ -9,13 +9,17 @@ interface PlayerIconProps {
   isDragging?: boolean;
   isCaptain?: boolean;
   nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
+  isCircular?: boolean;
+  positionAbbreviation?: string;
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
   player, 
   isDragging = false,
   isCaptain = false,
-  nameDisplayOption = 'surname'
+  nameDisplayOption = 'surname',
+  isCircular = false,
+  positionAbbreviation
 }) => {
   const {
     attributes,
@@ -49,19 +53,61 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   };
 
   const getAvailabilityStyle = () => {
+    const baseStyle = isCircular ? 'rounded-full' : 'rounded-lg';
+    
     switch (player.availabilityStatus) {
       case 'available':
-        return 'border-green-500 bg-green-50';
+        return `border-green-500 bg-green-50 ${baseStyle}`;
       case 'unavailable':
-        return 'border-red-500 bg-red-50 opacity-60';
+        return `border-red-500 bg-red-50 opacity-60 ${baseStyle}`;
       case 'maybe':
-        return 'border-yellow-500 bg-yellow-50';
+        return `border-yellow-500 bg-yellow-50 ${baseStyle}`;
       default:
-        return 'border-gray-300 bg-gray-50';
+        return `border-gray-300 bg-gray-50 ${baseStyle}`;
     }
   };
 
   const actualIsDragging = isDragging || dndIsDragging;
+
+  if (isCircular) {
+    return (
+      <div 
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
+        className={`
+          relative flex flex-col items-center justify-center w-16 h-16 border-2
+          ${getAvailabilityStyle()}
+          ${actualIsDragging ? 'shadow-lg scale-110' : 'shadow-sm'}
+          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab'}
+          transition-all duration-200
+        `}
+      >
+        {/* Captain indicator */}
+        {(isCaptain || player.squadRole === 'captain') && (
+          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />
+        )}
+        
+        {/* Squad number */}
+        <div className="text-xs font-bold text-center">
+          #{player.squadNumber}
+        </div>
+        
+        {/* Position abbreviation if provided */}
+        {positionAbbreviation && (
+          <div className="text-xs font-medium text-center text-blue-600">
+            {positionAbbreviation}
+          </div>
+        )}
+        
+        {/* Player name */}
+        <div className="text-xs text-center leading-tight mt-1">
+          {getDisplayName()}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 
