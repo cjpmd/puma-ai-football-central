@@ -98,7 +98,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
       
       selectedPlayers.forEach((playerId, index) => {
         if (index < positions.length) {
-          newPositionPlayers[positions[index]] = playerId;
+          newPositionPlayers[positions[index].position] = playerId;
         }
       });
       
@@ -326,12 +326,12 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
         </div>
         
         <div className="space-y-3">
-          {positions.map((position) => (
-            <div key={position} className="flex items-center gap-3">
-              <div className="w-12 text-sm font-medium">{position}</div>
+          {positions.map((positionObj) => (
+            <div key={positionObj.position} className="flex items-center gap-3">
+              <div className="w-12 text-sm font-medium">{positionObj.position}</div>
               <Select
-                value={positionPlayers[position] || 'none'}
-                onValueChange={(value) => handlePositionPlayerChange(position, value)}
+                value={positionPlayers[positionObj.position] || 'none'}
+                onValueChange={(value) => handlePositionPlayerChange(positionObj.position, value)}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue placeholder="No Player" />
@@ -370,7 +370,7 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   })}
                 </SelectContent>
               </Select>
-              {captainId === positionPlayers[position] && (
+              {captainId === positionPlayers[positionObj.position] && (
                 <Crown className="h-4 w-4 text-yellow-500" />
               )}
             </div>

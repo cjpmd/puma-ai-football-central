@@ -313,7 +313,7 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {positions.map((position, index) => {
+              {positions.map((positionObj, index) => {
                 const assignedPlayerId = selectedPlayers[index];
                 const assignedPlayer = assignedPlayerId ? players.find(p => p.id === assignedPlayerId) : null;
                 const availableForPosition = players.filter(p => 
@@ -321,10 +321,10 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                 );
 
                 return (
-                  <div key={`${position}-${index}`} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div key={`${positionObj.position}-${index}`} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                     <div className="min-w-[60px]">
                       <Badge variant="outline" className="text-center font-medium">
-                        {position}
+                        {positionObj.position}
                       </Badge>
                     </div>
                     
