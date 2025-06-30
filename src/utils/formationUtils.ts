@@ -4,14 +4,22 @@ import { GameFormat, Formation, Position } from '@/types';
 export interface FormationConfig {
   id: string;
   name: string;
-  positions: Position[];
+  positions: Array<{
+    position: string;
+    x: number;
+    y: number;
+  }>;
 }
 
 const formations3ASide: FormationConfig[] = [
   {
     id: "2-1",
     name: "2-1",
-    positions: ["DL", "DR", "MC"]
+    positions: [
+      { position: "Defender Left", x: 20, y: 70 },
+      { position: "Defender Right", x: 80, y: 70 },
+      { position: "Midfielder Centre", x: 50, y: 30 }
+    ]
   }
 ];
 
@@ -19,7 +27,12 @@ const formations4ASide: FormationConfig[] = [
   {
     id: "1-2-1",
     name: "1-2-1",
-    positions: ["DC", "ML", "MR", "AMC"]
+    positions: [
+      { position: "Defender Centre", x: 50, y: 80 },
+      { position: "Midfielder Left", x: 30, y: 50 },
+      { position: "Midfielder Right", x: 70, y: 50 },
+      { position: "Attacking Midfielder Centre", x: 50, y: 20 }
+    ]
   }
 ];
 
@@ -27,58 +40,60 @@ const formations5ASide: FormationConfig[] = [
   {
     id: "1-1-2-1",
     name: "1-1-2-1",
-    positions: ["GK", "DC", "ML", "MR", "AMC"]
-  },
-  {
-    id: "all",
-    name: "All",
-    positions: ["GK", "DC", "ML", "MR", "AMC"]
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Centre", x: 50, y: 70 },
+      { position: "Midfielder Left", x: 30, y: 45 },
+      { position: "Midfielder Right", x: 70, y: 45 },
+      { position: "Attacking Midfielder Centre", x: 50, y: 20 }
+    ]
   }
 ];
 
 const formations7ASide: FormationConfig[] = [
   {
-    id: "1-1-3-1",
-    name: "1-1-3-1",
-    positions: ["GK", "DC", "DM", "AML", "AMC", "AMR", "STC"]
+    id: "1-2-3-1",
+    name: "1-2-3-1",
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Left", x: 25, y: 70 },
+      { position: "Defender Right", x: 75, y: 70 },
+      { position: "Midfielder Left", x: 20, y: 45 },
+      { position: "Midfielder Centre", x: 50, y: 45 },
+      { position: "Midfielder Right", x: 80, y: 45 },
+      { position: "Striker Centre", x: 50, y: 15 }
+    ]
   },
   {
-    id: "2-3-1", 
-    name: "2-3-1",
-    positions: ["GK", "DL", "DR", "ML", "MC", "MR", "STC"]
-  },
-  {
-    id: "3-2-1",
-    name: "3-2-1", 
-    positions: ["GK", "DL", "DC", "DR", "MCL", "MCR", "STC"]
-  },
-  {
-    id: "all",
-    name: "All",
-    positions: ["GK", "DL", "DC", "DR", "DM", "ML", "MC", "MR", "AML", "AMC", "AMR", "STC"]
+    id: "1-3-2-1",
+    name: "1-3-2-1",
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Left", x: 20, y: 70 },
+      { position: "Defender Centre", x: 50, y: 70 },
+      { position: "Defender Right", x: 80, y: 70 },
+      { position: "Midfielder Left", x: 30, y: 45 },
+      { position: "Midfielder Right", x: 70, y: 45 },
+      { position: "Striker Centre", x: 50, y: 15 }
+    ]
   }
 ];
 
 const formations9ASide: FormationConfig[] = [
   {
-    id: "3-2-3",
-    name: "3-2-3",
-    positions: ["GK", "DL", "DC", "DR", "MCL", "MCR", "AMC", "STL", "STR"]
-  },
-  {
-    id: "2-4-2",
-    name: "2-4-2", 
-    positions: ["GK", "DCL", "DCR", "DM", "ML", "MR", "AMC", "STC"]
-  },
-  {
-    id: "3-3-2",
-    name: "3-3-2",
-    positions: ["GK", "DL", "DC", "DR", "ML", "MC", "MR", "STL", "STR"]
-  },
-  {
-    id: "all",
-    name: "All", 
-    positions: ["GK", "DL", "DC", "DR", "DCL", "DCR", "DM", "ML", "MC", "MR", "MCL", "MCR", "AMC", "STL", "STC", "STR"]
+    id: "1-3-3-2",
+    name: "1-3-3-2",
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Left", x: 20, y: 70 },
+      { position: "Defender Centre", x: 50, y: 70 },
+      { position: "Defender Right", x: 80, y: 70 },
+      { position: "Midfielder Left", x: 20, y: 45 },
+      { position: "Midfielder Centre", x: 50, y: 45 },
+      { position: "Midfielder Right", x: 80, y: 45 },
+      { position: "Striker Left", x: 35, y: 15 },
+      { position: "Striker Right", x: 65, y: 15 }
+    ]
   }
 ];
 
@@ -86,48 +101,54 @@ const formations11ASide: FormationConfig[] = [
   {
     id: "1-4-4-2",
     name: "1-4-4-2",
-    positions: ["GK", "DL", "DCL", "DCR", "DR", "ML", "MCL", "MCR", "MR", "STCL", "STCR"]
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Left", x: 15, y: 70 },
+      { position: "Defender Centre Left", x: 35, y: 70 },
+      { position: "Defender Centre Right", x: 65, y: 70 },
+      { position: "Defender Right", x: 85, y: 70 },
+      { position: "Midfielder Left", x: 15, y: 45 },
+      { position: "Midfielder Centre Left", x: 35, y: 45 },
+      { position: "Midfielder Centre Right", x: 65, y: 45 },
+      { position: "Midfielder Right", x: 85, y: 45 },
+      { position: "Striker Centre Left", x: 35, y: 15 },
+      { position: "Striker Centre Right", x: 65, y: 15 }
+    ]
   },
   {
     id: "1-4-3-3",
     name: "1-4-3-3",
-    positions: ["GK", "DL", "DCL", "DCR", "DR", "MCL", "MC", "MCR", "AML", "STC", "AMR"]
-  },
-  {
-    id: "1-4-2-3-1",
-    name: "1-4-2-3-1",
-    positions: ["GK", "DL", "DCL", "DCR", "DR", "MCL", "MCR", "AML", "AMC", "AMR", "STC"]
-  },
-  {
-    id: "1-3-4-3",
-    name: "1-3-4-3",
-    positions: ["GK", "DL", "DC", "DR", "ML", "MCL", "MCR", "MR", "AML", "STC", "AMR"]
+    positions: [
+      { position: "Goalkeeper", x: 50, y: 90 },
+      { position: "Defender Left", x: 15, y: 70 },
+      { position: "Defender Centre Left", x: 35, y: 70 },
+      { position: "Defender Centre Right", x: 65, y: 70 },
+      { position: "Defender Right", x: 85, y: 70 },
+      { position: "Midfielder Centre Left", x: 30, y: 45 },
+      { position: "Midfielder Centre", x: 50, y: 45 },
+      { position: "Midfielder Centre Right", x: 70, y: 45 },
+      { position: "Attacking Midfielder Left", x: 20, y: 20 },
+      { position: "Striker Centre", x: 50, y: 15 },
+      { position: "Attacking Midfielder Right", x: 80, y: 20 }
+    ]
   }
 ];
 
+export const formations: Record<string, FormationConfig[]> = {
+  '3-a-side': formations3ASide,
+  '4-a-side': formations4ASide,
+  '5-a-side': formations5ASide,
+  '7-a-side': formations7ASide,
+  '9-a-side': formations9ASide,
+  '11-a-side': formations11ASide,
+};
+
 export const getFormationsByFormat = (gameFormat: GameFormat): FormationConfig[] => {
-  const maxPlayers = parseInt(gameFormat.split('-')[0]);
-  
-  switch (maxPlayers) {
-    case 3:
-      return formations3ASide;
-    case 4:
-      return formations4ASide;
-    case 5:
-      return formations5ASide;
-    case 7:
-      return formations7ASide;
-    case 9:
-      return formations9ASide;
-    case 11:
-      return formations11ASide;
-    default:
-      return [];
-  }
+  return formations[gameFormat] || formations11ASide;
 };
 
 export const getPositionsForFormation = (formationId: string, gameFormat: GameFormat): Position[] => {
-  const formations = getFormationsByFormat(gameFormat);
-  const formation = formations.find(f => f.id === formationId);
+  const gameFormatFormations = getFormationsByFormat(gameFormat);
+  const formation = gameFormatFormations.find(f => f.id === formationId);
   return formation?.positions || [];
 };

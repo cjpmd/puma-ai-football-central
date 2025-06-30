@@ -1,10 +1,9 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, Users, Formation } from 'lucide-react';
+import { Save, Users, Gamepad2 } from 'lucide-react';
 import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
@@ -209,7 +208,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 Squad Management
               </TabsTrigger>
               <TabsTrigger value="formation" className="flex items-center gap-2">
-                <Formation className="h-4 w-4" />
+                <Gamepad2 className="h-4 w-4" />
                 Formation & Selection
               </TabsTrigger>
             </TabsList>
