@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -270,15 +269,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const playerTimes: Record<string, number> = {};
     
     periods.forEach(period => {
-      // Players in positions get full period time
+      // Only players in positions get playing time (not substitutes)
       period.positions.forEach(pos => {
         if (pos.playerId) {
           playerTimes[pos.playerId] = (playerTimes[pos.playerId] || 0) + period.duration;
         }
       });
       
-      // Substitutes DO NOT get any time automatically - they only get time when they actually play
-      // This should be managed separately when subs come on
+      // Substitutes get 0 minutes unless they're actually in a position
+      // This is handled above - substitutes only get time when they're moved to positions
     });
     
     return playerTimes;

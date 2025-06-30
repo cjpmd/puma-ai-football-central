@@ -16,8 +16,8 @@ const formations3ASide: FormationConfig[] = [
     id: "2-1",
     name: "2-1",
     positions: [
-      { position: "Defender Left", x: 25, y: 75 },
-      { position: "Defender Right", x: 75, y: 75 },
+      { position: "Defender Left", x: 30, y: 75 },
+      { position: "Defender Right", x: 70, y: 75 },
       { position: "Midfielder Centre", x: 50, y: 25 }
     ]
   }
@@ -56,11 +56,11 @@ const formations7ASide: FormationConfig[] = [
     name: "1-2-3-1",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 30, y: 70 },
-      { position: "Defender Right", x: 70, y: 70 },
-      { position: "Midfielder Left", x: 25, y: 45 },
+      { position: "Defender Left", x: 25, y: 70 },
+      { position: "Defender Right", x: 75, y: 70 },
+      { position: "Midfielder Left", x: 20, y: 45 },
       { position: "Midfielder Centre", x: 50, y: 45 },
-      { position: "Midfielder Right", x: 75, y: 45 },
+      { position: "Midfielder Right", x: 80, y: 45 },
       { position: "Striker Centre", x: 50, y: 15 }
     ]
   },
@@ -69,11 +69,11 @@ const formations7ASide: FormationConfig[] = [
     name: "1-3-2-1",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 25, y: 70 },
+      { position: "Defender Left", x: 20, y: 70 },
       { position: "Defender Centre", x: 50, y: 70 },
-      { position: "Defender Right", x: 75, y: 70 },
-      { position: "Midfielder Left", x: 35, y: 45 },
-      { position: "Midfielder Right", x: 65, y: 45 },
+      { position: "Defender Right", x: 80, y: 70 },
+      { position: "Midfielder Left", x: 30, y: 45 },
+      { position: "Midfielder Right", x: 70, y: 45 },
       { position: "Striker Centre", x: 50, y: 15 }
     ]
   },
@@ -83,11 +83,11 @@ const formations7ASide: FormationConfig[] = [
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
       { position: "Defender Centre", x: 50, y: 75 },
-      { position: "Midfielder Left", x: 25, y: 50 },
+      { position: "Midfielder Left", x: 20, y: 50 },
       { position: "Midfielder Centre", x: 50, y: 50 },
-      { position: "Midfielder Right", x: 75, y: 50 },
-      { position: "Striker Left", x: 40, y: 20 },
-      { position: "Striker Right", x: 60, y: 20 }
+      { position: "Midfielder Right", x: 80, y: 50 },
+      { position: "Striker Left", x: 35, y: 20 },
+      { position: "Striker Right", x: 65, y: 20 }
     ]
   }
 ];
@@ -98,14 +98,14 @@ const formations9ASide: FormationConfig[] = [
     name: "1-3-3-2",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 25, y: 70 },
+      { position: "Defender Left", x: 20, y: 70 },
       { position: "Defender Centre", x: 50, y: 70 },
-      { position: "Defender Right", x: 75, y: 70 },
-      { position: "Midfielder Left", x: 25, y: 45 },
+      { position: "Defender Right", x: 80, y: 70 },
+      { position: "Midfielder Left", x: 20, y: 45 },
       { position: "Midfielder Centre", x: 50, y: 45 },
-      { position: "Midfielder Right", x: 75, y: 45 },
-      { position: "Striker Left", x: 40, y: 15 },
-      { position: "Striker Right", x: 60, y: 15 }
+      { position: "Midfielder Right", x: 80, y: 45 },
+      { position: "Striker Left", x: 35, y: 15 },
+      { position: "Striker Right", x: 65, y: 15 }
     ]
   }
 ];
@@ -116,16 +116,16 @@ const formations11ASide: FormationConfig[] = [
     name: "1-4-4-2",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 20, y: 70 },
-      { position: "Defender Centre Left", x: 40, y: 70 },
-      { position: "Defender Centre Right", x: 60, y: 70 },
-      { position: "Defender Right", x: 80, y: 70 },
-      { position: "Midfielder Left", x: 20, y: 45 },
-      { position: "Midfielder Centre Left", x: 40, y: 45 },
-      { position: "Midfielder Centre Right", x: 60, y: 45 },
-      { position: "Midfielder Right", x: 80, y: 45 },
-      { position: "Striker Centre Left", x: 40, y: 15 },
-      { position: "Striker Centre Right", x: 60, y: 15 }
+      { position: "Defender Left", x: 15, y: 70 },
+      { position: "Defender Centre Left", x: 35, y: 70 },
+      { position: "Defender Centre Right", x: 65, y: 70 },
+      { position: "Defender Right", x: 85, y: 70 },
+      { position: "Midfielder Left", x: 15, y: 45 },
+      { position: "Midfielder Centre Left", x: 35, y: 45 },
+      { position: "Midfielder Centre Right", x: 65, y: 45 },
+      { position: "Midfielder Right", x: 85, y: 45 },
+      { position: "Striker Centre Left", x: 35, y: 15 },
+      { position: "Striker Centre Right", x: 65, y: 15 }
     ]
   },
   {
@@ -133,16 +133,16 @@ const formations11ASide: FormationConfig[] = [
     name: "1-4-3-3",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 20, y: 70 },
-      { position: "Defender Centre Left", x: 40, y: 70 },
-      { position: "Defender Centre Right", x: 60, y: 70 },
-      { position: "Defender Right", x: 80, y: 70 },
-      { position: "Midfielder Centre Left", x: 35, y: 45 },
+      { position: "Defender Left", x: 15, y: 70 },
+      { position: "Defender Centre Left", x: 35, y: 70 },
+      { position: "Defender Centre Right", x: 65, y: 70 },
+      { position: "Defender Right", x: 85, y: 70 },
+      { position: "Midfielder Centre Left", x: 30, y: 45 },
       { position: "Midfielder Centre", x: 50, y: 45 },
-      { position: "Midfielder Centre Right", x: 65, y: 45 },
-      { position: "Attacking Midfielder Left", x: 25, y: 20 },
+      { position: "Midfielder Centre Right", x: 70, y: 45 },
+      { position: "Attacking Midfielder Left", x: 20, y: 20 },
       { position: "Striker Centre", x: 50, y: 15 },
-      { position: "Attacking Midfielder Right", x: 75, y: 20 }
+      { position: "Attacking Midfielder Right", x: 80, y: 20 }
     ]
   }
 ];

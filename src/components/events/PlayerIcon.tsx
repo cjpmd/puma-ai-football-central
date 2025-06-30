@@ -91,21 +91,24 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
           <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />
         )}
         
-        {/* Position abbreviation at top if provided and showPositionLabel is true */}
-        {showPositionLabel && positionAbbreviation && (
-          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-blue-600 bg-white px-1 rounded border">
-            {positionAbbreviation}
+        {/* Content inside circle - position abbreviation, name, squad number */}
+        <div className="flex flex-col items-center justify-center text-center leading-none">
+          {/* Position abbreviation above name if provided */}
+          {showPositionLabel && positionAbbreviation && (
+            <div className="text-xs font-bold text-blue-600 mb-0.5">
+              {positionAbbreviation}
+            </div>
+          )}
+          
+          {/* Player name in center */}
+          <div className="text-xs font-medium leading-tight">
+            {getDisplayName()}
           </div>
-        )}
-        
-        {/* Player name centered */}
-        <div className="text-xs text-center leading-tight font-medium">
-          {getDisplayName()}
-        </div>
-        
-        {/* Squad number below name */}
-        <div className="text-xs font-bold text-center text-gray-600">
-          #{player.squadNumber}
+          
+          {/* Squad number below name */}
+          <div className="text-xs font-bold text-gray-600 mt-0.5">
+            #{player.squadNumber}
+          </div>
         </div>
       </div>
     );

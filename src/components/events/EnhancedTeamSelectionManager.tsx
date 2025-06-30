@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Users, Gamepad2, Target, Plus } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X } from 'lucide-react';
 import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
@@ -63,6 +62,22 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   // Load main squad for initial team
   const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
+
+  // Load team name display option
+  const { data: teamData } = useQuery({
+    queryKey: ['team-settings', teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('name_display_option')
+        .eq('id', teamId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!teamId,
+  });
 
   // Initialize first team with main squad
   useEffect(() => {
@@ -268,6 +283,18 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       
       for (const team of teamSelections) {
         for (const period of team.periods) {
+          // Convert positions to correct format for database
+          const playerPositions = period.positions
+            .filter(pos => pos.playerId) // Only include positions with players
+            .map(pos => ({
+              playerId: pos.playerId,
+              position: pos.positionName, // Use full position name
+              isSubstitute: false,
+              minutes: period.duration
+            }));
+
+          console.log('Converting positions for period:', period.id, playerPositions);
+
           selectionsToInsert.push({
             event_id: event.id,
             team_id: teamId,
@@ -277,12 +304,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             duration_minutes: period.duration,
             captain_id: team.globalCaptainId || null,
             performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
-            player_positions: period.positions.map(pos => ({
-              playerId: pos.playerId,
-              position: pos.positionName,
-              isSubstitute: false,
-              minutes: period.duration
-            })).filter(p => p.playerId),
+            player_positions: playerPositions,
             substitute_players: period.substitutes,
             staff_selection: []
           });
@@ -314,6 +336,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   if (!isOpen) return null;
 
   const currentTeam = getCurrentTeam();
+  const nameDisplayOption = teamData?.name_display_option || 'surname';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -341,6 +364,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 {saving ? 'Saving...' : 'Save Selection'}
               </Button>
               <Button variant="outline" onClick={onClose}>
+                <X className="h-4 w-4 mr-1" />
                 Close
               </Button>
             </div>
@@ -432,7 +456,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     periods={currentTeam.periods}
                     gameFormat={event.game_format || '11-a-side'}
                     globalCaptainId={currentTeam.globalCaptainId}
-                    nameDisplayOption="surname"
+                    nameDisplayOption={nameDisplayOption as any}
                     onPeriodsChange={handlePeriodsChange}
                     onCaptainChange={handleCaptainChange}
                   />
