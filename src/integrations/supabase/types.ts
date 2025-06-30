@@ -1091,6 +1091,36 @@ export type Database = {
           },
         ]
       }
+      position_abbreviations: {
+        Row: {
+          abbreviation: string
+          created_at: string
+          display_order: number
+          game_format: string
+          id: string
+          position_group: string
+          position_name: string
+        }
+        Insert: {
+          abbreviation: string
+          created_at?: string
+          display_order?: number
+          game_format: string
+          id?: string
+          position_group: string
+          position_name: string
+        }
+        Update: {
+          abbreviation?: string
+          created_at?: string
+          display_order?: number
+          game_format?: string
+          id?: string
+          position_group?: string
+          position_name?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           coaching_badges: Json | null
@@ -1373,6 +1403,77 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      team_squads: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          availability_status: string
+          created_at: string
+          event_id: string | null
+          id: string
+          notes: string | null
+          player_id: string
+          squad_role: string
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          availability_status?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          player_id: string
+          squad_role?: string
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          availability_status?: string
+          created_at?: string
+          event_id?: string | null
+          id?: string
+          notes?: string | null
+          player_id?: string
+          squad_role?: string
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_squads_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_squads_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_squads_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_squads_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_staff: {
         Row: {
@@ -1936,6 +2037,24 @@ export type Database = {
       }
     }
     Functions: {
+      backup_event_selections: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          backup_id: string
+          event_id: string
+          team_id: string
+          team_number: number
+          period_number: number
+          formation: string
+          player_positions: Json
+          substitute_players: Json
+          captain_id: string
+          staff_selection: Json
+          duration_minutes: number
+          performance_category_id: string
+          backup_created_at: string
+        }[]
+      }
       debug_player_positions: {
         Args: { p_player_id: string; p_player_name?: string }
         Returns: undefined
