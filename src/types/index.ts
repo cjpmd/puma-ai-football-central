@@ -115,9 +115,7 @@ export type Formation =
   | "3-2-3" | "2-4-2" | "3-3-2" 
   | "custom";
 
-export type GameFormat = 
-  | "3-a-side" | "4-a-side" | "5-a-side" 
-  | "7-a-side" | "9-a-side" | "11-a-side";
+export type GameFormat = '3-a-side' | '4-a-side' | '5-a-side' | '7-a-side' | '9-a-side' | '11-a-side';
 
 export type MatchStats = {
   totalGames: number;

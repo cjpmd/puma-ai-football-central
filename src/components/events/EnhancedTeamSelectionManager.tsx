@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -79,7 +80,7 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
         id: player.id,
         name: player.name,
         squadNumber: player.squad_number || 0,
-        type: player.position_type || 'outfield',
+        type: player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield',
         availabilityStatus: 'available',
         squadRole: 'player'
       }));
@@ -188,7 +189,7 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 
         // Load player positions
         try {
-          const playerPositions = JSON.parse(data.player_positions || '[]');
+          const playerPositions = JSON.parse(String(data.player_positions) || '[]');
           const initialAssignments: { [positionId: string]: string } = {};
           playerPositions.forEach((pos: any) => {
             const position = positions.find(p => p.positionName === pos.position);
@@ -203,7 +204,7 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 
         // Load substitutes
         try {
-          const subs = JSON.parse(data.substitute_players || '[]').map((sub: any) => sub.playerId);
+          const subs = JSON.parse(String(data.substitute_players) || '[]').map((sub: any) => sub.playerId);
           setSubstitutes(subs);
         } catch (parseError) {
           console.error('Error parsing substitute_players:', parseError);
@@ -213,7 +214,7 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 
         // Load staff selection
         try {
-          const staffSelection = JSON.parse(data.staff_selection || '[]').map((staff: any) => staff.staffId);
+          const staffSelection = JSON.parse(String(data.staff_selection) || '[]').map((staff: any) => staff.staffId);
           setSelectedStaff(staffSelection);
         } catch (parseError) {
           console.error('Error parsing staff_selection:', parseError);
@@ -300,6 +301,7 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-1">
                   <FormationSelector
+                    gameFormat={event.game_format || '11-a-side'}
                     selectedFormation={selectedFormation}
                     onFormationChange={setSelectedFormation}
                   />
