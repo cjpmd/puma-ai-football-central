@@ -336,34 +336,25 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Generate a UUID for the new profile
-      const { data: { user } } = await supabase.auth.admin.createUser({
-        email: email,
-        email_confirm: true,
-      });
-
-      if (!user) {
-        throw new Error('Failed to create user account');
-      }
-
-      // Create profile with the generated user ID
-      const { error: profileError } = await supabase
+      // Create profile with a generated UUID - this approach works without admin privileges
+      const { data, error: insertError } = await supabase
         .from('profiles')
         .insert({
-          id: user.id,
           email: email,
           name: name,
           roles: ['player']
-        });
+        })
+        .select()
+        .single();
 
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        throw profileError;
+      if (insertError) {
+        console.error('Error creating profile:', insertError);
+        throw insertError;
       }
 
       toast({
         title: 'Success',
-        description: `Profile created successfully for ${email}`,
+        description: `Profile created successfully for ${email}. They can now sign up using this email address.`,
       });
       
       await loadUsers();
@@ -371,7 +362,7 @@ export const UserManagementSystem = () => {
       console.error('Error creating profile:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create profile. This feature requires admin privileges.',
+        description: error.message || 'Failed to create profile. This creates a profile record that allows the user to sign up with the specified email.',
         variant: 'destructive',
       });
     }
@@ -446,10 +437,10 @@ export const UserManagementSystem = () => {
             variant="outline"
             size="sm"
             className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
-            title="Creates a user account and profile. Only available for global administrators."
+            title="Creates a profile record for a specific email address, allowing them to sign up later."
           >
             <AlertTriangle className="h-4 w-4 mr-2" />
-            Create Missing Profile
+            Create Profile Record
           </Button>
           <Button
             onClick={loadUsers}
@@ -469,17 +460,16 @@ export const UserManagementSystem = () => {
         </div>
       </div>
 
-      {/* Updated Info Card about Create Missing Profile */}
+      {/* Updated Info Card */}
       <Card className="bg-blue-50 border-blue-200">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-blue-600 mt-0.5" />
             <div>
-              <h4 className="font-medium text-blue-900 mb-1">About "Create Missing Profile"</h4>
+              <h4 className="font-medium text-blue-900 mb-1">About "Create Profile Record"</h4>
               <p className="text-sm text-blue-800">
-                This feature creates a full user account and profile for someone who hasn't signed up yet. 
-                It's only available for global administrators and should be used sparingly. 
-                Regular users should sign up through the normal registration process.
+                This feature creates a profile record for a specific email address, which allows that person to sign up later using that email. 
+                It doesn't create a full user account, but prepares the system for when they register.
               </p>
             </div>
           </div>
