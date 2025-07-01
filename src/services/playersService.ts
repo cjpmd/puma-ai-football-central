@@ -88,7 +88,15 @@ export const playersService = {
         .order('name');
 
       if (error) throw error;
-      return data || [];
+      return (data || []).map(player => ({
+        ...player,
+        attributes: Array.isArray(player.attributes) ? player.attributes : [],
+        comments: Array.isArray(player.comments) ? player.comments : [],
+        objectives: Array.isArray(player.objectives) ? player.objectives : [],
+        kit_sizes: player.kit_sizes || {},
+        fun_stats: player.fun_stats || {},
+        match_stats: player.match_stats || {}
+      }));
     } catch (error) {
       console.error('Error fetching active players:', error);
       throw error;
@@ -97,14 +105,54 @@ export const playersService = {
 
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
     try {
+      // Ensure required fields are present
+      if (!playerData.date_of_birth || !playerData.name || !playerData.squad_number || !playerData.team_id || !playerData.type) {
+        throw new Error('Missing required fields: date_of_birth, name, squad_number, team_id, and type are required');
+      }
+
+      // Convert attributes to proper format for database
+      const dbPlayerData = {
+        name: playerData.name,
+        date_of_birth: playerData.date_of_birth,
+        squad_number: playerData.squad_number,
+        team_id: playerData.team_id,
+        type: playerData.type,
+        availability: playerData.availability || 'green',
+        status: playerData.status || 'active',
+        subscription_type: playerData.subscription_type || 'full_squad',
+        subscription_status: playerData.subscription_status || 'active',
+        attributes: playerData.attributes ? JSON.stringify(playerData.attributes) : null,
+        comments: playerData.comments ? JSON.stringify(playerData.comments) : null,
+        objectives: playerData.objectives ? JSON.stringify(playerData.objectives) : null,
+        kit_sizes: playerData.kit_sizes ? JSON.stringify(playerData.kit_sizes) : null,
+        fun_stats: playerData.fun_stats ? JSON.stringify(playerData.fun_stats) : null,
+        match_stats: playerData.match_stats ? JSON.stringify(playerData.match_stats) : null,
+        photo_url: playerData.photo_url || null,
+        play_style: playerData.play_style || null,
+        card_design_id: playerData.card_design_id || 'goldRare',
+        linking_code: playerData.linking_code || null,
+        performance_category_id: playerData.performance_category_id || null,
+        parent_id: playerData.parent_id || null,
+        leave_date: playerData.leave_date || null,
+        leave_comments: playerData.leave_comments || null
+      };
+
       const { data, error } = await supabase
         .from('players')
-        .insert([playerData])
+        .insert(dbPlayerData)
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        attributes: Array.isArray(data.attributes) ? data.attributes : [],
+        comments: Array.isArray(data.comments) ? data.comments : [],
+        objectives: Array.isArray(data.objectives) ? data.objectives : [],
+        kit_sizes: data.kit_sizes || {},
+        fun_stats: data.fun_stats || {},
+        match_stats: data.match_stats || {}
+      };
     } catch (error) {
       console.error('Error creating player:', error);
       throw error;
@@ -121,7 +169,15 @@ export const playersService = {
         .single();
 
       if (error) throw error;
-      return data;
+      return {
+        ...data,
+        attributes: Array.isArray(data.attributes) ? data.attributes : [],
+        comments: Array.isArray(data.comments) ? data.comments : [],
+        objectives: Array.isArray(data.objectives) ? data.objectives : [],
+        kit_sizes: data.kit_sizes || {},
+        fun_stats: data.fun_stats || {},
+        match_stats: data.match_stats || {}
+      };
     } catch (error) {
       console.error('Error updating player:', error);
       throw error;

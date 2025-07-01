@@ -94,7 +94,14 @@ const PlayerManagementTab = () => {
 
   // Remove player mutation
   const removePlayerMutation = useMutation({
-    mutationFn: (playerId: string) => playersService.removePlayerFromSquad(playerId),
+    mutationFn: async (playerId: string) => {
+      const { error } = await supabase
+        .from('players')
+        .update({ status: 'inactive' })
+        .eq('id', playerId);
+      if (error) throw error;
+      return playerId;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-players'] });
       toast({
@@ -113,18 +120,18 @@ const PlayerManagementTab = () => {
 
   // Delete player photo mutation
   const deletePlayerPhotoMutation = useMutation({
-    mutationFn: (player: Player) => playersService.deletePlayerPhoto(player),
+    mutationFn: (playerId: string) => playersService.deletePlayerPhoto(playerId),
     onSuccess: (updatedPlayer) => {
       queryClient.invalidateQueries({ queryKey: ['active-players', selectedTeamId] });
       toast({
         title: 'Photo Deleted',
-        description: `Photo for ${updatedPlayer.name} has been successfully deleted.`,
+        description: 'Photo has been successfully deleted.',
       });
     },
     onError: (error: any, variables) => {
       toast({
         title: 'Error Deleting Photo',
-        description: error.message || `Failed to delete photo for ${variables.name}.`,
+        description: error.message || 'Failed to delete photo.',
         variant: 'destructive',
       });
     },
@@ -205,12 +212,12 @@ const PlayerManagementTab = () => {
   };
 
   const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
-    if (!playerToDeletePhoto.photoUrl) {
+    if (!playerToDeletePhoto.photo_url) {
       toast({ title: 'No Photo to Delete', description: `This player does not have a photo.` });
       return;
     }
     if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
-      deletePlayerPhotoMutation.mutate(playerToDeletePhoto);
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto.id);
     }
   };
 
@@ -222,7 +229,7 @@ const PlayerManagementTab = () => {
     });
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { funStats: stats }
+      data: { fun_stats: stats }
     });
   };
 
@@ -234,7 +241,7 @@ const PlayerManagementTab = () => {
     });
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { playStyle: JSON.stringify(playStyles) }
+      data: { play_style: JSON.stringify(playStyles) }
     });
   };
 
@@ -246,7 +253,7 @@ const PlayerManagementTab = () => {
     });
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { cardDesignId: designId }
+      data: { card_design_id: designId }
     });
   };
 
@@ -329,7 +336,7 @@ const PlayerManagementTab = () => {
   };
 
   const renderTopPositions = (player: Player) => {
-    const positions = player.matchStats?.minutesByPosition || {};
+    const positions = player.match_stats?.minutesByPosition || {};
     
     // Convert positions object to array and ensure values are numbers
     const positionEntries = Object.entries(positions).map(([position, minutes]) => [
@@ -467,22 +474,10 @@ const PlayerManagementTab = () => {
                     <FifaStylePlayerCard
                       key={player.id}
                       player={player}
-                      team={selectedTeam}
-                      onEdit={handleEditPlayer}
-                      onManageParents={handleManageParents}
-                      onRemoveFromSquad={handleRemoveFromSquad}
-                      onUpdatePhoto={handleUpdatePhoto}
-                      onDeletePhoto={handleDeletePlayerPhoto}
-                      onSaveFunStats={handleSaveFunStats}
-                      onSavePlayStyle={handleSavePlayStyle}
-                      onSaveCardDesign={handleSaveCardDesign}
-                      onManageAttributes={handleManageAttributes}
-                      onManageObjectives={handleManageObjectives}
-                      onManageComments={handleManageComments}
-                      onViewStats={handleViewStats}
-                      onViewHistory={handleViewHistory}
-                      onTransferPlayer={handleTransferPlayer}
-                      onLeaveTeam={handleLeaveTeam}
+                      showBackside={false}
+                      onFlip={() => {}}
+                      isEditable={true}
+                      onEdit={() => handleEditPlayer(player)}
                     />
                   ))}
                 </div>
@@ -524,8 +519,8 @@ const PlayerManagementTab = () => {
                               {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
-                          <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
+                          <TableCell>{player.match_stats?.totalGames || 0}</TableCell>
+                          <TableCell>{player.match_stats?.totalMinutes || 0}</TableCell>
                           <TableCell>
                             {renderTopPositions(player)}
                           </TableCell>

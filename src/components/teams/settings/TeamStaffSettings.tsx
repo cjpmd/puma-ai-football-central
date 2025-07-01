@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Team, Staff as TeamStaff } from '@/types';
+import { Team, Staff } from '@/types';
 import { Plus, Edit, Trash2, Users, Mail, Phone, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,15 +22,15 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
   team,
   onUpdate
 }) => {
-  const [staff, setStaff] = useState<TeamStaff[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
   const [isInvitingStaff, setIsInvitingStaff] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
     phone: '',
-    role: 'coach' as TeamStaff['role']
+    role: 'coach' as Staff['role']
   });
   const { toast } = useToast();
   const { user } = useAuth();
@@ -60,14 +60,15 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
       console.log('TeamStaffSettings: Loaded staff data:', data);
 
       if (data && Array.isArray(data)) {
-        const staffMembers: TeamStaff[] = data.map(record => {
+        const staffMembers: Staff[] = data.map(record => {
           console.log('TeamStaffSettings: Processing staff record:', record);
           return {
             id: record.id,
             name: record.name || '',
             email: record.email || '',
             phone: record.phone || '',
-            role: record.role as TeamStaff['role'],
+            team_id: team.id,
+            role: record.role as Staff['role'],
             user_id: record.user_id || undefined,
             coachingBadges: [],
             certificates: [],
@@ -218,7 +219,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
   };
 
-  function getRoleColor(role: TeamStaff['role']) {
+  function getRoleColor(role: Staff['role']) {
     switch (role) {
       case 'manager': return 'bg-blue-500';
       case 'assistant_manager': return 'bg-purple-500';
@@ -228,7 +229,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
     }
   }
 
-  function getRoleLabel(role: TeamStaff['role']) {
+  function getRoleLabel(role: Staff['role']) {
     return role.replace('_', ' ').split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
@@ -291,7 +292,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
                 <Label htmlFor="staffRole">Role</Label>
                 <Select 
                   value={newStaff.role}
-                  onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
+                  onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as Staff['role'] }))}
                 >
                   <SelectTrigger id="staffRole">
                     <SelectValue />
@@ -356,7 +357,7 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
                 <Label htmlFor="staffRole">Role</Label>
                 <Select 
                   value={newStaff.role}
-                  onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
+                  onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as Staff['role'] }))}
                 >
                   <SelectTrigger id="staffRole">
                     <SelectValue />
