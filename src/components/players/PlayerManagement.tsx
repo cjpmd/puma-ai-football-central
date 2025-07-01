@@ -13,6 +13,7 @@ import { Player, Team } from '@/types';
 import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud, Trash2 } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
 import { PlayerCard } from './PlayerCard';
+import { FifaStylePlayerCard } from './FifaStylePlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
 import { PlayerAttributesModal } from './PlayerAttributesModal';
 import { PlayerObjectivesModal } from './PlayerObjectivesModal';
@@ -35,6 +36,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
@@ -361,6 +363,23 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                 </SelectContent>
               </Select>
               
+              <div className="flex rounded-lg border p-1">
+                <Button
+                  variant={viewMode === 'table' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('table')}
+                >
+                  Table
+                </Button>
+                <Button
+                  variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setViewMode('cards')}
+                >
+                  FIFA Cards
+                </Button>
+              </div>
+              
               <Badge variant="secondary">
                 {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
               </Badge>
@@ -371,17 +390,32 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
               </Button>
             </div>
 
-            {/* FIFA-Style Player Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
-              {filteredPlayers.map((player) => (
-                <PlayerCard
-                  key={player.id}
-                  player={player}
-                  onEdit={() => handleEditPlayer(player)}
-                  onViewDetails={() => handleViewStats(player)}
-                />
-              ))}
-            </div>
+            {/* Player Cards or Table View */}
+            {viewMode === 'cards' ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
+                {filteredPlayers.map((player) => (
+                  <FifaStylePlayerCard
+                    key={player.id}
+                    player={player}
+                    showBackside={false}
+                    onFlip={() => {}}
+                    isEditable={true}
+                    onEdit={() => handleEditPlayer(player)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
+                {filteredPlayers.map((player) => (
+                  <PlayerCard
+                    key={player.id}
+                    player={player}
+                    onEdit={() => handleEditPlayer(player)}
+                    onViewDetails={() => handleViewStats(player)}
+                  />
+                ))}
+              </div>
+            )}
 
             {filteredPlayers.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
