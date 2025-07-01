@@ -141,24 +141,6 @@ export const UserTeamManagement = () => {
         }
       });
 
-      // Add users from accepted invitations (might not have profiles yet)
-      (invitationsData || [])
-        .filter(inv => inv.accepted_by)
-        .forEach(invitation => {
-          const userId = invitation.accepted_by;
-          allUserIds.add(userId);
-          if (!userMap.has(userId)) {
-            userMap.set(userId, {
-              id: userId,
-              name: invitation.name || 'From Invitation',
-              email: invitation.email || 'Unknown',
-              roles: [invitation.role],
-              hasProfile: false,
-              teamAssignments: []
-            });
-          }
-        });
-
       console.log('Total unique user IDs found:', allUserIds.size);
       console.log('User IDs:', Array.from(allUserIds));
 
