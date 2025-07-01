@@ -318,6 +318,7 @@ export const UserManagementSystem = () => {
       const email = prompt('Enter the email of the user who has signed up but is missing a profile:');
       if (!email) return;
 
+      // First check if profile already exists
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('id')
@@ -333,21 +334,56 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const result = await userInvitationService.processUserInvitation(email);
+      // Check if user exists in auth.users table
+      const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
       
-      if (result.processed) {
+      if (usersError) {
+        console.error('Error checking auth users:', usersError);
         toast({
-          title: 'Success',
-          description: `Profile created for ${email}`,
-        });
-        await loadUsers();
-      } else {
-        toast({
-          title: 'Cannot Create Profile',
-          description: 'User may not have signed up yet or no invitation exists.',
+          title: 'Error',
+          description: 'Cannot access user data. You may not have sufficient permissions.',
           variant: 'destructive',
         });
+        return;
       }
+
+      const authUser = users?.find(u => u.email === email);
+      
+      if (!authUser) {
+        toast({
+          title: 'User Not Found',
+          description: 'No authenticated user found with this email. The user needs to sign up first.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Create profile with the auth user's ID
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert({
+          id: authUser.id,
+          email: authUser.email,
+          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown User',
+          roles: ['player'] // default role
+        });
+
+      if (profileError) {
+        console.error('Error creating profile:', profileError);
+        toast({
+          title: 'Error',
+          description: profileError.message || 'Failed to create profile',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Success',
+        description: `Profile created for ${email}`,
+      });
+      
+      await loadUsers();
     } catch (error: any) {
       console.error('Error creating profile:', error);
       toast({
@@ -427,7 +463,7 @@ export const UserManagementSystem = () => {
             variant="outline"
             size="sm"
             className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
-            title="Only use this if a user has signed up but doesn't have a profile"
+            title="Creates a profile for users who have signed up but are missing profile records. Only use if user has successfully registered but profile is missing."
           >
             <AlertTriangle className="h-4 w-4 mr-2" />
             Create Missing Profile

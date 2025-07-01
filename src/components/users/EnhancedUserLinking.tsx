@@ -35,6 +35,7 @@ interface Player {
   id: string;
   name: string;
   team_name: string;
+  team_id: string;
 }
 
 interface StaffMember {
@@ -42,6 +43,7 @@ interface StaffMember {
   name: string;
   role: string;
   team_name: string;
+  team_id: string;
 }
 
 export const EnhancedUserLinking: React.FC = () => {
@@ -56,11 +58,11 @@ export const EnhancedUserLinking: React.FC = () => {
   const [relationship, setRelationship] = useState<string>('');
   const [linkType, setLinkType] = useState<'player' | 'staff'>('player');
   const { toast } = useToast();
-  const { teams } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
     loadData();
-  }, [teams]);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -79,6 +81,8 @@ export const EnhancedUserLinking: React.FC = () => {
 
   const loadUsers = async () => {
     try {
+      console.log('Loading users with links...');
+      
       // Get all users
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -97,24 +101,42 @@ export const EnhancedUserLinking: React.FC = () => {
         .from('user_players')
         .select(`
           user_id,
-          relationship,
           player_id,
-          players!inner(name, team_id, teams!inner(name))
+          relationship,
+          players!inner(
+            id,
+            name,
+            team_id,
+            teams!inner(name)
+          )
         `);
 
-      if (userPlayersError) console.error('Error fetching user players:', userPlayersError);
+      if (userPlayersError) {
+        console.error('Error fetching user players:', userPlayersError);
+      }
 
       // Get user-staff relationships
       const { data: userStaff, error: userStaffError } = await supabase
         .from('user_staff')
         .select(`
           user_id,
-          relationship,
           staff_id,
-          team_staff!inner(name, role, team_id, teams!inner(name))
+          relationship,
+          team_staff!inner(
+            id,
+            name,
+            role,
+            team_id,
+            teams!inner(name)
+          )
         `);
 
-      if (userStaffError) console.error('Error fetching user staff:', userStaffError);
+      if (userStaffError) {
+        console.error('Error fetching user staff:', userStaffError);
+      }
+
+      console.log('User-player links:', userPlayers?.length || 0);
+      console.log('User-staff links:', userStaff?.length || 0);
 
       // Combine data
       const usersWithLinks: UserWithLinks[] = profiles.map(profile => {
@@ -157,6 +179,7 @@ export const EnhancedUserLinking: React.FC = () => {
         };
       });
 
+      console.log('Processed users with links:', usersWithLinks.length);
       setUsers(usersWithLinks);
     } catch (error) {
       console.error('Error loading users:', error);
@@ -170,12 +193,6 @@ export const EnhancedUserLinking: React.FC = () => {
 
   const loadPlayers = async () => {
     try {
-      const teamIds = teams.map(team => team.id);
-      if (teamIds.length === 0) {
-        setPlayers([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('players')
         .select(`
@@ -184,7 +201,6 @@ export const EnhancedUserLinking: React.FC = () => {
           team_id,
           teams!inner(name)
         `)
-        .in('team_id', teamIds)
         .eq('status', 'active')
         .order('name');
 
@@ -193,7 +209,8 @@ export const EnhancedUserLinking: React.FC = () => {
       const playersWithTeams = (data || []).map(player => ({
         id: player.id,
         name: player.name,
-        team_name: (player as any).teams?.name || 'Unknown Team'
+        team_name: (player as any).teams?.name || 'Unknown Team',
+        team_id: player.team_id
       }));
 
       setPlayers(playersWithTeams);
@@ -204,12 +221,6 @@ export const EnhancedUserLinking: React.FC = () => {
 
   const loadStaff = async () => {
     try {
-      const teamIds = teams.map(team => team.id);
-      if (teamIds.length === 0) {
-        setStaff([]);
-        return;
-      }
-
       const { data, error } = await supabase
         .from('team_staff')
         .select(`
@@ -219,7 +230,6 @@ export const EnhancedUserLinking: React.FC = () => {
           team_id,
           teams!inner(name)
         `)
-        .in('team_id', teamIds)
         .order('name');
 
       if (error) throw error;
@@ -228,7 +238,8 @@ export const EnhancedUserLinking: React.FC = () => {
         id: staffMember.id,
         name: staffMember.name,
         role: staffMember.role,
-        team_name: (staffMember as any).teams?.name || 'Unknown Team'
+        team_name: (staffMember as any).teams?.name || 'Unknown Team',
+        team_id: staffMember.team_id
       }));
 
       setStaff(staffWithTeams);
@@ -334,6 +345,11 @@ export const EnhancedUserLinking: React.FC = () => {
     user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Get users with links for summary
+  const usersWithLinks = users.filter(user => 
+    user.playerLinks.length > 0 || user.staffLinks.length > 0
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -347,12 +363,18 @@ export const EnhancedUserLinking: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header with Summary */}
       <div>
         <h3 className="text-lg font-semibold">Enhanced User Linking</h3>
         <p className="text-sm text-muted-foreground">
           Link users to players or staff members, and manage existing relationships
         </p>
+        <div className="flex gap-4 mt-2 text-sm">
+          <span className="text-blue-600">Total Users: {users.length}</span>
+          <span className="text-green-600">Users with Links: {usersWithLinks.length}</span>
+          <span className="text-orange-600">Available Players: {players.length}</span>
+          <span className="text-purple-600">Available Staff: {staff.length}</span>
+        </div>
       </div>
 
       {/* Create New Link */}
@@ -380,7 +402,11 @@ export const EnhancedUserLinking: React.FC = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Link Type</label>
-              <Select value={linkType} onValueChange={(value: 'player' | 'staff') => setLinkType(value)}>
+              <Select value={linkType} onValueChange={(value: 'player' | 'staff') => {
+                setLinkType(value);
+                setSelectedPlayer('');
+                setSelectedStaff('');
+              }}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
