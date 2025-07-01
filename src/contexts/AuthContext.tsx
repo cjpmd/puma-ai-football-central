@@ -46,7 +46,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (session) {
         const { data: userDetails, error: userError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
@@ -57,7 +57,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        setUser(userDetails || session.user);
+        setUser(userDetails ? { id: userDetails.id, email: userDetails.email || '', name: userDetails.name, roles: userDetails.roles } : null);
         await fetchTeamsAndClubs(userDetails?.id || session.user.id);
       }
       setLoading(false);
@@ -68,7 +68,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
         const { data: userDetails, error: userError } = await supabase
-          .from('users')
+          .from('profiles')
           .select('*')
           .eq('id', session?.user.id)
           .single();
@@ -79,7 +79,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return;
         }
 
-        setUser(userDetails || session.user);
+        setUser(userDetails ? { id: userDetails.id, email: userDetails.email || '', name: userDetails.name, roles: userDetails.roles } : null);
         await fetchTeamsAndClubs(userDetails?.id || session.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -154,9 +154,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw teamsError;
       }
 
-      setTeams(teamsData);
+      const convertedTeams = teamsData.map(team => ({
+        ...team,
+        ageGroup: team.age_group,
+        seasonStart: team.season_start,
+        seasonEnd: team.season_end,
+        clubId: team.club_id,
+        gameFormat: team.game_format,
+        gameDuration: team.game_duration,
+        subscriptionType: team.subscription_type,
+        logoUrl: team.logo_url,
+        managerName: team.manager_name,
+        managerEmail: team.manager_email,
+        managerPhone: team.manager_phone,
+        performanceCategories: team.performance_categories || [],
+        kitIcons: team.kit_icons || { home: '', away: '' }
+      }));
+      setTeams(convertedTeams);
       if (teamsData.length > 0) {
-        setCurrentTeam(teamsData[0]);
+        setCurrentTeam(convertedTeams[0]);
       }
     } catch (error) {
       console.error('Error fetching teams and clubs:', error);
@@ -180,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const { data: userDetails, error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .select('*')
         .eq('id', authResponse.user?.id)
         .single();
@@ -191,7 +207,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: userError };
       }
 
-      setUser(userDetails || authResponse.user);
+      setUser(userDetails ? { id: userDetails.id, email: userDetails.email || '', name: userDetails.name, roles: userDetails.roles } : null);
       await fetchTeamsAndClubs(userDetails?.id || authResponse.user?.id);
       navigate('/dashboard');
       return {};
@@ -223,14 +239,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: authError };
       }
 
-      // Create a user profile in the 'users' table
+      // Create a user profile in the 'profiles' table
       const { error: userError } = await supabase
-        .from('users')
+        .from('profiles')
         .insert([
           {
             id: authResponse.user?.id,
             email: email,
             name: name,
+            roles: ['player']
           },
         ]);
 

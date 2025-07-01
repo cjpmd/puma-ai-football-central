@@ -10,13 +10,13 @@ interface TeamLogoSettingsProps {
 }
 
 export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpdate }) => {
-  const [logoUrl, setLogoUrl] = useState(team.logoUrl || null);
+  const [logoUrl, setLogoUrl] = useState(team.logo_url || null);
 
   const handleLogoChange = (newLogoUrl: string | null) => {
     console.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
     setLogoUrl(newLogoUrl);
     // Update parent component immediately
-    onUpdate({ logoUrl: newLogoUrl });
+    onUpdate({ logo_url: newLogoUrl });
   };
 
   return (
@@ -29,7 +29,7 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
       </CardHeader>
       <CardContent>
         <LogoUpload
-          currentLogoUrl={team.logoUrl}
+          currentLogoUrl={team.logo_url}
           onLogoChange={handleLogoChange}
           entityType="team"
           entityId={team.id}
