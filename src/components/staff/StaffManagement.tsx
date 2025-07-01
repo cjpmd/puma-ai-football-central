@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus, RefreshCw, Trash2, Edit, AlertCircle } from 'lucide-react';
+import { Users, Search, Phone, Mail, Calendar, UserPlus, RefreshCw, Trash2, Edit, AlertCircle } from 'lucide-react';
 
 interface StaffMember {
   id: string;
@@ -21,9 +22,6 @@ interface StaffMember {
   team_id?: string;
   email?: string;
   phone?: string;
-  linked_user_id?: string;
-  linked_user_name?: string;
-  coaching_badges?: any[];
   source: 'team_staff' | 'user_profile';
   user_roles?: string[];
 }
@@ -76,6 +74,8 @@ export const StaffManagement: React.FC = () => {
       setLoading(true);
       console.log('Loading all staff members...');
 
+      const allStaff: StaffMember[] = [];
+
       // Get team staff from team_staff table
       const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
@@ -92,78 +92,58 @@ export const StaffManagement: React.FC = () => {
 
       if (staffError) {
         console.error('Error fetching team staff:', staffError);
+      } else if (staffData) {
+        const teamStaffMembers: StaffMember[] = staffData.map(staffMember => ({
+          id: staffMember.id,
+          name: staffMember.name || 'Unknown',
+          role: staffMember.role || 'Unknown Role',
+          team_name: (staffMember as any).teams?.name || 'Unknown Team',
+          team_id: staffMember.team_id,
+          email: staffMember.email,
+          phone: staffMember.phone,
+          source: 'team_staff' as const
+        }));
+        allStaff.push(...teamStaffMembers);
+        console.log('Loaded team staff:', teamStaffMembers.length);
       }
 
-      // Get user-staff links
-      const { data: userStaffLinks, error: linksError } = await supabase
-        .from('user_staff')
-        .select(`
-          staff_id,
-          user_id,
-          profiles!inner(name, email, phone)
-        `);
-
-      if (linksError) {
-        console.error('Error fetching user-staff links:', linksError);
-      }
-
-      // Get users with staff roles
+      // Get users with staff roles from profiles table
       const { data: staffUsers, error: usersError } = await supabase
         .from('profiles')
         .select('id, name, email, phone, roles')
-        .or('roles.cs.{team_manager,team_assistant_manager,team_coach,team_helper}');
+        .not('roles', 'is', null);
 
       if (usersError) {
         console.error('Error fetching staff users:', usersError);
-      }
-
-      const allStaff: StaffMember[] = [];
-
-      // Process team_staff records
-      if (staffData) {
-        const teamStaffMembers: StaffMember[] = staffData.map(staffMember => {
-          const userLink = userStaffLinks?.find(link => link.staff_id === staffMember.id);
-          
-          return {
-            id: staffMember.id,
-            name: staffMember.name || 'Unknown',
-            role: staffMember.role || 'Unknown Role',
-            team_name: (staffMember as any).teams?.name || 'Unknown Team',
-            team_id: staffMember.team_id,
-            email: staffMember.email || (userLink as any)?.profiles?.email,
-            phone: staffMember.phone || (userLink as any)?.profiles?.phone,
-            linked_user_id: userLink?.user_id,
-            linked_user_name: (userLink as any)?.profiles?.name,
-            source: 'team_staff' as const
-          };
-        });
-        allStaff.push(...teamStaffMembers);
-      }
-
-      // Process users with staff roles (who aren't already in team_staff)
-      if (staffUsers) {
-        const existingUserIds = userStaffLinks?.map(link => link.user_id) || [];
-        
+      } else if (staffUsers) {
+        // Filter users who have staff roles
+        const staffRoles = ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper'];
         const userStaffMembers: StaffMember[] = staffUsers
-          .filter(user => !existingUserIds.includes(user.id))
-          .map(user => ({
-            id: user.id,
-            name: user.name || 'Unknown',
-            role: user.roles?.find((role: string) => 
-              ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper'].includes(role)
-            )?.replace('team_', '') || 'staff',
-            email: user.email,
-            phone: user.phone,
-            linked_user_id: user.id,
-            linked_user_name: user.name,
-            source: 'user_profile' as const,
-            user_roles: user.roles
-          }));
+          .filter(user => {
+            const userRoles = user.roles || [];
+            return userRoles.some((role: string) => staffRoles.includes(role));
+          })
+          .map(user => {
+            const userRoles = user.roles || [];
+            const staffRole = userRoles.find((role: string) => staffRoles.includes(role));
+            const displayRole = staffRole ? staffRole.replace('team_', '') : 'staff';
+            
+            return {
+              id: user.id,
+              name: user.name || 'Unknown',
+              role: displayRole,
+              email: user.email,
+              phone: user.phone,
+              source: 'user_profile' as const,
+              user_roles: userRoles
+            };
+          });
         
         allStaff.push(...userStaffMembers);
+        console.log('Loaded user staff:', userStaffMembers.length);
       }
 
-      console.log('All staff members loaded:', allStaff);
+      console.log('All staff members loaded:', allStaff.length);
       setStaff(allStaff);
     } catch (error: any) {
       console.error('Error loading staff:', error);
@@ -418,12 +398,6 @@ export const StaffManagement: React.FC = () => {
                     <Badge className={`${getRoleColor(member.role)} text-white text-xs`}>
                       {member.role}
                     </Badge>
-                    {member.linked_user_id && (
-                      <Badge variant="outline" className="text-xs">
-                        <Link2 className="h-3 w-3 mr-1" />
-                        Linked User
-                      </Badge>
-                    )}
                     <Badge variant="secondary" className="text-xs">
                       {member.source === 'team_staff' ? 'Team Staff' : 'User Profile'}
                     </Badge>
@@ -548,7 +522,7 @@ export const StaffManagement: React.FC = () => {
               <Label htmlFor="staffTeam">Team (Optional)</Label>
               <Select 
                 value={newStaffData.team_id}
-                onValueChange={(value) => setNewStaffData(prev => ({ ...prev, team_id: value || '' }))}
+                onValueChange={(value) => setNewStaffData(prev => ({ ...prev, team_id: value === 'none' ? '' : value }))}
               >
                 <SelectTrigger id="staffTeam">
                   <SelectValue placeholder="Select a team (optional)" />
