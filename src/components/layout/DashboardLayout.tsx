@@ -149,13 +149,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
             {currentClub ? (
               <EntityHeader 
-                logoUrl={currentClub.logoUrl}
+                logoUrl={currentClub.logo_url}
                 entityName={currentClub.name}
                 entityType="club"
               />
             ) : currentTeam ? (
               <EntityHeader 
-                logoUrl={currentTeam.logoUrl}
+                logoUrl={currentTeam.logo_url}
                 entityName={currentTeam.name}
                 entityType="team"
               />

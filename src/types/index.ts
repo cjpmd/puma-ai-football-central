@@ -219,3 +219,13 @@ export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CM' | 'LM' | 'RM' | 'CAM' | 
 
 export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4-3' | 
   '1-1-3-1' | '2-3-1' | '3-2-1' | '3-2-3' | '2-4-2' | '3-3-2' | 'custom';
+
+export interface PlayerAttribute {
+  id: string;
+  name: string;
+  group: string;
+  value: number;
+  max_value?: number;
+  created_at?: string;
+  updated_at?: string;
+}
