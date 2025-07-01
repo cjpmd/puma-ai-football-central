@@ -263,7 +263,20 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const playerId = event.active.id as string;
+    const dragId = event.active.id as string;
+    console.log('Drag started with ID:', dragId);
+    
+    // Extract player ID from the drag ID
+    let playerId: string;
+    if (dragId.includes('-position-')) {
+      // Format: periodId-position-index-playerId
+      const parts = dragId.split('-');
+      playerId = parts[parts.length - 1];
+    } else {
+      // Direct player ID from available players
+      playerId = dragId;
+    }
+    
     const player = squadPlayers.find(p => p.id === playerId);
     console.log('Drag started for player:', player?.name, 'ID:', playerId);
     setDraggedPlayer(player || null);
@@ -278,10 +291,19 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       return;
     }
 
-    const playerId = active.id as string;
+    const dragId = active.id as string;
     const targetId = over.id as string;
     
-    console.log('Drag ended:', { playerId, targetId });
+    console.log('Drag ended:', { dragId, targetId });
+    
+    // Extract player ID from drag ID
+    let playerId: string;
+    if (dragId.includes('-position-')) {
+      const parts = dragId.split('-');
+      playerId = parts[parts.length - 1];
+    } else {
+      playerId = dragId;
+    }
     
     if (targetId.includes('-position-')) {
       const [periodId, positionIndex] = targetId.split('-position-');
@@ -299,14 +321,17 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       if (period.id === periodId) {
         const newPositions = [...period.positions];
         
+        // Remove player from any existing position in THIS period only
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
           }
         });
         
+        // Remove from substitutes in THIS period only
         const newSubstitutes = period.substitutes.filter(id => id !== playerId);
         
+        // Add to new position
         if (newPositions[positionIndex]) {
           newPositions[positionIndex].playerId = playerId;
           console.log('Assigned player to position:', newPositions[positionIndex]);
@@ -318,7 +343,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       }
-      return period;
+      return period; // Don't modify other periods
     });
     
     console.log('Updated periods after position change:', updatedPeriods);
@@ -330,11 +355,13 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     
     const updatedPeriods = periods.map(period => {
       if (period.id === periodId) {
+        // Remove from positions in THIS period only
         const newPositions = period.positions.map(pos => ({
           ...pos,
           playerId: pos.playerId === playerId ? undefined : pos.playerId
         }));
         
+        // Add to substitutes if not already there
         const newSubstitutes = period.substitutes.includes(playerId) 
           ? period.substitutes 
           : [...period.substitutes, playerId];
@@ -345,7 +372,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       }
-      return period;
+      return period; // Don't modify other periods
     });
     
     onPeriodsChange(updatedPeriods);
@@ -419,8 +446,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <CardTitle className="text-lg mb-1">Period {period.periodNumber}</CardTitle>
-              <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+              <CardTitle className="text-lg mb-2">Period {period.periodNumber}</CardTitle>
+              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
                 <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
@@ -428,7 +455,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     type="number"
                     value={period.duration}
                     onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                    className="w-16 h-6 text-xs text-center"
+                    className="w-20 h-7 text-xs text-center"
                     min="1"
                     max="90"
                   />
@@ -542,7 +569,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     <div 
                       key={player.id} 
                       id={player.id}
-                      className="cursor-grab print:cursor-default"
+                      className="cursor-grab active:cursor-grabbing touch-none select-none print:cursor-default"
                       draggable
                     >
                       <PlayerIcon 

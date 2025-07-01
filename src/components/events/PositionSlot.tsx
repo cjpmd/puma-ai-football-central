@@ -1,4 +1,5 @@
 
+
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import { PlayerIcon } from './PlayerIcon';
@@ -32,12 +33,17 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     transform,
     isDragging,
   } = useDraggable({
-    id: player?.id || '',
+    id: player ? `${id}-${player.id}` : '', // Make drag ID unique per position and period
     disabled: !player,
+    data: {
+      playerId: player?.id,
+      sourcePositionId: id
+    }
   });
 
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 1000, // Ensure dragged item is on top
   } : undefined;
 
   const getPositionGroupColor = () => {
@@ -76,7 +82,12 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
             style={style}
             {...listeners}
             {...attributes}
-            className={`cursor-grab print:cursor-default ${isDragging ? 'opacity-50' : ''}`}
+            className={`
+              cursor-grab active:cursor-grabbing print:cursor-default 
+              ${isDragging ? 'opacity-50 scale-110' : ''} 
+              touch-none select-none
+              transition-transform duration-200
+            `}
           >
             <PlayerIcon 
               player={player} 
@@ -102,3 +113,4 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     </div>
   );
 };
+
