@@ -60,7 +60,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     >
       <div
         className={`
-          w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center
+          w-16 h-16 rounded-full border-2 border-dashed flex items-center justify-center
           ${getPositionGroupColor()}
           ${isOver ? 'border-solid bg-opacity-75 scale-110' : ''}
           transition-all duration-200

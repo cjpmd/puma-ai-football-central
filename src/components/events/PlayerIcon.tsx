@@ -79,7 +79,7 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         {...listeners}
         {...attributes}
         className={`
-          relative flex flex-col items-center justify-center w-16 h-16 border-2
+          relative flex flex-col items-center justify-center w-14 h-14 border-2
           ${getAvailabilityStyle()}
           ${actualIsDragging ? 'shadow-lg scale-110' : 'shadow-sm'}
           ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab'}

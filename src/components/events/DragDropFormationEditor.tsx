@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -484,26 +483,25 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         {/* Formation Periods - Side by Side Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {periods.map((period, index) => (
-            <Card key={period.id} className="min-h-[600px]">
+            <Card key={period.id} className="min-h-[650px]">
               <CardHeader className="pb-4">
                 <div className="space-y-3">
+                  {/* Compact header with period, game time, and duration on one line */}
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="flex items-center gap-3">
                       <CardTitle className="text-lg">
                         Period {period.periodNumber}
                       </CardTitle>
                       <div className="text-sm text-muted-foreground">
-                        Game Time: {calculateGameTime(index)}
+                        {calculateGameTime(index)}
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         <Input
                           type="number"
                           value={period.duration}
                           onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                          className="w-16 h-8"
+                          className="w-14 h-7 text-xs"
                           min="1"
                           max="90"
                         />
@@ -512,35 +510,32 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     </div>
                   </div>
                   
-                  {/* Compact Formation Selector */}
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Formation</Label>
-                    <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-                      <SelectTrigger className="mt-1 h-7 text-sm">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {gameFormatFormations.map((formation) => (
-                          <SelectItem key={formation.id} value={formation.id}>
-                            {formation.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {/* Compact Formation Selector without label */}
+                  <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
+                    <SelectTrigger className="h-7 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {gameFormatFormations.map((formation) => (
+                        <SelectItem key={formation.id} value={formation.id}>
+                          {formation.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Mini Formation Pitch */}
-                <div className="relative bg-green-100 rounded-lg p-4 h-[300px]">
+                {/* Larger Mini Formation Pitch */}
+                <div className="relative bg-green-100 rounded-lg p-4 h-[380px]">
                   <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
                   
                   {/* Pitch markings */}
-                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 border-2 border-white rounded-full opacity-50" />
+                  <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
                   <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-                  <div className="absolute top-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
-                  <div className="absolute bottom-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
+                  <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+                  <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
                   
                   <div className="relative h-full">
                     {period.positions.map((position, index) => (
