@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,7 @@ interface AuthorizationContextType {
   canManageTeams: boolean;
   canManageClubs: boolean;
   canViewAnalytics: boolean;
+  canViewStaff: boolean;
   isGlobalAdmin: boolean;
   isClubAdmin: (clubId?: string) => boolean;
   isTeamManager: (teamId?: string) => boolean;
@@ -59,22 +59,34 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
               basePermissions.add('clubs:manage');
               basePermissions.add('teams:manage');
               basePermissions.add('analytics:view');
+              basePermissions.add('staff:view'); // Can view staff
               break;
             case 'team_manager':
               basePermissions.add('users:invite');
               basePermissions.add('teams:manage');
               basePermissions.add('players:manage');
               basePermissions.add('staff:manage');
+              basePermissions.add('staff:view'); // Can view staff
+              basePermissions.add('analytics:view');
+              break;
+            case 'team_assistant_manager':
+            case 'team_coach':
+            case 'team_helper':
+              basePermissions.add('players:view');
+              basePermissions.add('events:manage');
+              basePermissions.add('staff:view'); // Staff can see other staff
               basePermissions.add('analytics:view');
               break;
             case 'coach':
               basePermissions.add('players:view');
               basePermissions.add('events:manage');
+              basePermissions.add('staff:view'); // Can view staff
               basePermissions.add('analytics:view');
               break;
             case 'staff':
               basePermissions.add('players:view');
               basePermissions.add('events:view');
+              basePermissions.add('staff:view'); // Staff can see other staff
               break;
             case 'parent':
               basePermissions.add('players:view:own');
@@ -88,12 +100,26 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
+      // Check if user has any staff roles in teams (team_manager, team_coach, etc.)
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select('role, team_id')
+        .eq('user_id', user!.id)
+        .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper']);
+
+      if (!userTeamsError && userTeamsData && userTeamsData.length > 0) {
+        // User has staff roles, so they can view other staff
+        basePermissions.add('staff:view');
+        basePermissions.add('staff:view:team'); // Can view team staff
+      }
+
       // Add team-specific permissions
       teams.forEach(team => {
         // Team managers have full control over their teams
         basePermissions.add(`teams:manage:${team.id}`);
         basePermissions.add(`players:manage:${team.id}`);
         basePermissions.add(`staff:manage:${team.id}`);
+        basePermissions.add(`staff:view:${team.id}`);
         basePermissions.add(`events:manage:${team.id}`);
       });
 
@@ -101,6 +127,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
       clubs.forEach(club => {
         basePermissions.add(`clubs:manage:${club.id}`);
         basePermissions.add(`teams:view:${club.id}`);
+        basePermissions.add(`staff:view:${club.id}`);
       });
 
       setUserPermissions(Array.from(basePermissions));
@@ -143,6 +170,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
   const canManageTeams = hasPermission({ resource: 'teams', action: 'manage' });
   const canManageClubs = hasPermission({ resource: 'clubs', action: 'manage' });
   const canViewAnalytics = hasPermission({ resource: 'analytics', action: 'view' });
+  const canViewStaff = hasPermission({ resource: 'staff', action: 'view' });
 
   const isGlobalAdmin = profile?.roles?.includes('global_admin') || false;
   
@@ -168,6 +196,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
     canManageTeams,
     canManageClubs,
     canViewAnalytics,
+    canViewStaff,
     isGlobalAdmin,
     isClubAdmin,
     isTeamManager,

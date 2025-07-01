@@ -8,7 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw, CheckCircle, Clock, UserCheck, User, Save, X } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw, CheckCircle, Clock, UserCheck, User, Save, X, Link } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface User {
   id: string;
@@ -21,6 +22,12 @@ interface User {
     teamName: string;
     role: string;
   }>;
+  linkedPlayers: Array<{
+    playerId: string;
+    playerName: string;
+    teamName: string;
+    relationship: string;
+  }>;
   hasProfile: boolean;
   invitationStatus?: 'pending' | 'accepted' | 'none';
 }
@@ -29,6 +36,13 @@ interface Team {
   id: string;
   name: string;
   age_group: string;
+}
+
+interface Player {
+  id: string;
+  name: string;
+  teamName: string;
+  teamId: string;
 }
 
 interface PendingInvitation {
@@ -42,9 +56,24 @@ interface PendingInvitation {
   created_at: string;
 }
 
+const AVAILABLE_ROLES = [
+  'global_admin',
+  'club_admin',
+  'club_chair',
+  'club_secretary',
+  'team_manager',
+  'team_assistant_manager',
+  'team_coach',
+  'team_helper',
+  'player',
+  'parent',
+  'staff'
+];
+
 export const UserTeamManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchEmail, setSearchEmail] = useState('');
@@ -52,9 +81,14 @@ export const UserTeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLinkPlayerModalOpen, setIsLinkPlayerModalOpen] = useState(false);
+  const [selectedUserForLinking, setSelectedUserForLinking] = useState<string>('');
+  const [selectedPlayer, setSelectedPlayer] = useState<string>('');
+  const [selectedRelationship, setSelectedRelationship] = useState<string>('');
   const [editingAssignment, setEditingAssignment] = useState<{userId: string, userTeamId: string, currentRole: string} | null>(null);
   const [editingUser, setEditingUser] = useState<{userId: string, field: 'name' | 'email' | 'roles'} | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,6 +112,31 @@ export const UserTeamManagement = () => {
       }
       console.log('Teams loaded:', teamsData?.length || 0);
 
+      // Load players
+      const { data: playersData, error: playersError } = await supabase
+        .from('players')
+        .select(`
+          id, 
+          name, 
+          team_id,
+          teams!inner(
+            id,
+            name
+          )
+        `)
+        .order('name');
+
+      if (playersError) {
+        console.error('Error loading players:', playersError);
+      }
+
+      const processedPlayers: Player[] = (playersData || []).map(p => ({
+        id: p.id,
+        name: p.name,
+        teamId: p.team_id,
+        teamName: p.teams?.name || 'Unknown Team'
+      }));
+
       // Load all user-team relationships
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
@@ -90,7 +149,17 @@ export const UserTeamManagement = () => {
       }
       console.log('User teams loaded:', userTeamsData?.length || 0);
 
-      // Load all profiles (should work now with updated RLS policy)
+      // Load user-player relationships
+      const { data: userPlayersData, error: userPlayersError } = await supabase
+        .from('user_players')
+        .select('user_id, player_id, relationship')
+        .order('created_at', { ascending: false });
+
+      if (userPlayersError) {
+        console.error('Error loading user players:', userPlayersError);
+      }
+
+      // Load all profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, name, email, roles, created_at')
@@ -116,7 +185,7 @@ export const UserTeamManagement = () => {
       // Create comprehensive user map
       const allUserIds = new Set<string>();
       const userMap = new Map<string, Partial<User>>();
-      const emailToUserMap = new Map<string, string>(); // Map emails to user IDs
+      const emailToUserMap = new Map<string, string>();
 
       // First, add all users from profiles
       (profilesData || []).forEach(profile => {
@@ -129,6 +198,7 @@ export const UserTeamManagement = () => {
           roles: Array.isArray(profile.roles) ? profile.roles : [],
           hasProfile: true,
           teamAssignments: [],
+          linkedPlayers: [],
           invitationStatus: 'none'
         });
       });
@@ -144,6 +214,7 @@ export const UserTeamManagement = () => {
             roles: [],
             hasProfile: false,
             teamAssignments: [],
+            linkedPlayers: [],
             invitationStatus: 'none'
           });
         }
@@ -173,6 +244,23 @@ export const UserTeamManagement = () => {
         }
       });
 
+      // Build player links for each user
+      (userPlayersData || []).forEach(userPlayer => {
+        const user = userMap.get(userPlayer.user_id);
+        if (user) {
+          const player = processedPlayers.find(p => p.id === userPlayer.player_id);
+          if (player) {
+            user.linkedPlayers = user.linkedPlayers || [];
+            user.linkedPlayers.push({
+              playerId: player.id,
+              playerName: player.name,
+              teamName: player.teamName,
+              relationship: userPlayer.relationship
+            });
+          }
+        }
+      });
+
       // Convert map to array
       const processedUsers: User[] = Array.from(userMap.values()).map(user => ({
         id: user.id!,
@@ -180,12 +268,13 @@ export const UserTeamManagement = () => {
         email: user.email!,
         roles: user.roles!,
         teamAssignments: user.teamAssignments!,
+        linkedPlayers: user.linkedPlayers!,
         hasProfile: user.hasProfile!,
         invitationStatus: user.invitationStatus!
       }));
 
       console.log('Processed users:', processedUsers.length);
-      
+
       // Check for the specific user we're looking for
       const specificUser = processedUsers.find(u => u.id === 'c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0');
       console.log('Found specific user c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0:', specificUser);
@@ -215,6 +304,7 @@ export const UserTeamManagement = () => {
 
       setUsers(processedUsers);
       setTeams(teamsData || []);
+      setPlayers(processedPlayers);
       setPendingInvitations(transformedInvitations);
       
     } catch (error: any) {
@@ -394,6 +484,19 @@ export const UserTeamManagement = () => {
 
   const updateUserGlobalRoles = async (userId: string, newRoles: string[]) => {
     try {
+      // Check if trying to assign global_admin to anyone other than chrisjpmcdonald@gmail.com
+      if (newRoles.includes('global_admin')) {
+        const user = users.find(u => u.id === userId);
+        if (user?.email !== 'chrisjpmcdonald@gmail.com') {
+          toast({
+            title: 'Error',
+            description: 'Global Admin role is restricted to chrisjpmcdonald@gmail.com only',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ roles: newRoles })
@@ -408,6 +511,7 @@ export const UserTeamManagement = () => {
 
       setEditingUser(null);
       setEditValue('');
+      setSelectedRoles([]);
       loadData();
     } catch (error: any) {
       console.error('Error updating user roles:', error);
@@ -504,10 +608,92 @@ export const UserTeamManagement = () => {
     }
   };
 
+  const linkUserToPlayer = async () => {
+    if (!selectedUserForLinking || !selectedPlayer || !selectedRelationship) {
+      toast({
+        title: 'Error',
+        description: 'Please select user, player, and relationship',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_players')
+        .insert([{
+          user_id: selectedUserForLinking,
+          player_id: selectedPlayer,
+          relationship: selectedRelationship
+        }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast({
+            title: 'Error',
+            description: 'This user is already linked to this player',
+            variant: 'destructive',
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: 'Success',
+          description: 'User linked to player successfully',
+        });
+
+        setIsLinkPlayerModalOpen(false);
+        setSelectedUserForLinking('');
+        setSelectedPlayer('');
+        setSelectedRelationship('');
+        loadData();
+      }
+    } catch (error: any) {
+      console.error('Error linking user to player:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to link user to player: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const unlinkUserFromPlayer = async (userId: string, playerId: string) => {
+    if (!confirm('Are you sure you want to unlink this user from the player?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('user_players')
+        .delete()
+        .eq('user_id', userId)
+        .eq('player_id', playerId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User unlinked from player successfully',
+      });
+
+      loadData();
+    } catch (error: any) {
+      console.error('Error unlinking user from player:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to unlink user from player: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const startEditingUser = (userId: string, field: 'name' | 'email' | 'roles', currentValue: string | string[]) => {
     setEditingUser({ userId, field });
     if (Array.isArray(currentValue)) {
       setEditValue(currentValue.join(','));
+      setSelectedRoles(currentValue);
     } else {
       setEditValue(currentValue);
     }
@@ -516,16 +702,24 @@ export const UserTeamManagement = () => {
   const cancelEditing = () => {
     setEditingUser(null);
     setEditValue('');
+    setSelectedRoles([]);
   };
 
   const saveEdit = () => {
     if (!editingUser) return;
 
     if (editingUser.field === 'roles') {
-      const rolesArray = editValue.split(',').map(role => role.trim()).filter(role => role);
-      updateUserGlobalRoles(editingUser.userId, rolesArray);
+      updateUserGlobalRoles(editingUser.userId, selectedRoles);
     } else {
       updateUserProfile(editingUser.userId, editingUser.field, editValue);
+    }
+  };
+
+  const handleRoleToggle = (role: string, checked: boolean) => {
+    if (checked) {
+      setSelectedRoles([...selectedRoles, role]);
+    } else {
+      setSelectedRoles(selectedRoles.filter(r => r !== role));
     }
   };
 
@@ -650,6 +844,81 @@ export const UserTeamManagement = () => {
                     Add to Team
                   </Button>
                   <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+          
+          <Dialog open={isLinkPlayerModalOpen} onOpenChange={setIsLinkPlayerModalOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <Link className="h-4 w-4 mr-2" />
+                Link User to Player
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Link User to Player</DialogTitle>
+                <DialogDescription>
+                  Create a relationship between a user and a player (e.g., parent-child).
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>User</Label>
+                  <Select value={selectedUserForLinking} onValueChange={setSelectedUserForLinking}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {getUserDisplayName(user)} ({user.email})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Player</Label>
+                  <Select value={selectedPlayer} onValueChange={setSelectedPlayer}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select player" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {players.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          {player.name} ({player.teamName})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Relationship</Label>
+                  <Select value={selectedRelationship} onValueChange={setSelectedRelationship}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select relationship" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="parent">Parent</SelectItem>
+                      <SelectItem value="guardian">Guardian</SelectItem>
+                      <SelectItem value="coach">Coach</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button onClick={linkUserToPlayer} className="flex-1">
+                    Link User to Player
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsLinkPlayerModalOpen(false)} className="flex-1">
                     Cancel
                   </Button>
                 </div>
@@ -878,19 +1147,36 @@ export const UserTeamManagement = () => {
                         <div className="mb-3">
                           <span className="text-xs font-medium text-gray-500">Global Roles:</span>
                           {editingUser?.userId === user.id && editingUser.field === 'roles' ? (
-                            <div className="flex items-center gap-2 mt-1">
-                              <Input
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                placeholder="Enter roles separated by commas"
-                                className="w-64"
-                              />
-                              <Button size="sm" onClick={saveEdit}>
-                                <Save className="h-3 w-3" />
-                              </Button>
-                              <Button size="sm" variant="outline" onClick={cancelEditing}>
-                                <X className="h-3 w-3" />
-                              </Button>
+                            <div className="space-y-2 mt-2">
+                              <div className="grid grid-cols-2 gap-2">
+                                {AVAILABLE_ROLES.map((role) => (
+                                  <div key={role} className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id={`role-${role}`}
+                                      checked={selectedRoles.includes(role)}
+                                      onCheckedChange={(checked) => handleRoleToggle(role, checked as boolean)}
+                                      disabled={role === 'global_admin' && user.email !== 'chrisjpmcdonald@gmail.com'}
+                                    />
+                                    <Label 
+                                      htmlFor={`role-${role}`} 
+                                      className={`text-xs ${role === 'global_admin' && user.email !== 'chrisjpmcdonald@gmail.com' ? 'text-gray-400' : ''}`}
+                                    >
+                                      {role.replace('_', ' ')}
+                                      {role === 'global_admin' && user.email !== 'chrisjpmcdonald@gmail.com' && ' (Restricted)'}
+                                    </Label>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" onClick={saveEdit}>
+                                  <Save className="h-3 w-3 mr-1" />
+                                  Save
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEditing}>
+                                  <X className="h-3 w-3 mr-1" />
+                                  Cancel
+                                </Button>
+                              </div>
                             </div>
                           ) : (
                             <div className="flex flex-wrap gap-1 mt-1 items-center">
@@ -914,19 +1200,58 @@ export const UserTeamManagement = () => {
                           )}
                         </div>
                       )}
+
+                      {/* Linked Players */}
+                      {user.linkedPlayers.length > 0 && (
+                        <div className="mb-3">
+                          <span className="text-xs font-medium text-gray-500">Linked Players:</span>
+                          <div className="space-y-1 mt-1">
+                            {user.linkedPlayers.map((link) => (
+                              <div key={link.playerId} className="flex items-center justify-between p-2 bg-blue-50 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <Link className="h-3 w-3 text-blue-500" />
+                                  <span className="text-sm">{link.playerName} ({link.teamName})</span>
+                                  <Badge variant="outline" className="text-xs">{link.relationship}</Badge>
+                                </div>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => unlinkUserFromPlayer(user.id, link.playerId)}
+                                  className="text-red-600 hover:text-red-700"
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                     
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(user.id);
-                        setIsAddModalOpen(true);
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add to Team
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUser(user.id);
+                          setIsAddModalOpen(true);
+                        }}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add to Team
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedUserForLinking(user.id);
+                          setIsLinkPlayerModalOpen(true);
+                        }}
+                      >
+                        <Link className="h-4 w-4 mr-2" />
+                        Link Player
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Team Assignments */}
