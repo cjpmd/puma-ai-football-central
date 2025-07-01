@@ -340,6 +340,7 @@ export const UserManagementSystem = () => {
       const { data, error: insertError } = await supabase
         .from('profiles')
         .insert({
+          id: crypto.randomUUID(),
           email: email,
           name: name,
           roles: ['player']

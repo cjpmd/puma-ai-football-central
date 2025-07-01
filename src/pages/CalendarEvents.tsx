@@ -60,8 +60,8 @@ const CalendarEventsPage = () => {
 
   // Get current team's default values
   const currentTeam = teams.find(team => team.id === selectedTeamId);
-  const teamDefaultGameFormat = currentTeam?.gameFormat || '7-a-side';
-  const teamDefaultGameDuration = currentTeam?.gameDuration || 90;
+  const teamDefaultGameFormat = currentTeam?.game_format || '7-a-side';
+  const teamDefaultGameDuration = currentTeam?.game_duration || 90;
 
   const eventTypes = [
     { value: 'training', label: 'Training' },
@@ -76,8 +76,8 @@ const CalendarEventsPage = () => {
   // Update defaults when team changes
   useEffect(() => {
     if (currentTeam) {
-      setEventGameFormat(currentTeam.gameFormat || '7-a-side');
-      setEventGameDuration(currentTeam.gameDuration || 90);
+      setEventGameFormat((currentTeam.game_format || '7-a-side') as GameFormat);
+      setEventGameDuration(currentTeam.game_duration || 90);
     }
   }, [currentTeam]);
 
@@ -287,27 +287,27 @@ const CalendarEventsPage = () => {
       if (error) {
         console.error('Error loading fresh team data:', error);
         // Fall back to cached values
-        setEventGameFormat(teamDefaultGameFormat);
+        setEventGameFormat(teamDefaultGameFormat as GameFormat);
         setEventGameDuration(teamDefaultGameDuration);
-        setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat, gameDuration: teamDefaultGameDuration });
+        setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat as GameFormat, gameDuration: teamDefaultGameDuration });
       } else {
         console.log('Fresh team data loaded for create modal:', freshTeam);
         // Use fresh database values
         const freshFormat = (freshTeam.game_format || '7-a-side') as GameFormat;
         const freshDuration = freshTeam.game_duration || 90;
         
-        setEventGameFormat(freshFormat);
+        setEventGameFormat(freshFormat as GameFormat);
         setEventGameDuration(freshDuration);
-        setFreshTeamDefaults({ gameFormat: freshFormat, gameDuration: freshDuration });
+        setFreshTeamDefaults({ gameFormat: freshFormat as GameFormat, gameDuration: freshDuration });
         
         console.log('Set create modal defaults - gameFormat:', freshTeam.game_format, 'gameDuration:', freshTeam.game_duration);
       }
     } catch (error) {
       console.error('Error loading fresh team data:', error);
       // Fall back to cached values
-      setEventGameFormat(teamDefaultGameFormat);
+      setEventGameFormat(teamDefaultGameFormat as GameFormat);
       setEventGameDuration(teamDefaultGameDuration);
-      setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat, gameDuration: teamDefaultGameDuration });
+      setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat as GameFormat, gameDuration: teamDefaultGameDuration });
     }
     
     setIsCreateModalOpen(true);
@@ -341,7 +341,7 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
-    setEventGameFormat(teamDefaultGameFormat);
+    setEventGameFormat(teamDefaultGameFormat as GameFormat);
     setEventGameDuration(teamDefaultGameDuration);
     setEventKitSelection('home');
   };

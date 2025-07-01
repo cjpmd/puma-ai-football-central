@@ -168,7 +168,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         managerEmail: team.manager_email,
         managerPhone: team.manager_phone,
         performanceCategories: team.performance_categories || [],
-        kitIcons: team.kit_icons || { home: '', away: '' }
+        kitIcons: (team.kit_icons as { home: string; away: string; training: string; goalkeeper: string }) || { home: '', away: '', training: '', goalkeeper: '' }
       }));
       setTeams(convertedTeams);
       if (teamsData.length > 0) {
@@ -257,7 +257,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: userError };
       }
 
-      setUser(authResponse.user);
+      setUser(authResponse.user ? { id: authResponse.user.id, email: authResponse.user.email || '', name: name, roles: ['player'] } : null);
       await fetchTeamsAndClubs(authResponse.user?.id);
       navigate('/dashboard');
       return { data: authResponse };
