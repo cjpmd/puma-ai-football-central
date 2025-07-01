@@ -70,31 +70,44 @@ export const UserTeamManagement = () => {
 
       if (teamsError) throw teamsError;
 
-      // Load user-team relationships
+      // Load user-team relationships with separate queries to avoid join issues
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
-        .select(`
-          id,
-          user_id,
-          team_id,
-          role,
-          profiles!user_teams_user_id_fkey(name, email),
-          teams!user_teams_team_id_fkey(name)
-        `)
-        .order('profiles(name)');
+        .select('id, user_id, team_id, role')
+        .order('created_at', { ascending: false });
 
       if (userTeamsError) throw userTeamsError;
 
-      // Transform user-team data
-      const transformedUserTeams = userTeamsData.map(ut => ({
-        id: ut.id,
-        user_id: ut.user_id,
-        team_id: ut.team_id,
-        role: ut.role,
-        user_name: ut.profiles?.name || 'Unknown',
-        user_email: ut.profiles?.email || 'Unknown',
-        team_name: ut.teams?.name || 'Unknown'
-      }));
+      // Transform user-team data by fetching user and team details separately
+      const transformedUserTeams: UserTeam[] = [];
+      
+      if (userTeamsData) {
+        for (const ut of userTeamsData) {
+          // Get user details
+          const { data: userData } = await supabase
+            .from('profiles')
+            .select('name, email')
+            .eq('id', ut.user_id)
+            .single();
+
+          // Get team details
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('name')
+            .eq('id', ut.team_id)
+            .single();
+
+          transformedUserTeams.push({
+            id: ut.id,
+            user_id: ut.user_id,
+            team_id: ut.team_id,
+            role: ut.role,
+            user_name: userData?.name || 'Unknown',
+            user_email: userData?.email || 'Unknown',
+            team_name: teamData?.name || 'Unknown'
+          });
+        }
+      }
 
       setUsers(usersData || []);
       setTeams(teamsData || []);
