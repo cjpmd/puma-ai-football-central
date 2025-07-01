@@ -45,7 +45,7 @@ export const UserLinkingPanel: React.FC = () => {
 
   const loadUnlinkedUsers = async () => {
     try {
-      // Get all users with their team associations - only actual authenticated users
+      // Only get users who actually exist in the auth system (have profiles)
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select(`
