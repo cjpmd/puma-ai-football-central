@@ -74,6 +74,40 @@ const roleOptions: RoleOption[] = [
   { value: 'club_secretary', label: 'Club Secretary', description: 'Club secretary' }
 ];
 
+// Utility functions
+const getRoleColor = (role: string): string => {
+  switch (role) {
+    case 'global_admin':
+      return 'bg-red-600';
+    case 'club_admin':
+      return 'bg-purple-600';
+    case 'team_manager':
+      return 'bg-blue-600';
+    case 'team_assistant_manager':
+      return 'bg-blue-500';
+    case 'team_coach':
+      return 'bg-green-600';
+    case 'team_helper':
+      return 'bg-green-500';
+    case 'parent':
+      return 'bg-orange-600';
+    case 'player':
+      return 'bg-yellow-600';
+    case 'club_chair':
+      return 'bg-purple-700';
+    case 'club_secretary':
+      return 'bg-purple-500';
+    default:
+      return 'bg-gray-600';
+  }
+};
+
+const formatRoleName = (role: string): string => {
+  return role.split('_').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1)
+  ).join(' ');
+};
+
 export const UserManagementSystem = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -255,6 +289,60 @@ export const UserManagementSystem = () => {
       toast({
         title: 'Error',
         description: error.message || 'Failed to create profile',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const openEditModal = (user: UserProfile) => {
+    setEditingUser(user);
+    setNewUserData({
+      name: user.name,
+      email: user.email,
+      phone: user.phone || '',
+      roles: [...user.roles]
+    });
+    setShowEditModal(true);
+  };
+
+  const handleRoleToggle = (role: string, checked: boolean) => {
+    setNewUserData(prev => ({
+      ...prev,
+      roles: checked 
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
+    }));
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: newUserData.name,
+          email: newUserData.email,
+          phone: newUserData.phone,
+          roles: newUserData.roles
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User updated successfully',
+      });
+
+      setShowEditModal(false);
+      setEditingUser(null);
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user',
         variant: 'destructive',
       });
     }
