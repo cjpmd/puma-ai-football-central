@@ -336,7 +336,7 @@ export const UserManagementSystem = () => {
       }
 
       // Check if user exists in auth.users table
-      const { data: { users: authUsers }, error: usersError } = await supabase.auth.admin.listUsers();
+      const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
       
       if (usersError) {
         console.error('Error checking auth users:', usersError);
@@ -348,7 +348,17 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const authUser = authUsers?.find(u => u.email === email);
+      const authUsers = authData?.users;
+      if (!authUsers || authUsers.length === 0) {
+        toast({
+          title: 'No Users Found',
+          description: 'No authenticated users found in the system.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const authUser = authUsers.find(u => u.email === email);
       
       if (!authUser) {
         toast({
