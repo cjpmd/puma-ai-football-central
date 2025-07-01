@@ -154,5 +154,83 @@ export const playersService = {
     if (error) throw error;
     
     return newLinkCode;
+  },
+
+  async createPlayer(playerData: Partial<Player>): Promise<Player> {
+    const { data, error } = await supabase
+      .from('players')
+      .insert({
+        name: playerData.name,
+        date_of_birth: playerData.date_of_birth,
+        squad_number: playerData.squad_number,
+        team_id: playerData.team_id,
+        type: playerData.type || 'outfield',
+        status: playerData.status || 'active'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updatePlayer(playerId: string, playerData: Partial<Player>): Promise<Player> {
+    const { data, error } = await supabase
+      .from('players')
+      .update(playerData)
+      .eq('id', playerId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async deletePlayerPhoto(playerId: string): Promise<void> {
+    const { error } = await supabase
+      .from('players')
+      .update({ photo_url: null })
+      .eq('id', playerId);
+
+    if (error) throw error;
+  },
+
+  async uploadPlayerPhoto(playerId: string, file: File): Promise<string> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${playerId}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('player_photos')
+      .upload(fileName, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from('player_photos')
+      .getPublicUrl(fileName);
+
+    return data.publicUrl;
+  },
+
+  async getTransferHistory(playerId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('player_transfers')
+      .select('*')
+      .eq('player_id', playerId)
+      .order('transfer_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
+  },
+
+  async getAttributeHistory(playerId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('player_attribute_history')
+      .select('*')
+      .eq('player_id', playerId)
+      .order('recorded_date', { ascending: false });
+
+    if (error) throw error;
+    return data || [];
   }
 };

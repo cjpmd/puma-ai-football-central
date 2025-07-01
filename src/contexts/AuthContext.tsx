@@ -11,8 +11,9 @@ interface AuthContextType {
   currentClub: Club | null;
   loading: boolean;
   isLoading: boolean; // Add this property
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, name: string) => Promise<void>;
+  profile: User | null; // Add profile property
+  signIn: (email: string, password: string) => Promise<{ error?: any }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ data?: any; error?: any }>;
   signOut: () => Promise<void>;
   logout: () => Promise<void>;
   switchTeam: (teamId: string) => void;
@@ -174,7 +175,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         console.error('Sign-in error:', authError);
-        throw authError;
+        setLoading(false);
+        return { error: authError };
       }
 
       const { data: userDetails, error: userError } = await supabase
@@ -186,15 +188,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (userError) {
         console.error('Error fetching user details:', userError);
         setLoading(false);
-        return;
+        return { error: userError };
       }
 
       setUser(userDetails || authResponse.user);
       await fetchTeamsAndClubs(userDetails?.id || authResponse.user?.id);
       navigate('/dashboard');
+      return {};
     } catch (error: any) {
       console.error('Authentication error:', error.message);
-      throw error;
+      setLoading(false);
+      return { error };
     } finally {
       setLoading(false);
     }
@@ -215,7 +219,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (authError) {
         console.error('Sign-up error:', authError);
-        throw authError;
+        setLoading(false);
+        return { error: authError };
       }
 
       // Create a user profile in the 'users' table
@@ -231,15 +236,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (userError) {
         console.error('Error creating user profile:', userError);
-        throw userError;
+        setLoading(false);
+        return { error: userError };
       }
 
       setUser(authResponse.user);
       await fetchTeamsAndClubs(authResponse.user?.id);
       navigate('/dashboard');
+      return { data: authResponse };
     } catch (error: any) {
       console.error('Registration error:', error.message);
-      throw error;
+      setLoading(false);
+      return { error };
     } finally {
       setLoading(false);
     }
@@ -293,6 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     currentClub,
     loading,
     isLoading: loading, // Map loading to isLoading for backward compatibility
+    profile: user, // Map user to profile for backward compatibility
     signIn,
     signUp,
     signOut,

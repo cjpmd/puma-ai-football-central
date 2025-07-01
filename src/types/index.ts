@@ -229,3 +229,40 @@ export interface PlayerAttribute {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface PlayerComment {
+  id: string;
+  text: string;
+  created_at: string;
+  created_by: string;
+}
+
+export interface PlayerObjective {
+  id: string;
+  title: string;
+  description?: string;
+  completed: boolean;
+  created_at: string;
+  target_date?: string;
+}
+
+export interface PlayerTransfer {
+  id: string;
+  player_id: string;
+  from_team_id: string;
+  to_team_id: string;
+  transfer_date: string;
+  status: 'pending' | 'approved' | 'rejected';
+  requested_by: string;
+  accepted_by?: string;
+}
+
+export interface AttributeHistory {
+  id: string;
+  player_id: string;
+  attribute_name: string;
+  attribute_group: string;
+  value: number;
+  recorded_date: string;
+  recorded_by: string;
+}

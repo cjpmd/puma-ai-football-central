@@ -52,7 +52,7 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
       // This would need to be updated based on your actual squad management system
       const selectedPlayerIds: string[] = [];
 
-      setPlayers(teamPlayers || []);
+      setPlayers((teamPlayers || []) as Player[]);
       setSelectedPlayers(selectedPlayerIds);
       
       if (onSquadChange) {
