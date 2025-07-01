@@ -5,23 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus, RefreshCw } from 'lucide-react';
+import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus, RefreshCw, Trash2, Edit } from 'lucide-react';
 
 interface StaffMember {
   id: string;
   name: string;
   role: string;
-  team_name: string;
-  team_id: string;
+  team_name?: string;
+  team_id?: string;
   email?: string;
   phone?: string;
   linked_user_id?: string;
   linked_user_name?: string;
   coaching_badges?: any[];
+  source: 'team_staff' | 'user_profile';
+  user_roles?: string[];
 }
 
 export const StaffManagement: React.FC = () => {
@@ -29,6 +34,15 @@ export const StaffManagement: React.FC = () => {
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newStaffData, setNewStaffData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: 'coach',
+    team_id: ''
+  });
+  const [availableTeams, setAvailableTeams] = useState<any[]>([]);
   const { user, profile } = useAuth();
   const { canViewStaff, isStaffMember } = useAuthorization();
   const { toast } = useToast();
@@ -36,6 +50,7 @@ export const StaffManagement: React.FC = () => {
   useEffect(() => {
     if (canViewStaff || isStaffMember) {
       loadStaff();
+      loadAvailableTeams();
     }
   }, [canViewStaff, isStaffMember]);
 
@@ -43,12 +58,26 @@ export const StaffManagement: React.FC = () => {
     filterStaff();
   }, [staff, searchTerm]);
 
+  const loadAvailableTeams = async () => {
+    try {
+      const { data: teams, error } = await supabase
+        .from('teams')
+        .select('id, name')
+        .order('name');
+
+      if (error) throw error;
+      setAvailableTeams(teams || []);
+    } catch (error: any) {
+      console.error('Error loading teams:', error);
+    }
+  };
+
   const loadStaff = async () => {
     try {
       setLoading(true);
       console.log('Loading all staff members...');
 
-      // Get ALL team staff with better error handling
+      // Get team staff from team_staff table
       const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
         .select(`
@@ -63,13 +92,10 @@ export const StaffManagement: React.FC = () => {
         .order('name');
 
       if (staffError) {
-        console.error('Error fetching staff:', staffError);
-        throw staffError;
+        console.error('Error fetching team staff:', staffError);
       }
 
-      console.log('Raw staff data:', staffData?.length || 0, staffData);
-
-      // Get user-staff links to see which staff members have user accounts
+      // Get user-staff links
       const { data: userStaffLinks, error: linksError } = await supabase
         .from('user_staff')
         .select(`
@@ -82,27 +108,64 @@ export const StaffManagement: React.FC = () => {
         console.error('Error fetching user-staff links:', linksError);
       }
 
-      console.log('User-staff links:', userStaffLinks?.length || 0);
+      // Get users with staff roles
+      const { data: staffUsers, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, name, email, phone, roles')
+        .or('roles.cs.{team_manager,team_assistant_manager,team_coach,team_helper}');
 
-      // Combine the data with better null checking
-      const staffWithUserInfo: StaffMember[] = (staffData || []).map(staffMember => {
-        const userLink = userStaffLinks?.find(link => link.staff_id === staffMember.id);
+      if (usersError) {
+        console.error('Error fetching staff users:', usersError);
+      }
+
+      const allStaff: StaffMember[] = [];
+
+      // Process team_staff records
+      if (staffData) {
+        const teamStaffMembers: StaffMember[] = staffData.map(staffMember => {
+          const userLink = userStaffLinks?.find(link => link.staff_id === staffMember.id);
+          
+          return {
+            id: staffMember.id,
+            name: staffMember.name || 'Unknown',
+            role: staffMember.role || 'Unknown Role',
+            team_name: (staffMember as any).teams?.name || 'Unknown Team',
+            team_id: staffMember.team_id,
+            email: staffMember.email || (userLink as any)?.profiles?.email,
+            phone: staffMember.phone || (userLink as any)?.profiles?.phone,
+            linked_user_id: userLink?.user_id,
+            linked_user_name: (userLink as any)?.profiles?.name,
+            source: 'team_staff' as const
+          };
+        });
+        allStaff.push(...teamStaffMembers);
+      }
+
+      // Process users with staff roles (who aren't already in team_staff)
+      if (staffUsers) {
+        const existingUserIds = userStaffLinks?.map(link => link.user_id) || [];
         
-        return {
-          id: staffMember.id,
-          name: staffMember.name || 'Unknown',
-          role: staffMember.role || 'Unknown Role',
-          team_name: (staffMember as any).teams?.name || 'Unknown Team',
-          team_id: staffMember.team_id,
-          email: staffMember.email || (userLink as any)?.profiles?.email,
-          phone: staffMember.phone || (userLink as any)?.profiles?.phone,
-          linked_user_id: userLink?.user_id,
-          linked_user_name: (userLink as any)?.profiles?.name,
-        };
-      });
+        const userStaffMembers: StaffMember[] = staffUsers
+          .filter(user => !existingUserIds.includes(user.id))
+          .map(user => ({
+            id: user.id,
+            name: user.name || 'Unknown',
+            role: user.roles?.find((role: string) => 
+              ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper'].includes(role)
+            )?.replace('team_', '') || 'staff',
+            email: user.email,
+            phone: user.phone,
+            linked_user_id: user.id,
+            linked_user_name: user.name,
+            source: 'user_profile' as const,
+            user_roles: user.roles
+          }));
+        
+        allStaff.push(...userStaffMembers);
+      }
 
-      console.log('Processed staff with user info:', staffWithUserInfo);
-      setStaff(staffWithUserInfo);
+      console.log('All staff members loaded:', allStaff);
+      setStaff(allStaff);
     } catch (error: any) {
       console.error('Error loading staff:', error);
       toast({
@@ -115,6 +178,138 @@ export const StaffManagement: React.FC = () => {
     }
   };
 
+  const handleAddStaff = async () => {
+    if (!newStaffData.name || !newStaffData.email) {
+      toast({
+        title: 'Error',
+        description: 'Name and email are required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Add to team_staff table if team is selected
+      if (newStaffData.team_id) {
+        const { data, error } = await supabase
+          .from('team_staff')
+          .insert({
+            name: newStaffData.name,
+            email: newStaffData.email,
+            phone: newStaffData.phone,
+            role: newStaffData.role,
+            team_id: newStaffData.team_id
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        toast({
+          title: 'Success',
+          description: `${newStaffData.name} has been added as ${newStaffData.role}`,
+        });
+      } else {
+        // Check if user exists and add staff role
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('email', newStaffData.email)
+          .single();
+
+        if (existingUser) {
+          // Add staff role to existing user
+          const currentRoles = existingUser.roles || [];
+          const staffRole = `team_${newStaffData.role}`;
+          
+          if (!currentRoles.includes(staffRole)) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({
+                roles: [...currentRoles, staffRole]
+              })
+              .eq('id', existingUser.id);
+
+            if (updateError) throw updateError;
+          }
+
+          toast({
+            title: 'Success',
+            description: `Staff role added to ${newStaffData.name}`,
+          });
+        } else {
+          toast({
+            title: 'User Not Found',
+            description: 'Please select a team or ensure the user has an account',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
+      setShowAddModal(false);
+      setNewStaffData({ name: '', email: '', phone: '', role: 'coach', team_id: '' });
+      await loadStaff();
+    } catch (error: any) {
+      console.error('Error adding staff:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to add staff member',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRemoveStaff = async (staffMember: StaffMember) => {
+    if (!confirm(`Are you sure you want to remove ${staffMember.name}?`)) return;
+
+    try {
+      if (staffMember.source === 'team_staff') {
+        // Remove from team_staff table
+        const { error } = await supabase
+          .from('team_staff')
+          .delete()
+          .eq('id', staffMember.id);
+
+        if (error) throw error;
+      } else {
+        // Remove staff roles from user
+        const { data: user, error: fetchError } = await supabase
+          .from('profiles')
+          .select('roles')
+          .eq('id', staffMember.id)
+          .single();
+
+        if (fetchError) throw fetchError;
+
+        const currentRoles = user.roles || [];
+        const staffRoles = ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper'];
+        const newRoles = currentRoles.filter((role: string) => !staffRoles.includes(role));
+
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ roles: newRoles })
+          .eq('id', staffMember.id);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: 'Success',
+        description: `${staffMember.name} has been removed from staff`,
+      });
+
+      await loadStaff();
+    } catch (error: any) {
+      console.error('Error removing staff:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove staff member',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const filterStaff = () => {
     let filtered = staff;
 
@@ -122,7 +317,7 @@ export const StaffManagement: React.FC = () => {
       filtered = filtered.filter(member =>
         member.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         member.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.team_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (member.team_name && member.team_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (member.email && member.email.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
@@ -133,12 +328,12 @@ export const StaffManagement: React.FC = () => {
   const getRoleColor = (role: string) => {
     switch (role.toLowerCase()) {
       case 'manager': return 'bg-green-500';
-      case 'assistant manager': return 'bg-green-400';
+      case 'assistant_manager': return 'bg-green-400';
       case 'coach': return 'bg-purple-500';
-      case 'goalkeeper coach': return 'bg-purple-400';
-      case 'fitness coach': return 'bg-orange-500';
+      case 'goalkeeper_coach': return 'bg-purple-400';
+      case 'fitness_coach': return 'bg-orange-500';
       case 'physio': return 'bg-blue-500';
-      case 'kit manager': return 'bg-gray-500';
+      case 'kit_manager': return 'bg-gray-500';
       default: return 'bg-gray-600';
     }
   };
@@ -173,13 +368,17 @@ export const StaffManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">Staff Directory</h2>
           <p className="text-muted-foreground">
-            View all staff members across teams ({staff.length} total)
+            Manage all staff members across teams ({staff.length} total)
           </p>
         </div>
         <div className="flex gap-2">
           <Button onClick={loadStaff} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
+          </Button>
+          <Button onClick={() => setShowAddModal(true)} className="bg-puma-blue-500 hover:bg-puma-blue-600">
+            <UserPlus className="h-4 w-4 mr-2" />
+            Add Staff
           </Button>
         </div>
       </div>
@@ -203,7 +402,7 @@ export const StaffManagement: React.FC = () => {
       {/* Staff List */}
       <div className="grid gap-4">
         {filteredStaff.map((member) => (
-          <Card key={member.id} className="p-4">
+          <Card key={`${member.source}-${member.id}`} className="p-4">
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-4">
                 <Avatar className="h-12 w-12">
@@ -226,13 +425,18 @@ export const StaffManagement: React.FC = () => {
                         Linked User
                       </Badge>
                     )}
+                    <Badge variant="secondary" className="text-xs">
+                      {member.source === 'team_staff' ? 'Team Staff' : 'User Profile'}
+                    </Badge>
                   </div>
                   
                   <div className="space-y-1 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Users className="h-3 w-3" />
-                      <span>{member.team_name}</span>
-                    </div>
+                    {member.team_name && (
+                      <div className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        <span>{member.team_name}</span>
+                      </div>
+                    )}
                     
                     {member.email && (
                       <div className="flex items-center gap-1">
@@ -248,14 +452,23 @@ export const StaffManagement: React.FC = () => {
                       </div>
                     )}
                     
-                    {member.linked_user_name && (
+                    {member.user_roles && member.user_roles.length > 0 && (
                       <div className="text-xs text-blue-600">
-                        Linked to: {member.linked_user_name}
+                        User Roles: {member.user_roles.join(', ')}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
+              
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleRemoveStaff(member)}
+                className="text-red-600 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </Card>
         ))}
@@ -268,12 +481,99 @@ export const StaffManagement: React.FC = () => {
             <p className="text-gray-600">
               {searchTerm 
                 ? 'Try adjusting your search criteria.'
-                : 'No staff members have been added to teams yet.'
+                : 'No staff members have been added yet, or they need to be assigned staff roles.'
               }
             </p>
           </Card>
         )}
       </div>
+
+      {/* Add Staff Modal */}
+      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Staff Member</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="staffName">Name</Label>
+              <Input
+                id="staffName"
+                value={newStaffData.name}
+                onChange={(e) => setNewStaffData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter full name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="staffEmail">Email</Label>
+              <Input
+                id="staffEmail"
+                type="email"
+                value={newStaffData.email}
+                onChange={(e) => setNewStaffData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="staffPhone">Phone</Label>
+              <Input
+                id="staffPhone"
+                value={newStaffData.phone}
+                onChange={(e) => setNewStaffData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Enter phone number"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="staffRole">Role</Label>
+              <Select 
+                value={newStaffData.role}
+                onValueChange={(value) => setNewStaffData(prev => ({ ...prev, role: value }))}
+              >
+                <SelectTrigger id="staffRole">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
+                  <SelectItem value="coach">Coach</SelectItem>
+                  <SelectItem value="helper">Helper</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="staffTeam">Team (Optional)</Label>
+              <Select 
+                value={newStaffData.team_id}
+                onValueChange={(value) => setNewStaffData(prev => ({ ...prev, team_id: value }))}
+              >
+                <SelectTrigger id="staffTeam">
+                  <SelectValue placeholder="Select a team (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No specific team</SelectItem>
+                  {availableTeams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleAddStaff}>Add Staff Member</Button>
+              <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
