@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -154,6 +155,45 @@ export const UserLinkingPanel: React.FC = () => {
     }
   };
 
+  const createUserProfile = async (email: string, name: string) => {
+    try {
+      // Check if profile already exists
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      if (existingProfile) {
+        return existingProfile.id;
+      }
+
+      // Create a temporary UUID for the profile until they sign up
+      const tempUserId = crypto.randomUUID();
+      
+      const { data: newProfile, error } = await supabase
+        .from('profiles')
+        .insert({
+          id: tempUserId,
+          email: email,
+          name: name,
+          roles: linkType === 'self' ? ['player'] : ['parent']
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Profile creation error:', error);
+        throw error;
+      }
+
+      return newProfile.id;
+    } catch (error) {
+      console.error('Error creating user profile:', error);
+      throw error;
+    }
+  };
+
   const handleLinkUser = async () => {
     if (!selectedUser || !selectedEntity) {
       toast.error('Please select both a user and an entity to link');
@@ -209,7 +249,7 @@ export const UserLinkingPanel: React.FC = () => {
           }
         }
 
-        // Add user to team
+        // Add user to team if not already there
         const { data: player } = await supabase
           .from('players')
           .select('team_id')
@@ -217,13 +257,23 @@ export const UserLinkingPanel: React.FC = () => {
           .single();
 
         if (player) {
-          await supabase
+          // Check if user is already in team
+          const { data: existingTeamLink } = await supabase
             .from('user_teams')
-            .insert({
-              user_id: selectedUser,
-              team_id: player.team_id,
-              role: linkType === 'self' ? 'player' : 'parent'
-            });
+            .select('id')
+            .eq('user_id', selectedUser)
+            .eq('team_id', player.team_id)
+            .single();
+
+          if (!existingTeamLink) {
+            await supabase
+              .from('user_teams')
+              .insert({
+                user_id: selectedUser,
+                team_id: player.team_id,
+                role: linkType === 'self' ? 'player' : 'parent'
+              });
+          }
         }
       } else if (entity.type === 'staff') {
         // Link user to staff
@@ -252,7 +302,7 @@ export const UserLinkingPanel: React.FC = () => {
             .eq('id', selectedUser);
         }
 
-        // Add user to team
+        // Add user to team if not already there
         const { data: staff } = await supabase
           .from('team_staff')
           .select('team_id')
@@ -260,13 +310,23 @@ export const UserLinkingPanel: React.FC = () => {
           .single();
 
         if (staff) {
-          await supabase
+          // Check if user is already in team
+          const { data: existingTeamLink } = await supabase
             .from('user_teams')
-            .insert({
-              user_id: selectedUser,
-              team_id: staff.team_id,
-              role: 'staff'
-            });
+            .select('id')
+            .eq('user_id', selectedUser)
+            .eq('team_id', staff.team_id)
+            .single();
+
+          if (!existingTeamLink) {
+            await supabase
+              .from('user_teams')
+              .insert({
+                user_id: selectedUser,
+                team_id: staff.team_id,
+                role: 'staff'
+              });
+          }
         }
       }
 
