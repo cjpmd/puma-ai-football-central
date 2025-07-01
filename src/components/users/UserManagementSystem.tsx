@@ -16,6 +16,8 @@ import { DualRoleManagement } from './DualRoleManagement';
 import { BulkUserImport } from './BulkUserImport';
 import { InvitationResendPanel } from './InvitationResendPanel';
 import { UserTeamManagement } from './UserTeamManagement';
+import { EnhancedUserLinking } from './EnhancedUserLinking';
+import { RoleSelector } from './RoleSelector';
 import { userInvitationService } from '@/services/userInvitationService';
 
 interface UserProfile {
@@ -57,6 +59,14 @@ export const UserManagementSystem = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    roles: [] as string[]
+  });
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
@@ -578,6 +588,52 @@ export const UserManagementSystem = () => {
     ).join(' ');
   };
 
+  const openEditModal = (user: UserProfile) => {
+    setEditingUser(user);
+    setNewUserData({
+      name: user.name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      roles: user.roles || []
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: newUserData.name,
+          email: newUserData.email,
+          phone: newUserData.phone || null,
+          roles: newUserData.roles,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User updated successfully',
+      });
+
+      setShowEditModal(false);
+      setEditingUser(null);
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update user',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const [activeTab, setActiveTab] = useState('users');
 
   if (loading) {
@@ -593,6 +649,7 @@ export const UserManagementSystem = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header section */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">User Management</h2>
@@ -633,175 +690,181 @@ export const UserManagementSystem = () => {
           <TabsTrigger value="users">Active Users ({filteredUsers.length})</TabsTrigger>
           <TabsTrigger value="team-management">Team Management</TabsTrigger>
           <TabsTrigger value="invitations">Invite</TabsTrigger>
-          <TabsTrigger value="teams">Team</TabsTrigger>
+          <TabsTrigger value="enhanced-linking">Enhanced Linking</TabsTrigger>
           <TabsTrigger value="linking">Link</TabsTrigger>
           <TabsTrigger value="open">Open</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="mt-6">
-          <div className="space-y-6">
-            {/* Search and Filter Controls */}
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search users by name or email..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-              <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Filter by role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="global_admin">Global Admin</SelectItem>
-                  <SelectItem value="club_admin">Club Admin</SelectItem>
-                  <SelectItem value="team_manager">Team Manager</SelectItem>
-                  <SelectItem value="coach">Coach</SelectItem>
-                  <SelectItem value="staff">Staff</SelectItem>
-                  <SelectItem value="parent">Parent</SelectItem>
-                  <SelectItem value="player">Player</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Search and Filter Controls */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search users by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-full sm:w-48">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="global_admin">Global Admin</SelectItem>
+                <SelectItem value="club_admin">Club Admin</SelectItem>
+                <SelectItem value="team_manager">Team Manager</SelectItem>
+                <SelectItem value="coach">Coach</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="parent">Parent</SelectItem>
+                <SelectItem value="player">Player</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Users List */}
-            <div className="grid gap-4">
-              {filteredUsers.map((user) => (
-                <Card key={user.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="bg-puma-blue-100 text-puma-blue-800">
-                          {user.name.charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
+          {/* Users List */}
+          <div className="grid gap-4 mt-6">
+            {filteredUsers.map((user) => (
+              <Card key={user.id} className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start space-x-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarFallback className="bg-puma-blue-100 text-puma-blue-800">
+                        {user.name.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900 truncate">
+                          {user.name}
+                        </h3>
+                        {user.roles.map((role) => (
+                          <Badge
+                            key={role}
+                            className={`${getRoleColor(role)} text-white text-xs`}
+                          >
+                            {formatRoleName(role)}
+                          </Badge>
+                        ))}
+                      </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900 truncate">
-                            {user.name}
-                          </h3>
-                          {user.roles.map((role) => (
-                            <Badge
-                              key={role}
-                              className={`${getRoleColor(role)} text-white text-xs`}
-                            >
-                              {formatRoleName(role)}
-                            </Badge>
-                          ))}
+                      <div className="space-y-1 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          <span>{user.email}</span>
                         </div>
-                        
-                        <div className="space-y-1 text-sm text-gray-600">
+                        {user.phone && (
                           <div className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            <span>{user.email}</span>
+                            <Phone className="h-3 w-3" />
+                            <span>{user.phone}</span>
                           </div>
-                          {user.phone && (
-                            <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              <span>{user.phone}</span>
+                        )}
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>Joined {new Date(user.created_at).toLocaleDateString()}</span>
+                        </div>
+                      </div>
+
+                      {/* Teams, Clubs, and Links sections */}
+                      {(user.teams.length > 0 || user.clubs.length > 0) && (
+                        <div className="mt-3 space-y-2">
+                          {user.teams.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Teams:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {user.teams.map((team) => (
+                                  <Badge key={team.id} variant="outline" className="text-xs">
+                                    {team.name} ({team.role})
+                                  </Badge>
+                                ))}
+                              </div>
                             </div>
                           )}
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>Joined {new Date(user.created_at).toLocaleDateString()}</span>
-                          </div>
+                          {user.clubs.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Clubs:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {user.clubs.map((club) => (
+                                  <Badge key={club.id} variant="outline" className="text-xs">
+                                    {club.name} ({club.role})
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
+                      )}
 
-                        {/* Teams and Clubs */}
-                        {(user.teams.length > 0 || user.clubs.length > 0) && (
-                          <div className="mt-3 space-y-2">
-                            {user.teams.length > 0 && (
-                              <div>
-                                <span className="text-xs font-medium text-gray-500">Teams:</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.teams.map((team) => (
-                                    <Badge key={team.id} variant="outline" className="text-xs">
-                                      {team.name} ({team.role})
-                                    </Badge>
-                                  ))}
-                                </div>
+                      {(user.playerLinks.length > 0 || user.staffLinks.length > 0) && (
+                        <div className="mt-3 space-y-2">
+                          {user.playerLinks.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Player Links:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {user.playerLinks.map((link) => (
+                                  <Badge key={link.id} variant="secondary" className="text-xs">
+                                    <Link2 className="h-3 w-3 mr-1" />
+                                    {link.name} ({link.relationship})
+                                  </Badge>
+                                ))}
                               </div>
-                            )}
-                            {user.clubs.length > 0 && (
-                              <div>
-                                <span className="text-xs font-medium text-gray-500">Clubs:</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.clubs.map((club) => (
-                                    <Badge key={club.id} variant="outline" className="text-xs">
-                                      {club.name} ({club.role})
-                                    </Badge>
-                                  ))}
-                                </div>
+                            </div>
+                          )}
+                          {user.staffLinks.length > 0 && (
+                            <div>
+                              <span className="text-xs font-medium text-gray-500">Staff Links:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {user.staffLinks.map((link) => (
+                                  <Badge key={link.id} variant="secondary" className="text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    {link.name} ({link.relationship})
+                                  </Badge>
+                                ))}
                               </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Player and Staff Links */}
-                        {(user.playerLinks.length > 0 || user.staffLinks.length > 0) && (
-                          <div className="mt-3 space-y-2">
-                            {user.playerLinks.length > 0 && (
-                              <div>
-                                <span className="text-xs font-medium text-gray-500">Player Links:</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.playerLinks.map((link) => (
-                                    <Badge key={link.id} variant="secondary" className="text-xs">
-                                      <Link2 className="h-3 w-3 mr-1" />
-                                      {link.name} ({link.relationship})
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            {user.staffLinks.length > 0 && (
-                              <div>
-                                <span className="text-xs font-medium text-gray-500">Staff Links:</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.staffLinks.map((link) => (
-                                    <Badge key={link.id} variant="secondary" className="text-xs">
-                                      <Shield className="h-3 w-3 mr-1" />
-                                      {link.name} ({link.relationship})
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
-                </Card>
-              ))}
+                  
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditModal(user)}
+                  >
+                    Edit
+                  </Button>
+                </div>
+              </Card>
+            ))}
 
-              {filteredUsers.length === 0 && (
-                <Card className="p-8 text-center">
-                  <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                  <p className="text-gray-600 mb-4">
-                    {searchTerm || roleFilter !== 'all' 
-                      ? 'Try adjusting your search or filter criteria.'
-                      : 'No users have been added to the system yet.'
-                    }
-                  </p>
-                  {!searchTerm && roleFilter === 'all' && (
-                    <Button 
-                      onClick={loadUsers}
-                      variant="outline"
-                    >
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Refresh User List
-                    </Button>
-                  )}
-                </Card>
-              )}
-            </div>
+            {/* No users found section */}
+            {filteredUsers.length === 0 && (
+              <Card className="p-8 text-center">
+                <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm || roleFilter !== 'all' 
+                    ? 'Try adjusting your search or filter criteria.'
+                    : 'No users have been added to the system yet.'
+                  }
+                </p>
+                {!searchTerm && roleFilter === 'all' && (
+                  <Button 
+                    onClick={loadUsers}
+                    variant="outline"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh User List
+                  </Button>
+                )}
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -813,8 +876,8 @@ export const UserManagementSystem = () => {
           <InvitationResendPanel />
         </TabsContent>
 
-        <TabsContent value="teams" className="mt-6">
-          <DualRoleManagement />
+        <TabsContent value="enhanced-linking" className="mt-6">
+          <EnhancedUserLinking />
         </TabsContent>
 
         <TabsContent value="linking" className="mt-6">
@@ -825,6 +888,67 @@ export const UserManagementSystem = () => {
           <BulkUserImport />
         </TabsContent>
       </Tabs>
+
+      {/* Edit User Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information and roles.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="editName">Name</Label>
+              <Input
+                id="editName"
+                value={newUserData.name}
+                onChange={(e) => setNewUserData(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="Enter full name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="editEmail">Email</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="editPhone">Phone</Label>
+              <Input
+                id="editPhone"
+                value={newUserData.phone}
+                onChange={(e) => setNewUserData(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Enter phone number"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label>Roles</Label>
+              <RoleSelector
+                selectedRoles={newUserData.roles}
+                onRolesChange={(roles) => setNewUserData(prev => ({ ...prev, roles }))}
+                userEmail={newUserData.email}
+              />
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleUpdateUser}>Update User</Button>
+              <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <UserInvitationModal
         isOpen={showInviteModal}

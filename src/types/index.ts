@@ -388,3 +388,25 @@ export type Profile = {
   created_at: string;
   updated_at: string;
 };
+
+export interface AuthorizationContextType {
+  hasPermission: (permission: Permission) => boolean;
+  canManageUsers: boolean;
+  canInviteUsers: boolean;
+  canManageTeams: boolean;
+  canManageClubs: boolean;
+  canViewAnalytics: boolean;
+  canViewStaff: boolean; // Added this property
+  isGlobalAdmin: boolean;
+  isClubAdmin: (clubId?: string) => boolean;
+  isTeamManager: (teamId?: string) => boolean;
+  userPermissions: string[];
+  loading: boolean;
+}
+
+interface Permission {
+  resource: string;
+  action: string;
+  scope?: 'global' | 'club' | 'team';
+  resourceId?: string;
+}
