@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,30 +9,25 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus } from 'lucide-react';
 
 interface User {
   id: string;
   name: string;
   email: string;
   roles: string[];
+  teamAssignments: Array<{
+    userTeamId: string;
+    teamId: string;
+    teamName: string;
+    role: string;
+  }>;
 }
 
 interface Team {
   id: string;
   name: string;
   age_group: string;
-}
-
-interface UserTeam {
-  id: string;
-  user_id: string;
-  team_id: string;
-  role: string;
-  user_name: string;
-  user_email: string;
-  team_name: string;
-  has_profile: boolean;
 }
 
 interface PendingInvitation {
@@ -47,7 +43,6 @@ interface PendingInvitation {
 export const UserTeamManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchEmail, setSearchEmail] = useState('');
@@ -55,7 +50,7 @@ export const UserTeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [showUnlinkedOnly, setShowUnlinkedOnly] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState<{userId: string, userTeamId: string, currentRole: string} | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -66,7 +61,7 @@ export const UserTeamManagement = () => {
     try {
       setLoading(true);
       
-      // Load users
+      // Load all users from profiles
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('id, name, email, roles')
@@ -82,7 +77,7 @@ export const UserTeamManagement = () => {
 
       if (teamsError) throw teamsError;
 
-      // Load user-team relationships
+      // Load all user-team relationships
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
         .select('id, user_id, team_id, role')
@@ -100,37 +95,28 @@ export const UserTeamManagement = () => {
         console.error('Error loading invitations:', invitationsError);
       }
 
-      // Transform user-team data by fetching user and team details
-      const transformedUserTeams: UserTeam[] = [];
-      
-      if (userTeamsData) {
-        for (const ut of userTeamsData) {
-          // Get user details
-          const { data: userData } = await supabase
-            .from('profiles')
-            .select('name, email')
-            .eq('id', ut.user_id)
-            .maybeSingle();
-
-          // Get team details
-          const { data: teamData } = await supabase
-            .from('teams')
-            .select('name')
-            .eq('id', ut.team_id)
-            .maybeSingle();
-
-          transformedUserTeams.push({
-            id: ut.id,
-            user_id: ut.user_id,
-            team_id: ut.team_id,
-            role: ut.role,
-            user_name: userData?.name || 'Unknown User',
-            user_email: userData?.email || 'Unknown Email',
-            team_name: teamData?.name || 'Unknown Team',
-            has_profile: userData !== null
+      // Process users with their team assignments
+      const processedUsers: User[] = (usersData || []).map(user => {
+        const userTeamAssignments = (userTeamsData || [])
+          .filter(ut => ut.user_id === user.id)
+          .map(ut => {
+            const team = (teamsData || []).find(t => t.id === ut.team_id);
+            return {
+              userTeamId: ut.id,
+              teamId: ut.team_id,
+              teamName: team?.name || 'Unknown Team',
+              role: ut.role
+            };
           });
-        }
-      }
+
+        return {
+          id: user.id,
+          name: user.name || 'Unknown',
+          email: user.email || '',
+          roles: Array.isArray(user.roles) ? user.roles : [],
+          teamAssignments: userTeamAssignments
+        };
+      });
 
       // Transform pending invitations
       const transformedInvitations: PendingInvitation[] = [];
@@ -154,9 +140,8 @@ export const UserTeamManagement = () => {
         }
       }
 
-      setUsers(usersData || []);
+      setUsers(processedUsers);
       setTeams(teamsData || []);
-      setUserTeams(transformedUserTeams);
       setPendingInvitations(transformedInvitations);
       
     } catch (error: any) {
@@ -168,47 +153,6 @@ export const UserTeamManagement = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const createMissingProfile = async (email: string) => {
-    try {
-      // Find invitation to get user details
-      const invitation = pendingInvitations.find(inv => inv.email === email);
-      if (!invitation) {
-        toast({
-          title: 'Error',
-          description: 'No invitation found for this email',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Use the userInvitationService to process the invitation
-      const { data, error } = await supabase.rpc('user_is_global_admin');
-      
-      if (error || !data) {
-        toast({
-          title: 'Permission Denied',
-          description: 'You must be a global admin to create user profiles',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'Profile Creation',
-        description: 'Creating user profile. This user will need to sign up to complete the process.',
-      });
-
-      await loadData(); // Refresh data
-    } catch (error: any) {
-      console.error('Error creating profile:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create profile: ' + error.message,
-        variant: 'destructive',
-      });
     }
   };
 
@@ -296,6 +240,7 @@ export const UserTeamManagement = () => {
         description: 'User role updated successfully',
       });
 
+      setEditingAssignment(null);
       loadData();
     } catch (error: any) {
       console.error('Error updating user role:', error);
@@ -307,38 +252,44 @@ export const UserTeamManagement = () => {
     }
   };
 
-  const findUserByEmail = (email: string) => {
-    return userTeams.filter(ut => 
-      ut.user_email.toLowerCase().includes(email.toLowerCase())
-    );
+  const updateUserGlobalRoles = async (userId: string, newRoles: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ roles: newRoles })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'User global roles updated successfully',
+      });
+
+      loadData();
+    } catch (error: any) {
+      console.error('Error updating user roles:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user roles: ' + error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
-  const findPendingByEmail = (email: string) => {
-    return pendingInvitations.filter(inv =>
-      inv.email.toLowerCase().includes(email.toLowerCase())
-    );
-  };
-
-  // Get users without any team relationships
-  const getUsersWithoutTeams = () => {
-    const usersWithTeams = new Set(userTeams.map(ut => ut.user_id));
-    return users.filter(user => !usersWithTeams.has(user.id));
-  };
-
-  const filteredUserTeams = searchEmail 
-    ? findUserByEmail(searchEmail)
-    : (showUnlinkedOnly ? userTeams.filter(ut => !ut.has_profile) : userTeams);
-
-  const filteredPendingInvitations = searchEmail
-    ? findPendingByEmail(searchEmail)
-    : pendingInvitations;
-
-  const unlinkedUsers = searchEmail
-    ? getUsersWithoutTeams().filter(user => 
+  const filteredUsers = searchEmail 
+    ? users.filter(user => 
         user.email.toLowerCase().includes(searchEmail.toLowerCase()) ||
         user.name.toLowerCase().includes(searchEmail.toLowerCase())
       )
-    : getUsersWithoutTeams();
+    : users;
+
+  const filteredPendingInvitations = searchEmail
+    ? pendingInvitations.filter(inv =>
+        inv.email.toLowerCase().includes(searchEmail.toLowerCase()) ||
+        inv.name.toLowerCase().includes(searchEmail.toLowerCase())
+      )
+    : pendingInvitations;
 
   if (loading) {
     return (
@@ -357,7 +308,7 @@ export const UserTeamManagement = () => {
         <div>
           <h3 className="text-lg font-semibold">User Team Management</h3>
           <p className="text-sm text-muted-foreground">
-            Manage user-team relationships and roles
+            Manage all users, their team assignments, and roles
           </p>
         </div>
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
@@ -438,83 +389,23 @@ export const UserTeamManagement = () => {
         </Dialog>
       </div>
 
-      {/* Search and Filter Controls */}
+      {/* Search Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Search and Filter</CardTitle>
+          <CardTitle>Search Users</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search by email (e.g., m888kky@outlook.com)"
-                value={searchEmail}
-                onChange={(e) => setSearchEmail(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant={showUnlinkedOnly ? "default" : "outline"}
-                size="sm"
-                onClick={() => setShowUnlinkedOnly(!showUnlinkedOnly)}
-              >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                {showUnlinkedOnly ? "Show All" : "Show Unlinked Users Only"}
-              </Button>
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search by name or email..."
+              value={searchEmail}
+              onChange={(e) => setSearchEmail(e.target.value)}
+              className="pl-10"
+            />
           </div>
         </CardContent>
       </Card>
-
-      {/* Users Without Team Assignments */}
-      {unlinkedUsers.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Users Without Team Assignments ({unlinkedUsers.length})</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Users who have profiles but are not assigned to any teams
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {unlinkedUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <UserSearch className="h-4 w-4 text-blue-600" />
-                      <div>
-                        <p className="font-medium">{user.name}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">No Team Assignment</Badge>
-                      {user.roles.map((role) => (
-                        <Badge key={role} variant="outline">{role}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedUser(user.id);
-                        setIsAddModalOpen(true);
-                      }}
-                    >
-                      Assign to Team
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Pending Invitations */}
       {filteredPendingInvitations.length > 0 && (
@@ -546,16 +437,6 @@ export const UserTeamManagement = () => {
                       </Badge>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => createMissingProfile(invitation.email)}
-                    >
-                      Create Profile
-                    </Button>
-                  </div>
                 </div>
               ))}
             </div>
@@ -563,81 +444,157 @@ export const UserTeamManagement = () => {
         </Card>
       )}
 
-      {/* User Team Relationships */}
+      {/* All Users */}
       <Card>
         <CardHeader>
-          <CardTitle>User Team Relationships ({filteredUserTeams.length})</CardTitle>
+          <CardTitle>All Users ({filteredUsers.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredUserTeams.map((userTeam) => (
-              <div key={userTeam.id} className={`flex items-center justify-between p-4 border rounded-lg ${!userTeam.has_profile ? 'bg-red-50 border-red-200' : ''}`}>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Users className="h-4 w-4 text-blue-500" />
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{userTeam.user_name}</p>
-                        {!userTeam.has_profile && (
-                          <Badge variant="destructive" className="text-xs">
-                            No Profile
-                          </Badge>
-                        )}
+            {filteredUsers.map((user) => (
+              <div key={user.id} className="p-4 border rounded-lg">
+                <div className="space-y-4">
+                  {/* User Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="text-xs text-muted-foreground">ID: {user.id}</p>
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground">{userTeam.user_email}</p>
+                      
+                      {/* Global Roles */}
+                      <div className="mb-3">
+                        <span className="text-xs font-medium text-gray-500">Global Roles:</span>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {user.roles.map((role) => (
+                            <Badge key={role} variant="secondary" className="text-xs">
+                              {role.replace('_', ' ')}
+                            </Badge>
+                          ))}
+                          {user.roles.length === 0 && (
+                            <Badge variant="outline" className="text-xs">No global roles</Badge>
+                          )}
+                        </div>
+                      </div>
                     </div>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(user.id);
+                        setIsAddModalOpen(true);
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add to Team
+                    </Button>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-green-500" />
-                    <span className="text-sm">{userTeam.team_name}</span>
-                    <Badge variant="outline">{userTeam.role}</Badge>
+
+                  {/* Team Assignments */}
+                  <div>
+                    <span className="text-xs font-medium text-gray-500">Team Assignments:</span>
+                    {user.teamAssignments.length > 0 ? (
+                      <div className="space-y-2 mt-2">
+                        {user.teamAssignments.map((assignment) => (
+                          <div key={assignment.userTeamId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4 text-green-500" />
+                              <span className="text-sm font-medium">{assignment.teamName}</span>
+                              <Badge variant="outline" className="text-xs">{assignment.role}</Badge>
+                            </div>
+                            
+                            <div className="flex items-center gap-2">
+                              {editingAssignment?.userTeamId === assignment.userTeamId ? (
+                                <div className="flex items-center gap-2">
+                                  <Select
+                                    value={selectedRole}
+                                    onValueChange={setSelectedRole}
+                                  >
+                                    <SelectTrigger className="w-40">
+                                      <SelectValue placeholder="Select role" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="team_manager">Team Manager</SelectItem>
+                                      <SelectItem value="team_assistant_manager">Assistant Manager</SelectItem>
+                                      <SelectItem value="team_coach">Coach</SelectItem>
+                                      <SelectItem value="team_helper">Helper</SelectItem>
+                                      <SelectItem value="player">Player</SelectItem>
+                                      <SelectItem value="parent">Parent</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateUserRole(assignment.userTeamId, selectedRole)}
+                                    disabled={!selectedRole}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingAssignment(null);
+                                      setSelectedRole('');
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingAssignment({
+                                        userId: user.id,
+                                        userTeamId: assignment.userTeamId,
+                                        currentRole: assignment.role
+                                      });
+                                      setSelectedRole(assignment.role);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => removeUserFromTeam(assignment.userTeamId)}
+                                    className="text-red-600 hover:text-red-700"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="mt-2 p-3 bg-blue-50 rounded-lg text-center">
+                        <p className="text-sm text-muted-foreground">No team assignments</p>
+                      </div>
+                    )}
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Select
-                    value={userTeam.role}
-                    onValueChange={(newRole) => updateUserRole(userTeam.id, newRole)}
-                  >
-                    <SelectTrigger className="w-48">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="team_manager">Team Manager</SelectItem>
-                      <SelectItem value="team_assistant_manager">Assistant Manager</SelectItem>
-                      <SelectItem value="team_coach">Coach</SelectItem>
-                      <SelectItem value="team_helper">Helper</SelectItem>
-                      <SelectItem value="player">Player</SelectItem>
-                      <SelectItem value="parent">Parent</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => removeUserFromTeam(userTeam.id)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             ))}
 
-            {filteredUserTeams.length === 0 && unlinkedUsers.length === 0 && filteredPendingInvitations.length === 0 && (
+            {filteredUsers.length === 0 && (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <h3 className="font-semibold mb-2">No Users Found</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchEmail 
                     ? `No users found matching "${searchEmail}"`
-                    : 'No users or relationships exist yet.'
+                    : 'No users exist yet.'
                   }
                 </p>
-                <Button onClick={() => setIsAddModalOpen(true)}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Add User to Team
-                </Button>
               </div>
             )}
           </div>
