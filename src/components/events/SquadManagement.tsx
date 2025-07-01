@@ -172,9 +172,6 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
             Squad Management
             <Badge variant="secondary">{squadPlayers.length} players</Badge>
           </CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Team: {teamId} | Event: {eventId || 'General Squad'}
-          </p>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add Player Section */}

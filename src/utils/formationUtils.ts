@@ -1,3 +1,4 @@
+
 import { GameFormat } from '@/types';
 
 export interface FormationConfig {
@@ -69,7 +70,7 @@ const formations7ASide: FormationConfig[] = [
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
       { position: "Defender Left", x: 15, y: 75 },
-      { position: "Defender Centre", x: 50, y: 75 },
+      { position: "Defender Centre", x: 50, y: 70 }, // Moved up slightly to avoid overlap with GK
       { position: "Defender Right", x: 85, y: 75 },
       { position: "Midfielder Left", x: 25, y: 45 },
       { position: "Midfielder Right", x: 75, y: 45 },
@@ -81,9 +82,9 @@ const formations7ASide: FormationConfig[] = [
     name: "1-1-3-2",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Centre", x: 50, y: 75 },
-      { position: "Midfielder Left", x: 15, y: 45 },
-      { position: "Midfielder Centre", x: 50, y: 45 },
+      { position: "Defender Centre", x: 50, y: 70 }, // Moved up slightly
+      { position: "Midfielder Left", x: 15, y: 40 }, // Moved up slightly to avoid overlap
+      { position: "Midfielder Centre", x: 50, y: 40 }, // Moved up slightly to avoid overlap
       { position: "Midfielder Right", x: 85, y: 45 },
       { position: "Striker Left", x: 30, y: 15 },
       { position: "Striker Right", x: 70, y: 15 }

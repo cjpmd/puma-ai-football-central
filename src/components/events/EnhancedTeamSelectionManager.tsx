@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -326,7 +327,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             <div>
               <h2 className="text-2xl font-bold">{event.title}</h2>
               <p className="text-muted-foreground">
-                {event.date} • {event.game_format} • Enhanced Team Selection
+                {event.date} • {event.game_format} • Team Selection
               </p>
             </div>
             <div className="flex items-center gap-2">
