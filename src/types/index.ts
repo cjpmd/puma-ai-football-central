@@ -185,7 +185,7 @@ export interface Attendance {
 }
 
 // Additional types that were missing
-export type SubscriptionType = 'free' | 'premium' | 'pro' | 'analytics_plus';
+export type SubscriptionType = 'free' | 'premium' | 'pro' | 'analytics_plus' | 'full_squad' | 'training' | 'trialist';
 
 export type GameFormat = '3-a-side' | '4-a-side' | '5-a-side' | '7-a-side' | '9-a-side' | '11-a-side';
 
@@ -244,6 +244,10 @@ export interface PlayerObjective {
   completed: boolean;
   created_at: string;
   target_date?: string;
+  difficulty_rating?: number;
+  review_date?: string;
+  status?: 'ongoing' | 'improving' | 'complete';
+  created_by?: string;
 }
 
 export interface PlayerTransfer {
@@ -255,6 +259,9 @@ export interface PlayerTransfer {
   status: 'pending' | 'approved' | 'rejected';
   requested_by: string;
   accepted_by?: string;
+  fromTeamId?: string;
+  toTeamId?: string;
+  transferDate?: string;
 }
 
 export interface AttributeHistory {
@@ -265,4 +272,12 @@ export interface AttributeHistory {
   value: number;
   recorded_date: string;
   recorded_by: string;
+  attributeName?: string;
+  recordedDate?: string;
+  recordedBy?: string;
 }
+
+// Additional missing types
+export type SubscriptionStatus = 'active' | 'pending' | 'inactive' | 'paused';
+export type UserRole = 'global_admin' | 'club_admin' | 'club_chair' | 'club_secretary' | 'team_manager' | 'team_assistant_manager' | 'team_coach' | 'team_helper' | 'admin' | 'manager' | 'coach' | 'player' | 'parent';
+export type PlayerSubscriptionType = 'full_squad' | 'training' | 'trialist';

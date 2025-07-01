@@ -53,7 +53,7 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
     queryFn: async () => {
       // For demonstration, just get history for first attribute
       const sample = player.attributes[0]?.name || 'Pace';
-      return playersService.getAttributeHistory(player.id, sample);
+      return playersService.getAttributeHistory(player.id);
     },
     enabled: isOpen && player.attributes.length > 0,
   });

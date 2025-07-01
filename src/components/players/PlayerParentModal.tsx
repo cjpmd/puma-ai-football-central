@@ -32,7 +32,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     email: '',
     phone: '',
     playerId: player?.id || '',
-    subscriptionType: player?.subscriptionType || 'full_squad',
+    subscriptionType: player?.subscription_type || 'full_squad',
     subscriptionStatus: 'active'
   });
 
@@ -56,7 +56,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
         email: '',
         phone: '',
         playerId: player?.id || '',
-        subscriptionType: player?.subscriptionType || 'full_squad',
+        subscriptionType: player?.subscription_type || 'full_squad',
         subscriptionStatus: 'active'
       });
       toast({
@@ -176,7 +176,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
         email: '',
         phone: '',
         playerId: player?.id || '',
-        subscriptionType: player?.subscriptionType || 'full_squad',
+        subscriptionType: player?.subscription_type || 'full_squad',
         subscriptionStatus: 'active'
       });
     }
