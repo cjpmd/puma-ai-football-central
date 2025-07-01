@@ -4,13 +4,13 @@ import { SubscriptionType } from './index';
 export interface Club {
   id: string;
   name: string;
-  referenceNumber?: string;
-  subscriptionType?: SubscriptionType;
-  serialNumber?: string;
+  reference_number?: string;
+  subscription_type?: SubscriptionType;
+  serial_number?: string;
   teams?: any[];
-  logoUrl?: string | null;
+  logo_url?: string | null;
   userRole?: string; // For linked clubs
   isReadOnly?: boolean; // For linked clubs
-  createdAt?: string;
-  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
 }

@@ -62,6 +62,7 @@ export interface Club {
   serial_number?: string;
   userRole?: string; // For linked clubs
   isReadOnly?: boolean; // For linked clubs
+  teams?: any[];
 }
 
 export interface Player {

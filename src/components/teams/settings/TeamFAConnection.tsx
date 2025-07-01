@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Team } from '@/types/team';
+import { Team } from '@/types';
 import { Wifi, Upload, Download, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 
 interface TeamFAConnectionProps {

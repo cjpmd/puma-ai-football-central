@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { GameFormat } from '@/types';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { formatPlayerName } from '@/utils/nameUtils';
-import { NameDisplayOption } from '@/types/team';
+// NameDisplayOption is now in @/types
 
 interface Player {
   id: string;
