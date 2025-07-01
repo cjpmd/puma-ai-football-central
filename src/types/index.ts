@@ -1,3 +1,4 @@
+
 export interface User {
   id: string;
   email: string;
@@ -15,6 +16,7 @@ export interface Team {
   season_end?: string;
   logo_url?: string;
   game_format?: string;
+  game_duration?: number;
   subscription_type?: string;
   manager_name?: string;
   manager_email?: string;
@@ -38,6 +40,8 @@ export interface Club {
   subscription_type?: string;
   reference_number?: string;
   serial_number?: string;
+  userRole?: string; // For linked clubs
+  isReadOnly?: boolean; // For linked clubs
 }
 
 export interface Player {
@@ -75,19 +79,37 @@ export interface Event {
   title: string;
   description?: string;
   location?: string;
-  start_time: string;
-  end_time: string;
-  type: 'game' | 'training' | 'other';
+  date: string;
+  start_time?: string;
+  end_time?: string;
+  meeting_time?: string;
+  type: 'training' | 'fixture' | 'friendly' | 'tournament' | 'festival' | 'social';
+  event_type: 'training' | 'fixture' | 'friendly' | 'tournament' | 'festival' | 'social';
   is_recurring?: boolean;
   recurrence_rule?: string;
   created_at?: string;
   updated_at?: string;
   mandatory?: boolean;
+  game_format?: string;
+  game_duration?: number;
+  opponent?: string;
+  is_home?: boolean;
+  facility_id?: string;
+  facility_booking_id?: string;
+  training_notes?: string;
+  notes?: string;
+  coach_notes?: string;
+  staff_notes?: string;
+  scores?: {
+    home: number;
+    away: number;
+  };
+  player_of_match_id?: string;
+  kit_selection?: 'home' | 'away' | 'training';
+  teams?: string[];
+  total_minutes?: number;
   attendance?: {
     [player_id: string]: 'confirmed' | 'maybe' | 'declined' | 'pending';
-  };
-  notes?: {
-    [player_id: string]: string;
   };
 }
 
@@ -162,3 +184,36 @@ export interface Attendance {
   created_at?: string;
   updated_at?: string;
 }
+
+// Additional types that were missing
+export type SubscriptionType = 'free' | 'premium' | 'pro' | 'analytics_plus';
+
+export type GameFormat = '3-a-side' | '4-a-side' | '5-a-side' | '7-a-side' | '9-a-side' | '11-a-side';
+
+export interface ClubOfficial {
+  id: string;
+  club_id: string;
+  user_id: string;
+  role: string;
+  assigned_at: string;
+  assigned_by?: string;
+  profile?: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
+}
+
+export interface Facility {
+  id: string;
+  name: string;
+  description?: string;
+  club_id: string;
+  bookable_units: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4-3';
+
+export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CM' | 'LM' | 'RM' | 'CAM' | 'CDM' | 'LW' | 'RW' | 'ST' | 'CF';

@@ -55,20 +55,20 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     title: event?.title || '',
     description: event?.description || '',
     date: event?.date || new Date().toISOString().split('T')[0],
-    startTime: event?.startTime || '10:00',
-    endTime: event?.endTime || '11:00',
+    start_time: event?.start_time || '10:00',
+    end_time: event?.end_time || '11:00',
     location: event?.location || '',
-    gameFormat: event?.gameFormat || teamDefaultGameFormat,
-    gameDuration: event?.gameDuration || teamDefaultGameDuration,
+    game_format: event?.game_format || teamDefaultGameFormat,
+    game_duration: event?.game_duration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
-    isHome: event?.isHome ?? true,
-    facilityId: event?.facilityId || '',
-    trainingNotes: event?.trainingNotes || '',
+    is_home: event?.is_home ?? true,
+    facility_id: event?.facility_id || '',
+    training_notes: event?.training_notes || '',
     notes: event?.notes || '',
     homeScore: event?.scores?.home || 0,
     awayScore: event?.scores?.away || 0,
-    playerOfTheMatchId: event?.playerOfTheMatchId || '',
-    kitSelection: event?.kitSelection || 'home' as 'home' | 'away' | 'training'
+    player_of_match_id: event?.player_of_match_id || '',
+    kit_selection: event?.kit_selection || 'home' as 'home' | 'away' | 'training'
   });
 
   useEffect(() => {
@@ -85,9 +85,9 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       setNumberOfTeams(eventTeams.length || 1);
       const initialSlots = eventTeams.map((_, index: number) => ({
         teamNumber: index + 1,
-        meetingTime: event.meetingTime || '09:00',
-        startTime: event.startTime || '10:00',
-        endTime: event.endTime || '11:30'
+        meetingTime: event.meeting_time || '09:00',
+        startTime: event.start_time || '10:00',
+        endTime: event.end_time || '11:30'
       }));
       setTeamTimeSlots(initialSlots);
       
@@ -96,28 +96,28 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         title: event.title || '',
         description: event.description || '',
         date: event.date || new Date().toISOString().split('T')[0],
-        startTime: event.startTime || '10:00',
-        endTime: event.endTime || '11:00',
+        start_time: event.start_time || '10:00',
+        end_time: event.end_time || '11:00',
         location: event.location || '',
-        gameFormat: event.gameFormat || teamDefaultGameFormat,
-        gameDuration: event.gameDuration || teamDefaultGameDuration,
+        game_format: event.game_format || teamDefaultGameFormat,
+        game_duration: event.game_duration || teamDefaultGameDuration,
         opponent: event.opponent || '',
-        isHome: event.isHome ?? true,
-        facilityId: event.facilityId || '',
-        trainingNotes: event.trainingNotes || '',
+        is_home: event.is_home ?? true,
+        facility_id: event.facility_id || '',
+        training_notes: event.training_notes || '',
         notes: event.notes || '',
         homeScore: event.scores?.home || 0,
         awayScore: event.scores?.away || 0,
-        playerOfTheMatchId: event.playerOfTheMatchId || '',
-        kitSelection: event.kitSelection || 'home'
+        player_of_match_id: event.player_of_match_id || '',
+        kit_selection: event.kit_selection || 'home'
       });
     } else {
-      console.log('Creating new event, using team defaults - gameFormat:', teamDefaultGameFormat, 'gameDuration:', teamDefaultGameDuration);
+      console.log('Creating new event, using team defaults - game_format:', teamDefaultGameFormat, 'game_duration:', teamDefaultGameDuration);
       // For new events, use team defaults
       setFormData(prev => ({
         ...prev,
-        gameFormat: teamDefaultGameFormat,
-        gameDuration: teamDefaultGameDuration
+        game_format: teamDefaultGameFormat,
+        game_duration: teamDefaultGameDuration
       }));
     }
   }, [event, teamId, teamDefaultGameFormat, teamDefaultGameDuration]);
@@ -155,12 +155,12 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const loadFacilities = async () => {
     try {
       const team = teams.find(t => t.id === teamId);
-      if (!team?.clubId) return;
+      if (!team?.club_id) return;
 
       const { data, error } = await supabase
         .from('facilities')
         .select('*')
-        .eq('club_id', team.clubId)
+        .eq('club_id', team.club_id)
         .order('name');
 
       if (error) throw error;
@@ -227,21 +227,21 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     
     const primaryTimeSlot = teamTimeSlots[0];
     
-    console.log('Submitting event with game duration:', formData.gameDuration);
+    console.log('Submitting event with game duration:', formData.game_duration);
     
     const eventData: Partial<Event> = {
       ...formData,
-      teamId,
+      team_id: teamId,
       teams: numberOfTeams > 1 ? Array(numberOfTeams).fill(teamId) : [teamId],
-      meetingTime: primaryTimeSlot.meetingTime,
-      startTime: primaryTimeSlot.startTime || formData.startTime,
-      endTime: primaryTimeSlot.endTime || formData.endTime,
+      meeting_time: primaryTimeSlot.meetingTime,
+      start_time: primaryTimeSlot.startTime || formData.start_time,
+      end_time: primaryTimeSlot.endTime || formData.end_time,
       opponent: requiresOpponent ? formData.opponent : undefined,
       scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
-      playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
-      kitSelection: formData.kitSelection
+      player_of_match_id: formData.player_of_match_id || undefined,
+      kit_selection: formData.kit_selection
     };
 
     console.log('Final event data being submitted:', eventData);
@@ -300,12 +300,12 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
 
         {/* Kit Selection */}
         <div className="space-y-2">
-          <Label htmlFor="kitSelection">Kit Selection</Label>
+          <Label htmlFor="kit_selection">Kit Selection</Label>
           <Select
-            value={formData.kitSelection}
+            value={formData.kit_selection}
             onValueChange={(value: 'home' | 'away' | 'training') => {
               console.log('Kit selection changed to:', value);
-              setFormData(prev => ({ ...prev, kitSelection: value }));
+              setFormData(prev => ({ ...prev, kit_selection: value }));
             }}
           >
             <SelectTrigger>
@@ -351,12 +351,12 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="gameFormat">Game Format</Label>
+            <Label htmlFor="game_format">Game Format</Label>
             <Select
-              value={formData.gameFormat}
+              value={formData.game_format}
               onValueChange={(value) => {
                 console.log('Game format changed to:', value);
-                setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }));
+                setFormData(prev => ({ ...prev, game_format: value as GameFormat }));
               }}
             >
               <SelectTrigger>
@@ -375,17 +375,17 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
 
         {/* Game Duration */}
         <div className="space-y-2">
-          <Label htmlFor="gameDuration">Game Duration (minutes)</Label>
+          <Label htmlFor="game_duration">Game Duration (minutes)</Label>
           <Input
-            id="gameDuration"
+            id="game_duration"
             type="number"
             min="1"
             max="180"
-            value={formData.gameDuration}
+            value={formData.game_duration}
             onChange={(e) => {
               const newDuration = parseInt(e.target.value) || teamDefaultGameDuration;
               console.log('Game duration changed to:', newDuration);
-              setFormData(prev => ({ ...prev, gameDuration: newDuration }));
+              setFormData(prev => ({ ...prev, game_duration: newDuration }));
             }}
             placeholder={teamDefaultGameDuration.toString()}
           />
@@ -398,21 +398,21 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         {!requiresOpponent && (
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time</Label>
+              <Label htmlFor="start_time">Start Time</Label>
               <Input
-                id="startTime"
+                id="start_time"
                 type="time"
-                value={formData.startTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                value={formData.start_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endTime">End Time</Label>
+              <Label htmlFor="end_time">End Time</Label>
               <Input
-                id="endTime"
+                id="end_time"
                 type="time"
-                value={formData.endTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                value={formData.end_time}
+                onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
               />
             </div>
           </div>
@@ -498,8 +498,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             <div className="space-y-2">
               <Label htmlFor="facility">Facility</Label>
               <Select
-                value={formData.facilityId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value === 'none' ? '' : value }))}
+                value={formData.facility_id}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, facility_id: value === 'none' ? '' : value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select facility" />
@@ -521,11 +521,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         {(formData.type === 'fixture' || formData.type === 'friendly') && (
           <div className="flex items-center space-x-2">
             <Switch
-              id="isHome"
-              checked={formData.isHome}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+              id="is_home"
+              checked={formData.is_home}
+              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_home: checked }))}
             />
-            <Label htmlFor="isHome">Home game</Label>
+            <Label htmlFor="is_home">Home game</Label>
           </div>
         )}
 
@@ -534,7 +534,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="homeScore">
-                {formData.isHome ? 'Our Score' : 'Opponent Score'}
+                {formData.is_home ? 'Our Score' : 'Opponent Score'}
               </Label>
               <Input
                 id="homeScore"
@@ -546,7 +546,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
             </div>
             <div className="space-y-2">
               <Label htmlFor="awayScore">
-                {formData.isHome ? 'Opponent Score' : 'Our Score'}
+                {formData.is_home ? 'Opponent Score' : 'Our Score'}
               </Label>
               <Input
                 id="awayScore"
@@ -562,10 +562,10 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         {/* Player of the Match */}
         {(formData.type === 'fixture' || formData.type === 'friendly') && (
           <div className="space-y-2">
-            <Label htmlFor="playerOfTheMatch">Player of the Match</Label>
+            <Label htmlFor="player_of_match">Player of the Match</Label>
             <Select
-              value={formData.playerOfTheMatchId}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, playerOfTheMatchId: value === 'none' ? '' : value }))}
+              value={formData.player_of_match_id}
+              onValueChange={(value) => setFormData(prev => ({ ...prev, player_of_match_id: value === 'none' ? '' : value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select player of the match" />
@@ -585,11 +585,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         {/* Training Notes */}
         {formData.type === 'training' && (
           <div className="space-y-2">
-            <Label htmlFor="trainingNotes">Training Notes</Label>
+            <Label htmlFor="training_notes">Training Notes</Label>
             <Textarea
-              id="trainingNotes"
-              value={formData.trainingNotes}
-              onChange={(e) => setFormData(prev => ({ ...prev, trainingNotes: e.target.value }))}
+              id="training_notes"
+              value={formData.training_notes}
+              onChange={(e) => setFormData(prev => ({ ...prev, training_notes: e.target.value }))}
               placeholder="Add notes about this training session..."
               rows={3}
             />

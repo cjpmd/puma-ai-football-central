@@ -17,9 +17,9 @@ interface ClubFormProps {
 export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
     name: club?.name || '',
-    referenceNumber: club?.referenceNumber || '',
-    subscriptionType: (club?.subscriptionType || 'free') as SubscriptionType,
-    logoUrl: club?.logoUrl || null
+    reference_number: club?.reference_number || '',
+    subscription_type: (club?.subscription_type || 'free') as SubscriptionType,
+    logo_url: club?.logo_url || null
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -28,7 +28,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
   };
 
   const handleLogoChange = (logoUrl: string | null) => {
-    setFormData(prev => ({ ...prev, logoUrl }));
+    setFormData(prev => ({ ...prev, logo_url: logoUrl }));
   };
 
   return (
@@ -44,7 +44,7 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
           {/* Logo Upload */}
           {club && (
             <LogoUpload
-              currentLogoUrl={formData.logoUrl}
+              currentLogoUrl={formData.logo_url}
               onLogoChange={handleLogoChange}
               entityType="club"
               entityId={club.id}
@@ -65,22 +65,22 @@ export const ClubForm: React.FC<ClubFormProps> = ({ club, onSubmit, onCancel }) 
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="referenceNumber">Reference Number (Optional)</Label>
+            <Label htmlFor="reference_number">Reference Number (Optional)</Label>
             <Input
-              id="referenceNumber"
-              value={formData.referenceNumber}
-              onChange={(e) => setFormData(prev => ({ ...prev, referenceNumber: e.target.value }))}
+              id="reference_number"
+              value={formData.reference_number}
+              onChange={(e) => setFormData(prev => ({ ...prev, reference_number: e.target.value }))}
               placeholder="Enter reference number"
             />
           </div>
 
           {/* Subscription Type */}
           <div className="space-y-2">
-            <Label htmlFor="subscriptionType">Subscription Type</Label>
+            <Label htmlFor="subscription_type">Subscription Type</Label>
             <Select 
-              value={formData.subscriptionType} 
+              value={formData.subscription_type} 
               onValueChange={(value: SubscriptionType) => 
-                setFormData(prev => ({ ...prev, subscriptionType: value }))
+                setFormData(prev => ({ ...prev, subscription_type: value }))
               }
             >
               <SelectTrigger>

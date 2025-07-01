@@ -78,6 +78,23 @@ export const playersService = {
     }
   },
 
+  async getActivePlayersByTeamId(teamId: string): Promise<Player[]> {
+    try {
+      const { data, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching active players:', error);
+      throw error;
+    }
+  },
+
   async createParent(parentData: Partial<Parent>): Promise<void> {
     const { error } = await supabase
       .from('parents')
