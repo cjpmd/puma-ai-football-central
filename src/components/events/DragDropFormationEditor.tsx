@@ -413,6 +413,90 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const unusedPlayers = getUnusedPlayers();
   const { firstHalf, secondHalf } = organizeByHalves();
 
+  const renderPeriodCard = (period: FormationPeriod) => (
+    <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
+      <CardHeader className="pb-3">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-center flex-1">
+              <CardTitle className="text-lg mb-1">Period {period.periodNumber}</CardTitle>
+              <div className="flex items-center justify-center gap-3 text-sm text-muted-foreground">
+                <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
+                <div className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  <Input
+                    type="number"
+                    value={period.duration}
+                    onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
+                    className="w-16 h-6 text-xs text-center"
+                    min="1"
+                    max="90"
+                  />
+                  <span className="text-xs">min</span>
+                </div>
+              </div>
+            </div>
+            {periods.length > 1 && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => deletePeriod(period.id)}
+                className="h-6 w-6 p-0 print:hidden"
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+          </div>
+          
+          <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
+            <SelectTrigger className="h-7 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {gameFormatFormations.map((formation) => (
+                <SelectItem key={formation.id} value={formation.id}>
+                  {formation.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
+          <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
+          
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
+          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
+          <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+          <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+          
+          <div className="relative h-full">
+            {period.positions.map((position, posIndex) => (
+              <PositionSlot
+                key={`${period.id}-position-${posIndex}`}
+                id={`${period.id}-position-${posIndex}`}
+                position={position}
+                player={position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined}
+                isCaptain={position.playerId === globalCaptainId}
+                nameDisplayOption={mappedNameDisplayOption}
+                isLarger={true}
+              />
+            ))}
+          </div>
+        </div>
+
+        <SubstituteBench
+          id={`substitutes-${period.id}`}
+          substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
+          globalCaptainId={globalCaptainId}
+          nameDisplayOption={mappedNameDisplayOption}
+        />
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-4 print:text-sm">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -478,7 +562,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         </Collapsible>
 
-        {/* Formation Periods - Organized by Halves */}
+        {/* Formation Periods - Organized by Halves with Responsive Grid */}
         <div className="space-y-6">
           {/* First Half */}
           {firstHalf.length > 0 && (
@@ -489,90 +573,16 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                   Total: {firstHalf.reduce((total, period) => total + period.duration, 0)} minutes
                 </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                {firstHalf.map((period, index) => (
-                  <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
-                    <CardHeader className="pb-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="text-center">
-                            <CardTitle className="text-lg">Period {period.periodNumber}</CardTitle>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {calculateGameTime(periods.findIndex(p => p.id === period.id))}
-                            </div>
-                            <div className="flex items-center justify-center gap-1 mt-1">
-                              <Clock className="h-3 w-3" />
-                              <Input
-                                type="number"
-                                value={period.duration}
-                                onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                                className="w-12 h-6 text-xs text-center"
-                                min="1"
-                                max="90"
-                              />
-                              <span className="text-xs text-muted-foreground">min</span>
-                            </div>
-                          </div>
-                          {periods.length > 1 && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => deletePeriod(period.id)}
-                              className="h-6 w-6 p-0 print:hidden"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        
-                        <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-                          <SelectTrigger className="h-7 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gameFormatFormations.map((formation) => (
-                              <SelectItem key={formation.id} value={formation.id}>
-                                {formation.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
-                        <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-                        
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
-                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-                        <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-                        <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-                        
-                        <div className="relative h-full">
-                          {period.positions.map((position, posIndex) => (
-                            <PositionSlot
-                              key={`${period.id}-position-${posIndex}`}
-                              id={`${period.id}-position-${posIndex}`}
-                              position={position}
-                              player={position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined}
-                              isCaptain={position.playerId === globalCaptainId}
-                              nameDisplayOption={mappedNameDisplayOption}
-                              isLarger={true}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      <SubstituteBench
-                        id={`substitutes-${period.id}`}
-                        substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-                        globalCaptainId={globalCaptainId}
-                        nameDisplayOption={mappedNameDisplayOption}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+                {firstHalf.map((period) => renderPeriodCard(period))}
+              </div>
+              
+              {/* Add Period Button for First Half */}
+              <div className="flex justify-center mt-4 print:hidden">
+                <Button onClick={addPeriod} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Period
+                </Button>
               </div>
             </div>
           )}
@@ -586,101 +596,19 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                   Total: {secondHalf.reduce((total, period) => total + period.duration, 0)} minutes
                 </div>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                {secondHalf.map((period, index) => (
-                  <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
-                    <CardHeader className="pb-3">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="text-center">
-                            <CardTitle className="text-lg">Period {period.periodNumber}</CardTitle>
-                            <div className="text-sm text-muted-foreground mt-1">
-                              {calculateGameTime(periods.findIndex(p => p.id === period.id))}
-                            </div>
-                            <div className="flex items-center justify-center gap-1 mt-1">
-                              <Clock className="h-3 w-3" />
-                              <Input
-                                type="number"
-                                value={period.duration}
-                                onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                                className="w-12 h-6 text-xs text-center"
-                                min="1"
-                                max="90"
-                              />
-                              <span className="text-xs text-muted-foreground">min</span>
-                            </div>
-                          </div>
-                          {periods.length > 1 && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => deletePeriod(period.id)}
-                              className="h-6 w-6 p-0 print:hidden"
-                            >
-                              <X className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                        
-                        <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-                          <SelectTrigger className="h-7 text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {gameFormatFormations.map((formation) => (
-                              <SelectItem key={formation.id} value={formation.id}>
-                                {formation.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="space-y-4">
-                      <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
-                        <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-                        
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
-                        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-                        <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-                        <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-                        
-                        <div className="relative h-full">
-                          {period.positions.map((position, posIndex) => (
-                            <PositionSlot
-                              key={`${period.id}-position-${posIndex}`}
-                              id={`${period.id}-position-${posIndex}`}
-                              position={position}
-                              player={position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined}
-                              isCaptain={position.playerId === globalCaptainId}
-                              nameDisplayOption={mappedNameDisplayOption}
-                              isLarger={true}
-                            />
-                          ))}
-                        </div>
-                      </div>
-
-                      <SubstituteBench
-                        id={`substitutes-${period.id}`}
-                        substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-                        globalCaptainId={globalCaptainId}
-                        nameDisplayOption={mappedNameDisplayOption}
-                      />
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
+                {secondHalf.map((period) => renderPeriodCard(period))}
+              </div>
+              
+              {/* Add Period Button for Second Half */}
+              <div className="flex justify-center mt-4 print:hidden">
+                <Button onClick={addPeriod} variant="outline" size="sm">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Period
+                </Button>
               </div>
             </div>
           )}
-        </div>
-
-        {/* Add Period Button */}
-        <div className="flex justify-center print:hidden">
-          <Button onClick={addPeriod} variant="outline" size="sm">
-            <Plus className="h-4 w-4 mr-1" />
-            Add Period
-          </Button>
         </div>
 
         {/* Playing Time Summary - 3 Column Layout */}
