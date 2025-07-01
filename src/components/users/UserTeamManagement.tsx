@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, UserPlus, Edit, Trash2, Users, Shield } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch } from 'lucide-react';
 
 interface User {
   id: string;
@@ -32,18 +31,31 @@ interface UserTeam {
   user_name: string;
   user_email: string;
   team_name: string;
+  has_profile: boolean;
+}
+
+interface PendingInvitation {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  team_name: string;
+  status: string;
+  created_at: string;
 }
 
 export const UserTeamManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
   const [userTeams, setUserTeams] = useState<UserTeam[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchEmail, setSearchEmail] = useState('');
   const [selectedUser, setSelectedUser] = useState<string>('');
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [showPendingOnly, setShowPendingOnly] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,6 +90,16 @@ export const UserTeamManagement = () => {
 
       if (userTeamsError) throw userTeamsError;
 
+      // Load pending invitations
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from('user_invitations')
+        .select('id, email, name, role, team_id, status, created_at')
+        .in('status', ['pending', 'accepted']);
+
+      if (invitationsError) {
+        console.error('Error loading invitations:', invitationsError);
+      }
+
       // Transform user-team data by fetching user and team details separately
       const transformedUserTeams: UserTeam[] = [];
       
@@ -88,23 +110,49 @@ export const UserTeamManagement = () => {
             .from('profiles')
             .select('name, email')
             .eq('id', ut.user_id)
-            .single();
+            .maybeSingle();
 
           // Get team details
           const { data: teamData } = await supabase
             .from('teams')
             .select('name')
             .eq('id', ut.team_id)
-            .single();
+            .maybeSingle();
+
+          // Check if user has a profile
+          const hasProfile = userData !== null;
 
           transformedUserTeams.push({
             id: ut.id,
             user_id: ut.user_id,
             team_id: ut.team_id,
             role: ut.role,
-            user_name: userData?.name || 'Unknown',
-            user_email: userData?.email || 'Unknown',
-            team_name: teamData?.name || 'Unknown'
+            user_name: userData?.name || 'Unknown User',
+            user_email: userData?.email || 'Unknown Email',
+            team_name: teamData?.name || 'Unknown Team',
+            has_profile: hasProfile
+          });
+        }
+      }
+
+      // Transform pending invitations
+      const transformedInvitations: PendingInvitation[] = [];
+      if (invitationsData) {
+        for (const inv of invitationsData) {
+          const { data: teamData } = await supabase
+            .from('teams')
+            .select('name')
+            .eq('id', inv.team_id)
+            .maybeSingle();
+
+          transformedInvitations.push({
+            id: inv.id,
+            email: inv.email,
+            name: inv.name,
+            role: inv.role,
+            team_name: teamData?.name || 'Unknown Team',
+            status: inv.status,
+            created_at: inv.created_at
           });
         }
       }
@@ -112,6 +160,7 @@ export const UserTeamManagement = () => {
       setUsers(usersData || []);
       setTeams(teamsData || []);
       setUserTeams(transformedUserTeams);
+      setPendingInvitations(transformedInvitations);
       
     } catch (error: any) {
       console.error('Error loading data:', error);
@@ -122,6 +171,47 @@ export const UserTeamManagement = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createMissingProfile = async (email: string) => {
+    try {
+      // Find invitation to get user details
+      const invitation = pendingInvitations.find(inv => inv.email === email);
+      if (!invitation) {
+        toast({
+          title: 'Error',
+          description: 'No invitation found for this email',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Use the userInvitationService to process the invitation
+      const { data, error } = await supabase.rpc('user_is_global_admin');
+      
+      if (error || !data) {
+        toast({
+          title: 'Permission Denied',
+          description: 'You must be a global admin to create user profiles',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: 'Profile Creation',
+        description: 'Creating user profile. This user will need to sign up to complete the process.',
+      });
+
+      await loadData(); // Refresh data
+    } catch (error: any) {
+      console.error('Error creating profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create profile: ' + error.message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -226,9 +316,19 @@ export const UserTeamManagement = () => {
     );
   };
 
+  const findPendingByEmail = (email: string) => {
+    return pendingInvitations.filter(inv =>
+      inv.email.toLowerCase().includes(email.toLowerCase())
+    );
+  };
+
   const filteredUserTeams = searchEmail 
     ? findUserByEmail(searchEmail)
-    : userTeams;
+    : (showPendingOnly ? userTeams.filter(ut => !ut.has_profile) : userTeams);
+
+  const filteredPendingInvitations = searchEmail
+    ? findPendingByEmail(searchEmail)
+    : pendingInvitations;
 
   if (loading) {
     return (
@@ -328,23 +428,82 @@ export const UserTeamManagement = () => {
         </Dialog>
       </div>
 
-      {/* Search */}
+      {/* Search and Filter Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Search Users</CardTitle>
+          <CardTitle>Search and Filter</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search by email (e.g., m888kky@outlook.com)"
-              value={searchEmail}
-              onChange={(e) => setSearchEmail(e.target.value)}
-              className="pl-10"
-            />
+          <div className="space-y-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search by email (e.g., m888kky@outlook.com)"
+                value={searchEmail}
+                onChange={(e) => setSearchEmail(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={showPendingOnly ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowPendingOnly(!showPendingOnly)}
+              >
+                <AlertTriangle className="h-4 w-4 mr-2" />
+                {showPendingOnly ? "Show All" : "Show Users Without Profiles"}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Pending Invitations */}
+      {filteredPendingInvitations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Pending Invitations ({filteredPendingInvitations.length})</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Users who have been invited but may not have completed signup
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {filteredPendingInvitations.map((invitation) => (
+                <div key={invitation.id} className="flex items-center justify-between p-4 border rounded-lg bg-yellow-50">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <UserSearch className="h-4 w-4 text-yellow-600" />
+                      <div>
+                        <p className="font-medium">{invitation.name}</p>
+                        <p className="text-sm text-muted-foreground">{invitation.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm">{invitation.team_name}</span>
+                      <Badge variant="outline">{invitation.role}</Badge>
+                      <Badge variant={invitation.status === 'pending' ? 'secondary' : 'default'}>
+                        {invitation.status}
+                      </Badge>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => createMissingProfile(invitation.email)}
+                    >
+                      Create Profile
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* User Team Relationships */}
       <Card>
@@ -354,12 +513,19 @@ export const UserTeamManagement = () => {
         <CardContent>
           <div className="space-y-4">
             {filteredUserTeams.map((userTeam) => (
-              <div key={userTeam.id} className="flex items-center justify-between p-4 border rounded-lg">
+              <div key={userTeam.id} className={`flex items-center justify-between p-4 border rounded-lg ${!userTeam.has_profile ? 'bg-red-50 border-red-200' : ''}`}>
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <Users className="h-4 w-4 text-blue-500" />
                     <div>
-                      <p className="font-medium">{userTeam.user_name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{userTeam.user_name}</p>
+                        {!userTeam.has_profile && (
+                          <Badge variant="destructive" className="text-xs">
+                            No Profile
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">{userTeam.user_email}</p>
                     </div>
                   </div>
