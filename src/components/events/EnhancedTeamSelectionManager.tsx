@@ -33,6 +33,7 @@ import { PlayerSelectionList } from './PlayerSelectionList';
 import { CaptainSelector } from './CaptainSelector';
 import { SubstituteSelectionList } from './SubstituteSelectionList';
 import { StaffSelectionForTeamSelection } from './StaffSelectionForTeamSelection';
+import { GameFormat } from '@/types';
 
 export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   event,
@@ -247,31 +248,31 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
     switch (formation) {
       case '4-3-3':
         return [
-          { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper', x: 50, y: 90 },
-          { id: 'lb', positionName: 'Left Back', abbreviation: 'LB', positionGroup: 'defender', x: 15, y: 70 },
-          { id: 'cb1', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender', x: 35, y: 70 },
-          { id: 'cb2', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender', x: 65, y: 70 },
-          { id: 'rb', positionName: 'Right Back', abbreviation: 'RB', positionGroup: 'defender', x: 85, y: 70 },
-          { id: 'cm1', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder', x: 25, y: 50 },
-          { id: 'cm2', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder', x: 50, y: 50 },
-          { id: 'cm3', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder', x: 75, y: 50 },
-          { id: 'lw', positionName: 'Left Wing', abbreviation: 'LW', positionGroup: 'forward', x: 15, y: 20 },
-          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward', x: 50, y: 10 },
-          { id: 'rw', positionName: 'Right Wing', abbreviation: 'RW', positionGroup: 'forward', x: 85, y: 20 }
+          { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper' as const, x: 50, y: 90 },
+          { id: 'lb', positionName: 'Left Back', abbreviation: 'LB', positionGroup: 'defender' as const, x: 15, y: 70 },
+          { id: 'cb1', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 35, y: 70 },
+          { id: 'cb2', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 65, y: 70 },
+          { id: 'rb', positionName: 'Right Back', abbreviation: 'RB', positionGroup: 'defender' as const, x: 85, y: 70 },
+          { id: 'cm1', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 25, y: 50 },
+          { id: 'cm2', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 50, y: 50 },
+          { id: 'cm3', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 75, y: 50 },
+          { id: 'lw', positionName: 'Left Wing', abbreviation: 'LW', positionGroup: 'forward' as const, x: 15, y: 20 },
+          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 50, y: 10 },
+          { id: 'rw', positionName: 'Right Wing', abbreviation: 'RW', positionGroup: 'forward' as const, x: 85, y: 20 }
         ].map(pos => ({ ...pos, playerId: undefined }));
       case '4-4-2':
         return [
-          { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper', x: 50, y: 90 },
-          { id: 'lb', positionName: 'Left Back', abbreviation: 'LB', positionGroup: 'defender', x: 15, y: 70 },
-          { id: 'cb1', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender', x: 35, y: 70 },
-          { id: 'cb2', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender', x: 65, y: 70 },
-          { id: 'rb', positionName: 'Right Back', abbreviation: 'RB', positionGroup: 'defender', x: 85, y: 70 },
-          { id: 'lm', positionName: 'Left Mid', abbreviation: 'LM', positionGroup: 'midfielder', x: 15, y: 40 },
-          { id: 'cm1', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder', x: 35, y: 40 },
-          { id: 'cm2', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder', x: 65, y: 40 },
-          { id: 'rm', positionName: 'Right Mid', abbreviation: 'RM', positionGroup: 'midfielder', x: 85, y: 40 },
-          { id: 'st1', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward', x: 35, y: 10 },
-          { id: 'st2', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward', x: 65, y: 10 }
+          { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper' as const, x: 50, y: 90 },
+          { id: 'lb', positionName: 'Left Back', abbreviation: 'LB', positionGroup: 'defender' as const, x: 15, y: 70 },
+          { id: 'cb1', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 35, y: 70 },
+          { id: 'cb2', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 65, y: 70 },
+          { id: 'rb', positionName: 'Right Back', abbreviation: 'RB', positionGroup: 'defender' as const, x: 85, y: 70 },
+          { id: 'lm', positionName: 'Left Mid', abbreviation: 'LM', positionGroup: 'midfielder' as const, x: 15, y: 40 },
+          { id: 'cm1', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 35, y: 40 },
+          { id: 'cm2', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 65, y: 40 },
+          { id: 'rm', positionName: 'Right Mid', abbreviation: 'RM', positionGroup: 'midfielder' as const, x: 85, y: 40 },
+          { id: 'st1', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 35, y: 10 },
+          { id: 'st2', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 65, y: 10 }
         ].map(pos => ({ ...pos, playerId: undefined }));
       default:
         return [];
@@ -301,7 +302,7 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-1">
                   <FormationSelector
-                    gameFormat={event.game_format || '11-a-side'}
+                    gameFormat={(event.game_format || '11-a-side') as GameFormat}
                     selectedFormation={selectedFormation}
                     onFormationChange={setSelectedFormation}
                   />
