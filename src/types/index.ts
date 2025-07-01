@@ -28,6 +28,13 @@ export interface Team {
     home?: string;
     away?: string;
   };
+  // Extended properties for team settings
+  playerAttributes?: Record<PlayerAttributeGroup, PlayerAttribute[]>;
+  kitDesigns?: KitDesigns;
+  nameDisplayOption?: NameDisplayOption;
+  faConnection?: FAConnection;
+  staff?: Staff[];
+  isReadOnly?: boolean;
   // Camel case aliases for backward compatibility
   ageGroup?: string;
   seasonStart?: string;
@@ -63,6 +70,11 @@ export interface Club {
   userRole?: string; // For linked clubs
   isReadOnly?: boolean; // For linked clubs
   teams?: any[];
+  // Camel case aliases for backward compatibility
+  logoUrl?: string;
+  subscriptionType?: string;
+  referenceNumber?: string;
+  serialNumber?: string;
 }
 
 export interface Player {
@@ -155,6 +167,11 @@ export interface Staff {
   bio?: string;
   created_at?: string;
   updated_at?: string;
+  user_id?: string;
+  coachingBadges?: any[];
+  certificates?: any[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PerformanceCategory {
@@ -206,10 +223,34 @@ export interface Attendance {
   updated_at?: string;
 }
 
-// Additional types that were missing
+// Base types that need to be defined first
 export type SubscriptionType = 'free' | 'premium' | 'pro' | 'analytics_plus' | 'full_squad' | 'training' | 'trialist';
-
 export type GameFormat = '3-a-side' | '4-a-side' | '5-a-side' | '7-a-side' | '9-a-side' | '11-a-side';
+export type NameDisplayOption = 'firstName' | 'surname' | 'fullName' | 'initials';
+export type PlayerAttributeGroup = "goalkeeping" | "mental" | "physical" | "technical";
+
+export interface KitDesign {
+  shirtColor: string;
+  sleeveColor: string;
+  hasStripes: boolean;
+  stripeColor: string;
+  shortsColor: string;
+  socksColor: string;
+}
+
+export interface KitDesigns {
+  home: KitDesign;
+  away: KitDesign;
+  training: KitDesign;
+  goalkeeper: KitDesign;
+}
+
+export interface FAConnection {
+  provider: string;
+  isConnected: boolean;
+  syncEnabled: boolean;
+  lastSync?: string;
+}
 
 export interface ClubOfficial {
   id: string;
@@ -245,12 +286,44 @@ export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4
 export interface PlayerAttribute {
   id: string;
   name: string;
-  group: string;
+  group: PlayerAttributeGroup;
   value: number;
   max_value?: number;
   created_at?: string;
   updated_at?: string;
+  enabled?: boolean;
 }
+
+export const DEFAULT_PLAYER_ATTRIBUTES: PlayerAttribute[] = [
+  // Goalkeeping
+  { id: 'shot_stopping', name: 'Shot Stopping', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'distribution', name: 'Distribution', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'positioning', name: 'Positioning', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'communication', name: 'Communication', group: 'goalkeeping', value: 5, enabled: true },
+  
+  // Technical
+  { id: 'first_touch', name: 'First Touch', group: 'technical', value: 5, enabled: true },
+  { id: 'passing', name: 'Passing', group: 'technical', value: 5, enabled: true },
+  { id: 'shooting', name: 'Shooting', group: 'technical', value: 5, enabled: true },
+  { id: 'dribbling', name: 'Dribbling', group: 'technical', value: 5, enabled: true },
+  { id: 'crossing', name: 'Crossing', group: 'technical', value: 5, enabled: true },
+  { id: 'tackling', name: 'Tackling', group: 'technical', value: 5, enabled: true },
+  { id: 'heading', name: 'Heading', group: 'technical', value: 5, enabled: true },
+  
+  // Physical
+  { id: 'pace', name: 'Pace', group: 'physical', value: 5, enabled: true },
+  { id: 'strength', name: 'Strength', group: 'physical', value: 5, enabled: true },
+  { id: 'stamina', name: 'Stamina', group: 'physical', value: 5, enabled: true },
+  { id: 'agility', name: 'Agility', group: 'physical', value: 5, enabled: true },
+  { id: 'balance', name: 'Balance', group: 'physical', value: 5, enabled: true },
+  
+  // Mental
+  { id: 'decision_making', name: 'Decision Making', group: 'mental', value: 5, enabled: true },
+  { id: 'concentration', name: 'Concentration', group: 'mental', value: 5, enabled: true },
+  { id: 'teamwork', name: 'Teamwork', group: 'mental', value: 5, enabled: true },
+  { id: 'leadership', name: 'Leadership', group: 'mental', value: 5, enabled: true },
+  { id: 'creativity', name: 'Creativity', group: 'mental', value: 5, enabled: true }
+];
 
 export interface PlayerComment {
   id: string;

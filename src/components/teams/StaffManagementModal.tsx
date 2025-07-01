@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Team, Staff as TeamStaff } from '@/types';
+import { Team, Staff } from '@/types';
 import { UserPlus, Trash2, Users, Mail, Phone, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,7 +26,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   onClose,
   onUpdate
 }) => {
-  const [staff, setStaff] = useState<TeamStaff[]>([]);
+  const [staff, setStaff] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(false);
   const [isInvitingStaff, setIsInvitingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
@@ -81,7 +81,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       console.log('StaffManagementModal: Raw staff data:', data);
 
       if (data) {
-        const staffMembers: TeamStaff[] = data.map(record => {
+        const staffMembers: Staff[] = data.map(record => {
           try {
             return {
               id: record.id,
@@ -103,6 +103,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               email: record.email || '',
               phone: record.phone || '',
               role: (record.role as TeamStaff['role']) || 'helper',
+              team_id: team.id,
               user_id: record.user_id || undefined,
               coachingBadges: [],
               certificates: [],

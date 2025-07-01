@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Team } from '@/types';
+import { Team, KitDesigns } from '@/types';
 import { KitDesigner } from '../KitDesigner';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
