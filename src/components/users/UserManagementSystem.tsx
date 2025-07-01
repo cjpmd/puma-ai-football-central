@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -335,7 +336,7 @@ export const UserManagementSystem = () => {
       }
 
       // Check if user exists in auth.users table
-      const { data: { users }, error: usersError } = await supabase.auth.admin.listUsers();
+      const { data: { users: authUsers }, error: usersError } = await supabase.auth.admin.listUsers();
       
       if (usersError) {
         console.error('Error checking auth users:', usersError);
@@ -347,7 +348,7 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const authUser = users?.find(u => u.email === email);
+      const authUser = authUsers?.find(u => u.email === email);
       
       if (!authUser) {
         toast({
@@ -394,13 +395,13 @@ export const UserManagementSystem = () => {
     }
   };
 
-  const openEditModal = (user: UserProfile) => {
-    setEditingUser(user);
+  const openEditModal = (userToEdit: UserProfile) => {
+    setEditingUser(userToEdit);
     setNewUserData({
-      name: user.name,
-      email: user.email,
-      phone: user.phone || '',
-      roles: [...user.roles]
+      name: userToEdit.name,
+      email: userToEdit.email,
+      phone: userToEdit.phone || '',
+      roles: [...userToEdit.roles]
     });
     setShowEditModal(true);
   };
