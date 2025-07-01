@@ -27,12 +27,9 @@ import {
   SquadPlayer,
   PositionSlot,
 } from '@/types/teamSelection';
-import { FormationSelector } from './FormationSelector';
 import { PositionAssignmentGrid } from './PositionAssignmentGrid';
-import { PlayerSelectionList } from './PlayerSelectionList';
 import { CaptainSelector } from './CaptainSelector';
 import { SubstituteSelectionList } from './SubstituteSelectionList';
-import { StaffSelectionForTeamSelection } from './StaffSelectionForTeamSelection';
 import { GameFormat } from '@/types';
 
 export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
@@ -43,13 +40,11 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 }) => {
   const [squadPlayers, setSquadPlayers] = useState<SquadPlayer[]>([]);
   const [positions, setPositions] = useState<PositionSlot[]>([]);
-  const [selectedFormation, setSelectedFormation] = useState<string>('4-3-3');
+  const [selectedFormation, setSelectedFormation] = useState<string>('1-2-3-1');
   const [positionAssignments, setPositionAssignments] = useState<{ [positionId: string]: string }>({});
   const [substitutes, setSubstitutes] = useState<string[]>([]);
   const [captainId, setCaptainId] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
-
-  const [selectedStaff, setSelectedStaff] = useState<string[]>([]);
 
   useEffect(() => {
     if (teamId) {
@@ -103,7 +98,6 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 
     try {
       setSaving(true);
-      console.log('Saving team selection with staff:', selectedStaff);
 
       const selectionData = {
         event_id: event.id,
@@ -138,12 +132,6 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
           })
         ),
         captain_id: captainId || null,
-        staff_selection: JSON.stringify(
-          selectedStaff.map(staffId => ({
-            staffId,
-            role: 'staff'
-          }))
-        ),
         duration_minutes: 90,
         performance_category_id: null
       };
@@ -182,13 +170,12 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 
       if (error) {
         console.error('Error fetching event selections:', error);
-        return; // Don't throw an error, just don't load anything
+        return;
       }
 
       if (data) {
-        setSelectedFormation(data.formation || '4-3-3');
+        setSelectedFormation(data.formation || '1-2-3-1');
 
-        // Load player positions
         try {
           const playerPositions = JSON.parse(String(data.player_positions) || '[]');
           const initialAssignments: { [positionId: string]: string } = {};
@@ -203,7 +190,6 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
           console.error('Error parsing player_positions:', parseError);
         }
 
-        // Load substitutes
         try {
           const subs = JSON.parse(String(data.substitute_players) || '[]').map((sub: any) => sub.playerId);
           setSubstitutes(subs);
@@ -212,14 +198,6 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
         }
 
         setCaptainId(data.captain_id || undefined);
-
-        // Load staff selection
-        try {
-          const staffSelection = JSON.parse(String(data.staff_selection) || '[]').map((staff: any) => staff.staffId);
-          setSelectedStaff(staffSelection);
-        } catch (parseError) {
-          console.error('Error parsing staff_selection:', parseError);
-        }
       }
     } catch (error: any) {
       console.error('Error in loadEventSelections:', error);
@@ -246,33 +224,25 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
 
   const getPositionsForFormation = (formation: string): PositionSlot[] => {
     switch (formation) {
-      case '4-3-3':
+      case '1-2-3-1':
         return [
           { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper' as const, x: 50, y: 90 },
-          { id: 'lb', positionName: 'Left Back', abbreviation: 'LB', positionGroup: 'defender' as const, x: 15, y: 70 },
-          { id: 'cb1', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 35, y: 70 },
-          { id: 'cb2', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 65, y: 70 },
-          { id: 'rb', positionName: 'Right Back', abbreviation: 'RB', positionGroup: 'defender' as const, x: 85, y: 70 },
-          { id: 'cm1', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 25, y: 50 },
-          { id: 'cm2', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 50, y: 50 },
-          { id: 'cm3', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 75, y: 50 },
-          { id: 'lw', positionName: 'Left Wing', abbreviation: 'LW', positionGroup: 'forward' as const, x: 15, y: 20 },
-          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 50, y: 10 },
-          { id: 'rw', positionName: 'Right Wing', abbreviation: 'RW', positionGroup: 'forward' as const, x: 85, y: 20 }
+          { id: 'dl', positionName: 'Left Back', abbreviation: 'DL', positionGroup: 'defender' as const, x: 25, y: 70 },
+          { id: 'dr', positionName: 'Right Back', abbreviation: 'DR', positionGroup: 'defender' as const, x: 75, y: 70 },
+          { id: 'ml', positionName: 'Left Mid', abbreviation: 'ML', positionGroup: 'midfielder' as const, x: 15, y: 45 },
+          { id: 'mc', positionName: 'Center Mid', abbreviation: 'MC', positionGroup: 'midfielder' as const, x: 50, y: 45 },
+          { id: 'mr', positionName: 'Right Mid', abbreviation: 'MR', positionGroup: 'midfielder' as const, x: 85, y: 45 },
+          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 50, y: 20 }
         ].map(pos => ({ ...pos, playerId: undefined }));
-      case '4-4-2':
+      case '1-3-2-1':
         return [
           { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper' as const, x: 50, y: 90 },
-          { id: 'lb', positionName: 'Left Back', abbreviation: 'LB', positionGroup: 'defender' as const, x: 15, y: 70 },
-          { id: 'cb1', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 35, y: 70 },
-          { id: 'cb2', positionName: 'Center Back', abbreviation: 'CB', positionGroup: 'defender' as const, x: 65, y: 70 },
-          { id: 'rb', positionName: 'Right Back', abbreviation: 'RB', positionGroup: 'defender' as const, x: 85, y: 70 },
-          { id: 'lm', positionName: 'Left Mid', abbreviation: 'LM', positionGroup: 'midfielder' as const, x: 15, y: 40 },
-          { id: 'cm1', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 35, y: 40 },
-          { id: 'cm2', positionName: 'Center Mid', abbreviation: 'CM', positionGroup: 'midfielder' as const, x: 65, y: 40 },
-          { id: 'rm', positionName: 'Right Mid', abbreviation: 'RM', positionGroup: 'midfielder' as const, x: 85, y: 40 },
-          { id: 'st1', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 35, y: 10 },
-          { id: 'st2', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 65, y: 10 }
+          { id: 'dl', positionName: 'Left Back', abbreviation: 'DL', positionGroup: 'defender' as const, x: 20, y: 70 },
+          { id: 'dc', positionName: 'Center Back', abbreviation: 'DC', positionGroup: 'defender' as const, x: 50, y: 70 },
+          { id: 'dr', positionName: 'Right Back', abbreviation: 'DR', positionGroup: 'defender' as const, x: 80, y: 70 },
+          { id: 'ml', positionName: 'Left Mid', abbreviation: 'ML', positionGroup: 'midfielder' as const, x: 30, y: 45 },
+          { id: 'mr', positionName: 'Right Mid', abbreviation: 'MR', positionGroup: 'midfielder' as const, x: 70, y: 45 },
+          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 50, y: 20 }
         ].map(pos => ({ ...pos, playerId: undefined }));
       default:
         return [];
@@ -290,59 +260,64 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">
-          <Tabs defaultValue="formation" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="formation">Formation & Players</TabsTrigger>
-              <TabsTrigger value="substitutes">Substitutes</TabsTrigger>
-              <TabsTrigger value="staff">Staff</TabsTrigger>
+          <Tabs defaultValue="squad" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="squad">Squad Management</TabsTrigger>
+              <TabsTrigger value="formation">Formation & Selection</TabsTrigger>
               <TabsTrigger value="summary">Summary</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="formation">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-1">
-                  <FormationSelector
-                    gameFormat={(event.game_format || '11-a-side') as GameFormat}
-                    selectedFormation={selectedFormation}
-                    onFormationChange={setSelectedFormation}
-                  />
-                  <PositionAssignmentGrid
-                    positions={positions}
-                    positionAssignments={positionAssignments}
-                    onPositionAssign={handlePositionAssignment}
-                    squadPlayers={squadPlayers}
-                  />
-                </div>
-                <div className="col-span-1">
-                  <PlayerSelectionList
-                    squadPlayers={squadPlayers}
-                    positionAssignments={positionAssignments}
-                    onPositionAssign={handlePositionAssignment}
-                  />
-                  <CaptainSelector
-                    squadPlayers={squadPlayers}
-                    captainId={captainId}
-                    onCaptainChange={setCaptainId}
-                  />
-                </div>
+            <TabsContent value="squad">
+              <div className="space-y-4">
+                <CaptainSelector
+                  squadPlayers={squadPlayers}
+                  captainId={captainId}
+                  onCaptainChange={setCaptainId}
+                />
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Squad Management</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {squadPlayers.map((player) => (
+                        <div key={player.id} className="flex items-center justify-between p-3 border rounded">
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">#{player.squadNumber}</span>
+                            <span>{player.name}</span>
+                            <span className="text-sm text-muted-foreground">{player.type}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm capitalize px-2 py-1 bg-green-100 text-green-700 rounded">
+                              {player.availabilityStatus}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
 
-            <TabsContent value="substitutes">
-              <SubstituteSelectionList
+            <TabsContent value="formation">
+              <PositionAssignmentGrid
+                positions={positions}
+                positionAssignments={positionAssignments}
+                onPositionAssign={handlePositionAssignment}
                 squadPlayers={squadPlayers}
-                substitutes={substitutes}
-                onSubstituteToggle={handleSubstituteToggle}
+                formation={selectedFormation}
+                onFormationChange={setSelectedFormation}
               />
-            </TabsContent>
-
-            <TabsContent value="staff">
-              <StaffSelectionForTeamSelection
-                teamId={teamId || ''}
-                eventId={event.id}
-                selectedStaff={selectedStaff}
-                onSelectionChange={setSelectedStaff}
-              />
+              
+              <div className="mt-4">
+                <SubstituteSelectionList
+                  squadPlayers={squadPlayers}
+                  substitutes={substitutes}
+                  onSubstituteToggle={handleSubstituteToggle}
+                />
+              </div>
             </TabsContent>
 
             <TabsContent value="summary">
@@ -388,15 +363,6 @@ export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> =
                             </div>
                           );
                         })}
-                      </div>
-                    </div>
-                  )}
-
-                  {selectedStaff.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Selected Staff ({selectedStaff.length})</h4>
-                      <div className="text-sm text-muted-foreground">
-                        {selectedStaff.length} staff member{selectedStaff.length !== 1 ? 's' : ''} selected
                       </div>
                     </div>
                   )}
