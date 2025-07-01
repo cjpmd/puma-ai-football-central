@@ -28,6 +28,27 @@ export interface Team {
     home?: string;
     away?: string;
   };
+  // Camel case aliases for backward compatibility
+  ageGroup?: string;
+  seasonStart?: string;
+  seasonEnd?: string;
+  logoUrl?: string;
+  gameFormat?: string;
+  gameDuration?: number;
+  subscriptionType?: string;
+  managerName?: string;
+  managerEmail?: string;
+  managerPhone?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  clubId?: string;
+  performanceCategories?: string[];
+  kitIcons?: {
+    home?: string;
+    away?: string;
+    training?: string;
+    goalkeeper?: string;
+  };
 }
 
 export interface Club {

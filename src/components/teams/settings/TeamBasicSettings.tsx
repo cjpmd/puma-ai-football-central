@@ -43,19 +43,19 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   const [isLocalSaving, setIsLocalSaving] = useState(false);
   
   console.log('TeamBasicSettings received team object:', team);
-  console.log('Team game_duration from props:', team.game_duration);
+  console.log('Team gameDuration from props:', team.gameDuration);
   
   const [formData, setFormData] = useState<FormData>({
     name: team.name || '',
-    ageGroup: team.age_group || '',
-    gameFormat: team.game_format || '11-a-side',
-    gameDuration: String(team.game_duration || 90),
-    seasonStart: team.season_start || '',
-    seasonEnd: team.season_end || '',
-    clubId: team.club_id || '',
-    managerName: team.manager_name || '',
-    managerEmail: team.manager_email || '',
-    managerPhone: team.manager_phone || '',
+    ageGroup: team.ageGroup || '',
+    gameFormat: team.gameFormat || '11-a-side',
+    gameDuration: String(team.gameDuration || 90),
+    seasonStart: team.seasonStart || '',
+    seasonEnd: team.seasonEnd || '',
+    clubId: team.clubId || '',
+    managerName: team.managerName || '',
+    managerEmail: team.managerEmail || '',
+    managerPhone: team.managerPhone || '',
   });
 
   // Load fresh team data from database when component mounts or team ID changes
@@ -193,7 +193,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('Team updated successfully in database:', updatedTeam);
 
       // Handle club linking
-      if (clubIdForDb !== team.club_id) {
+      if (clubIdForDb !== team.clubId) {
         await supabase
           .from('club_teams')
           .delete()

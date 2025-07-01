@@ -156,22 +156,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const convertedTeams = teamsData.map(team => ({
         ...team,
-        ageGroup: team.age_group,
-        seasonStart: team.season_start,
-        seasonEnd: team.season_end,
-        clubId: team.club_id,
-        gameFormat: team.game_format,
-        gameDuration: team.game_duration,
-        subscriptionType: team.subscription_type,
-        logoUrl: team.logo_url,
-        managerName: team.manager_name,
-        managerEmail: team.manager_email,
-        managerPhone: team.manager_phone,
-        performanceCategories: team.performance_categories || [],
-        kitIcons: (team.kit_icons as { home: string; away: string; training: string; goalkeeper: string }) || { home: '', away: '', training: '', goalkeeper: '' }
-      }));
+        kit_icons: typeof team.kit_icons === 'string' ? JSON.parse(team.kit_icons) : team.kit_icons || { home: '', away: '' }
+      })) as Team[];
       setTeams(convertedTeams);
-      if (teamsData.length > 0) {
+      if (convertedTeams.length > 0) {
         setCurrentTeam(convertedTeams[0]);
       }
     } catch (error) {

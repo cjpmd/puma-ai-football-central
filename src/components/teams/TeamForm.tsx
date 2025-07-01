@@ -18,13 +18,13 @@ interface TeamFormProps {
 export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCancel }) => {
   const [formData, setFormData] = useState({
     name: team?.name || '',
-    ageGroup: team?.age_group || '',
-    seasonStart: team?.season_start || '',
-    seasonEnd: team?.season_end || '',
-    clubId: team?.club_id || '',
-    gameFormat: (team?.game_format || '11-a-side') as GameFormat,
-    subscriptionType: (team?.subscription_type || 'free') as SubscriptionType,
-    logoUrl: team?.logo_url || null
+    ageGroup: team?.ageGroup || '',
+    seasonStart: team?.seasonStart || '',
+    seasonEnd: team?.seasonEnd || '',
+    clubId: team?.clubId || '',
+    gameFormat: (team?.gameFormat || '11-a-side') as GameFormat,
+    subscriptionType: (team?.subscriptionType || 'free') as SubscriptionType,
+    logoUrl: team?.logoUrl || null
   });
 
   const handleSubmit = (e: React.FormEvent) => {

@@ -60,8 +60,8 @@ const CalendarEventsPage = () => {
 
   // Get current team's default values
   const currentTeam = teams.find(team => team.id === selectedTeamId);
-  const teamDefaultGameFormat = currentTeam?.game_format || '7-a-side';
-  const teamDefaultGameDuration = currentTeam?.game_duration || 90;
+  const teamDefaultGameFormat = currentTeam?.gameFormat || '7-a-side';
+  const teamDefaultGameDuration = currentTeam?.gameDuration || 90;
 
   const eventTypes = [
     { value: 'training', label: 'Training' },
@@ -76,8 +76,8 @@ const CalendarEventsPage = () => {
   // Update defaults when team changes
   useEffect(() => {
     if (currentTeam) {
-      setEventGameFormat((currentTeam.game_format || '7-a-side') as GameFormat);
-      setEventGameDuration(currentTeam.game_duration || 90);
+      setEventGameFormat((currentTeam.gameFormat || '7-a-side') as GameFormat);
+      setEventGameDuration(currentTeam.gameDuration || 90);
     }
   }, [currentTeam]);
 

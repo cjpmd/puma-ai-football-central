@@ -149,7 +149,7 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
             <SelectContent>
               {teams.map(team => (
                 <SelectItem key={team.id} value={team.id}>
-                  {team.name} ({team.age_group})
+                  {team.name} ({team.ageGroup})
                 </SelectItem>
               ))}
             </SelectContent>
