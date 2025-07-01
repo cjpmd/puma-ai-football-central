@@ -1,399 +1,455 @@
 
 import { useState, useEffect } from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@/components/ui/tabs';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { TeamSelectionManagerProps } from '@/components/events/TeamSelectionManager';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Save, Users, Gamepad2, Target, Plus, X } from 'lucide-react';
+import { SquadManagement } from './SquadManagement';
+import { DragDropFormationEditor } from './DragDropFormationEditor';
+import { useSquadManagement } from '@/hooks/useSquadManagement';
+import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
+import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
-import {
-  SquadPlayer,
-  PositionSlot,
-} from '@/types/teamSelection';
-import { PositionAssignmentGrid } from './PositionAssignmentGrid';
-import { CaptainSelector } from './CaptainSelector';
-import { SubstituteSelectionList } from './SubstituteSelectionList';
-import { GameFormat } from '@/types';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
 
-export const EnhancedTeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
+interface TeamSelection {
+  teamNumber: number;
+  squadPlayers: SquadPlayer[];
+  periods: FormationPeriod[];
+  globalCaptainId?: string;
+  performanceCategory?: string;
+}
+
+interface EnhancedTeamSelectionManagerProps {
+  event: DatabaseEvent;
+  teamId?: string;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManagerProps> = ({
   event,
-  teamId,
+  teamId: propTeamId,
   isOpen,
   onClose
 }) => {
-  const [squadPlayers, setSquadPlayers] = useState<SquadPlayer[]>([]);
-  const [positions, setPositions] = useState<PositionSlot[]>([]);
-  const [selectedFormation, setSelectedFormation] = useState<string>('1-2-3-1');
-  const [positionAssignments, setPositionAssignments] = useState<{ [positionId: string]: string }>({});
-  const [substitutes, setSubstitutes] = useState<string[]>([]);
-  const [captainId, setCaptainId] = useState<string | undefined>(undefined);
+  const { user } = useAuth();
+  const teamId = propTeamId || event.team_id;
+  const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
+  const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('squad');
 
-  useEffect(() => {
-    if (teamId) {
-      loadSquadPlayers(teamId);
-      loadEventSelections(event.id, teamId);
-    }
-  }, [teamId, event.id]);
-
-  useEffect(() => {
-    const formationPositions = getPositionsForFormation(selectedFormation);
-    setPositions(formationPositions);
-    // Reset position assignments when formation changes
-    setPositionAssignments({});
-  }, [selectedFormation]);
-
-  const loadSquadPlayers = async (teamId: string) => {
-    try {
+  // Load performance categories for the team
+  const { data: performanceCategories = [] } = useQuery({
+    queryKey: ['performance-categories', teamId],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from('players')
+        .from('performance_categories')
         .select('*')
-        .eq('team_id', teamId);
+        .eq('team_id', teamId)
+        .order('name');
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!teamId,
+  });
 
-      if (error) {
-        console.error('Error fetching players:', error);
-        throw error;
-      }
+  // Load main squad for initial team
+  const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
 
-      const squad: SquadPlayer[] = data.map(player => ({
-        id: player.id,
-        name: player.name,
-        squadNumber: player.squad_number || 0,
-        type: player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield',
-        availabilityStatus: 'available',
-        squadRole: 'player'
-      }));
+  // Load team name display option
+  const { data: teamData } = useQuery({
+    queryKey: ['team-settings', teamId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('name_display_option')
+        .eq('id', teamId)
+        .single();
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!teamId,
+  });
 
-      setSquadPlayers(squad);
-    } catch (error: any) {
-      console.error('Error loading squad players:', error);
-      toast.error('Failed to load squad players', {
-        description: error.message
-      });
+  // Initialize first team with main squad
+  useEffect(() => {
+    if (mainSquadPlayers.length > 0 && teamSelections.length === 0) {
+      const initialTeam: TeamSelection = {
+        teamNumber: 1,
+        squadPlayers: mainSquadPlayers,
+        periods: [],
+        globalCaptainId: undefined,
+        performanceCategory: 'none'
+      };
+      setTeamSelections([initialTeam]);
     }
+  }, [mainSquadPlayers]);
+
+  // Load existing team selections
+  useEffect(() => {
+    const loadExistingSelections = async () => {
+      if (!event.id || !teamId) return;
+      
+      try {
+        console.log('Loading existing selections for event:', event.id, 'team:', teamId);
+        
+        const { data: existingSelections, error } = await supabase
+          .from('event_selections')
+          .select('*')
+          .eq('event_id', event.id)
+          .eq('team_id', teamId)
+          .order('team_number', { ascending: true })
+          .order('period_number', { ascending: true });
+
+        if (error) {
+          console.error('Error loading existing selections:', error);
+          throw error;
+        }
+
+        console.log('Existing selections loaded:', existingSelections);
+
+        if (existingSelections && existingSelections.length > 0) {
+          // Group selections by team number
+          const groupedSelections = existingSelections.reduce((acc, selection) => {
+            const teamNum = selection.team_number || 1;
+            if (!acc[teamNum]) acc[teamNum] = [];
+            acc[teamNum].push(selection);
+            return acc;
+          }, {} as Record<number, any[]>);
+
+          const loadedTeamSelections: TeamSelection[] = [];
+
+          for (const [teamNum, selections] of Object.entries(groupedSelections)) {
+            const periods: FormationPeriod[] = selections.map(selection => ({
+              id: `period-${selection.period_number}`,
+              periodNumber: selection.period_number,
+              formation: selection.formation,
+              duration: selection.duration_minutes,
+              positions: (selection.player_positions || []).map((pos: any, index: number) => ({
+                id: `position-${index}`,
+                positionName: pos.position,
+                abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
+                positionGroup: pos.positionGroup || 'midfielder',
+                x: pos.x || 50,
+                y: pos.y || 50,
+                playerId: pos.playerId || pos.player_id
+              })),
+              substitutes: selection.substitute_players || [],
+              captainId: selection.captain_id || undefined
+            }));
+
+            // For team 1, use main squad. For additional teams, start with empty squad
+            let squadForTeam: SquadPlayer[] = [];
+            if (parseInt(teamNum) === 1) {
+              squadForTeam = mainSquadPlayers;
+            }
+
+            loadedTeamSelections.push({
+              teamNumber: parseInt(teamNum),
+              squadPlayers: squadForTeam,
+              periods,
+              globalCaptainId: periods[0]?.captainId,
+              performanceCategory: selections[0]?.performance_category_id || 'none'
+            });
+          }
+
+          // Sort by team number
+          loadedTeamSelections.sort((a, b) => a.teamNumber - b.teamNumber);
+          setTeamSelections(loadedTeamSelections);
+        }
+      } catch (error) {
+        console.error('Error loading existing selections:', error);
+        toast.error('Failed to load existing team selections');
+      }
+    };
+
+    if (mainSquadPlayers.length > 0) {
+      loadExistingSelections();
+    }
+  }, [event.id, teamId, mainSquadPlayers]);
+
+  const addTeam = () => {
+    const newTeamNumber = teamSelections.length + 1;
+    const newTeam: TeamSelection = {
+      teamNumber: newTeamNumber,
+      squadPlayers: [], // Start with empty squad for additional teams
+      periods: [],
+      globalCaptainId: undefined,
+      performanceCategory: 'none'
+    };
+    setTeamSelections([...teamSelections, newTeam]);
+    setCurrentTeamIndex(teamSelections.length);
+    setActiveTab('squad');
   };
 
-  const handleSaveSelection = async () => {
-    if (!teamId) {
-      toast.error('No team selected');
+  const getCurrentTeam = (): TeamSelection | null => {
+    return teamSelections[currentTeamIndex] || null;
+  };
+
+  const updateCurrentTeam = (updates: Partial<TeamSelection>) => {
+    const updatedSelections = teamSelections.map((team, index) => 
+      index === currentTeamIndex ? { ...team, ...updates } : team
+    );
+    setTeamSelections(updatedSelections);
+  };
+
+  const handlePeriodsChange = (periods: FormationPeriod[]) => {
+    updateCurrentTeam({ periods });
+  };
+
+  const handleCaptainChange = (captainId: string) => {
+    const updatedPeriods = getCurrentTeam()?.periods.map(period => ({
+      ...period,
+      captainId
+    })) || [];
+    
+    updateCurrentTeam({ 
+      globalCaptainId: captainId,
+      periods: updatedPeriods
+    });
+  };
+
+  const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
+    updateCurrentTeam({ squadPlayers: newSquadPlayers });
+  };
+
+  const handlePerformanceCategoryChange = (categoryId: string) => {
+    updateCurrentTeam({ performanceCategory: categoryId });
+  };
+
+  const saveSelections = async () => {
+    if (teamSelections.length === 0) {
+      toast.error('Please create at least one team before saving');
       return;
     }
 
+    const hasAnyPeriods = teamSelections.some(team => team.periods.length > 0);
+    if (!hasAnyPeriods) {
+      toast.error('Please create at least one period for any team before saving');
+      return;
+    }
+
+    setSaving(true);
     try {
-      setSaving(true);
-
-      const selectionData = {
-        event_id: event.id,
-        team_id: teamId,
-        team_number: 1,
-        period_number: 1,
-        formation: selectedFormation,
-        player_positions: JSON.stringify(
-          Object.entries(positionAssignments)
-            .filter(([_, playerId]) => playerId)
-            .map(([positionId, playerId]) => {
-              const position = positions.find(p => p.id === positionId);
-              const player = squadPlayers.find(p => p.id === playerId);
-              return {
-                playerId,
-                position: position?.positionName || 'Unknown',
-                playerName: player?.name || 'Unknown',
-                minutes: 90,
-                isSubstitute: false
-              };
-            })
-        ),
-        substitute_players: JSON.stringify(
-          substitutes.map(playerId => {
-            const player = squadPlayers.find(p => p.id === playerId);
-            return {
-              playerId,
-              playerName: player?.name || 'Unknown',
-              minutes: 0,
-              isSubstitute: true
-            };
-          })
-        ),
-        captain_id: captainId || null,
-        duration_minutes: 90,
-        performance_category_id: null
-      };
-
-      const { error } = await supabase
+      console.log('Saving selections:', teamSelections);
+      
+      // Delete existing selections for this event
+      const { error: deleteError } = await supabase
         .from('event_selections')
-        .upsert(selectionData, {
-          onConflict: 'event_id,team_id,team_number,period_number'
-        });
+        .delete()
+        .eq('event_id', event.id)
+        .eq('team_id', teamId);
 
-      if (error) {
-        console.error('Save error:', error);
-        throw error;
+      if (deleteError) {
+        console.error('Error deleting existing selections:', deleteError);
+        throw deleteError;
       }
 
-      toast.success('Team selection saved successfully');
-      onClose();
-    } catch (error: any) {
-      console.error('Error saving selection:', error);
-      toast.error('Failed to save team selection', {
-        description: error.message
-      });
+      // Create new selections for each team and period
+      const selectionsToInsert = [];
+      
+      for (const team of teamSelections) {
+        for (const period of team.periods) {
+          // Convert positions to correct format for database
+          const playerPositions = period.positions
+            .filter(pos => pos.playerId) // Only include positions with players
+            .map(pos => ({
+              playerId: pos.playerId,
+              player_id: pos.playerId, // Include both formats for compatibility
+              position: pos.positionName,
+              abbreviation: pos.abbreviation,
+              positionGroup: pos.positionGroup,
+              x: pos.x,
+              y: pos.y,
+              isSubstitute: false,
+              minutes: period.duration
+            }));
+
+          console.log('Converting positions for period:', period.id, playerPositions);
+
+          selectionsToInsert.push({
+            event_id: event.id,
+            team_id: teamId,
+            team_number: team.teamNumber,
+            period_number: period.periodNumber,
+            formation: period.formation,
+            duration_minutes: period.duration,
+            captain_id: team.globalCaptainId || null,
+            performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
+            player_positions: playerPositions,
+            substitute_players: period.substitutes,
+            staff_selection: []
+          });
+        }
+      }
+
+      console.log('Inserting selections:', selectionsToInsert);
+
+      if (selectionsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from('event_selections')
+          .insert(selectionsToInsert);
+
+        if (insertError) {
+          console.error('Error inserting selections:', insertError);
+          throw insertError;
+        }
+      }
+
+      toast.success('Team selections saved successfully!');
+    } catch (error) {
+      console.error('Error saving selections:', error);
+      toast.error('Failed to save team selections');
     } finally {
       setSaving(false);
     }
   };
 
-  const loadEventSelections = async (eventId: string, teamId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('event_selections')
-        .select('*')
-        .eq('event_id', eventId)
-        .eq('team_id', teamId)
-        .single();
+  if (!isOpen) return null;
 
-      if (error) {
-        console.error('Error fetching event selections:', error);
-        return;
-      }
-
-      if (data) {
-        setSelectedFormation(data.formation || '1-2-3-1');
-
-        try {
-          const playerPositions = JSON.parse(String(data.player_positions) || '[]');
-          const initialAssignments: { [positionId: string]: string } = {};
-          playerPositions.forEach((pos: any) => {
-            const position = positions.find(p => p.positionName === pos.position);
-            if (position) {
-              initialAssignments[position.id] = pos.playerId;
-            }
-          });
-          setPositionAssignments(initialAssignments);
-        } catch (parseError) {
-          console.error('Error parsing player_positions:', parseError);
-        }
-
-        try {
-          const subs = JSON.parse(String(data.substitute_players) || '[]').map((sub: any) => sub.playerId);
-          setSubstitutes(subs);
-        } catch (parseError) {
-          console.error('Error parsing substitute_players:', parseError);
-        }
-
-        setCaptainId(data.captain_id || undefined);
-      }
-    } catch (error: any) {
-      console.error('Error in loadEventSelections:', error);
-      toast.error('Failed to load event selections', {
-        description: error.message
-      });
-    }
-  };
-
-  const handlePositionAssignment = (positionId: string, playerId: string) => {
-    setPositionAssignments(prev => ({
-      ...prev,
-      [positionId]: playerId
-    }));
-  };
-
-  const handleSubstituteToggle = (playerId: string) => {
-    if (substitutes.includes(playerId)) {
-      setSubstitutes(prev => prev.filter(id => id !== playerId));
-    } else {
-      setSubstitutes(prev => [...prev, playerId]);
-    }
-  };
-
-  const getPositionsForFormation = (formation: string): PositionSlot[] => {
-    switch (formation) {
-      case '1-2-3-1':
-        return [
-          { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper' as const, x: 50, y: 90 },
-          { id: 'dl', positionName: 'Left Back', abbreviation: 'DL', positionGroup: 'defender' as const, x: 25, y: 70 },
-          { id: 'dr', positionName: 'Right Back', abbreviation: 'DR', positionGroup: 'defender' as const, x: 75, y: 70 },
-          { id: 'ml', positionName: 'Left Mid', abbreviation: 'ML', positionGroup: 'midfielder' as const, x: 15, y: 45 },
-          { id: 'mc', positionName: 'Center Mid', abbreviation: 'MC', positionGroup: 'midfielder' as const, x: 50, y: 45 },
-          { id: 'mr', positionName: 'Right Mid', abbreviation: 'MR', positionGroup: 'midfielder' as const, x: 85, y: 45 },
-          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 50, y: 20 }
-        ].map(pos => ({ ...pos, playerId: undefined }));
-      case '1-3-2-1':
-        return [
-          { id: 'gk', positionName: 'Goalkeeper', abbreviation: 'GK', positionGroup: 'goalkeeper' as const, x: 50, y: 90 },
-          { id: 'dl', positionName: 'Left Back', abbreviation: 'DL', positionGroup: 'defender' as const, x: 20, y: 70 },
-          { id: 'dc', positionName: 'Center Back', abbreviation: 'DC', positionGroup: 'defender' as const, x: 50, y: 70 },
-          { id: 'dr', positionName: 'Right Back', abbreviation: 'DR', positionGroup: 'defender' as const, x: 80, y: 70 },
-          { id: 'ml', positionName: 'Left Mid', abbreviation: 'ML', positionGroup: 'midfielder' as const, x: 30, y: 45 },
-          { id: 'mr', positionName: 'Right Mid', abbreviation: 'MR', positionGroup: 'midfielder' as const, x: 70, y: 45 },
-          { id: 'st', positionName: 'Striker', abbreviation: 'ST', positionGroup: 'forward' as const, x: 50, y: 20 }
-        ].map(pos => ({ ...pos, playerId: undefined }));
-      default:
-        return [];
-    }
-  };
+  const currentTeam = getCurrentTeam();
+  const nameDisplayOption = teamData?.name_display_option || 'surname';
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl max-h-[90vh] overflow-hidden">
-        <DialogHeader>
-          <DialogTitle>Team Selection - {event.title}</DialogTitle>
-          <DialogDescription>
-            Select players and formation for {event.opponent ? `vs ${event.opponent}` : 'the event'}
-          </DialogDescription>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg w-full max-w-7xl h-[90vh] flex flex-col">
+        <div className="p-6 border-b">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold">{event.title}</h2>
+              <p className="text-muted-foreground">
+                {event.date} • {event.game_format} • Team Selection
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline">
+                {teamSelections.length} team(s)
+              </Badge>
+              <Badge variant="outline">
+                {currentTeam?.squadPlayers.length || 0} in squad
+              </Badge>
+              <Badge variant="outline">
+                {currentTeam?.periods.length || 0} period(s)
+              </Badge>
+              <Button onClick={saveSelections} disabled={saving}>
+                <Save className="h-4 w-4 mr-1" />
+                {saving ? 'Saving...' : 'Save Selection'}
+              </Button>
+              <Button variant="outline" onClick={onClose}>
+                <X className="h-4 w-4 mr-1" />
+                Close
+              </Button>
+            </div>
+          </div>
 
-        <div className="flex-1 overflow-auto">
-          <Tabs defaultValue="squad" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="squad">Squad Management</TabsTrigger>
-              <TabsTrigger value="formation">Formation & Selection</TabsTrigger>
-              <TabsTrigger value="summary">Summary</TabsTrigger>
+          {/* Team Selection */}
+          <div className="mt-4 flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm font-medium">Teams:</Label>
+              {teamSelections.map((team, index) => (
+                <Button
+                  key={team.teamNumber}
+                  variant={index === currentTeamIndex ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setCurrentTeamIndex(index)}
+                >
+                  Team {team.teamNumber}
+                </Button>
+              ))}
+              <Button onClick={addTeam} variant="outline" size="sm">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Performance Category Selection for Current Team */}
+            {performanceCategories.length > 0 && currentTeam && (
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Target className="h-4 w-4" />
+                  Category:
+                </Label>
+                <Select value={currentTeam.performanceCategory} onValueChange={handlePerformanceCategoryChange}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No specific category</SelectItem>
+                    {performanceCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <TabsList className="grid w-full grid-cols-2 mx-6 mt-4">
+              <TabsTrigger value="squad" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Squad Management
+              </TabsTrigger>
+              <TabsTrigger value="formation" className="flex items-center gap-2">
+                <Gamepad2 className="h-4 w-4" />
+                Formation & Selection
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="squad">
-              <div className="space-y-4">
-                <CaptainSelector
-                  squadPlayers={squadPlayers}
-                  captainId={captainId}
-                  onCaptainChange={setCaptainId}
+            <div className="flex-1 overflow-auto p-6">
+              <TabsContent value="squad" className="h-full mt-0">
+                <SquadManagement
+                  teamId={teamId}
+                  eventId={currentTeam?.teamNumber === 1 ? event.id : null}
+                  globalCaptainId={currentTeam?.globalCaptainId}
+                  onSquadChange={handleSquadChange}
+                  onCaptainChange={handleCaptainChange}
                 />
-                
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Squad Management</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {squadPlayers.map((player) => (
-                        <div key={player.id} className="flex items-center justify-between p-3 border rounded">
-                          <div className="flex items-center gap-3">
-                            <span className="font-medium">#{player.squadNumber}</span>
-                            <span>{player.name}</span>
-                            <span className="text-sm text-muted-foreground">{player.type}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm capitalize px-2 py-1 bg-green-100 text-green-700 rounded">
-                              {player.availabilityStatus}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
+              </TabsContent>
 
-            <TabsContent value="formation">
-              <PositionAssignmentGrid
-                positions={positions}
-                positionAssignments={positionAssignments}
-                onPositionAssign={handlePositionAssignment}
-                squadPlayers={squadPlayers}
-                formation={selectedFormation}
-                onFormationChange={setSelectedFormation}
-              />
-              
-              <div className="mt-4">
-                <SubstituteSelectionList
-                  squadPlayers={squadPlayers}
-                  substitutes={substitutes}
-                  onSubstituteToggle={handleSubstituteToggle}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="summary">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Selection Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold mb-2">Formation: {selectedFormation}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {Object.keys(positionAssignments).filter(pos => positionAssignments[pos]).length} positions filled
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="font-semibold mb-2">Starting XI</h4>
-                    <div className="space-y-1">
-                      {Object.entries(positionAssignments)
-                        .filter(([_, playerId]) => playerId)
-                        .map(([positionId, playerId]) => {
-                          const position = positions.find(p => p.id === positionId);
-                          const player = squadPlayers.find(p => p.id === playerId);
-                          return (
-                            <div key={positionId} className="flex justify-between text-sm">
-                              <span>{position?.positionName}</span>
-                              <span className="font-medium">{player?.name}</span>
-                            </div>
-                          );
-                        })}
-                    </div>
-                  </div>
-
-                  {substitutes.length > 0 && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Substitutes ({substitutes.length})</h4>
-                      <div className="space-y-1">
-                        {substitutes.map(playerId => {
-                          const player = squadPlayers.find(p => p.id === playerId);
-                          return (
-                            <div key={playerId} className="text-sm font-medium">
-                              {player?.name}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {captainId && (
-                    <div>
-                      <h4 className="font-semibold mb-2">Captain</h4>
-                      <div className="text-sm font-medium">
-                        {squadPlayers.find(p => p.id === captainId)?.name}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+              <TabsContent value="formation" className="h-full mt-0">
+                {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">No Squad Selected</h3>
+                      <p className="text-muted-foreground mb-4">
+                        Please add players to your squad first before creating formations.
+                      </p>
+                      <Button onClick={() => setActiveTab('squad')}>
+                        Go to Squad Management
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <DragDropFormationEditor
+                    squadPlayers={currentTeam.squadPlayers}
+                    periods={currentTeam.periods}
+                    gameFormat={event.game_format || '11-a-side'}
+                    globalCaptainId={currentTeam.globalCaptainId}
+                    nameDisplayOption={nameDisplayOption as any}
+                    onPeriodsChange={handlePeriodsChange}
+                    onCaptainChange={handleCaptainChange}
+                    gameDuration={event.game_duration || 50}
+                  />
+                )}
+              </TabsContent>
+            </div>
           </Tabs>
         </div>
-
-        <div className="flex justify-between items-center pt-4 border-t">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSaveSelection}
-            disabled={saving}
-            className="bg-puma-blue-500 hover:bg-puma-blue-600"
-          >
-            {saving ? 'Saving...' : 'Save Selection'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>
   );
 };

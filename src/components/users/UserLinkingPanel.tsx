@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,7 +44,7 @@ export const UserLinkingPanel: React.FC = () => {
 
   const loadUnlinkedUsers = async () => {
     try {
-      // Only get users who actually exist in the auth system (have profiles)
+      // Get all users with their team associations
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select(`
@@ -210,7 +209,7 @@ export const UserLinkingPanel: React.FC = () => {
           }
         }
 
-        // Add user to team if not already there
+        // Add user to team
         const { data: player } = await supabase
           .from('players')
           .select('team_id')
@@ -218,23 +217,13 @@ export const UserLinkingPanel: React.FC = () => {
           .single();
 
         if (player) {
-          // Check if user is already in team
-          const { data: existingTeamLink } = await supabase
+          await supabase
             .from('user_teams')
-            .select('id')
-            .eq('user_id', selectedUser)
-            .eq('team_id', player.team_id)
-            .single();
-
-          if (!existingTeamLink) {
-            await supabase
-              .from('user_teams')
-              .insert({
-                user_id: selectedUser,
-                team_id: player.team_id,
-                role: linkType === 'self' ? 'player' : 'parent'
-              });
-          }
+            .insert({
+              user_id: selectedUser,
+              team_id: player.team_id,
+              role: linkType === 'self' ? 'player' : 'parent'
+            });
         }
       } else if (entity.type === 'staff') {
         // Link user to staff
@@ -263,7 +252,7 @@ export const UserLinkingPanel: React.FC = () => {
             .eq('id', selectedUser);
         }
 
-        // Add user to team if not already there
+        // Add user to team
         const { data: staff } = await supabase
           .from('team_staff')
           .select('team_id')
@@ -271,23 +260,13 @@ export const UserLinkingPanel: React.FC = () => {
           .single();
 
         if (staff) {
-          // Check if user is already in team
-          const { data: existingTeamLink } = await supabase
+          await supabase
             .from('user_teams')
-            .select('id')
-            .eq('user_id', selectedUser)
-            .eq('team_id', staff.team_id)
-            .single();
-
-          if (!existingTeamLink) {
-            await supabase
-              .from('user_teams')
-              .insert({
-                user_id: selectedUser,
-                team_id: staff.team_id,
-                role: 'staff'
-              });
-          }
+            .insert({
+              user_id: selectedUser,
+              team_id: staff.team_id,
+              role: 'staff'
+            });
         }
       }
 
@@ -320,17 +299,10 @@ export const UserLinkingPanel: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
-            User Linking (Authenticated Users Only)
+            Manual User Linking
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Note:</strong> This panel only shows users who have already signed up and been authenticated. 
-              Users must first create an account through the normal signup process before they can be linked to players or staff.
-            </p>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Search Users/Entities</Label>
@@ -431,12 +403,12 @@ export const UserLinkingPanel: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Authenticated Users Without Links ({filteredUsers.length})
+              Users Without Player/Staff Links ({filteredUsers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              These are authenticated users who have team access but aren't linked to any player or staff profile.
+              These users have team access but aren't linked to any player or staff profile.
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {filteredUsers.map(user => (

@@ -2,7 +2,7 @@
 import { EnhancedTeamSelectionManager } from './EnhancedTeamSelectionManager';
 import { DatabaseEvent } from '@/types/event';
 
-export interface TeamSelectionManagerProps {
+interface TeamSelectionManagerProps {
   event: DatabaseEvent;
   teamId?: string;
   isOpen: boolean;
