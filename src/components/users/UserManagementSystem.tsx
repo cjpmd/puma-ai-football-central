@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch, Unlink, AlertTriangle } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -101,147 +100,9 @@ export const UserManagementSystem = () => {
     filterUsers();
   }, [users, searchTerm, roleFilter]);
 
-  const fixSpecificUser = async () => {
-    const targetUserId = '9eb48f9d-a697-4863-80e1-9a648ede7836';
-    const targetEmail = 'dcjpm001@gmail.com';
-    
-    try {
-      console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
-      
-      // Check if current user is global admin
-      if (!profile?.roles?.includes('global_admin')) {
-        throw new Error('You must be a global admin to perform this action');
-      }
-      
-      // Check if profile already exists
-      const { data: existingProfile, error: profileCheckError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', targetUserId)
-        .maybeSingle();
-
-      if (profileCheckError) {
-        console.error('Error checking profile:', profileCheckError);
-        throw profileCheckError;
-      }
-
-      // If no profile exists, create one
-      if (!existingProfile) {
-        console.log('No profile found, creating one...');
-        
-        // Get invitations to get user details
-        const { data: invitations, error: invitationError } = await supabase
-          .from('user_invitations')
-          .select('*')
-          .eq('email', targetEmail)
-          .order('created_at', { ascending: true });
-
-        if (invitationError) {
-          console.error('Error fetching invitations:', invitationError);
-          throw invitationError;
-        }
-
-        if (!invitations || invitations.length === 0) {
-          throw new Error('No invitations found for this email');
-        }
-
-        const firstInvitation = invitations[0];
-        
-        // Create the missing profile
-        const { error: createProfileError } = await supabase
-          .from('profiles')
-          .insert([{
-            id: targetUserId,
-            name: firstInvitation.name,
-            email: firstInvitation.email,
-            roles: [firstInvitation.role]
-          }]);
-
-        if (createProfileError) {
-          console.error('Error creating profile:', createProfileError);
-          throw createProfileError;
-        }
-        
-        console.log('Profile created successfully');
-      }
-
-      // Process all pending invitations for this email
-      console.log('Processing all pending invitations for:', targetEmail);
-      const result = await userInvitationService.processUserInvitation(targetEmail);
-      console.log('Processing result:', result);
-
-      // Reload users to see the changes
-      await loadUsers();
-      
-      toast({
-        title: 'User Fixed Successfully',
-        description: `User ${targetEmail} has been processed. ${result.message}`,
-      });
-      
-    } catch (error: any) {
-      console.error('Fix user error:', error);
-      toast({
-        title: 'Fix User Error',
-        description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const processPendingInvitations = async () => {
-    try {
-      console.log('Processing pending invitations...');
-      
-      // Get all pending invitations
-      const { data: pendingInvitations, error: invitationError } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('status', 'pending');
-
-      if (invitationError) {
-        throw invitationError;
-      }
-
-      console.log('Found pending invitations:', pendingInvitations);
-
-      let processedCount = 0;
-
-      // Check each pending invitation to see if the user has signed up
-      for (const invitation of pendingInvitations || []) {
-        try {
-          const result = await userInvitationService.processUserInvitation(invitation.email);
-          if (result.processed) {
-            processedCount++;
-          }
-        } catch (error) {
-          console.error(`Error processing invitation for ${invitation.email}:`, error);
-        }
-      }
-
-      // Reload users after processing
-      await loadUsers();
-      
-      toast({
-        title: 'Processing Complete',
-        description: `${processedCount} pending invitations have been processed and users can now see their team data.`,
-      });
-
-    } catch (error: any) {
-      console.error('Error processing pending invitations:', error);
-      toast({
-        title: 'Processing Error',
-        description: error.message || 'Failed to process pending invitations',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading users...');
-
-      // Get all profiles with basic info
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -252,140 +113,24 @@ export const UserManagementSystem = () => {
         throw profilesError;
       }
 
-      console.log('Profiles found:', profiles?.length || 0);
-
       if (!profiles || profiles.length === 0) {
-        console.log('No profiles found');
         setUsers([]);
         return;
       }
 
-      // Get user-team relationships
-      const { data: userTeamsData, error: userTeamsError } = await supabase
-        .from('user_teams')
-        .select('user_id, role, team_id');
+      const processedUsers: UserProfile[] = profiles.map(profile => ({
+        id: profile.id,
+        name: profile.name || 'Unknown',
+        email: profile.email || '',
+        phone: profile.phone || '',
+        roles: Array.isArray(profile.roles) ? profile.roles : [],
+        created_at: profile.created_at,
+        teams: [],
+        clubs: [],
+        playerLinks: [],
+        staffLinks: []
+      }));
 
-      if (userTeamsError) console.error('Error fetching user teams:', userTeamsError);
-
-      // Get teams data
-      const { data: teamsData, error: teamsError } = await supabase
-        .from('teams')
-        .select('id, name');
-
-      if (teamsError) console.error('Error fetching teams:', teamsError);
-
-      // Get user-club relationships
-      const { data: userClubsData, error: userClubsError } = await supabase
-        .from('user_clubs')
-        .select('user_id, role, club_id');
-
-      if (userClubsError) console.error('Error fetching user clubs:', userClubsError);
-
-      // Get clubs data
-      const { data: clubsData, error: clubsError } = await supabase
-        .from('clubs')
-        .select('id, name');
-
-      if (clubsError) console.error('Error fetching clubs:', clubsError);
-
-      // Get user-player relationships
-      const { data: userPlayersData, error: userPlayersError } = await supabase
-        .from('user_players')
-        .select('user_id, relationship, player_id');
-
-      if (userPlayersError) console.error('Error fetching user players:', userPlayersError);
-
-      // Get players data
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('id, name, team_id');
-
-      if (playersError) console.error('Error fetching players:', playersError);
-
-      // Get user-staff relationships
-      const { data: userStaffData, error: userStaffError } = await supabase
-        .from('user_staff')
-        .select('user_id, relationship, staff_id');
-
-      if (userStaffError) console.error('Error fetching user staff:', userStaffError);
-
-      // Get staff data
-      const { data: staffData, error: staffError } = await supabase
-        .from('team_staff')
-        .select('id, name, role, team_id');
-
-      if (staffError) console.error('Error fetching staff:', staffError);
-
-      // Process and combine all data
-      const processedUsers: UserProfile[] = profiles.map(profile => {
-        // Map user teams
-        const userTeams = (userTeamsData || [])
-          .filter(ut => ut.user_id === profile.id)
-          .map(ut => {
-            const team = (teamsData || []).find(t => t.id === ut.team_id);
-            return {
-              id: team?.id || '',
-              name: team?.name || 'Unknown Team',
-              role: ut.role
-            };
-          });
-
-        // Map user clubs
-        const userClubs = (userClubsData || [])
-          .filter(uc => uc.user_id === profile.id)
-          .map(uc => {
-            const club = (clubsData || []).find(c => c.id === uc.club_id);
-            return {
-              id: club?.id || '',
-              name: club?.name || 'Unknown Club',
-              role: uc.role
-            };
-          });
-
-        // Map user players
-        const userPlayers = (userPlayersData || [])
-          .filter(up => up.user_id === profile.id)
-          .map(up => {
-            const player = (playersData || []).find(p => p.id === up.player_id);
-            const team = player ? (teamsData || []).find(t => t.id === player.team_id) : null;
-            return {
-              id: player?.id || '',
-              name: player?.name || 'Unknown Player',
-              team: team?.name || 'Unknown Team',
-              relationship: up.relationship
-            };
-          });
-
-        // Map user staff
-        const userStaffMembers = (userStaffData || [])
-          .filter(us => us.user_id === profile.id)
-          .map(us => {
-            const staff = (staffData || []).find(s => s.id === us.staff_id);
-            const team = staff ? (teamsData || []).find(t => t.id === staff.team_id) : null;
-            return {
-              id: staff?.id || '',
-              name: staff?.name || 'Unknown Staff',
-              team: team?.name || 'Unknown Team',
-              role: staff?.role || 'Unknown Role',
-              relationship: us.relationship
-            };
-          });
-
-        return {
-          id: profile.id,
-          name: profile.name || 'Unknown',
-          email: profile.email || '',
-          phone: profile.phone || '',
-          roles: Array.isArray(profile.roles) ? profile.roles : [],
-          created_at: profile.created_at,
-          teams: userTeams,
-          clubs: userClubs,
-          playerLinks: userPlayers,
-          staffLinks: userStaffMembers
-        };
-      });
-
-      console.log('Processed users:', processedUsers);
       setUsers(processedUsers);
     } catch (error: any) {
       console.error('Error loading users:', error);
@@ -402,7 +147,6 @@ export const UserManagementSystem = () => {
   const filterUsers = () => {
     let filtered = users;
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -410,7 +154,6 @@ export const UserManagementSystem = () => {
       );
     }
 
-    // Role filter
     if (roleFilter !== 'all') {
       filtered = filtered.filter(user =>
         user.roles.includes(roleFilter)
@@ -420,110 +163,105 @@ export const UserManagementSystem = () => {
     setFilteredUsers(filtered);
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'global_admin': return 'bg-red-500';
-      case 'club_admin': return 'bg-blue-500';
-      case 'team_manager': return 'bg-green-500';
-      case 'team_assistant_manager': return 'bg-green-400';
-      case 'team_coach': return 'bg-purple-500';
-      case 'team_helper': return 'bg-purple-400';
-      case 'parent': return 'bg-pink-500';
-      case 'player': return 'bg-cyan-500';
-      case 'club_chair': return 'bg-blue-600';
-      case 'club_secretary': return 'bg-blue-400';
-      default: return 'bg-gray-500';
-    }
-  };
-
-  const formatRoleName = (role: string): string => {
-    const roleOption = roleOptions.find(r => r.value === role);
-    return roleOption?.label || role.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
-  };
-
-  const openEditModal = (user: UserProfile) => {
-    setEditingUser(user);
-    setNewUserData({
-      name: user.name || '',
-      email: user.email || '',
-      phone: user.phone || '',
-      roles: user.roles || []
-    });
-    setShowEditModal(true);
-  };
-
-  const handleRoleToggle = (role: string, checked: boolean) => {
-    // Check if this is global admin and user is not authorized
-    if (role === 'global_admin' && newUserData.email !== 'chrisjpmcdonald@gmail.com') {
-      toast({
-        title: 'Access Restricted',
-        description: 'Global Admin role is restricted to chrisjpmcdonald@gmail.com',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setNewUserData(prev => ({
-      ...prev,
-      roles: checked 
-        ? [...prev.roles, role]
-        : prev.roles.filter(r => r !== role)
-    }));
-  };
-
-  const handleUpdateUser = async () => {
-    if (!editingUser) return;
-
+  const handleRemovePlayerLink = async (userId: string, playerId: string) => {
     try {
       const { error } = await supabase
-        .from('profiles')
-        .update({
-          name: newUserData.name,
-          email: newUserData.email,
-          phone: newUserData.phone || null,
-          roles: newUserData.roles,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingUser.id);
+        .from('user_players')
+        .delete()
+        .eq('user_id', userId)
+        .eq('player_id', playerId);
 
       if (error) throw error;
 
       toast({
         title: 'Success',
-        description: 'User updated successfully',
+        description: 'Player link removed successfully',
       });
 
-      setShowEditModal(false);
-      setEditingUser(null);
       await loadUsers();
     } catch (error: any) {
-      console.error('Error updating user:', error);
+      console.error('Error removing player link:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update user',
+        description: error.message || 'Failed to remove player link',
         variant: 'destructive',
       });
     }
   };
 
-  const [activeTab, setActiveTab] = useState('users');
+  const handleRemoveStaffLink = async (userId: string, staffId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_staff')
+        .delete()
+        .eq('user_id', userId)
+        .eq('staff_id', staffId);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p>Loading users...</p>
-        </div>
-      </div>
-    );
-  }
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Staff link removed successfully',
+      });
+
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error removing staff link:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove staff link',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreateMissingProfile = async () => {
+    try {
+      const email = prompt('Enter the email of the user who has signed up but is missing a profile:');
+      if (!email) return;
+
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+      if (existingProfile) {
+        toast({
+          title: 'Profile Already Exists',
+          description: 'A profile already exists for this email address.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const result = await userInvitationService.processUserInvitation(email);
+      
+      if (result.processed) {
+        toast({
+          title: 'Success',
+          description: `Profile created for ${email}`,
+        });
+        await loadUsers();
+      } else {
+        toast({
+          title: 'Cannot Create Profile',
+          description: 'User may not have signed up yet or no invitation exists.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error creating profile:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create profile',
+        variant: 'destructive',
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold">User Management</h2>
@@ -533,22 +271,14 @@ export const UserManagementSystem = () => {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={fixSpecificUser}
+            onClick={handleCreateMissingProfile}
             variant="outline"
             size="sm"
-            className="bg-red-50 border-red-200 text-red-800 hover:bg-red-100"
+            className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
+            title="Only use this if a user has signed up but doesn't have a profile"
           >
-            <UserCheck className="h-4 w-4 mr-2" />
-            Fix Missing User
-          </Button>
-          <Button
-            onClick={processPendingInvitations}
-            variant="outline"
-            size="sm"
-            className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Process Invitations
+            <AlertTriangle className="h-4 w-4 mr-2" />
+            Create Missing Profile
           </Button>
           <Button
             onClick={loadUsers}
@@ -568,7 +298,7 @@ export const UserManagementSystem = () => {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value="users" className="w-full">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Active Users ({filteredUsers.length})</TabsTrigger>
           <TabsTrigger value="team-management">Team Management</TabsTrigger>
@@ -579,7 +309,6 @@ export const UserManagementSystem = () => {
         </TabsList>
 
         <TabsContent value="users" className="mt-6">
-          {/* Search and Filter Controls */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
@@ -606,7 +335,6 @@ export const UserManagementSystem = () => {
             </Select>
           </div>
 
-          {/* Users List */}
           <div className="grid gap-4 mt-6">
             {filteredUsers.map((user) => (
               <Card key={user.id} className="p-4">
@@ -650,36 +378,6 @@ export const UserManagementSystem = () => {
                         </div>
                       </div>
 
-                      {/* Teams, Clubs, and Links sections */}
-                      {(user.teams.length > 0 || user.clubs.length > 0) && (
-                        <div className="mt-3 space-y-2">
-                          {user.teams.length > 0 && (
-                            <div>
-                              <span className="text-xs font-medium text-gray-500">Teams:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {user.teams.map((team) => (
-                                  <Badge key={team.id} variant="outline" className="text-xs">
-                                    {team.name} ({team.role})
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {user.clubs.length > 0 && (
-                            <div>
-                              <span className="text-xs font-medium text-gray-500">Clubs:</span>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {user.clubs.map((club) => (
-                                  <Badge key={club.id} variant="outline" className="text-xs">
-                                    {club.name} ({club.role})
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-
                       {(user.playerLinks.length > 0 || user.staffLinks.length > 0) && (
                         <div className="mt-3 space-y-2">
                           {user.playerLinks.length > 0 && (
@@ -690,6 +388,14 @@ export const UserManagementSystem = () => {
                                   <Badge key={link.id} variant="secondary" className="text-xs">
                                     <Link2 className="h-3 w-3 mr-1" />
                                     {link.name} ({link.relationship})
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleRemovePlayerLink(user.id, link.id)}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Unlink className="h-4 w-4" />
+                                    </Button>
                                   </Badge>
                                 ))}
                               </div>
@@ -702,7 +408,15 @@ export const UserManagementSystem = () => {
                                 {user.staffLinks.map((link) => (
                                   <Badge key={link.id} variant="secondary" className="text-xs">
                                     <Shield className="h-3 w-3 mr-1" />
-                                    {link.name} ({link.relationship})
+                                    {link.name} ({link.role})
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => handleRemoveStaffLink(user.id, link.id)}
+                                      className="text-red-600 hover:text-red-700"
+                                    >
+                                      <Unlink className="h-4 w-4" />
+                                    </Button>
                                   </Badge>
                                 ))}
                               </div>
@@ -724,26 +438,13 @@ export const UserManagementSystem = () => {
               </Card>
             ))}
 
-            {/* No users found section */}
             {filteredUsers.length === 0 && (
               <Card className="p-8 text-center">
                 <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No users found</h3>
-                <p className="text-gray-600 mb-4">
-                  {searchTerm || roleFilter !== 'all' 
-                    ? 'Try adjusting your search or filter criteria.'
-                    : 'No users have been added to the system yet.'
-                  }
+                <p className="text-gray-600">
+                  {searchTerm ? 'Try adjusting your search criteria.' : 'No users have been added to the system yet.'}
                 </p>
-                {!searchTerm && roleFilter === 'all' && (
-                  <Button 
-                    onClick={loadUsers}
-                    variant="outline"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh User List
-                  </Button>
-                )}
               </Card>
             )}
           </div>
@@ -770,13 +471,12 @@ export const UserManagementSystem = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Edit User Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update user information and roles.
+              Update user information, roles, and manage links.
             </DialogDescription>
           </DialogHeader>
           
@@ -851,6 +551,64 @@ export const UserManagementSystem = () => {
                 </p>
               )}
             </div>
+
+            {editingUser && (editingUser.playerLinks.length > 0 || editingUser.staffLinks.length > 0) && (
+              <div className="space-y-3">
+                <Label>Current Links</Label>
+                
+                {editingUser.playerLinks.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Player Links:</h4>
+                    <div className="space-y-2">
+                      {editingUser.playerLinks.map((link) => (
+                        <div key={link.id} className="flex items-center justify-between bg-green-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <Link2 className="h-4 w-4 text-green-600" />
+                            <span className="text-sm">
+                              {link.name} ({link.team}) - {link.relationship}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemovePlayerLink(editingUser.id, link.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {editingUser.staffLinks.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium mb-2">Staff Links:</h4>
+                    <div className="space-y-2">
+                      {editingUser.staffLinks.map((link) => (
+                        <div key={link.id} className="flex items-center justify-between bg-blue-50 p-2 rounded">
+                          <div className="flex items-center space-x-2">
+                            <Shield className="h-4 w-4 text-blue-600" />
+                            <span className="text-sm">
+                              {link.name} ({link.role}, {link.team}) - {link.relationship}
+                            </span>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveStaffLink(editingUser.id, link.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Unlink className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             
             <div className="flex gap-2 pt-4">
               <Button onClick={handleUpdateUser}>Update User</Button>
