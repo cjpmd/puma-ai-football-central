@@ -336,28 +336,34 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Create profile directly (this will only work if the user has the necessary permissions)
+      // Generate a UUID for the new profile
+      const { data: { user } } = await supabase.auth.admin.createUser({
+        email: email,
+        email_confirm: true,
+      });
+
+      if (!user) {
+        throw new Error('Failed to create user account');
+      }
+
+      // Create profile with the generated user ID
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
+          id: user.id,
           email: email,
           name: name,
-          roles: ['player'] // default role
+          roles: ['player']
         });
 
       if (profileError) {
         console.error('Error creating profile:', profileError);
-        toast({
-          title: 'Profile Creation Failed',
-          description: 'Unable to create the profile. This feature requires global admin permissions, or the user must sign up first through the normal registration process.',
-          variant: 'destructive',
-        });
-        return;
+        throw profileError;
       }
 
       toast({
         title: 'Success',
-        description: `Profile created for ${email}`,
+        description: `Profile created successfully for ${email}`,
       });
       
       await loadUsers();
@@ -365,7 +371,7 @@ export const UserManagementSystem = () => {
       console.error('Error creating profile:', error);
       toast({
         title: 'Error',
-        description: 'This feature is only available for global administrators. Regular users should sign up through the normal registration process.',
+        description: error.message || 'Failed to create profile. This feature requires admin privileges.',
         variant: 'destructive',
       });
     }
@@ -440,7 +446,7 @@ export const UserManagementSystem = () => {
             variant="outline"
             size="sm"
             className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
-            title="Creates a profile for users who have signed up but are missing profile records. Only available for global administrators."
+            title="Creates a user account and profile. Only available for global administrators."
           >
             <AlertTriangle className="h-4 w-4 mr-2" />
             Create Missing Profile
@@ -471,8 +477,9 @@ export const UserManagementSystem = () => {
             <div>
               <h4 className="font-medium text-blue-900 mb-1">About "Create Missing Profile"</h4>
               <p className="text-sm text-blue-800">
-                This feature is only available for global administrators and is used for creating profiles for users in special circumstances. 
-                Regular users should sign up through the normal registration process. If you're getting permission errors, you may not have sufficient privileges.
+                This feature creates a full user account and profile for someone who hasn't signed up yet. 
+                It's only available for global administrators and should be used sparingly. 
+                Regular users should sign up through the normal registration process.
               </p>
             </div>
           </div>
