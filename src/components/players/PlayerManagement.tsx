@@ -37,6 +37,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
+  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
@@ -397,10 +398,34 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   <FifaStylePlayerCard
                     key={player.id}
                     player={player}
-                    showBackside={false}
-                    onFlip={() => {}}
+                    showBackside={flippedCards.has(player.id)}
+                    onFlip={() => {
+                      setFlippedCards(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has(player.id)) {
+                          newSet.delete(player.id);
+                        } else {
+                          newSet.add(player.id);
+                        }
+                        return newSet;
+                      });
+                    }}
                     isEditable={true}
                     onEdit={() => handleEditPlayer(player)}
+                    onManageParents={() => handleManageParents(player)}
+                    onRemoveFromSquad={() => handleRemoveFromSquad(player)}
+                    onUpdatePhoto={(player, file) => handleUpdatePhoto(player, file)}
+                    onDeletePhoto={() => handleDeletePlayerPhoto(player)}
+                    onSaveFunStats={(player, stats) => handleSaveFunStats(player, stats)}
+                    onSavePlayStyle={(player, playStyles) => handleSavePlayStyle(player, playStyles)}
+                    onSaveCardDesign={(player, designId) => handleSaveCardDesign(player, designId)}
+                    onManageAttributes={() => handleManageAttributes(player)}
+                    onManageObjectives={() => handleManageObjectives(player)}
+                    onManageComments={() => handleManageComments(player)}
+                    onViewStats={() => handleViewStats(player)}
+                    onViewHistory={() => handleViewHistory(player)}
+                    onTransferPlayer={() => handleTransferPlayer(player)}
+                    onLeaveTeam={() => handleLeaveTeam(player)}
                   />
                 ))}
               </div>
