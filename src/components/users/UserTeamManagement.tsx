@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw, CheckCircle, Clock, UserCheck } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw, CheckCircle, Clock, UserCheck, User } from 'lucide-react';
 
 interface User {
   id: string;
@@ -416,6 +415,61 @@ export const UserTeamManagement = () => {
     }
   };
 
+  const fixUserName = async (userId: string, email: string) => {
+    try {
+      console.log('Fixing user name for:', userId, email);
+      
+      // Get user details from invitations to find the correct name
+      const { data: invitations, error: invitationError } = await supabase
+        .from('user_invitations')
+        .select('*')
+        .eq('email', email)
+        .order('created_at', { ascending: true });
+
+      if (invitationError) {
+        throw invitationError;
+      }
+
+      if (!invitations || invitations.length === 0) {
+        throw new Error('No invitations found for this email to get the correct name');
+      }
+
+      const correctName = invitations[0].name;
+      
+      // Update the profile with the correct name
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ name: correctName })
+        .eq('id', userId);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast({
+        title: 'Success',
+        description: `Updated name for ${email} to "${correctName}"`,
+      });
+
+      // Reload data to refresh the view
+      loadData();
+    } catch (error: any) {
+      console.error('Error fixing user name:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fix user name: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getUserDisplayName = (user: User) => {
+    if (user.name === 'Unknown' || user.name === 'No Profile Found') {
+      return `${user.email} (Name Missing)`;
+    }
+    return user.name;
+  };
+
   const filteredUsers = searchEmail 
     ? users.filter(user => 
         user.email.toLowerCase().includes(searchEmail.toLowerCase()) ||
@@ -485,7 +539,7 @@ export const UserTeamManagement = () => {
                     <SelectContent>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
-                          {user.name || user.email} ({user.email}) - {user.id.substring(0, 8)}...
+                          {getUserDisplayName(user)} ({user.email}) - {user.id.substring(0, 8)}...
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -668,7 +722,7 @@ export const UserTeamManagement = () => {
                         <Users className="h-4 w-4 text-blue-500" />
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{user.name}</p>
+                            <p className="font-medium">{getUserDisplayName(user)}</p>
                             {!user.hasProfile && (
                               <Badge variant="destructive" className="text-xs">
                                 No Profile
@@ -683,6 +737,17 @@ export const UserTeamManagement = () => {
                               <Badge variant="default" className="text-xs">
                                 Accepted Invitation
                               </Badge>
+                            )}
+                            {(user.name === 'Unknown' || user.name === 'No Profile Found') && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => fixUserName(user.id, user.email)}
+                                className="text-xs px-2 py-1 h-auto"
+                              >
+                                <User className="h-3 w-3 mr-1" />
+                                Fix Name
+                              </Button>
                             )}
                           </div>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
