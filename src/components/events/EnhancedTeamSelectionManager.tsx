@@ -413,7 +413,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 <SquadManagement
                   teamId={teamId}
                   eventId={currentTeam?.teamNumber === 1 ? event.id : null}
+                  globalCaptainId={currentTeam?.globalCaptainId}
                   onSquadChange={handleSquadChange}
+                  onCaptainChange={handleCaptainChange}
                 />
               </TabsContent>
 

@@ -1,13 +1,13 @@
+
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Crown, Clock, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { Plus, Clock, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
@@ -380,39 +380,19 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   return (
     <div className="space-y-6">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        {/* Compact Captain Selection */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Crown className="h-4 w-4 text-yellow-500" />
-              Team Captain
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <Select value={globalCaptainId || ''} onValueChange={onCaptainChange}>
-              <SelectTrigger className="h-8">
-                <SelectValue placeholder="Select captain..." />
-              </SelectTrigger>
-              <SelectContent>
-                {squadPlayers
-                  .filter(p => p.availabilityStatus === 'available')
-                  .map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      #{player.squadNumber} {player.name}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-
-        {/* Period Tabs */}
+        {/* Period Tabs with Game Time and Duration */}
         <div className="flex items-center gap-2 mb-4">
           {periods.map((period, index) => (
             <div key={period.id} className="flex items-center gap-1">
-              <Badge variant="outline" className="px-3 py-1">
-                Period {period.periodNumber}
-              </Badge>
+              <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2">
+                <span className="font-medium text-sm">Period {period.periodNumber}</span>
+                <span className="text-sm text-muted-foreground">
+                  {calculateGameTime(index)}
+                </span>
+                <span className="text-sm text-muted-foreground">
+                  ({period.duration}min)
+                </span>
+              </div>
               {periods.length > 1 && (
                 <Button
                   size="sm"
@@ -486,31 +466,33 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             <Card key={period.id} className="min-h-[650px]">
               <CardHeader className="pb-4">
                 <div className="space-y-3">
-                  {/* Compact header with period, game time, and duration on one line */}
+                  {/* Compact header with period info and controls */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <CardTitle className="text-lg">
                         Period {period.periodNumber}
                       </CardTitle>
-                      <div className="text-sm text-muted-foreground">
-                        {calculateGameTime(index)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <Input
-                          type="number"
-                          value={period.duration}
-                          onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                          className="w-14 h-7 text-xs"
-                          min="1"
-                          max="90"
-                        />
-                        <span className="text-xs text-muted-foreground">min</span>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <div className="text-sm text-muted-foreground">
+                          {calculateGameTime(index)}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          <Input
+                            type="number"
+                            value={period.duration}
+                            onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
+                            className="w-14 h-7 text-xs"
+                            min="1"
+                            max="90"
+                          />
+                          <span className="text-xs text-muted-foreground">min</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Compact Formation Selector without label */}
+                  {/* Compact Formation Selector */}
                   <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
                     <SelectTrigger className="h-7 text-sm">
                       <SelectValue />
@@ -527,8 +509,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Larger Mini Formation Pitch */}
-                <div className="relative bg-green-100 rounded-lg p-4 h-[380px]">
+                {/* Mini Formation Pitch */}
+                <div className="relative bg-green-100 rounded-lg p-4 h-[420px]">
                   <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
                   
                   {/* Pitch markings */}
@@ -563,14 +545,14 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           ))}
         </div>
 
-        {/* Playing Time Summary */}
+        {/* Playing Time Summary - List Format */}
         {Object.keys(playingTimeSummary).length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Playing Time Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+              <div className="space-y-2">
                 {Object.entries(playingTimeSummary)
                   .sort(([, a], [, b]) => b - a) // Sort by minutes descending
                   .map(([playerId, minutes]) => {
@@ -578,15 +560,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     if (!player) return null;
                     
                     return (
-                      <div key={playerId} className="flex flex-col items-center gap-2 p-3 border rounded-lg bg-gray-50">
-                        <div className="flex items-center gap-2">
+                      <div key={playerId} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50">
+                        <div className="flex items-center gap-3">
                           <Badge variant="outline" className="text-xs">#{player.squadNumber}</Badge>
+                          <span className="font-medium">{player.name}</span>
                           {player.id === globalCaptainId && (
-                            <Crown className="h-3 w-3 text-yellow-500" />
+                            <Badge variant="secondary" className="text-xs">Captain</Badge>
                           )}
                         </div>
-                        <span className="text-sm font-medium text-center">{player.name}</span>
-                        <Badge variant="secondary" className="text-xs">{minutes} min</Badge>
+                        <Badge variant="secondary" className="text-sm">{minutes} min</Badge>
                       </div>
                     );
                   })}
