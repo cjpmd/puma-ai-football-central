@@ -15,6 +15,7 @@ import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
 import { BulkUserImport } from './BulkUserImport';
 import { InvitationResendPanel } from './InvitationResendPanel';
+import { UserTeamManagement } from './UserTeamManagement';
 import { userInvitationService } from '@/services/userInvitationService';
 
 interface UserProfile {
@@ -610,32 +611,6 @@ export const UserManagementSystem = () => {
             Fix Missing User
           </Button>
           <Button
-            onClick={debugSpecificUser}
-            variant="outline"
-            size="sm"
-            className="bg-orange-50 border-orange-200 text-orange-800 hover:bg-orange-100"
-          >
-            <UserSearch className="h-4 w-4 mr-2" />
-            Debug Missing User
-          </Button>
-          <Button
-            onClick={processPendingInvitations}
-            variant="outline"
-            size="sm"
-            className="bg-green-50 border-green-200 text-green-800 hover:bg-green-100"
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Process Pending
-          </Button>
-          <Button
-            onClick={syncMissingProfiles}
-            variant="outline"
-            size="sm"
-          >
-            <UserCheck className="h-4 w-4 mr-2" />
-            Sync Profiles
-          </Button>
-          <Button
             onClick={loadUsers}
             variant="outline"
             size="sm"
@@ -654,8 +629,9 @@ export const UserManagementSystem = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Active Users ({filteredUsers.length})</TabsTrigger>
+          <TabsTrigger value="team-management">Team Management</TabsTrigger>
           <TabsTrigger value="invitations">Invite</TabsTrigger>
           <TabsTrigger value="teams">Team</TabsTrigger>
           <TabsTrigger value="linking">Link</TabsTrigger>
@@ -827,6 +803,10 @@ export const UserManagementSystem = () => {
               )}
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="team-management" className="mt-6">
+          <UserTeamManagement />
         </TabsContent>
 
         <TabsContent value="invitations" className="mt-6">
