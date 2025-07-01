@@ -65,28 +65,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     loadSession();
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        const { data: userDetails, error: userError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session?.user.id)
-          .single();
+        // Use setTimeout to defer Supabase calls and prevent deadlock
+        setTimeout(async () => {
+          const { data: userDetails, error: userError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session?.user.id)
+            .single();
 
-        if (userError) {
-          console.error('Error fetching user details:', userError);
-          setLoading(false);
-          return;
-        }
+          if (userError) {
+            console.error('Error fetching user details:', userError);
+            setLoading(false);
+            return;
+          }
 
-        setUser(userDetails ? { id: userDetails.id, email: userDetails.email || '', name: userDetails.name, roles: userDetails.roles } : null);
-        await fetchTeamsAndClubs(userDetails?.id || session.user.id);
+          setUser(userDetails ? { id: userDetails.id, email: userDetails.email || '', name: userDetails.name, roles: userDetails.roles } : null);
+          await fetchTeamsAndClubs(userDetails?.id || session.user.id);
+        }, 0);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setTeams([]);
         setClubs([]);
         setCurrentTeam(null);
         setCurrentClub(null);
+        setLoading(false);
       }
     });
   }, [navigate]);
@@ -172,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     try {
-      const { data: authResponse, error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -183,28 +187,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: authError };
       }
 
-      const { data: userDetails, error: userError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', authResponse.user?.id)
-        .single();
-
-      if (userError) {
-        console.error('Error fetching user details:', userError);
-        setLoading(false);
-        return { error: userError };
-      }
-
-      setUser(userDetails ? { id: userDetails.id, email: userDetails.email || '', name: userDetails.name, roles: userDetails.roles } : null);
-      await fetchTeamsAndClubs(userDetails?.id || authResponse.user?.id);
-      navigate('/dashboard');
+      // Let onAuthStateChange handle the rest
       return {};
     } catch (error: any) {
       console.error('Authentication error:', error.message);
       setLoading(false);
       return { error };
-    } finally {
-      setLoading(false);
     }
   };
 
