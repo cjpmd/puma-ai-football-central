@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -360,7 +359,7 @@ export const UserManagementSystem = () => {
 
       const authUser = authUsers.find(u => u.email === email);
       
-      if (!authUser) {
+      if (!authUser || !authUser.email || !authUser.id) {
         toast({
           title: 'User Not Found',
           description: 'No authenticated user found with this email. The user needs to sign up first.',
@@ -375,7 +374,7 @@ export const UserManagementSystem = () => {
         .insert({
           id: authUser.id,
           email: authUser.email,
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown User',
+          name: authUser.user_metadata?.name || authUser.email.split('@')[0] || 'Unknown User',
           roles: ['player'] // default role
         });
 
@@ -391,7 +390,7 @@ export const UserManagementSystem = () => {
 
       toast({
         title: 'Success',
-        description: `Profile created for ${email}`,
+        description: `Profile created for ${authUser.email}`,
       });
       
       await loadUsers();
