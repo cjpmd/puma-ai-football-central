@@ -23,6 +23,7 @@ interface StaffMember {
   email: string;
   phone?: string;
   role: UserRole | string;
+  userId?: string;
 }
 
 const StaffManagement = () => {
@@ -84,6 +85,7 @@ const StaffManagement = () => {
     try {
       console.log('Fetching team staff for team:', teamId);
       
+      // Get regular team staff
       const { data: teamStaffData, error: teamStaffError } = await supabase
         .from('team_staff')
         .select('*')
@@ -95,20 +97,63 @@ const StaffManagement = () => {
       }
       
       console.log('Team staff data:', teamStaffData);
-      
-      if (teamStaffData && teamStaffData.length > 0) {
-        const staffMembers: StaffMember[] = teamStaffData.map(staff => ({
-          id: staff.id,
-          name: staff.name || 'Unknown',
-          email: staff.email || 'No email',
-          phone: staff.phone || '',
-          role: staff.role
-        }));
-        
-        setTeamStaff(staffMembers);
-      } else {
-        setTeamStaff([]);
+
+      // Get users assigned to this team with management roles
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select(`
+          *,
+          profiles!inner(
+            id,
+            name,
+            email,
+            phone
+          )
+        `)
+        .eq('team_id', teamId)
+        .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper']);
+
+      if (userTeamsError) {
+        console.error('Error fetching user teams:', userTeamsError);
+        throw userTeamsError;
       }
+
+      console.log('User teams data:', userTeamsData);
+      
+      // Combine both data sources
+      const staffMembers: StaffMember[] = [];
+
+      // Add regular team staff
+      if (teamStaffData) {
+        teamStaffData.forEach(staff => {
+          staffMembers.push({
+            id: staff.id,
+            name: staff.name || 'Unknown',
+            email: staff.email || 'No email',
+            phone: staff.phone || '',
+            role: staff.role
+          });
+        });
+      }
+
+      // Add users with team roles
+      if (userTeamsData) {
+        userTeamsData.forEach(userTeam => {
+          const profile = userTeam.profiles;
+          if (profile) {
+            staffMembers.push({
+              id: userTeam.id,
+              name: profile.name || 'Unknown',
+              email: profile.email || 'No email',
+              phone: profile.phone || '',
+              role: userTeam.role,
+              userId: profile.id
+            });
+          }
+        });
+      }
+      
+      setTeamStaff(staffMembers);
     } catch (error: any) {
       console.error('Error in fetchTeamStaff:', error);
       toast.error('Failed to fetch team staff', {
@@ -310,14 +355,22 @@ const StaffManagement = () => {
     try {
       console.log('Removing team staff:', staffId);
       
-      const { error } = await supabase
+      // First try to remove from team_staff table
+      const { error: teamStaffError } = await supabase
         .from('team_staff')
         .delete()
         .eq('id', staffId);
 
-      if (error) {
-        console.error('Remove staff error:', error);
-        throw error;
+      // If not found in team_staff, try user_teams table
+      if (teamStaffError) {
+        const { error: userTeamsError } = await supabase
+          .from('user_teams')
+          .delete()
+          .eq('id', staffId);
+
+        if (userTeamsError) {
+          throw userTeamsError;
+        }
       }
 
       toast.success('Staff member removed successfully');

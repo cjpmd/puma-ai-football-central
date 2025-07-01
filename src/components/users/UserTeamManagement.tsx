@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw, CheckCircle, Clock, UserCheck, User } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw, CheckCircle, Clock, UserCheck, User, Save, X } from 'lucide-react';
 
 interface User {
   id: string;
@@ -53,6 +53,8 @@ export const UserTeamManagement = () => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<{userId: string, userTeamId: string, currentRole: string} | null>(null);
+  const [editingUser, setEditingUser] = useState<{userId: string, field: 'name' | 'email' | 'roles'} | null>(null);
+  const [editValue, setEditValue] = useState('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -404,6 +406,8 @@ export const UserTeamManagement = () => {
         description: 'User global roles updated successfully',
       });
 
+      setEditingUser(null);
+      setEditValue('');
       loadData();
     } catch (error: any) {
       console.error('Error updating user roles:', error);
@@ -415,11 +419,42 @@ export const UserTeamManagement = () => {
     }
   };
 
+  const updateUserProfile = async (userId: string, field: 'name' | 'email', value: string) => {
+    try {
+      console.log('Updating user profile:', { userId, field, value });
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [field]: value })
+        .eq('id', userId);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Success',
+        description: `User ${field} updated successfully`,
+      });
+
+      setEditingUser(null);
+      setEditValue('');
+      loadData();
+    } catch (error: any) {
+      console.error('Error updating user profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user profile: ' + error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const fixUserName = async (userId: string, email: string) => {
     try {
       console.log('Fixing user name for:', userId, email);
       
-      // Get user details from invitations to find the correct name
+      // First try to get name from invitations
       const { data: invitations, error: invitationError } = await supabase
         .from('user_invitations')
         .select('*')
@@ -430,11 +465,17 @@ export const UserTeamManagement = () => {
         throw invitationError;
       }
 
-      if (!invitations || invitations.length === 0) {
-        throw new Error('No invitations found for this email to get the correct name');
+      let correctName = null;
+      if (invitations && invitations.length > 0) {
+        correctName = invitations[0].name;
+      } else {
+        // If no invitations found, prompt for manual entry
+        const manualName = prompt(`No invitations found for ${email}. Please enter the correct name:`);
+        if (!manualName) {
+          return;
+        }
+        correctName = manualName;
       }
-
-      const correctName = invitations[0].name;
       
       // Update the profile with the correct name
       const { error: updateError } = await supabase
@@ -460,6 +501,31 @@ export const UserTeamManagement = () => {
         description: 'Failed to fix user name: ' + error.message,
         variant: 'destructive',
       });
+    }
+  };
+
+  const startEditingUser = (userId: string, field: 'name' | 'email' | 'roles', currentValue: string | string[]) => {
+    setEditingUser({ userId, field });
+    if (Array.isArray(currentValue)) {
+      setEditValue(currentValue.join(','));
+    } else {
+      setEditValue(currentValue);
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingUser(null);
+    setEditValue('');
+  };
+
+  const saveEdit = () => {
+    if (!editingUser) return;
+
+    if (editingUser.field === 'roles') {
+      const rolesArray = editValue.split(',').map(role => role.trim()).filter(role => role);
+      updateUserGlobalRoles(editingUser.userId, rolesArray);
+    } else {
+      updateUserProfile(editingUser.userId, editingUser.field, editValue);
     }
   };
 
@@ -722,7 +788,33 @@ export const UserTeamManagement = () => {
                         <Users className="h-4 w-4 text-blue-500" />
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="font-medium">{getUserDisplayName(user)}</p>
+                            {editingUser?.userId === user.id && editingUser.field === 'name' ? (
+                              <div className="flex items-center gap-2">
+                                <Input
+                                  value={editValue}
+                                  onChange={(e) => setEditValue(e.target.value)}
+                                  className="w-48"
+                                />
+                                <Button size="sm" onClick={saveEdit}>
+                                  <Save className="h-3 w-3" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={cancelEditing}>
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{getUserDisplayName(user)}</p>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => startEditingUser(user.id, 'name', user.name)}
+                                  className="text-xs px-1 py-0 h-auto"
+                                >
+                                  <Edit className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            )}
                             {!user.hasProfile && (
                               <Badge variant="destructive" className="text-xs">
                                 No Profile
@@ -750,7 +842,33 @@ export const UserTeamManagement = () => {
                               </Button>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          {editingUser?.userId === user.id && editingUser.field === 'email' ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="w-48"
+                              />
+                              <Button size="sm" onClick={saveEdit}>
+                                <Save className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={cancelEditing}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-muted-foreground">{user.email}</p>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditingUser(user.id, 'email', user.email)}
+                                className="text-xs px-1 py-0 h-auto"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                           <p className="text-xs text-muted-foreground font-mono">ID: {user.id}</p>
                         </div>
                       </div>
@@ -759,16 +877,41 @@ export const UserTeamManagement = () => {
                       {user.hasProfile && (
                         <div className="mb-3">
                           <span className="text-xs font-medium text-gray-500">Global Roles:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {user.roles.map((role) => (
-                              <Badge key={role} variant="secondary" className="text-xs">
-                                {role.replace('_', ' ')}
-                              </Badge>
-                            ))}
-                            {user.roles.length === 0 && (
-                              <Badge variant="outline" className="text-xs">No global roles</Badge>
-                            )}
-                          </div>
+                          {editingUser?.userId === user.id && editingUser.field === 'roles' ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Input
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                placeholder="Enter roles separated by commas"
+                                className="w-64"
+                              />
+                              <Button size="sm" onClick={saveEdit}>
+                                <Save className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={cancelEditing}>
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap gap-1 mt-1 items-center">
+                              {user.roles.map((role) => (
+                                <Badge key={role} variant="secondary" className="text-xs">
+                                  {role.replace('_', ' ')}
+                                </Badge>
+                              ))}
+                              {user.roles.length === 0 && (
+                                <Badge variant="outline" className="text-xs">No global roles</Badge>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => startEditingUser(user.id, 'roles', user.roles)}
+                                className="text-xs px-1 py-0 h-auto ml-2"
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
