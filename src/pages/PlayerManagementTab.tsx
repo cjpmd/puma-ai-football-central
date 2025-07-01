@@ -38,7 +38,7 @@ const PlayerManagementTab = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [performanceTrends, setPerformanceTrends] = useState<Map<string, PerformanceTrend>>(new Map());
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
