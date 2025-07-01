@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   email: string;
@@ -214,6 +213,9 @@ export interface Facility {
   updated_at: string;
 }
 
-export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4-3';
+export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CM' | 'LM' | 'RM' | 'CAM' | 'CDM' | 'LW' | 'RW' | 'ST' | 'CF' | 
+  'SK' | 'DL' | 'DCL' | 'DC' | 'DCR' | 'DR' | 'WBL' | 'DCML' | 'DCM' | 'DCMR' | 'WBR' | 'ML' | 'MCL' | 'MC' | 'MCR' | 'MR' | 
+  'AML' | 'AMCL' | 'AMC' | 'AMCR' | 'AMR' | 'STCL' | 'STC' | 'STCR' | 'STL' | 'STR' | 'DM';
 
-export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CM' | 'LM' | 'RM' | 'CAM' | 'CDM' | 'LW' | 'RW' | 'ST' | 'CF';
+export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4-3' | 
+  '1-1-3-1' | '2-3-1' | '3-2-1' | '3-2-3' | '2-4-2' | '3-3-2' | 'custom';

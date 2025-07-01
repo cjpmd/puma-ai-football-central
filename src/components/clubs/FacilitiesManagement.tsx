@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,18 +42,7 @@ export const FacilitiesManagement = ({ clubId, onRefreshClub }: FacilitiesManage
 
       if (error) throw error;
       
-      // Transform database fields to match interface
-      const transformedFacilities: Facility[] = (data || []).map(facility => ({
-        id: facility.id,
-        clubId: facility.club_id,
-        name: facility.name,
-        description: facility.description,
-        bookableUnits: facility.bookable_units,
-        createdAt: facility.created_at,
-        updatedAt: facility.updated_at
-      }));
-      
-      setFacilities(transformedFacilities);
+      setFacilities(data || []);
     } catch (error) {
       console.error('Error loading facilities:', error);
       toast({
@@ -150,8 +138,8 @@ export const FacilitiesManagement = ({ clubId, onRefreshClub }: FacilitiesManage
                       <CardTitle className="text-base font-medium flex items-center">
                         {facility.name}
                         <Badge variant="outline" className="ml-2 text-xs">
-                          {facility.bookableUnits === 'hours' ? 'Hourly' : 
-                           facility.bookableUnits === 'sessions' ? 'Sessions' : 'Daily'}
+                          {facility.bookable_units === 'hours' ? 'Hourly' : 
+                           facility.bookable_units === 'sessions' ? 'Sessions' : 'Daily'}
                         </Badge>
                       </CardTitle>
                       <div className="flex gap-1">

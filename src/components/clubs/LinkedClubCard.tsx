@@ -1,141 +1,72 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Building, Users } from 'lucide-react';
-import { Club } from '@/types/index';
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-
-interface ClubOfficial {
-  id: string;
-  role: string;
-  user_id: string;
-  profile?: {
-    name: string;
-    email: string;
-  };
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Building2, Link2Off } from "lucide-react";
+import { Club } from "@/types";
+import { Badge } from "@/components/ui/badge";
 
 interface LinkedClubCardProps {
   club: Club;
+  onUnlink: (clubId: string) => void;
+  isReadOnly?: boolean;
 }
 
-export const LinkedClubCard: React.FC<LinkedClubCardProps> = ({ club }) => {
-  const [officials, setOfficials] = useState<ClubOfficial[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadClubOfficials();
-  }, [club.id]);
-
-  const loadClubOfficials = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('club_officials')
-        .select(`
-          id,
-          role,
-          user_id,
-          profiles!user_id (
-            name,
-            email
-          )
-        `)
-        .eq('club_id', club.id);
-
-      if (error) throw error;
-
-      const officials = data?.map(official => ({
-        id: official.id,
-        role: official.role,
-        user_id: official.user_id,
-        profile: official.profiles ? {
-          name: official.profiles.name || 'Unknown',
-          email: official.profiles.email || ''
-        } : undefined
-      })) || [];
-
-      setOfficials(officials);
-    } catch (error) {
-      console.error('Error loading club officials:', error);
-    } finally {
-      setLoading(false);
+export const LinkedClubCard = ({ club, onUnlink, isReadOnly = false }: LinkedClubCardProps) => {
+  const handleUnlink = () => {
+    if (confirm(`Are you sure you want to unlink from ${club.name}?`)) {
+      onUnlink(club.id);
     }
   };
 
   return (
-    <Card className="border-dashed opacity-75">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 flex items-center justify-center rounded bg-muted">
-            {club.logoUrl ? (
+    <Card className="p-4 border-l-4 border-l-blue-500">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden">
+            {club.logo_url ? (
               <img 
-                src={club.logoUrl} 
+                src={club.logo_url} 
                 alt={`${club.name} logo`}
-                className="w-8 h-8 object-contain rounded"
+                className="w-full h-full object-cover"
               />
             ) : (
-              <Building className="h-6 w-6 text-muted-foreground" />
+              <Building2 className="w-6 h-6 text-gray-400" />
             )}
-          </div>
-          <div className="flex-1">
-            <CardTitle className="flex items-center gap-2">
-              {club.name}
-              <Badge variant="outline" className="text-xs">
-                Linked Club
-              </Badge>
-            </CardTitle>
-            {club.referenceNumber && (
-              <p className="text-sm text-muted-foreground">
-                Ref: {club.referenceNumber}
-              </p>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Your Role:</span>
-            <Badge variant="outline" className="capitalize text-xs">
-              {club.userRole?.replace('_', ' ') || 'Member'}
-            </Badge>
           </div>
           
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm font-medium">Club Officials</span>
-            </div>
-            
-            {loading ? (
-              <div className="text-sm text-muted-foreground">Loading officials...</div>
-            ) : officials.length > 0 ? (
-              <div className="space-y-2">
-                {officials.map((official) => (
-                  <div key={official.id} className="flex items-center gap-3">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs">
-                        {official.profile?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {official.profile?.name || 'Unknown'}
-                      </p>
-                      <p className="text-xs text-muted-foreground capitalize">
-                        {official.role.replace('_', ' ')}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-sm text-muted-foreground">No officials found</div>
+            <h3 className="font-semibold text-lg">{club.name}</h3>
+            {club.reference_number && (
+              <p className="text-sm text-gray-600">
+                Ref: {club.reference_number}
+              </p>
             )}
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="outline" className="text-xs">
+                {(club as any).userRole || 'Member'}
+              </Badge>
+              {club.subscription_type && (
+                <Badge variant="secondary" className="text-xs">
+                  {club.subscription_type.replace('_', ' ')}
+                </Badge>
+              )}
+            </div>
           </div>
         </div>
+
+        <div>
+          {!isReadOnly && (
+            <Button variant="destructive" size="sm" onClick={handleUnlink}>
+              <Link2Off className="h-4 w-4 mr-2" />
+              Unlink
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <CardContent className="mt-4">
+        <p className="text-sm text-gray-700">
+          Manage your club settings, team assignments, and subscription details.
+        </p>
       </CardContent>
     </Card>
   );

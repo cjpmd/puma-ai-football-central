@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +16,12 @@ interface FacilityFormProps {
 }
 
 export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: FacilityFormProps) => {
-  const [name, setName] = useState(facility?.name || '');
-  const [description, setDescription] = useState(facility?.description || '');
-  const [bookableUnits, setBookableUnits] = useState(facility?.bookableUnits || 'hours');
+  const [formData, setFormData] = useState({
+    name: facility?.name || '',
+    description: facility?.description || '',
+    bookable_units: facility?.bookable_units || 'hours'
+  });
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,9 +34,9 @@ export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: Facility
         const { error } = await supabase
           .from('facilities')
           .update({
-            name,
-            description,
-            bookable_units: bookableUnits,
+            name: formData.name,
+            description: formData.description,
+            bookable_units: formData.bookable_units,
             updated_at: new Date().toISOString()
           })
           .eq('id', facility.id);
@@ -47,9 +49,9 @@ export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: Facility
           .from('facilities')
           .insert({
             club_id: clubId,
-            name,
-            description,
-            bookable_units: bookableUnits
+            name: formData.name,
+            description: formData.description,
+            bookable_units: formData.bookable_units
           });
 
         if (error) throw error;
@@ -66,13 +68,13 @@ export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: Facility
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-2">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="name">Facility Name</Label>
         <Input
           id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={formData.name}
+          onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
           placeholder="e.g. Main Field"
           required
           disabled={isSubmitting}
@@ -83,8 +85,8 @@ export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: Facility
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          value={formData.description}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
           placeholder="Describe the facility..."
           className="min-h-[100px]"
           disabled={isSubmitting}
@@ -92,14 +94,13 @@ export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: Facility
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bookableUnits">Bookable Units</Label>
+        <Label htmlFor="bookable_units">Bookable Units</Label>
         <Select
-          value={bookableUnits}
-          onValueChange={setBookableUnits}
-          disabled={isSubmitting}
+          value={formData.bookable_units}
+          onValueChange={(value) => setFormData(prev => ({ ...prev, bookable_units: value }))}
         >
-          <SelectTrigger id="bookableUnits">
-            <SelectValue placeholder="Select booking unit" />
+          <SelectTrigger>
+            <SelectValue placeholder="Select booking type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="hours">Hours</SelectItem>
