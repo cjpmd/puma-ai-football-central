@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,7 +21,6 @@ import { BulkUserImport } from './BulkUserImport';
 import { InvitationResendPanel } from './InvitationResendPanel';
 import { UserTeamManagement } from './UserTeamManagement';
 import { EnhancedUserLinking } from './EnhancedUserLinking';
-import { RoleSelector } from './RoleSelector';
 import { userInvitationService } from '@/services/userInvitationService';
 
 interface UserProfile {
@@ -55,6 +55,26 @@ interface UserProfile {
   }>;
 }
 
+interface RoleOption {
+  value: string;
+  label: string;
+  description: string;
+  restricted?: boolean;
+}
+
+const roleOptions: RoleOption[] = [
+  { value: 'global_admin', label: 'Global Admin', description: 'Full system access', restricted: true },
+  { value: 'club_admin', label: 'Club Admin', description: 'Manage club and teams' },
+  { value: 'team_manager', label: 'Team Manager', description: 'Manage team operations' },
+  { value: 'team_assistant_manager', label: 'Assistant Manager', description: 'Assist with team management' },
+  { value: 'team_coach', label: 'Coach', description: 'Coach team and manage training' },
+  { value: 'team_helper', label: 'Team Helper', description: 'Support team activities' },
+  { value: 'parent', label: 'Parent', description: 'Parent of a player' },
+  { value: 'player', label: 'Player', description: 'Team player' },
+  { value: 'club_chair', label: 'Club Chair', description: 'Club chairperson' },
+  { value: 'club_secretary', label: 'Club Secretary', description: 'Club secretary' }
+];
+
 export const UserManagementSystem = () => {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([]);
@@ -87,22 +107,18 @@ export const UserManagementSystem = () => {
     
     try {
       console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
-      console.log('Current user:', user);
-      console.log('Current profile:', profile);
       
       // Check if current user is global admin
       if (!profile?.roles?.includes('global_admin')) {
         throw new Error('You must be a global admin to perform this action');
       }
       
-      // Check if profile already exists using maybeSingle to avoid errors
+      // Check if profile already exists
       const { data: existingProfile, error: profileCheckError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', targetUserId)
         .maybeSingle();
-
-      console.log('Profile check result:', { existingProfile, profileCheckError });
 
       if (profileCheckError) {
         console.error('Error checking profile:', profileCheckError);
@@ -129,57 +145,24 @@ export const UserManagementSystem = () => {
           throw new Error('No invitations found for this email');
         }
 
-        console.log('Found invitations:', invitations);
         const firstInvitation = invitations[0];
         
-        // Create the missing profile using insert (since upsert might have issues with RLS)
-        console.log('Creating missing profile for user:', targetUserId);
-        
-        // First try with direct insert
-        const { data: newProfile, error: createProfileError } = await supabase
+        // Create the missing profile
+        const { error: createProfileError } = await supabase
           .from('profiles')
           .insert([{
             id: targetUserId,
             name: firstInvitation.name,
             email: firstInvitation.email,
             roles: [firstInvitation.role]
-          }])
-          .select()
-          .single();
+          }]);
 
         if (createProfileError) {
-          console.error('Error creating profile with direct insert:', createProfileError);
-          
-          // If direct insert fails, try with RPC call as backup
-          console.log('Attempting alternative profile creation method...');
-          const { data: rpcResult, error: rpcError } = await supabase.rpc('user_is_global_admin');
-          console.log('Global admin check result:', rpcResult);
-          
-          if (rpcError || !rpcResult) {
-            throw new Error('Global admin verification failed. Please ensure you have proper permissions.');
-          }
-          
-          // Try upsert as last resort
-          const { error: upsertError } = await supabase
-            .from('profiles')
-            .upsert([{
-              id: targetUserId,
-              name: firstInvitation.name,
-              email: firstInvitation.email,
-              roles: [firstInvitation.role]
-            }], {
-              onConflict: 'id'
-            });
-            
-          if (upsertError) {
-            console.error('Error with upsert:', upsertError);
-            throw new Error(`Failed to create profile: ${upsertError.message}`);
-          }
+          console.error('Error creating profile:', createProfileError);
+          throw createProfileError;
         }
         
         console.log('Profile created successfully');
-      } else {
-        console.log('Profile already exists:', existingProfile);
       }
 
       // Process all pending invitations for this email
@@ -200,64 +183,6 @@ export const UserManagementSystem = () => {
       toast({
         title: 'Fix User Error',
         description: error.message || 'An unexpected error occurred',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const debugSpecificUser = async () => {
-    const targetUserId = '9eb48f9d-a697-4863-80e1-9a648ede7836';
-    
-    try {
-      console.log('=== DEBUGGING SPECIFIC USER:', targetUserId, '===');
-      
-      // Check profiles table directly
-      console.log('1. Checking profiles table for user ID...');
-      const { data: profileById, error: profileIdError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', targetUserId);
-      
-      console.log('Profile by ID query result:', { profileById, profileIdError });
-
-      // Check invitations for this user
-      console.log('2. Checking user_invitations for user ID...');
-      const { data: invitationsByUserId, error: invitationUserError } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('accepted_by', targetUserId);
-      
-      console.log('Invitations by user ID query result:', { invitationsByUserId, invitationUserError });
-
-      // Check all profiles to see what we get
-      console.log('3. Checking all profiles...');
-      const { data: allProfiles, error: allProfilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(10);
-      
-      console.log('Recent profiles:', { allProfiles, allProfilesError });
-
-      // Check for the specific email in invitations
-      console.log('4. Checking user_invitations by email...');
-      const { data: invitationsByEmail, error: invitationEmailError } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('email', 'dcjpm001@gmail.com');
-      
-      console.log('Invitations by email query result:', { invitationsByEmail, invitationEmailError });
-
-      toast({
-        title: 'Debug Complete for ' + targetUserId,
-        description: 'Check console for detailed information about this user',
-      });
-      
-    } catch (error: any) {
-      console.error('Debug error:', error);
-      toast({
-        title: 'Debug Error',
-        description: error.message,
         variant: 'destructive',
       });
     }
@@ -311,82 +236,6 @@ export const UserManagementSystem = () => {
     }
   };
 
-  const syncMissingProfiles = async () => {
-    try {
-      console.log('Syncing missing profiles from auth users...');
-      
-      // Get current user (must be admin to do this)
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) {
-        throw new Error('Not authenticated');
-      }
-
-      // Get all accepted invitations where user doesn't have a profile
-      const { data: invitations, error: invError } = await supabase
-        .from('user_invitations')
-        .select('*')
-        .eq('status', 'accepted');
-
-      if (invError) {
-        console.error('Error fetching invitations:', invError);
-        throw invError;
-      }
-
-      console.log('Found accepted invitations:', invitations);
-
-      let profilesCreated = 0;
-
-      // Check if profiles exist for these users
-      for (const invitation of invitations || []) {
-        if (invitation.accepted_by) {
-          const { data: existingProfile, error: profileError } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', invitation.accepted_by)
-            .single();
-
-          if (profileError && profileError.code === 'PGRST116') {
-            // Profile doesn't exist, create it
-            console.log('Creating missing profile for user:', invitation.accepted_by);
-            
-            const { error: createError } = await supabase
-              .from('profiles')
-              .insert([{
-                id: invitation.accepted_by,
-                name: invitation.name,
-                email: invitation.email,
-                roles: [invitation.role]
-              }]);
-
-            if (createError) {
-              console.error('Error creating profile:', createError);
-            } else {
-              console.log('Profile created successfully for:', invitation.email);
-              profilesCreated++;
-            }
-          } else if (existingProfile) {
-            console.log('Profile already exists for:', invitation.email);
-          }
-        }
-      }
-
-      // Reload users after sync
-      await loadUsers();
-      
-      toast({
-        title: 'Sync Complete',
-        description: `${profilesCreated} missing user profiles have been synchronized.`,
-      });
-    } catch (error: any) {
-      console.error('Error syncing profiles:', error);
-      toast({
-        title: 'Sync Error',
-        description: error.message || 'Failed to sync user profiles',
-        variant: 'destructive',
-      });
-    }
-  };
-
   const loadUsers = async () => {
     try {
       setLoading(true);
@@ -404,7 +253,6 @@ export const UserManagementSystem = () => {
       }
 
       console.log('Profiles found:', profiles?.length || 0);
-      console.log('All profiles:', profiles);
 
       if (!profiles || profiles.length === 0) {
         console.log('No profiles found');
@@ -577,16 +425,20 @@ export const UserManagementSystem = () => {
       case 'global_admin': return 'bg-red-500';
       case 'club_admin': return 'bg-blue-500';
       case 'team_manager': return 'bg-green-500';
-      case 'coach': return 'bg-purple-500';
-      case 'staff': return 'bg-orange-500';
+      case 'team_assistant_manager': return 'bg-green-400';
+      case 'team_coach': return 'bg-purple-500';
+      case 'team_helper': return 'bg-purple-400';
       case 'parent': return 'bg-pink-500';
       case 'player': return 'bg-cyan-500';
+      case 'club_chair': return 'bg-blue-600';
+      case 'club_secretary': return 'bg-blue-400';
       default: return 'bg-gray-500';
     }
   };
 
   const formatRoleName = (role: string): string => {
-    return role.split('_').map(word => 
+    const roleOption = roleOptions.find(r => r.value === role);
+    return roleOption?.label || role.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
@@ -600,6 +452,25 @@ export const UserManagementSystem = () => {
       roles: user.roles || []
     });
     setShowEditModal(true);
+  };
+
+  const handleRoleToggle = (role: string, checked: boolean) => {
+    // Check if this is global admin and user is not authorized
+    if (role === 'global_admin' && newUserData.email !== 'chrisjpmcdonald@gmail.com') {
+      toast({
+        title: 'Access Restricted',
+        description: 'Global Admin role is restricted to chrisjpmcdonald@gmail.com',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setNewUserData(prev => ({
+      ...prev,
+      roles: checked 
+        ? [...prev.roles, role]
+        : prev.roles.filter(r => r !== role)
+    }));
   };
 
   const handleUpdateUser = async () => {
@@ -671,6 +542,15 @@ export const UserManagementSystem = () => {
             Fix Missing User
           </Button>
           <Button
+            onClick={processPendingInvitations}
+            variant="outline"
+            size="sm"
+            className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Process Invitations
+          </Button>
+          <Button
             onClick={loadUsers}
             variant="outline"
             size="sm"
@@ -717,13 +597,11 @@ export const UserManagementSystem = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="global_admin">Global Admin</SelectItem>
-                <SelectItem value="club_admin">Club Admin</SelectItem>
-                <SelectItem value="team_manager">Team Manager</SelectItem>
-                <SelectItem value="coach">Coach</SelectItem>
-                <SelectItem value="staff">Staff</SelectItem>
-                <SelectItem value="parent">Parent</SelectItem>
-                <SelectItem value="player">Player</SelectItem>
+                {roleOptions.map(role => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -936,11 +814,42 @@ export const UserManagementSystem = () => {
             
             <div className="space-y-2">
               <Label>Roles</Label>
-              <RoleSelector
-                selectedRoles={newUserData.roles}
-                onRolesChange={(roles) => setNewUserData(prev => ({ ...prev, roles }))}
-                userEmail={newUserData.email}
-              />
+              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {roleOptions.map((role) => {
+                  const isRestricted = role.restricted && newUserData.email !== 'chrisjpmcdonald@gmail.com';
+                  const isChecked = newUserData.roles.includes(role.value);
+                  
+                  return (
+                    <div key={role.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={role.value}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => handleRoleToggle(role.value, checked as boolean)}
+                        disabled={isRestricted}
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <Label
+                          htmlFor={role.value}
+                          className={`text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 ${
+                            isRestricted ? 'text-gray-400' : ''
+                          }`}
+                        >
+                          {role.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {role.description}
+                          {isRestricted && ' (Restricted)'}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {newUserData.email !== 'chrisjpmcdonald@gmail.com' && (
+                <p className="text-xs text-muted-foreground">
+                  Global Admin role is restricted to chrisjpmcdonald@gmail.com
+                </p>
+              )}
             </div>
             
             <div className="flex gap-2 pt-4">
