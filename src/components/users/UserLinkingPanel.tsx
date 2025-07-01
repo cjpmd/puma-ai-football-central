@@ -45,7 +45,7 @@ export const UserLinkingPanel: React.FC = () => {
 
   const loadUnlinkedUsers = async () => {
     try {
-      // Get all users with their team associations
+      // Get all users with their team associations - only actual authenticated users
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select(`
@@ -152,45 +152,6 @@ export const UserLinkingPanel: React.FC = () => {
     } catch (error) {
       console.error('Error loading available entities:', error);
       toast.error('Failed to load available entities');
-    }
-  };
-
-  const createUserProfile = async (email: string, name: string) => {
-    try {
-      // Check if profile already exists
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('email', email)
-        .single();
-
-      if (existingProfile) {
-        return existingProfile.id;
-      }
-
-      // Create a temporary UUID for the profile until they sign up
-      const tempUserId = crypto.randomUUID();
-      
-      const { data: newProfile, error } = await supabase
-        .from('profiles')
-        .insert({
-          id: tempUserId,
-          email: email,
-          name: name,
-          roles: linkType === 'self' ? ['player'] : ['parent']
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Profile creation error:', error);
-        throw error;
-      }
-
-      return newProfile.id;
-    } catch (error) {
-      console.error('Error creating user profile:', error);
-      throw error;
     }
   };
 
@@ -359,10 +320,17 @@ export const UserLinkingPanel: React.FC = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
-            Manual User Linking
+            User Linking (Authenticated Users Only)
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> This panel only shows users who have already signed up and been authenticated. 
+              Users must first create an account through the normal signup process before they can be linked to players or staff.
+            </p>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Search Users/Entities</Label>
@@ -463,12 +431,12 @@ export const UserLinkingPanel: React.FC = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Users Without Player/Staff Links ({filteredUsers.length})
+              Authenticated Users Without Links ({filteredUsers.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              These users have team access but aren't linked to any player or staff profile.
+              These are authenticated users who have team access but aren't linked to any player or staff profile.
             </p>
             <div className="space-y-2 max-h-64 overflow-y-auto">
               {filteredUsers.map(user => (

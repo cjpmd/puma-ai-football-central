@@ -21,14 +21,14 @@ export const CaptainSelector: React.FC<CaptainSelectorProps> = ({
       </CardHeader>
       <CardContent>
         <Select
-          value={captainId || "none"}
-          onValueChange={(value) => onCaptainChange(value === "none" ? undefined : value)}
+          value={captainId || "no-captain"}
+          onValueChange={(value) => onCaptainChange(value === "no-captain" ? undefined : value)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select captain" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="none">No captain</SelectItem>
+            <SelectItem value="no-captain">No captain</SelectItem>
             {squadPlayers.map((player) => (
               <SelectItem key={player.id} value={player.id}>
                 {player.name} (#{player.squadNumber})
