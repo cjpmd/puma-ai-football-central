@@ -29,7 +29,7 @@ export const StaffManagement: React.FC = () => {
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const { user, teams } = useAuth();
+  const { user, profile } = useAuth();
   const { canViewStaff, isStaffMember } = useAuthorization();
   const { toast } = useToast();
 
@@ -37,7 +37,7 @@ export const StaffManagement: React.FC = () => {
     if (canViewStaff || isStaffMember) {
       loadStaff();
     }
-  }, [canViewStaff, isStaffMember, teams]);
+  }, [canViewStaff, isStaffMember]);
 
   useEffect(() => {
     filterStaff();
@@ -46,16 +46,9 @@ export const StaffManagement: React.FC = () => {
   const loadStaff = async () => {
     try {
       setLoading(true);
+      console.log('Loading all staff members...');
 
-      // Get staff members from teams the user has access to
-      const teamIds = teams.map(team => team.id);
-      
-      if (teamIds.length === 0) {
-        setStaff([]);
-        return;
-      }
-
-      // Get team staff
+      // Get ALL team staff (not limited by user's teams)
       const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
         .select(`
@@ -65,12 +58,14 @@ export const StaffManagement: React.FC = () => {
           team_id,
           teams!inner(name)
         `)
-        .in('team_id', teamIds);
+        .order('name');
 
       if (staffError) {
         console.error('Error fetching staff:', staffError);
         throw staffError;
       }
+
+      console.log('Raw staff data:', staffData?.length || 0);
 
       // Get user-staff links to see which staff members have user accounts
       const { data: userStaffLinks, error: linksError } = await supabase
@@ -84,6 +79,8 @@ export const StaffManagement: React.FC = () => {
       if (linksError) {
         console.error('Error fetching user-staff links:', linksError);
       }
+
+      console.log('User-staff links:', userStaffLinks?.length || 0);
 
       // Combine the data
       const staffWithUserInfo: StaffMember[] = (staffData || []).map(staffMember => {
@@ -102,6 +99,7 @@ export const StaffManagement: React.FC = () => {
         };
       });
 
+      console.log('Processed staff with user info:', staffWithUserInfo.length);
       setStaff(staffWithUserInfo);
     } catch (error: any) {
       console.error('Error loading staff:', error);
@@ -173,9 +171,13 @@ export const StaffManagement: React.FC = () => {
         <div>
           <h2 className="text-2xl font-bold">Staff Directory</h2>
           <p className="text-muted-foreground">
-            View staff members across your teams
+            View all staff members across teams ({staff.length} total)
           </p>
         </div>
+        <Button onClick={loadStaff} variant="outline">
+          <UserPlus className="h-4 w-4 mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* Search */}
@@ -257,7 +259,7 @@ export const StaffManagement: React.FC = () => {
             <p className="text-gray-600">
               {searchTerm 
                 ? 'Try adjusting your search criteria.'
-                : 'No staff members have been added to your teams yet.'
+                : 'No staff members have been added to teams yet.'
               }
             </p>
           </Card>

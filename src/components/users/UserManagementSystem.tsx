@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -117,7 +118,8 @@ export const UserManagementSystem = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [newUserData, setNewUserData] = useState({
+  const [activeTab, setActiveTab] = useState('users');
+  const [newUserData, setNewUserData] = setState({
     name: '',
     email: '',
     phone: '',
@@ -137,6 +139,9 @@ export const UserManagementSystem = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
+      console.log('Loading users with links...');
+      
+      // Get all profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
@@ -152,19 +157,79 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const processedUsers: UserProfile[] = profiles.map(profile => ({
-        id: profile.id,
-        name: profile.name || 'Unknown',
-        email: profile.email || '',
-        phone: profile.phone || '',
-        roles: Array.isArray(profile.roles) ? profile.roles : [],
-        created_at: profile.created_at,
-        teams: [],
-        clubs: [],
-        playerLinks: [],
-        staffLinks: []
-      }));
+      // Get user-player links
+      const { data: userPlayerLinks, error: playerLinksError } = await supabase
+        .from('user_players')
+        .select(`
+          user_id,
+          relationship,
+          players!inner(
+            id,
+            name,
+            teams!inner(name)
+          )
+        `);
 
+      if (playerLinksError) {
+        console.error('Error fetching player links:', playerLinksError);
+      }
+
+      // Get user-staff links
+      const { data: userStaffLinks, error: staffLinksError } = await supabase
+        .from('user_staff')
+        .select(`
+          user_id,
+          relationship,
+          team_staff!inner(
+            id,
+            name,
+            role,
+            teams!inner(name)
+          )
+        `);
+
+      if (staffLinksError) {
+        console.error('Error fetching staff links:', staffLinksError);
+      }
+
+      // Process users with their links
+      const processedUsers: UserProfile[] = profiles.map(profile => {
+        // Find player links for this user
+        const playerLinks = (userPlayerLinks || [])
+          .filter(link => link.user_id === profile.id)
+          .map(link => ({
+            id: (link as any).players.id,
+            name: (link as any).players.name,
+            team: (link as any).players.teams?.name || 'Unknown Team',
+            relationship: link.relationship
+          }));
+
+        // Find staff links for this user
+        const staffLinks = (userStaffLinks || [])
+          .filter(link => link.user_id === profile.id)
+          .map(link => ({
+            id: (link as any).team_staff.id,
+            name: (link as any).team_staff.name,
+            team: (link as any).team_staff.teams?.name || 'Unknown Team',
+            role: (link as any).team_staff.role,
+            relationship: link.relationship
+          }));
+
+        return {
+          id: profile.id,
+          name: profile.name || 'Unknown',
+          email: profile.email || '',
+          phone: profile.phone || '',
+          roles: Array.isArray(profile.roles) ? profile.roles : [],
+          created_at: profile.created_at,
+          teams: [],
+          clubs: [],
+          playerLinks,
+          staffLinks
+        };
+      });
+
+      console.log('Processed users with links:', processedUsers.length);
       setUsers(processedUsers);
     } catch (error: any) {
       console.error('Error loading users:', error);
@@ -386,7 +451,7 @@ export const UserManagementSystem = () => {
         </div>
       </div>
 
-      <Tabs value="users" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="users">Active Users ({filteredUsers.length})</TabsTrigger>
           <TabsTrigger value="team-management">Team Management</TabsTrigger>
@@ -480,9 +545,9 @@ export const UserManagementSystem = () => {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleRemovePlayerLink(user.id, link.id)}
-                                      className="text-red-600 hover:text-red-700"
+                                      className="text-red-600 hover:text-red-700 ml-1 p-0 h-auto"
                                     >
-                                      <Unlink className="h-4 w-4" />
+                                      <Unlink className="h-3 w-3" />
                                     </Button>
                                   </Badge>
                                 ))}
@@ -501,9 +566,9 @@ export const UserManagementSystem = () => {
                                       size="sm"
                                       variant="ghost"
                                       onClick={() => handleRemoveStaffLink(user.id, link.id)}
-                                      className="text-red-600 hover:text-red-700"
+                                      className="text-red-600 hover:text-red-700 ml-1 p-0 h-auto"
                                     >
-                                      <Unlink className="h-4 w-4" />
+                                      <Unlink className="h-3 w-3" />
                                     </Button>
                                   </Badge>
                                 ))}
