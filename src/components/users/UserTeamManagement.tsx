@@ -55,7 +55,7 @@ export const UserTeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [showPendingOnly, setShowPendingOnly] = useState(false);
+  const [showUnlinkedOnly, setShowUnlinkedOnly] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -82,7 +82,7 @@ export const UserTeamManagement = () => {
 
       if (teamsError) throw teamsError;
 
-      // Load user-team relationships with separate queries to avoid join issues
+      // Load user-team relationships
       const { data: userTeamsData, error: userTeamsError } = await supabase
         .from('user_teams')
         .select('id, user_id, team_id, role')
@@ -100,7 +100,7 @@ export const UserTeamManagement = () => {
         console.error('Error loading invitations:', invitationsError);
       }
 
-      // Transform user-team data by fetching user and team details separately
+      // Transform user-team data by fetching user and team details
       const transformedUserTeams: UserTeam[] = [];
       
       if (userTeamsData) {
@@ -119,9 +119,6 @@ export const UserTeamManagement = () => {
             .eq('id', ut.team_id)
             .maybeSingle();
 
-          // Check if user has a profile
-          const hasProfile = userData !== null;
-
           transformedUserTeams.push({
             id: ut.id,
             user_id: ut.user_id,
@@ -130,7 +127,7 @@ export const UserTeamManagement = () => {
             user_name: userData?.name || 'Unknown User',
             user_email: userData?.email || 'Unknown Email',
             team_name: teamData?.name || 'Unknown Team',
-            has_profile: hasProfile
+            has_profile: userData !== null
           });
         }
       }
@@ -322,13 +319,26 @@ export const UserTeamManagement = () => {
     );
   };
 
+  // Get users without any team relationships
+  const getUsersWithoutTeams = () => {
+    const usersWithTeams = new Set(userTeams.map(ut => ut.user_id));
+    return users.filter(user => !usersWithTeams.has(user.id));
+  };
+
   const filteredUserTeams = searchEmail 
     ? findUserByEmail(searchEmail)
-    : (showPendingOnly ? userTeams.filter(ut => !ut.has_profile) : userTeams);
+    : (showUnlinkedOnly ? userTeams.filter(ut => !ut.has_profile) : userTeams);
 
   const filteredPendingInvitations = searchEmail
     ? findPendingByEmail(searchEmail)
     : pendingInvitations;
+
+  const unlinkedUsers = searchEmail
+    ? getUsersWithoutTeams().filter(user => 
+        user.email.toLowerCase().includes(searchEmail.toLowerCase()) ||
+        user.name.toLowerCase().includes(searchEmail.toLowerCase())
+      )
+    : getUsersWithoutTeams();
 
   if (loading) {
     return (
@@ -446,17 +456,65 @@ export const UserTeamManagement = () => {
             </div>
             <div className="flex gap-2">
               <Button
-                variant={showPendingOnly ? "default" : "outline"}
+                variant={showUnlinkedOnly ? "default" : "outline"}
                 size="sm"
-                onClick={() => setShowPendingOnly(!showPendingOnly)}
+                onClick={() => setShowUnlinkedOnly(!showUnlinkedOnly)}
               >
                 <AlertTriangle className="h-4 w-4 mr-2" />
-                {showPendingOnly ? "Show All" : "Show Users Without Profiles"}
+                {showUnlinkedOnly ? "Show All" : "Show Unlinked Users Only"}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Users Without Team Assignments */}
+      {unlinkedUsers.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Users Without Team Assignments ({unlinkedUsers.length})</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Users who have profiles but are not assigned to any teams
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {unlinkedUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg bg-blue-50">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <UserSearch className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <p className="font-medium">{user.name}</p>
+                        <p className="text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">No Team Assignment</Badge>
+                      {user.roles.map((role) => (
+                        <Badge key={role} variant="outline">{role}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(user.id);
+                        setIsAddModalOpen(true);
+                      }}
+                    >
+                      Assign to Team
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Pending Invitations */}
       {filteredPendingInvitations.length > 0 && (
@@ -566,14 +624,14 @@ export const UserTeamManagement = () => {
               </div>
             ))}
 
-            {filteredUserTeams.length === 0 && (
+            {filteredUserTeams.length === 0 && unlinkedUsers.length === 0 && filteredPendingInvitations.length === 0 && (
               <div className="text-center py-8">
                 <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold mb-2">No User Team Relationships Found</h3>
+                <h3 className="font-semibold mb-2">No Users Found</h3>
                 <p className="text-muted-foreground mb-4">
                   {searchEmail 
-                    ? `No relationships found for "${searchEmail}"`
-                    : 'No user team relationships exist yet.'
+                    ? `No users found matching "${searchEmail}"`
+                    : 'No users or relationships exist yet.'
                   }
                 </p>
                 <Button onClick={() => setIsAddModalOpen(true)}>
