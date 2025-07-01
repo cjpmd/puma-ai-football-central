@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus } from 'lucide-react';
+import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus, RefreshCw } from 'lucide-react';
 
 interface StaffMember {
   id: string;
@@ -48,7 +48,7 @@ export const StaffManagement: React.FC = () => {
       setLoading(true);
       console.log('Loading all staff members...');
 
-      // Get ALL team staff (not limited by user's teams)
+      // Get ALL team staff with better error handling
       const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
         .select(`
@@ -56,6 +56,8 @@ export const StaffManagement: React.FC = () => {
           name,
           role,
           team_id,
+          email,
+          phone,
           teams!inner(name)
         `)
         .order('name');
@@ -65,7 +67,7 @@ export const StaffManagement: React.FC = () => {
         throw staffError;
       }
 
-      console.log('Raw staff data:', staffData?.length || 0);
+      console.log('Raw staff data:', staffData?.length || 0, staffData);
 
       // Get user-staff links to see which staff members have user accounts
       const { data: userStaffLinks, error: linksError } = await supabase
@@ -82,24 +84,24 @@ export const StaffManagement: React.FC = () => {
 
       console.log('User-staff links:', userStaffLinks?.length || 0);
 
-      // Combine the data
+      // Combine the data with better null checking
       const staffWithUserInfo: StaffMember[] = (staffData || []).map(staffMember => {
         const userLink = userStaffLinks?.find(link => link.staff_id === staffMember.id);
         
         return {
           id: staffMember.id,
-          name: staffMember.name,
-          role: staffMember.role,
+          name: staffMember.name || 'Unknown',
+          role: staffMember.role || 'Unknown Role',
           team_name: (staffMember as any).teams?.name || 'Unknown Team',
           team_id: staffMember.team_id,
+          email: staffMember.email || (userLink as any)?.profiles?.email,
+          phone: staffMember.phone || (userLink as any)?.profiles?.phone,
           linked_user_id: userLink?.user_id,
           linked_user_name: (userLink as any)?.profiles?.name,
-          email: (userLink as any)?.profiles?.email,
-          phone: (userLink as any)?.profiles?.phone,
         };
       });
 
-      console.log('Processed staff with user info:', staffWithUserInfo.length);
+      console.log('Processed staff with user info:', staffWithUserInfo);
       setStaff(staffWithUserInfo);
     } catch (error: any) {
       console.error('Error loading staff:', error);
@@ -174,10 +176,12 @@ export const StaffManagement: React.FC = () => {
             View all staff members across teams ({staff.length} total)
           </p>
         </div>
-        <Button onClick={loadStaff} variant="outline">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={loadStaff} variant="outline">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Search */}
@@ -189,6 +193,11 @@ export const StaffManagement: React.FC = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
+      </div>
+
+      {/* Debug Info */}
+      <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+        Debug: Found {staff.length} staff members, showing {filteredStaff.length} after filtering
       </div>
 
       {/* Staff List */}

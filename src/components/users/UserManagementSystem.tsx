@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -334,7 +335,7 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Check if user exists in auth.users table
+      // Check if user exists in auth.users table with proper error handling
       const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
       
       if (usersError) {
@@ -347,8 +348,7 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const authUsers = authData?.users || [];
-      if (authUsers.length === 0) {
+      if (!authData || !authData.users || authData.users.length === 0) {
         toast({
           title: 'No Users Found',
           description: 'No authenticated users found in the system.',
@@ -357,8 +357,10 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Find the user with proper type checking
-      const authUser = authUsers.find((u: any) => u.email === email);
+      // Find the user with explicit typing and proper validation
+      const authUser = authData.users.find((user: any) => {
+        return user && user.email && user.email === email;
+      });
       
       if (!authUser || !authUser.email || !authUser.id) {
         toast({
