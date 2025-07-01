@@ -347,8 +347,8 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const authUsers = authData?.users;
-      if (!authUsers || authUsers.length === 0) {
+      const authUsers = authData?.users || [];
+      if (authUsers.length === 0) {
         toast({
           title: 'No Users Found',
           description: 'No authenticated users found in the system.',
@@ -357,7 +357,8 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      const authUser = authUsers.find(u => u.email === email);
+      // Find the user with proper type checking
+      const authUser = authUsers.find((u: any) => u.email === email);
       
       if (!authUser || !authUser.email || !authUser.id) {
         toast({
