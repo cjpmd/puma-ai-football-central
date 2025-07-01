@@ -10,6 +10,7 @@ interface PositionSlotProps {
   player?: SquadPlayer;
   isCaptain?: boolean;
   nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
+  isLarger?: boolean;
 }
 
 export const PositionSlot: React.FC<PositionSlotProps> = ({
@@ -17,7 +18,8 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
   position,
   player,
   isCaptain = false,
-  nameDisplayOption = 'surname'
+  nameDisplayOption = 'surname',
+  isLarger = false
 }) => {
   const { isOver, setNodeRef: setDropRef } = useDroppable({
     id: id,
@@ -48,6 +50,8 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     }
   };
 
+  const slotSize = isLarger ? 'w-20 h-20' : 'w-16 h-16';
+
   return (
     <div
       ref={setDropRef}
@@ -60,7 +64,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     >
       <div
         className={`
-          w-16 h-16 rounded-full border-2 border-dashed flex items-center justify-center
+          ${slotSize} rounded-full border-2 border-dashed flex items-center justify-center
           ${getPositionGroupColor()}
           ${isOver ? 'border-solid bg-opacity-75 scale-110' : ''}
           transition-all duration-200
@@ -72,7 +76,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
             style={style}
             {...listeners}
             {...attributes}
-            className={`cursor-grab ${isDragging ? 'opacity-50' : ''}`}
+            className={`cursor-grab print:cursor-default ${isDragging ? 'opacity-50' : ''}`}
           >
             <PlayerIcon 
               player={player} 
@@ -81,14 +85,15 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
               isCircular={true}
               positionAbbreviation={position.abbreviation}
               showPositionLabel={true}
+              isLarger={isLarger}
             />
           </div>
         ) : (
           <div className="text-center">
-            <div className="text-xs font-bold text-gray-600">
+            <div className={`${isLarger ? 'text-sm' : 'text-xs'} font-bold text-gray-600`}>
               {position.abbreviation}
             </div>
-            <div className="text-xs text-gray-500 mt-1">
+            <div className={`${isLarger ? 'text-xs' : 'text-xs'} text-gray-500 mt-1`}>
               {position.positionName.split(' ').map(word => word.slice(0, 3)).join(' ')}
             </div>
           </div>

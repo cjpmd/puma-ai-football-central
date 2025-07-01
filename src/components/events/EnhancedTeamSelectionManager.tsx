@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -442,6 +441,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     nameDisplayOption={nameDisplayOption as any}
                     onPeriodsChange={handlePeriodsChange}
                     onCaptainChange={handleCaptainChange}
+                    gameDuration={event.game_duration || 50}
                   />
                 )}
               </TabsContent>

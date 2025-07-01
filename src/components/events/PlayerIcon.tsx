@@ -12,6 +12,7 @@ interface PlayerIconProps {
   isCircular?: boolean;
   positionAbbreviation?: string;
   showPositionLabel?: boolean;
+  isLarger?: boolean;
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
@@ -21,7 +22,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   nameDisplayOption = 'surname',
   isCircular = false,
   positionAbbreviation,
-  showPositionLabel = false
+  showPositionLabel = false,
+  isLarger = false
 }) => {
   const {
     attributes,
@@ -70,6 +72,7 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   };
 
   const actualIsDragging = isDragging || dndIsDragging;
+  const circularSize = isLarger ? 'w-16 h-16' : 'w-14 h-14';
 
   if (isCircular) {
     return (
@@ -79,34 +82,34 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         {...listeners}
         {...attributes}
         className={`
-          relative flex flex-col items-center justify-center w-14 h-14 border-2
+          relative flex flex-col items-center justify-center ${circularSize} border-2
           ${getAvailabilityStyle()}
           ${actualIsDragging ? 'shadow-lg scale-110' : 'shadow-sm'}
-          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab'}
+          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
           transition-all duration-200
         `}
       >
         {/* Captain indicator */}
         {(isCaptain || player.squadRole === 'captain') && (
-          <Crown className="absolute -top-1 -right-1 h-3 w-3 text-yellow-500" />
+          <Crown className={`absolute -top-1 -right-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-yellow-500`} />
         )}
         
         {/* Content inside circle - position abbreviation, name, squad number */}
         <div className="flex flex-col items-center justify-center text-center leading-none">
           {/* Position abbreviation above name if provided */}
           {showPositionLabel && positionAbbreviation && (
-            <div className="text-xs font-bold text-blue-600 mb-0.5">
+            <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-blue-600 mb-0.5`}>
               {positionAbbreviation}
             </div>
           )}
           
           {/* Player name in center */}
-          <div className="text-xs font-medium leading-tight">
+          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium leading-tight`}>
             {getDisplayName()}
           </div>
           
           {/* Squad number below name */}
-          <div className="text-xs font-bold text-gray-600 mt-0.5">
+          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-gray-600 mt-0.5`}>
             #{player.squadNumber}
           </div>
         </div>
@@ -124,7 +127,7 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         relative flex flex-col items-center p-2 rounded-lg border-2 min-w-[80px] max-w-[100px]
         ${getAvailabilityStyle()}
         ${actualIsDragging ? 'shadow-lg transform rotate-2' : 'shadow-sm'}
-        ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab'}
+        ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
         transition-all duration-200
       `}
     >
