@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus } from 'lucide-react';
+import { Search, UserPlus, Edit, Trash2, Users, Shield, AlertTriangle, UserSearch, Plus, RefreshCw } from 'lucide-react';
 
 interface User {
   id: string;
@@ -22,6 +21,7 @@ interface User {
     teamName: string;
     role: string;
   }>;
+  hasProfile: boolean;
 }
 
 interface Team {
@@ -60,22 +60,19 @@ export const UserTeamManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('=== LOADING ALL USER DATA ===');
       
-      // Load all users from profiles
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, name, email, roles')
-        .order('name');
-
-      if (usersError) throw usersError;
-
-      // Load teams
+      // Load teams first
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name, age_group')
         .order('name');
 
-      if (teamsError) throw teamsError;
+      if (teamsError) {
+        console.error('Error loading teams:', teamsError);
+        throw teamsError;
+      }
+      console.log('Teams loaded:', teamsData?.length || 0);
 
       // Load all user-team relationships
       const { data: userTeamsData, error: userTeamsError } = await supabase
@@ -83,7 +80,23 @@ export const UserTeamManagement = () => {
         .select('id, user_id, team_id, role')
         .order('created_at', { ascending: false });
 
-      if (userTeamsError) throw userTeamsError;
+      if (userTeamsError) {
+        console.error('Error loading user teams:', userTeamsError);
+        throw userTeamsError;
+      }
+      console.log('User teams loaded:', userTeamsData?.length || 0);
+
+      // Load all profiles
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, roles')
+        .order('name');
+
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
+      }
+      console.log('Profiles loaded:', profilesData?.length || 0);
 
       // Load pending invitations
       const { data: invitationsData, error: invitationsError } = await supabase
@@ -94,29 +107,90 @@ export const UserTeamManagement = () => {
       if (invitationsError) {
         console.error('Error loading invitations:', invitationsError);
       }
+      console.log('Invitations loaded:', invitationsData?.length || 0);
 
-      // Process users with their team assignments
-      const processedUsers: User[] = (usersData || []).map(user => {
-        const userTeamAssignments = (userTeamsData || [])
-          .filter(ut => ut.user_id === user.id)
-          .map(ut => {
-            const team = (teamsData || []).find(t => t.id === ut.team_id);
-            return {
-              userTeamId: ut.id,
-              teamId: ut.team_id,
-              teamName: team?.name || 'Unknown Team',
-              role: ut.role
-            };
-          });
+      // Create a comprehensive list of all users from multiple sources
+      const allUserIds = new Set<string>();
+      const userMap = new Map<string, Partial<User>>();
 
-        return {
-          id: user.id,
-          name: user.name || 'Unknown',
-          email: user.email || '',
-          roles: Array.isArray(user.roles) ? user.roles : [],
-          teamAssignments: userTeamAssignments
-        };
+      // Add users from profiles
+      (profilesData || []).forEach(profile => {
+        allUserIds.add(profile.id);
+        userMap.set(profile.id, {
+          id: profile.id,
+          name: profile.name || 'Unknown',
+          email: profile.email || '',
+          roles: Array.isArray(profile.roles) ? profile.roles : [],
+          hasProfile: true,
+          teamAssignments: []
+        });
       });
+
+      // Add users from user_teams (might not have profiles)
+      (userTeamsData || []).forEach(userTeam => {
+        allUserIds.add(userTeam.user_id);
+        if (!userMap.has(userTeam.user_id)) {
+          userMap.set(userTeam.user_id, {
+            id: userTeam.user_id,
+            name: 'No Profile Found',
+            email: 'Unknown',
+            roles: [],
+            hasProfile: false,
+            teamAssignments: []
+          });
+        }
+      });
+
+      // Add users from accepted invitations (might not have profiles yet)
+      (invitationsData || [])
+        .filter(inv => inv.accepted_by)
+        .forEach(invitation => {
+          const userId = invitation.accepted_by;
+          allUserIds.add(userId);
+          if (!userMap.has(userId)) {
+            userMap.set(userId, {
+              id: userId,
+              name: invitation.name || 'From Invitation',
+              email: invitation.email || 'Unknown',
+              roles: [invitation.role],
+              hasProfile: false,
+              teamAssignments: []
+            });
+          }
+        });
+
+      console.log('Total unique user IDs found:', allUserIds.size);
+      console.log('User IDs:', Array.from(allUserIds));
+
+      // Build team assignments for each user
+      (userTeamsData || []).forEach(userTeam => {
+        const user = userMap.get(userTeam.user_id);
+        if (user) {
+          const team = (teamsData || []).find(t => t.id === userTeam.team_id);
+          user.teamAssignments = user.teamAssignments || [];
+          user.teamAssignments.push({
+            userTeamId: userTeam.id,
+            teamId: userTeam.team_id,
+            teamName: team?.name || 'Unknown Team',
+            role: userTeam.role
+          });
+        }
+      });
+
+      // Convert map to array
+      const processedUsers: User[] = Array.from(userMap.values()).map(user => ({
+        id: user.id!,
+        name: user.name!,
+        email: user.email!,
+        roles: user.roles!,
+        teamAssignments: user.teamAssignments!,
+        hasProfile: user.hasProfile!
+      }));
+
+      console.log('Processed users:', processedUsers.length);
+      console.log('Looking for specific user c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0...');
+      const specificUser = processedUsers.find(u => u.id === 'c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0');
+      console.log('Found specific user:', specificUser);
 
       // Transform pending invitations
       const transformedInvitations: PendingInvitation[] = [];
@@ -280,7 +354,8 @@ export const UserTeamManagement = () => {
   const filteredUsers = searchEmail 
     ? users.filter(user => 
         user.email.toLowerCase().includes(searchEmail.toLowerCase()) ||
-        user.name.toLowerCase().includes(searchEmail.toLowerCase())
+        user.name.toLowerCase().includes(searchEmail.toLowerCase()) ||
+        user.id.toLowerCase().includes(searchEmail.toLowerCase())
       )
     : users;
 
@@ -311,82 +386,92 @@ export const UserTeamManagement = () => {
             Manage all users, their team assignments, and roles
           </p>
         </div>
-        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add User to Team
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add User to Team</DialogTitle>
-              <DialogDescription>
-                Select a user, team, and role to create a new relationship.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>User</Label>
-                <Select value={selectedUser} onValueChange={setSelectedUser}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select user" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name || user.email} ({user.email})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={loadData}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Refresh Data
+          </Button>
+          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add User to Team
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add User to Team</DialogTitle>
+                <DialogDescription>
+                  Select a user, team, and role to create a new relationship.
+                </DialogDescription>
+              </DialogHeader>
               
-              <div className="space-y-2">
-                <Label>Team</Label>
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teams.map((team) => (
-                      <SelectItem key={team.id} value={team.id}>
-                        {team.name} ({team.age_group})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>User</Label>
+                  <Select value={selectedUser} onValueChange={setSelectedUser}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select user" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name || user.email} ({user.email}) - {user.id.substring(0, 8)}...
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Team</Label>
+                  <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select team" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teams.map((team) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name} ({team.age_group})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="team_manager">Team Manager</SelectItem>
+                      <SelectItem value="team_assistant_manager">Assistant Manager</SelectItem>
+                      <SelectItem value="team_coach">Coach</SelectItem>
+                      <SelectItem value="team_helper">Helper</SelectItem>
+                      <SelectItem value="player">Player</SelectItem>
+                      <SelectItem value="parent">Parent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button onClick={addUserToTeam} className="flex-1">
+                    Add to Team
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="flex-1">
+                    Cancel
+                  </Button>
+                </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label>Role</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="team_manager">Team Manager</SelectItem>
-                    <SelectItem value="team_assistant_manager">Assistant Manager</SelectItem>
-                    <SelectItem value="team_coach">Coach</SelectItem>
-                    <SelectItem value="team_helper">Helper</SelectItem>
-                    <SelectItem value="player">Player</SelectItem>
-                    <SelectItem value="parent">Parent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button onClick={addUserToTeam} className="flex-1">
-                  Add to Team
-                </Button>
-                <Button variant="outline" onClick={() => setIsAddModalOpen(false)} className="flex-1">
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {/* Search Controls */}
@@ -398,11 +483,38 @@ export const UserTeamManagement = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email, or UUID..."
               value={searchEmail}
               onChange={(e) => setSearchEmail(e.target.value)}
               className="pl-10"
             />
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Try searching for: c68e8344-0dd6-4a2c-b1c3-8dd5114c21d0, Micky McPherson, or m888kky@outlook.com
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Summary */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+            <div>
+              <p className="text-2xl font-bold">{users.length}</p>
+              <p className="text-sm text-muted-foreground">Total Users</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{users.filter(u => u.hasProfile).length}</p>
+              <p className="text-sm text-muted-foreground">With Profiles</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{users.filter(u => !u.hasProfile).length}</p>
+              <p className="text-sm text-muted-foreground">Without Profiles</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{pendingInvitations.length}</p>
+              <p className="text-sm text-muted-foreground">Pending Invitations</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -460,26 +572,35 @@ export const UserTeamManagement = () => {
                       <div className="flex items-center gap-3 mb-2">
                         <Users className="h-4 w-4 text-blue-500" />
                         <div>
-                          <p className="font-medium">{user.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{user.name}</p>
+                            {!user.hasProfile && (
+                              <Badge variant="destructive" className="text-xs">
+                                No Profile
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-muted-foreground">{user.email}</p>
-                          <p className="text-xs text-muted-foreground">ID: {user.id}</p>
+                          <p className="text-xs text-muted-foreground font-mono">ID: {user.id}</p>
                         </div>
                       </div>
                       
                       {/* Global Roles */}
-                      <div className="mb-3">
-                        <span className="text-xs font-medium text-gray-500">Global Roles:</span>
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {user.roles.map((role) => (
-                            <Badge key={role} variant="secondary" className="text-xs">
-                              {role.replace('_', ' ')}
-                            </Badge>
-                          ))}
-                          {user.roles.length === 0 && (
-                            <Badge variant="outline" className="text-xs">No global roles</Badge>
-                          )}
+                      {user.hasProfile && (
+                        <div className="mb-3">
+                          <span className="text-xs font-medium text-gray-500">Global Roles:</span>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {user.roles.map((role) => (
+                              <Badge key={role} variant="secondary" className="text-xs">
+                                {role.replace('_', ' ')}
+                              </Badge>
+                            ))}
+                            {user.roles.length === 0 && (
+                              <Badge variant="outline" className="text-xs">No global roles</Badge>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                     
                     <Button
@@ -595,6 +716,10 @@ export const UserTeamManagement = () => {
                     : 'No users exist yet.'
                   }
                 </p>
+                <Button onClick={loadData} variant="outline">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh Data
+                </Button>
               </div>
             )}
           </div>
