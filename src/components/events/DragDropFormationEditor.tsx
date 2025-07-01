@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Crown, Clock, X } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, Crown, Clock, X, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
@@ -50,6 +52,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   onCaptainChange
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
+  const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
   
   const gameFormatFormations = getFormationsByFormat(gameFormat as any);
@@ -95,17 +98,61 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     onPeriodsChange(updatedPeriods);
   };
 
+  const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
+    if (positionName.toLowerCase().includes('goalkeeper')) return 'goalkeeper';
+    if (positionName.toLowerCase().includes('defender')) return 'defender';
+    if (positionName.toLowerCase().includes('midfielder')) return 'midfielder';
+    if (positionName.toLowerCase().includes('striker') || positionName.toLowerCase().includes('attacking')) return 'forward';
+    return 'midfielder';
+  };
+
+  const preservePlayerAssignments = (oldPositions: PositionSlotType[], newPositions: PositionSlotType[]): PositionSlotType[] => {
+    // Create a copy of new positions to work with
+    const updatedPositions = [...newPositions];
+    
+    // For each old position that has a player, try to find a matching position in the new formation
+    oldPositions.forEach(oldPos => {
+      if (!oldPos.playerId) return;
+      
+      // First, try to find exact position match
+      let matchIndex = updatedPositions.findIndex(newPos => 
+        newPos.positionName === oldPos.positionName && !newPos.playerId
+      );
+      
+      // If no exact match, try to find position in same group
+      if (matchIndex === -1) {
+        const oldPosGroup = getPositionGroup(oldPos.positionName);
+        matchIndex = updatedPositions.findIndex(newPos => 
+          getPositionGroup(newPos.positionName) === oldPosGroup && !newPos.playerId
+        );
+      }
+      
+      // If we found a match, assign the player
+      if (matchIndex !== -1) {
+        updatedPositions[matchIndex] = {
+          ...updatedPositions[matchIndex],
+          playerId: oldPos.playerId
+        };
+      }
+    });
+    
+    return updatedPositions;
+  };
+
   const updatePeriodFormation = (periodId: string, formation: string) => {
     console.log('Updating formation for period:', periodId, 'to:', formation);
     
     const updatedPeriods = periods.map(period => {
       if (period.id === periodId) {
         const newPositions = createPositionSlots(formation);
-        console.log('Created new positions for formation:', formation, newPositions);
+        // Preserve existing player assignments
+        const preservedPositions = preservePlayerAssignments(period.positions, newPositions);
+        
+        console.log('Created new positions for formation:', formation, preservedPositions);
         return {
           ...period,
           formation,
-          positions: newPositions
+          positions: preservedPositions
         };
       }
       return period;
@@ -173,14 +220,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     };
     
     return positionMap[positionName] || positionName.slice(0, 2).toUpperCase();
-  };
-
-  const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
-    if (positionName.toLowerCase().includes('goalkeeper')) return 'goalkeeper';
-    if (positionName.toLowerCase().includes('defender')) return 'defender';
-    if (positionName.toLowerCase().includes('midfielder')) return 'midfielder';
-    if (positionName.toLowerCase().includes('striker') || positionName.toLowerCase().includes('attacking')) return 'forward';
-    return 'midfielder';
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -326,23 +365,34 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     });
   }, [periods]);
 
+  // Auto-collapse available players when all are assigned
+  useEffect(() => {
+    const unusedPlayers = getUnusedPlayers();
+    if (unusedPlayers.length === 0 && availablePlayersOpen) {
+      setAvailablePlayersOpen(false);
+    } else if (unusedPlayers.length > 0 && !availablePlayersOpen) {
+      setAvailablePlayersOpen(true);
+    }
+  }, [squadPlayers, periods]);
+
   const playingTimeSummary = calculatePlayingTimeSummary();
+  const unusedPlayers = getUnusedPlayers();
 
   return (
     <div className="space-y-6">
       <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        {/* Captain Selection */}
+        {/* Compact Captain Selection */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Crown className="h-5 w-5 text-yellow-500" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Crown className="h-4 w-4 text-yellow-500" />
               Team Captain
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0">
             <Select value={globalCaptainId || ''} onValueChange={onCaptainChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select team captain..." />
+              <SelectTrigger className="h-8">
+                <SelectValue placeholder="Select captain..." />
               </SelectTrigger>
               <SelectContent>
                 {squadPlayers
@@ -381,47 +431,62 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Button>
         </div>
 
-        {/* Available Players Pool */}
-        <div className="space-y-2">
-          <h4 className="text-sm font-medium">Available Players ({squadPlayers.filter(p => p.availabilityStatus === 'available').length})</h4>
-          <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[100px]">
-            {squadPlayers.filter(p => p.availabilityStatus === 'available').map((player) => {
-              // Check if player is used in any period
-              const isUsed = periods.some(period => 
-                period.positions.some(pos => pos.playerId === player.id) ||
-                period.substitutes.includes(player.id)
-              );
-              
-              if (isUsed) return null;
-              
-              return (
-                <div 
-                  key={player.id} 
-                  id={player.id}
-                  className="cursor-grab"
-                  draggable
-                >
-                  <PlayerIcon 
-                    player={player} 
-                    isCaptain={player.id === globalCaptainId}
-                    nameDisplayOption={mappedNameDisplayOption}
-                    isCircular={true}
-                  />
+        {/* Collapsible Available Players Pool */}
+        <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="pb-2 cursor-pointer hover:bg-gray-50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4" />
+                    Available Players ({unusedPlayers.length})
+                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    {unusedPlayers.length === 0 && (
+                      <Badge variant="secondary" className="text-xs">All assigned</Badge>
+                    )}
+                    {availablePlayersOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </div>
                 </div>
-              );
-            })}
-            {getUnusedPlayers().length === 0 && (
-              <div className="text-sm text-muted-foreground">All available players are assigned</div>
-            )}
-          </div>
-        </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[80px]">
+                  {unusedPlayers.map((player) => (
+                    <div 
+                      key={player.id} 
+                      id={player.id}
+                      className="cursor-grab"
+                      draggable
+                    >
+                      <PlayerIcon 
+                        player={player} 
+                        isCaptain={player.id === globalCaptainId}
+                        nameDisplayOption={mappedNameDisplayOption}
+                        isCircular={true}
+                      />
+                    </div>
+                  ))}
+                  {unusedPlayers.length === 0 && (
+                    <div className="text-sm text-muted-foreground">All available players are assigned</div>
+                  )}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
         {/* Formation Periods - Side by Side Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {periods.map((period, index) => (
             <Card key={period.id} className="min-h-[600px]">
               <CardHeader className="pb-4">
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-lg">
@@ -447,11 +512,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     </div>
                   </div>
                   
-                  {/* Formation Selector - Smaller size */}
+                  {/* Compact Formation Selector */}
                   <div>
-                    <Label className="text-sm">Formation</Label>
+                    <Label className="text-xs text-muted-foreground">Formation</Label>
                     <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-                      <SelectTrigger className="mt-1 h-8">
+                      <SelectTrigger className="mt-1 h-7 text-sm">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
