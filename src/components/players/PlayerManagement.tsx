@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Player, Team } from '@/types';
 import { Search, Users, Plus, UserPlus, Brain, Target, MessageSquare, BarChart3, Calendar as CalendarIcon, RefreshCw, UserMinus as UserMinusIcon, X, UploadCloud, Trash2 } from 'lucide-react';
 import { PlayerForm } from './PlayerForm';
-import { FifaStylePlayerCard } from './FifaStylePlayerCard';
+import { PlayerCard } from './PlayerCard';
 import { PlayerParentModal } from './PlayerParentModal';
 import { PlayerAttributesModal } from './PlayerAttributesModal';
 import { PlayerObjectivesModal } from './PlayerObjectivesModal';
@@ -91,21 +91,21 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
 
   // Delete player photo mutation
   const deletePlayerPhotoMutation = useMutation({
-    mutationFn: (player: Player) => playersService.deletePlayerPhoto(player),
-    onSuccess: (updatedPlayer) => {
+    mutationFn: (playerId: string) => playersService.deletePlayerPhoto(playerId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
-      if (selectedPlayer && selectedPlayer.id === updatedPlayer.id) {
-        setSelectedPlayer(prev => prev ? { ...prev, photoUrl: null } : null);
+      if (selectedPlayer) {
+        setSelectedPlayer(prev => prev ? { ...prev, photo_url: null } : null);
       }
       toast({
         title: 'Photo Deleted',
-        description: `Photo for ${updatedPlayer.name} has been successfully deleted.`,
+        description: `Photo has been successfully deleted.`,
       });
     },
-    onError: (error: any, variables) => {
+    onError: (error: any) => {
       toast({
         title: 'Error Deleting Photo',
-        description: error.message || `Failed to delete photo for ${variables.name}.`,
+        description: error.message || `Failed to delete photo.`,
         variant: 'destructive',
       });
     },
@@ -114,10 +114,10 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   // Filter players based on search and subscription type
   const filteredPlayers = players.filter(player => {
     const matchesSearch = player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      player.squadNumber?.toString().includes(searchTerm);
+      player.squad_number?.toString().includes(searchTerm);
     
     const matchesSubscription = subscriptionFilter === 'all' || 
-      player.subscriptionType === subscriptionFilter;
+      player.subscription_type === subscriptionFilter;
     
     return matchesSearch && matchesSubscription;
   });
@@ -209,18 +209,18 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       
       updatePlayerMutation.mutate({ 
         id: player.id, 
-        data: { photoUrl: newPhotoUrl } 
+        data: { photo_url: newPhotoUrl } 
       }, {
         onSuccess: (updatedPlayer) => {
           queryClient.invalidateQueries({ queryKey: ['active-players', team.id] });
           // If this player is currently selected for a modal or card view, update its state
           if (selectedPlayer && selectedPlayer.id === player.id) {
-            setSelectedPlayer(prev => prev ? { ...prev, photoUrl: newPhotoUrl } : null);
+            setSelectedPlayer(prev => prev ? { ...prev, photo_url: newPhotoUrl } : null);
           }
           // Update the player in the main 'players' list if possible, or rely on query invalidation
           const currentPlayers = queryClient.getQueryData<Player[]>(['active-players', team.id]);
           if (currentPlayers) {
-            const updatedPlayers = currentPlayers.map(p => p.id === player.id ? { ...p, photoUrl: newPhotoUrl } : p);
+            const updatedPlayers = currentPlayers.map(p => p.id === player.id ? { ...p, photo_url: newPhotoUrl } : p);
             queryClient.setQueryData(['active-players', team.id], updatedPlayers);
           }
 
@@ -248,12 +248,12 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   };
 
   const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
-    if (!playerToDeletePhoto.photoUrl) {
+    if (!playerToDeletePhoto.photo_url) {
       toast({ title: 'No Photo to Delete', description: 'This player does not have a photo.', variant: 'default' });
       return;
     }
     if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
-      deletePlayerPhotoMutation.mutate(playerToDeletePhoto);
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto.id);
     }
   };
 
@@ -261,7 +261,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleSaveFunStats for player: ${player.name}`, stats);
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { funStats: stats }
+      data: { fun_stats: stats }
     });
   };
 
@@ -269,7 +269,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleSavePlayStyle for player: ${player.name}`, playStyles);
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { playStyle: JSON.stringify(playStyles) } // Ensure playStyle is stringified if stored as JSON string in DB
+      data: { play_style: JSON.stringify(playStyles) } // Ensure playStyle is stringified if stored as JSON string in DB
     });
   };
 
@@ -277,7 +277,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleSaveCardDesign for player: ${player.name}`, designId);
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { cardDesignId: designId }
+      data: { card_design_id: designId }
     });
   };
 
@@ -374,25 +374,11 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
             {/* FIFA-Style Player Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
               {filteredPlayers.map((player) => (
-                <FifaStylePlayerCard
+                <PlayerCard
                   key={player.id}
                   player={player}
-                  team={team}
-                  onEdit={handleEditPlayer}
-                  onManageParents={handleManageParents}
-                  onRemoveFromSquad={handleRemoveFromSquad}
-                  onUpdatePhoto={handleUpdatePhoto}
-                  onDeletePhoto={handleDeletePlayerPhoto}
-                  onSaveFunStats={handleSaveFunStats}
-                  onSavePlayStyle={handleSavePlayStyle}
-                  onSaveCardDesign={handleSaveCardDesign}
-                  onManageAttributes={handleManageAttributes}
-                  onManageObjectives={handleManageObjectives}
-                  onManageComments={handleManageComments}
-                  onViewStats={handleViewStats}
-                  onViewHistory={handleViewHistory}
-                  onTransferPlayer={handleTransferPlayer}
-                  onLeaveTeam={handleLeaveTeam}
+                  onEdit={() => handleEditPlayer(player)}
+                  onViewDetails={() => handleViewStats(player)}
                 />
               ))}
             </div>
@@ -519,8 +505,8 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                       id: selectedPlayer.id,
                       data: { 
                         status: 'left', 
-                        leaveDate: leaveDate, 
-                        leaveComments: leaveComments 
+                        leave_date: leaveDate, 
+                        leave_comments: leaveComments 
                       }
                     }, {
                       onSuccess: () => {
