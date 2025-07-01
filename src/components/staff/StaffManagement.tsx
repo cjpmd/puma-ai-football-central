@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus, RefreshCw, Trash2, Edit } from 'lucide-react';
+import { Users, Search, Phone, Mail, Calendar, Link2, UserPlus, RefreshCw, Trash2, Edit, AlertCircle } from 'lucide-react';
 
 interface StaffMember {
   id: string;
@@ -549,13 +548,13 @@ export const StaffManagement: React.FC = () => {
               <Label htmlFor="staffTeam">Team (Optional)</Label>
               <Select 
                 value={newStaffData.team_id}
-                onValueChange={(value) => setNewStaffData(prev => ({ ...prev, team_id: value }))}
+                onValueChange={(value) => setNewStaffData(prev => ({ ...prev, team_id: value || '' }))}
               >
                 <SelectTrigger id="staffTeam">
                   <SelectValue placeholder="Select a team (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No specific team</SelectItem>
+                  <SelectItem value="none">No specific team</SelectItem>
                   {availableTeams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch, Unlink, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch, Unlink, AlertTriangle, Info } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -335,68 +334,68 @@ export const UserManagementSystem = () => {
         return;
       }
 
-      // Check if user exists in auth.users table with proper error handling
-      const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
-      
-      if (usersError) {
-        console.error('Error checking auth users:', usersError);
+      // Check if user exists in auth.users table
+      try {
+        const { data: authData, error: usersError } = await supabase.auth.admin.listUsers();
+        
+        if (usersError) {
+          console.error('Error accessing auth users:', usersError);
+          toast({
+            title: 'Access Error',
+            description: 'Cannot access user data. You may not have sufficient permissions.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Find the user with proper validation
+        const authUser = authData?.users?.find((user: any) => {
+          return user && user.email && user.email === email;
+        });
+        
+        if (!authUser || !authUser.email || !authUser.id) {
+          toast({
+            title: 'User Not Found',
+            description: 'No authenticated user found with this email. The user needs to sign up first.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Create profile with the auth user's ID
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert({
+            id: authUser.id,
+            email: authUser.email,
+            name: authUser.user_metadata?.name || authUser.email.split('@')[0] || 'Unknown User',
+            roles: ['player'] // default role
+          });
+
+        if (profileError) {
+          console.error('Error creating profile:', profileError);
+          toast({
+            title: 'Profile Creation Failed',
+            description: profileError.message || 'Failed to create profile. The user ID may already exist or be invalid.',
+            variant: 'destructive',
+          });
+          return;
+        }
+
         toast({
-          title: 'Error',
-          description: 'Cannot access user data. You may not have sufficient permissions.',
+          title: 'Success',
+          description: `Profile created for ${authUser.email}`,
+        });
+        
+        await loadUsers();
+      } catch (authError: any) {
+        console.error('Auth API error:', authError);
+        toast({
+          title: 'Authentication Error',
+          description: 'Unable to access authentication data. Please ensure you have admin permissions.',
           variant: 'destructive',
         });
-        return;
       }
-
-      if (!authData || !authData.users || authData.users.length === 0) {
-        toast({
-          title: 'No Users Found',
-          description: 'No authenticated users found in the system.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Find the user with explicit typing and proper validation
-      const authUser = authData.users.find((user: any) => {
-        return user && user.email && user.email === email;
-      });
-      
-      if (!authUser || !authUser.email || !authUser.id) {
-        toast({
-          title: 'User Not Found',
-          description: 'No authenticated user found with this email. The user needs to sign up first.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Create profile with the auth user's ID
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: authUser.id,
-          email: authUser.email,
-          name: authUser.user_metadata?.name || authUser.email.split('@')[0] || 'Unknown User',
-          roles: ['player'] // default role
-        });
-
-      if (profileError) {
-        console.error('Error creating profile:', profileError);
-        toast({
-          title: 'Error',
-          description: profileError.message || 'Failed to create profile',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: 'Success',
-        description: `Profile created for ${authUser.email}`,
-      });
-      
-      await loadUsers();
     } catch (error: any) {
       console.error('Error creating profile:', error);
       toast({
@@ -498,6 +497,22 @@ export const UserManagementSystem = () => {
           </Button>
         </div>
       </div>
+
+      {/* Info Card about Create Missing Profile */}
+      <Card className="bg-blue-50 border-blue-200">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <h4 className="font-medium text-blue-900 mb-1">About "Create Missing Profile"</h4>
+              <p className="text-sm text-blue-800">
+                This button is only for users who have successfully signed up through the authentication system but are missing their profile record. 
+                It should NOT be used to create new user accounts. New users should sign up through the normal registration process first.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-6">
