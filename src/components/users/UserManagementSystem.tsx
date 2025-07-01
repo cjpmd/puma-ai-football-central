@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -119,7 +118,7 @@ export const UserManagementSystem = () => {
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [activeTab, setActiveTab] = useState('users');
-  const [newUserData, setNewUserData] = setState({
+  const [newUserData, setNewUserData] = useState({
     name: '',
     email: '',
     phone: '',
