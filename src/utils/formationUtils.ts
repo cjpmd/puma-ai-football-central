@@ -1,5 +1,3 @@
-
-
 import { GameFormat } from '@/types';
 
 export interface FormationConfig {
@@ -57,8 +55,8 @@ const formations7ASide: FormationConfig[] = [
     name: "1-2-3-1",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 20, y: 75 },
-      { position: "Defender Right", x: 80, y: 75 },
+      { position: "Defender Left", x: 20, y: 70 }, // Moved up from 75 to prevent overlap
+      { position: "Defender Right", x: 80, y: 70 }, // Moved up from 75 to prevent overlap
       { position: "Midfielder Left", x: 15, y: 45 },
       { position: "Midfielder Centre", x: 50, y: 45 },
       { position: "Midfielder Right", x: 85, y: 45 },
@@ -70,11 +68,11 @@ const formations7ASide: FormationConfig[] = [
     name: "1-3-2-1",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 15, y: 65 }, // Moved up to prevent overlap
-      { position: "Defender Centre", x: 50, y: 65 }, // Moved up to prevent overlap with GK
-      { position: "Defender Right", x: 85, y: 65 }, // Moved up to prevent overlap
-      { position: "Midfielder Left", x: 25, y: 35 }, // Moved up for better spacing
-      { position: "Midfielder Right", x: 75, y: 35 }, // Moved up for better spacing
+      { position: "Defender Left", x: 15, y: 60 }, // Moved up from 65 to create more space
+      { position: "Defender Centre", x: 50, y: 60 }, // Moved up from 65 to prevent overlap with GK
+      { position: "Defender Right", x: 85, y: 60 }, // Moved up from 65 to create more space
+      { position: "Midfielder Left", x: 25, y: 30 }, // Moved up from 35 for better spacing
+      { position: "Midfielder Right", x: 75, y: 30 }, // Moved up from 35 for better spacing
       { position: "Striker Centre", x: 50, y: 10 }
     ]
   },
@@ -83,10 +81,10 @@ const formations7ASide: FormationConfig[] = [
     name: "1-1-3-2",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Centre", x: 50, y: 75 }, // Positioned between MC and GK
-      { position: "Midfielder Left", x: 15, y: 50 }, // Aligned with MR
-      { position: "Midfielder Centre", x: 50, y: 50 }, // Positioned to not overlap with DC
-      { position: "Midfielder Right", x: 85, y: 50 }, // Aligned with ML
+      { position: "Defender Centre", x: 50, y: 70 }, // Moved up from 75 to create space between GK and MC
+      { position: "Midfielder Left", x: 15, y: 45 }, // Aligned at same y level
+      { position: "Midfielder Centre", x: 50, y: 45 }, // Moved up from 50 to create space between DC
+      { position: "Midfielder Right", x: 85, y: 45 }, // Aligned at same y level as ML
       { position: "Striker Left", x: 30, y: 15 },
       { position: "Striker Right", x: 70, y: 15 }
     ]
@@ -166,4 +164,3 @@ export const getPositionsForFormation = (formationId: string, gameFormat: GameFo
   const formation = gameFormatFormations.find(f => f.id === formationId);
   return formation?.positions || [];
 };
-

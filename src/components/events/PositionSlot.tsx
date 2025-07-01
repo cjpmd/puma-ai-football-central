@@ -1,5 +1,4 @@
 
-
 import { useDroppable } from '@dnd-kit/core';
 import { useDraggable } from '@dnd-kit/core';
 import { PlayerIcon } from './PlayerIcon';
@@ -33,7 +32,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     transform,
     isDragging,
   } = useDraggable({
-    id: player ? `${id}-${player.id}` : '', // Make drag ID unique per position and period
+    id: player ? `${id}-${player.id}` : '',
     disabled: !player,
     data: {
       playerId: player?.id,
@@ -41,9 +40,11 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     }
   });
 
+  // Improved transform with better visual feedback
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-    zIndex: 1000, // Ensure dragged item is on top
+    zIndex: 1000,
+    cursor: 'grabbing',
   } : undefined;
 
   const getPositionGroupColor = () => {
@@ -72,8 +73,8 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         className={`
           ${slotSize} rounded-full border-2 border-dashed flex items-center justify-center
           ${getPositionGroupColor()}
-          ${isOver ? 'border-solid bg-opacity-75 scale-110' : ''}
-          transition-all duration-200
+          ${isOver ? 'border-solid bg-opacity-75 scale-110 ring-2 ring-blue-300' : ''}
+          transition-all duration-200 ease-in-out
         `}
       >
         {player ? (
@@ -84,9 +85,10 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
             {...attributes}
             className={`
               cursor-grab active:cursor-grabbing print:cursor-default 
-              ${isDragging ? 'opacity-50 scale-110' : ''} 
+              ${isDragging ? 'opacity-30' : 'opacity-100'} 
               touch-none select-none
-              transition-transform duration-200
+              transition-opacity duration-150
+              hover:scale-105
             `}
           >
             <PlayerIcon 
@@ -113,4 +115,3 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     </div>
   );
 };
-

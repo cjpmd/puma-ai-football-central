@@ -53,6 +53,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   gameDuration = 50
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
+  const [draggedFromPeriod, setDraggedFromPeriod] = useState<string | null>(null);
   const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
   
@@ -266,25 +267,33 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const dragId = event.active.id as string;
     console.log('Drag started with ID:', dragId);
     
-    // Extract player ID from the drag ID
+    // Extract player ID and period ID from the drag ID
     let playerId: string;
+    let periodId: string | null = null;
+    
     if (dragId.includes('-position-')) {
       // Format: periodId-position-index-playerId
       const parts = dragId.split('-');
+      periodId = parts[0];
       playerId = parts[parts.length - 1];
+      setDraggedFromPeriod(periodId);
     } else {
       // Direct player ID from available players
       playerId = dragId;
+      setDraggedFromPeriod(null);
     }
     
     const player = squadPlayers.find(p => p.id === playerId);
-    console.log('Drag started for player:', player?.name, 'ID:', playerId);
+    console.log('Drag started for player:', player?.name, 'ID:', playerId, 'from period:', periodId);
     setDraggedPlayer(player || null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    
+    // Reset drag state
     setDraggedPlayer(null);
+    setDraggedFromPeriod(null);
     
     if (!over) {
       console.log('Drag ended with no target');
@@ -314,11 +323,12 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     }
   };
 
-  const updatePlayerPosition = (periodId: string, positionIndex: number, playerId: string) => {
-    console.log('Updating player position:', { periodId, positionIndex, playerId });
+  const updatePlayerPosition = (targetPeriodId: string, positionIndex: number, playerId: string) => {
+    console.log('Updating player position:', { targetPeriodId, positionIndex, playerId, draggedFromPeriod });
     
     const updatedPeriods = periods.map(period => {
-      if (period.id === periodId) {
+      // Only modify the target period and the source period (if different)
+      if (period.id === targetPeriodId) {
         const newPositions = [...period.positions];
         
         // Remove player from any existing position in THIS period only
@@ -342,7 +352,22 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           positions: newPositions,
           substitutes: newSubstitutes
         };
+      } else if (draggedFromPeriod && period.id === draggedFromPeriod && period.id !== targetPeriodId) {
+        // Remove player from source period only if dragging between different periods
+        const newPositions = period.positions.map(pos => ({
+          ...pos,
+          playerId: pos.playerId === playerId ? undefined : pos.playerId
+        }));
+        
+        const newSubstitutes = period.substitutes.filter(id => id !== playerId);
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
       }
+      
       return period; // Don't modify other periods
     });
     
@@ -350,11 +375,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     onPeriodsChange(updatedPeriods);
   };
 
-  const addToSubstitutes = (periodId: string, playerId: string) => {
-    console.log('Adding to substitutes:', { periodId, playerId });
+  const addToSubstitutes = (targetPeriodId: string, playerId: string) => {
+    console.log('Adding to substitutes:', { targetPeriodId, playerId, draggedFromPeriod });
     
     const updatedPeriods = periods.map(period => {
-      if (period.id === periodId) {
+      if (period.id === targetPeriodId) {
         // Remove from positions in THIS period only
         const newPositions = period.positions.map(pos => ({
           ...pos,
@@ -371,7 +396,22 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           positions: newPositions,
           substitutes: newSubstitutes
         };
+      } else if (draggedFromPeriod && period.id === draggedFromPeriod && period.id !== targetPeriodId) {
+        // Remove player from source period only if dragging between different periods
+        const newPositions = period.positions.map(pos => ({
+          ...pos,
+          playerId: pos.playerId === playerId ? undefined : pos.playerId
+        }));
+        
+        const newSubstitutes = period.substitutes.filter(id => id !== playerId);
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
       }
+      
       return period; // Don't modify other periods
     });
     
@@ -526,7 +566,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
   return (
     <div className="space-y-4 print:text-sm">
-      <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext 
+        onDragStart={handleDragStart} 
+        onDragEnd={handleDragEnd}
+      >
         {/* Time Validation Alert */}
         {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
           <Alert variant="destructive">
@@ -670,16 +713,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         )}
 
-        {/* Drag Overlay */}
+        {/* Drag Overlay with improved visual feedback */}
         <DragOverlay>
           {draggedPlayer && (
-            <PlayerIcon 
-              player={draggedPlayer} 
-              isDragging 
-              isCaptain={draggedPlayer.id === globalCaptainId}
-              nameDisplayOption={mappedNameDisplayOption}
-              isCircular={true}
-            />
+            <div className="transform scale-110 shadow-2xl">
+              <PlayerIcon 
+                player={draggedPlayer} 
+                isDragging 
+                isCaptain={draggedPlayer.id === globalCaptainId}
+                nameDisplayOption={mappedNameDisplayOption}
+                isCircular={true}
+              />
+            </div>
           )}
         </DragOverlay>
       </DndContext>
