@@ -27,14 +27,14 @@ export const PositionAssignmentGrid: React.FC<PositionAssignmentGridProps> = ({
             <div key={position.id} className="flex items-center justify-between p-2 border rounded">
               <div className="font-medium">{position.positionName}</div>
               <Select
-                value={positionAssignments[position.id] || ''}
-                onValueChange={(playerId) => onPositionAssign(position.id, playerId)}
+                value={positionAssignments[position.id] || 'no-player'}
+                onValueChange={(playerId) => onPositionAssign(position.id, playerId === 'no-player' ? '' : playerId)}
               >
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="Select player" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No player assigned</SelectItem>
+                  <SelectItem value="no-player">No player assigned</SelectItem>
                   {squadPlayers
                     .filter(player => player.id && player.id.trim() !== '')
                     .map((player) => (
