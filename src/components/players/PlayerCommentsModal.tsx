@@ -35,8 +35,8 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
       const comment: PlayerComment = {
         id: `comment-${Date.now()}`,
         text: newComment,
-        created_at: new Date().toISOString(),
-        created_by: 'Current User' // This would be replaced with actual user name
+        createdAt: new Date().toISOString(),
+        createdBy: 'Current User' // This would be replaced with actual user name
       };
       
       setComments([...comments, comment]);
@@ -103,7 +103,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
                       <p className="whitespace-pre-wrap">{comment.text}</p>
                       
                       <div className="mt-2 text-sm text-muted-foreground">
-                        Added by {comment.created_by} on {formatDate(comment.created_at, 'PPp')}
+                        Added by {comment.createdBy} on {formatDate(comment.createdAt, 'PPp')}
                       </div>
                     </CardContent>
                   </Card>

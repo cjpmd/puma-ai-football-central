@@ -31,11 +31,11 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
   const [newObjective, setNewObjective] = useState<Partial<PlayerObjective>>({
     title: '',
     description: '',
-    difficulty_rating: 3,
-    review_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'), // Default 30 days
+    difficultyRating: 3,
+    reviewDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'), // Default 30 days
     status: 'ongoing',
-    created_at: new Date().toISOString(),
-    created_by: 'Current User' // This would be replaced with actual user name
+    createdAt: new Date().toISOString(),
+    createdBy: 'Current User' // This would be replaced with actual user name
   });
 
   // Don't render the modal if there's no player
@@ -51,24 +51,22 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
         id,
         title: newObjective.title || '',
         description: newObjective.description || '',
-        difficulty_rating: newObjective.difficulty_rating || 3,
-        review_date: newObjective.review_date || '',
+        difficultyRating: newObjective.difficultyRating || 3,
+        reviewDate: newObjective.reviewDate || '',
         status: newObjective.status as 'ongoing' | 'improving' | 'complete',
-        created_at: newObjective.created_at || new Date().toISOString(),
-        created_by: newObjective.created_by || 'Current User',
-        completed: false,
-        target_date: newObjective.review_date
+        createdAt: newObjective.createdAt || new Date().toISOString(),
+        createdBy: newObjective.createdBy || 'Current User'
       }
     ]);
     
     setNewObjective({
       title: '',
       description: '',
-      difficulty_rating: 3,
-      review_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+      difficultyRating: 3,
+      reviewDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
       status: 'ongoing',
-      created_at: new Date().toISOString(),
-      created_by: 'Current User'
+      createdAt: new Date().toISOString(),
+      createdBy: 'Current User'
     });
     setShowAddForm(false);
   };
@@ -165,9 +163,9 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="difficultyRating">Difficulty (1-5)</Label>
-                     <Select 
-                       value={newObjective.difficulty_rating?.toString()}
-                       onValueChange={(value) => setNewObjective({ ...newObjective, difficulty_rating: parseInt(value) })}
+                    <Select 
+                      value={newObjective.difficultyRating?.toString()}
+                      onValueChange={(value) => setNewObjective({ ...newObjective, difficultyRating: parseInt(value) })}
                     >
                       <SelectTrigger id="difficultyRating">
                         <SelectValue placeholder="Select difficulty" />
@@ -184,11 +182,11 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                   
                   <div className="space-y-2">
                     <Label htmlFor="reviewDate">Review Date</Label>
-                     <Input
-                       id="reviewDate"
-                       type="date"
-                       value={newObjective.review_date}
-                       onChange={(e) => setNewObjective({ ...newObjective, review_date: e.target.value })}
+                    <Input
+                      id="reviewDate"
+                      type="date"
+                      value={newObjective.reviewDate}
+                      onChange={(e) => setNewObjective({ ...newObjective, reviewDate: e.target.value })}
                       required
                     />
                   </div>
@@ -202,11 +200,11 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                 >
                   Cancel
                 </Button>
-                 <Button 
-                   onClick={handleAddObjective}
-                   disabled={!newObjective.title || !newObjective.description || !newObjective.review_date}
-                   className="bg-puma-blue-500 hover:bg-puma-blue-600"
-                 >
+                <Button 
+                  onClick={handleAddObjective}
+                  disabled={!newObjective.title || !newObjective.description || !newObjective.reviewDate}
+                  className="bg-puma-blue-500 hover:bg-puma-blue-600"
+                >
                   Add Objective
                 </Button>
               </CardFooter>
@@ -236,35 +234,35 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold text-lg">{objective.title}</h4>
-                        {getStatusBadge(objective.status || 'ongoing')}
+                        {getStatusBadge(objective.status)}
                       </div>
                       
                       <p className="text-sm">{objective.description}</p>
                       
                       <div className="flex justify-between text-sm">
-                         <div>
-                           <span className="text-muted-foreground">Difficulty:</span>{' '}
-                           <span className="text-yellow-500">{getDifficultyStars(objective.difficulty_rating || 3)}</span>
-                         </div>
-                         <div>
-                           <span className="text-muted-foreground">Review:</span>{' '}
-                           {objective.review_date ? format(new Date(objective.review_date), 'dd MMM yyyy') : 'Not set'}
-                         </div>
+                        <div>
+                          <span className="text-muted-foreground">Difficulty:</span>{' '}
+                          <span className="text-yellow-500">{getDifficultyStars(objective.difficultyRating)}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Review:</span>{' '}
+                          {format(new Date(objective.reviewDate), 'dd MMM yyyy')}
+                        </div>
                       </div>
                       
                       <div className="flex justify-between text-sm">
-                         <div>
-                           <span className="text-muted-foreground">Created:</span>{' '}
-                           {format(new Date(objective.created_at), 'dd MMM yyyy')} by {objective.created_by || 'Unknown'}
-                         </div>
+                        <div>
+                          <span className="text-muted-foreground">Created:</span>{' '}
+                          {format(new Date(objective.createdAt), 'dd MMM yyyy')} by {objective.createdBy}
+                        </div>
                         
-                         <Select 
-                           value={objective.status || 'ongoing'}
-                           onValueChange={(value) => handleStatusChange(
-                             objective.id, 
-                             value as 'ongoing' | 'improving' | 'complete'
-                           )}
-                         >
+                        <Select 
+                          value={objective.status}
+                          onValueChange={(value) => handleStatusChange(
+                            objective.id, 
+                            value as 'ongoing' | 'improving' | 'complete'
+                          )}
+                        >
                           <SelectTrigger className="h-8 w-36">
                             <SelectValue />
                           </SelectTrigger>

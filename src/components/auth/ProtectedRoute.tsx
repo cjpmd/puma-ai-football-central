@@ -7,10 +7,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { loading, user } = useAuth();
+  const { session, loading, user } = useAuth();
   const location = useLocation();
 
-  console.log('ProtectedRoute - loading:', loading, 'user:', !!user);
+  console.log('ProtectedRoute - loading:', loading, 'session:', !!session, 'user:', !!user);
 
   if (loading) {
     return (
@@ -21,8 +21,8 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  if (!user) {
-    console.log('No user, redirecting to auth');
+  if (!session || !user) {
+    console.log('No session or user, redirecting to auth');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

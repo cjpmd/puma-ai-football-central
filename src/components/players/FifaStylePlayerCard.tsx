@@ -1,119 +1,117 @@
-import React, { useState } from 'react';
-import { MoreVertical, Pencil, Camera, Trash2, Users, Brain, Target, MessageSquare, BarChart3, Calendar, RefreshCw, UserMinus, ArrowLeft } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+import React, { useState, useEffect } from 'react';
+import { Player, Team } from '@/types';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award, Users, Brain, Target, MessageSquare, BarChart3, UserMinus, RefreshCw, Edit, X, AlertTriangle, Trash2 } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface FifaStylePlayerCardProps {
-  player: any;
-  showBackside?: boolean;
-  onFlip: () => void;
-  isEditable?: boolean;
-  onEdit?: () => void;
-  onManageParents?: (player: any) => void;
-  onRemoveFromSquad?: (player: any) => void;
-  onUpdatePhoto?: (player: any, file: File) => void;
-  onDeletePhoto?: (player: any) => void;
-  onSaveFunStats?: (player: any, stats: Record<string, number>) => void;
-  onSavePlayStyle?: (player: any, playStyles: string[]) => void;
-  onSaveCardDesign?: (player: any, designId: string) => void;
-  onManageAttributes?: (player: any) => void;
-  onManageObjectives?: (player: any) => void;
-  onManageComments?: (player: any) => void;
-  onViewStats?: (player: any) => void;
-  onViewHistory?: (player: any) => void;
-  onTransferPlayer?: (player: any) => void;
-  onLeaveTeam?: (player: any) => void;
+  player: Player;
+  team?: Team;
+  onEdit?: (player: Player) => void;
+  onManageParents?: (player: Player) => void;
+  onRemoveFromSquad?: (player: Player) => void;
+  onUpdatePhoto?: (player: Player, file: File) => void;
+  onDeletePhoto?: (player: Player) => void;
+  onSaveFunStats?: (player: Player, stats: Record<string, number>) => void;
+  onSavePlayStyle?: (player: Player, playStyles: string[]) => void;
+  onSaveCardDesign?: (player: Player, designId: string) => void;
+  onManageAttributes?: (player: Player) => void;
+  onManageObjectives?: (player: Player) => void;
+  onManageComments?: (player: Player) => void;
+  onViewStats?: (player: Player) => void;
+  onViewHistory?: (player: Player) => void;
+  onTransferPlayer?: (player: Player) => void;
+  onLeaveTeam?: (player: Player) => void;
+  onClose?: () => void;
 }
 
-const calculateOverall = (stats: any) => {
-  if (!stats) return 50;
-  const { pace, shooting, passing, dribbling, defending, physical } = stats;
-  const total = (pace || 50) + (shooting || 50) + (passing || 50) + (dribbling || 50) + (defending || 50) + (physical || 50);
-  return Math.round(total / 6);
+type CardDesignImage = {
+  name: string;
+  bgImage: string;
+  border: string;
+  textColor: string;
+  shadow: string;
 };
 
-const designs = {
-  goldRare: {
-    className: 'border-2 border-yellow-400',
-    background: `url('/lovable-uploads/03f7b9d6-8512-4609-a849-1a8b690399ea.png')`,
-    borderGlow: 'shadow-lg shadow-yellow-400/50',
-    name: 'Gold Rare'
+type CardDesign = CardDesignImage;
+
+const cardDesigns: Record<string, CardDesign> = {
+  goldBallon: {
+    name: "Gold Ballon d'Or",
+    bgImage: "url('/lovable-uploads/03f7b9d6-8512-4609-a849-1a8b690399ea.png')",
+    border: "border-yellow-400",
+    textColor: "text-yellow-900",
+    shadow: "shadow-yellow-500/50",
   },
-  silverRare: {
-    className: 'border-2 border-gray-400', 
-    background: `url('/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png')`,
-    borderGlow: 'shadow-lg shadow-gray-400/50',
-    name: 'Silver Rare'
+  orangeStadium: {
+    name: "Orange Stadium",
+    bgImage: "url('/lovable-uploads/6cbbcb58-092a-4c48-adc4-12501ebc9a70.png')",
+    border: "border-orange-400",
+    textColor: "text-orange-900",
+    shadow: "shadow-orange-500/50",
   },
-  bronzeRare: {
-    className: 'border-2 border-amber-600',
-    background: `url('/lovable-uploads/0e7b2d9e-64e2-46da-8a4f-01a3e2cd50df.png')`,
-    borderGlow: 'shadow-lg shadow-amber-600/50',
-    name: 'Bronze Rare'
+  blueChampions: {
+    name: "Blue Champions",
+    bgImage: "url('/lovable-uploads/d7e37207-294b-4c2a-840b-2a55234ddb3b.png')",
+    border: "border-blue-400",
+    textColor: "text-blue-900",
+    shadow: "shadow-blue-500/50",
   },
-  purpleSpecial: {
-    className: 'border-2 border-purple-400',
-    background: `url('/lovable-uploads/52998c71-592a-493d-bab1-7a1a5726080e.png')`,
-    borderGlow: 'shadow-lg shadow-purple-400/50',
-    name: 'Purple Special'
+  pinkVortex: {
+    name: "Pink Vortex",
+    bgImage: "url('/lovable-uploads/84d0f9c8-d146-41ef-86a0-871af15c0bc1.png')",
+    border: "border-pink-400",
+    textColor: "text-pink-900",
+    shadow: "shadow-pink-500/50",
+  },
+  redCrystal: {
+    name: "Red Crystal",
+    bgImage: "url('/lovable-uploads/f930e1ff-b50a-437b-94f8-a51a79bf9fac.png')",
+    border: "border-red-400",
+    textColor: "text-red-900",
+    shadow: "shadow-red-500/50",
   },
   galaxyGems: {
-    className: 'border-2 border-blue-400',
-    background: `url('/lovable-uploads/6cbbcb58-092a-4c48-adc4-12501ebc9a70.png')`,
-    borderGlow: 'shadow-lg shadow-blue-400/50',
-    name: 'Galaxy Gems'
-  },
-  iconicMoments: {
-    className: 'border-2 border-pink-400',
-    background: `url('/lovable-uploads/84d0f9c8-d146-41ef-86a0-871af15c0bc1.png')`,
-    borderGlow: 'shadow-lg shadow-pink-400/50',
-    name: 'Iconic Moments'
-  },
-  futureStars: {
-    className: 'border-2 border-green-400',
-    background: `url('/lovable-uploads/d7e37207-294b-4c2a-840b-2a55234ddb3b.png')`,
-    borderGlow: 'shadow-lg shadow-green-400/50',
-    name: 'Future Stars'
-  },
-  teamOfTheYear: {
-    className: 'border-2 border-indigo-400',
-    background: `url('/lovable-uploads/e312db4c-9834-4d19-8b74-abf4e871c7c1.png')`,
-    borderGlow: 'shadow-lg shadow-indigo-400/50',
-    name: 'Team of the Year'
-  },
-  heroCard: {
-    className: 'border-2 border-orange-400',
-    background: `url('/lovable-uploads/f10817a5-248b-4981-8539-e72f55ca861a.png')`,
-    borderGlow: 'shadow-lg shadow-orange-400/50',
-    name: 'Hero Card'
-  },
-  legendCard: {
-    className: 'border-2 border-red-400',
-    background: `url('/lovable-uploads/f930e1ff-b50a-437b-94f8-a51a79bf9fac.png')`,
-    borderGlow: 'shadow-lg shadow-red-400/50',
-    name: 'Legend Card'
+    name: "Galaxy Gems",
+    bgImage: "url('/lovable-uploads/f10817a5-248b-4981-8539-e72f55ca861a.png')",
+    border: "border-purple-400",
+    textColor: "text-purple-900",
+    shadow: "shadow-purple-500/50",
   }
 };
 
-const playStyleIcons = {
-  pace: '⚡',
-  technical: '⚙️',
-  physical: '💪',
-  defensive: '🛡️',
-  creative: '🎨',
-  leadership: '👑',
-  finishing: '🎯',
-  crossing: '🔄',
-  versatile: '🔧'
-};
+// Updated play styles with your preferred icons
+const playStylesWithIcons = [
+  { value: "finisher", label: "Finisher", icon: "🎯", category: "attacker" },
+  { value: "clinical", label: "Clinical", icon: "✅", category: "attacker" },
+  { value: "speedster", label: "Speedster", icon: "⚡", category: "attacker" },
+  { value: "trickster", label: "Trickster", icon: "🔮", category: "attacker" },
+  { value: "playmaker", label: "Playmaker", icon: "🎭", category: "midfielder" },
+  { value: "engine", label: "Engine", icon: "⚙️", category: "midfielder" },
+  { value: "maestro", label: "Maestro", icon: "🎩", category: "midfielder" },
+  { value: "workhorse", label: "Workhorse", icon: "💪", category: "midfielder" },
+  { value: "guardian", label: "Guardian", icon: "🛡️", category: "defender" },
+  { value: "interceptor", label: "Interceptor", icon: "⚔️", category: "defender" },
+  { value: "rock", label: "Rock", icon: "🗿", category: "defender" },
+  { value: "sweeper", label: "Sweeper", icon: "🧹", category: "defender" },
+  { value: "reflexes", label: "Reflexes", icon: "🥅", category: "goalkeeper" },
+  { value: "commander", label: "Commander", icon: "👑", category: "goalkeeper" },
+  { value: "wall", label: "Wall", icon: "🧱", category: "goalkeeper" }
+];
 
-export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({ 
-  player, 
-  showBackside = false, 
-  onFlip,
-  isEditable = false,
+// Create a list of valid play style values for easier filtering
+const validPlayStyleValues = playStylesWithIcons.map(s => s.value);
+
+export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
+  player,
+  team,
   onEdit,
   onManageParents,
   onRemoveFromSquad,
@@ -128,46 +126,183 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onViewStats,
   onViewHistory,
   onTransferPlayer,
-  onLeaveTeam
+  onLeaveTeam,
+  onClose
 }) => {
-  const [tempStats, setTempStats] = useState(player.fun_stats || {});
-  const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
-    typeof player.play_style === 'string' ? JSON.parse(player.play_style || '[]') : []
-  );
-  const [selectedCardDesign, setSelectedCardDesign] = useState(player.card_design_id || 'goldRare');
-
-  const currentDesign = designs[player.card_design_id as keyof typeof designs] || designs.goldRare;
-  const playerStats = player.fun_stats as any || {};
-  const overall = calculateOverall(playerStats);
+  const { toast } = useToast();
+  const [flipped, setFlipped] = useState(false);
   
-  const getPositionAbbr = (playStyle: string) => {
-    const positions: { [key: string]: string } = {
-      'goalkeeper': 'GK',
-      'defender': 'CB++',
-      'midfielder': 'CM++', 
-      'forward': 'ST++',
-      'winger': 'LW++',
-      'striker': 'ST++',
-      'Balanced': 'CM++'
-    };
-    return positions[playStyle] || 'CM++';
+  const { user, profile, loading: authLoading } = useAuth();
+  const { hasPermission, loading: authzLoading } = useAuthorization();
+  const [canManageCard, setCanManageCard] = useState(false);
+  const [isUserStaffContext, setIsUserStaffContext] = useState(false);
+
+  // Updated parsePlayStyles function
+  const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
+    let rawStyles: string[] = [];
+    if (!playStyleData) {
+      // No data, empty styles
+    } else if (Array.isArray(playStyleData)) {
+      rawStyles = playStyleData.map(s => String(s)); // Ensure all elements are strings
+    } else if (typeof playStyleData === 'string') {
+      try {
+        const parsed = JSON.parse(playStyleData);
+        if (Array.isArray(parsed)) {
+          rawStyles = parsed.map(s => String(s)); // Ensure all elements are strings
+        } else if (typeof parsed === 'string') {
+          rawStyles = [parsed];
+        } // else, parsed is not an array or string, ignore
+      } catch {
+        // If JSON parsing fails, treat as a single play style string, if not empty
+        if (playStyleData.trim().length > 0) {
+          rawStyles = [playStyleData.trim()];
+        }
+      }
+    }
+    
+    // Filter for valid and unique styles from the known list, and limit to 3
+    const uniqueFilteredStyles = [...new Set(rawStyles.filter(style => validPlayStyleValues.includes(style)))];
+    return uniqueFilteredStyles.slice(0, 3);
   };
 
-  const positionAbbr = getPositionAbbr(player.play_style || 'Balanced');
-  const age = player.date_of_birth ? new Date().getFullYear() - new Date(player.date_of_birth).getFullYear() : 0;
+  const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
+  const [funStats, setFunStats] = useState(player.funStats || {});
+  const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
+    parsePlayStyles(player.playStyle)
+  );
 
-  const handleSaveStats = () => {
+  // useEffect to synchronize state with player prop changes
+  useEffect(() => {
+    const parsed = parsePlayStyles(player.playStyle);
+    if (JSON.stringify(parsed) !== JSON.stringify(selectedPlayStyles)) {
+      setSelectedPlayStyles(parsed);
+    }
+    setFunStats(player.funStats || {});
+    setSelectedDesign(player.cardDesignId || "goldBallon");
+  }, [player.playStyle, player.funStats, player.cardDesignId, selectedPlayStyles, player]);
+
+  // useEffect to determine if the current user can manage this card and if they are staff
+  useEffect(() => {
+    if (authLoading || authzLoading || !user || !profile || !player) {
+      setCanManageCard(false);
+      setIsUserStaffContext(false); // Reset staff context
+      return;
+    }
+
+    let canManage = false;
+    let isStaff = false; // Local variable to determine if access is due to staff role
+
+    // Check staff permissions first
+    const targetTeamId = team?.id || player.team_id;
+    if (targetTeamId && hasPermission({ resource: 'players', action: 'manage', resourceId: targetTeamId })) {
+      canManage = true;
+      isStaff = true;
+    } else if (hasPermission({ resource: 'players', action: 'manage' })) { // Broader manage permission (e.g., club admin, global admin)
+      canManage = true;
+      isStaff = true;
+    }
+
+    // If not identified as staff yet, check if player or parent
+    if (!isStaff) {
+      if (player.user_id && profile.id === player.user_id) { // Player themselves
+        canManage = true;
+      } else if (profile.managed_player_ids && profile.managed_player_ids.includes(player.id)) { // Parent/guardian
+        canManage = true;
+      }
+    }
+    
+    setCanManageCard(canManage);
+    setIsUserStaffContext(isStaff); // Set the staff context state
+
+  }, [user, profile, player, team, hasPermission, authLoading, authzLoading]);
+
+  const currentDesign = cardDesigns[selectedDesign] || cardDesigns.goldBallon;
+
+  // Calculate age from date of birth
+  const calculateAge = (dateOfBirth: string) => {
+    if (!dateOfBirth) return 0;
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // Get top 3 positions with minutes (excluding SUB and TBD)
+  const getTopPositions = () => {
+    const minutesByPosition = player.matchStats?.minutesByPosition || {};
+    const filteredPositions = Object.entries(minutesByPosition)
+      .filter(([position]) => position !== 'SUB' && position !== 'TBD') // Exclude SUB and TBD
+      .map(([position, minutes]) => ({
+        position,
+        minutes: Number(minutes) || 0
+      }))
+      .filter(p => p.minutes > 0)
+      .sort((a, b) => b.minutes - a.minutes)
+      .slice(0, 3);
+
+    // Add appropriate number of plus signs
+    return filteredPositions.map((pos, index) => ({
+      ...pos,
+      display: index === 0 ? `${pos.position}+++` : 
+               index === 1 ? `${pos.position}++` : 
+               `${pos.position}+`
+    }));
+  };
+
+  // Check for missing critical information
+  const getMissingInfoAlerts = () => {
+    const alerts = [];
+    
+    // Check for missing name (first name or surname)
+    const fullName = player.name || '';
+    const nameParts = fullName.trim().split(' ').filter(part => part.length > 0);
+    
+    if (nameParts.length === 0) {
+      alerts.push({ icon: User, message: 'Missing player name' });
+    } else if (nameParts.length === 1) {
+      alerts.push({ icon: User, message: 'Missing first name or surname' });
+    }
+    
+    if (!player.dateOfBirth) {
+      alerts.push({ icon: Calendar, message: 'Missing date of birth' });
+    }
+    
+    if (!player.squadNumber || player.squadNumber === 0) {
+      alerts.push({ icon: Hash, message: 'Missing squad number' });
+    }
+    
+    const kitSizes = player.kit_sizes || {};
+    if (Object.keys(kitSizes).length === 0 || !kitSizes.nameOnShirt) {
+      alerts.push({ icon: Shirt, message: 'Missing kit information' });
+    }
+    
+    return alerts;
+  };
+
+  const updateStat = (key: string, value: string) => {
+    const numValue = Math.min(99, Math.max(0, parseInt(value) || 0));
+    const updatedStats = { ...funStats, [key]: numValue };
+    setFunStats(updatedStats);
+    
+    // Save immediately when value changes
     if (onSaveFunStats) {
-      onSaveFunStats(player, tempStats);
+      onSaveFunStats(player, updatedStats);
     }
   };
 
-  const handlePlayStyleToggle = (style: string) => {
-    const newStyles = selectedPlayStyles.includes(style)
-      ? selectedPlayStyles.filter(s => s !== style)
-      : selectedPlayStyles.length < 3 
-        ? [...selectedPlayStyles, style] 
-        : selectedPlayStyles;
+  const togglePlayStyle = (styleValue: string) => {
+    let newStyles;
+    if (selectedPlayStyles.includes(styleValue)) {
+      newStyles = selectedPlayStyles.filter(s => s !== styleValue);
+    } else if (selectedPlayStyles.length < 3) {
+      newStyles = [...selectedPlayStyles, styleValue];
+    } else {
+      return; // Max 3 styles
+    }
     
     setSelectedPlayStyles(newStyles);
     if (onSavePlayStyle) {
@@ -175,311 +310,533 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
   };
 
-  const handleCardDesignChange = (designId: string) => {
-    setSelectedCardDesign(designId);
+  const isGoalkeeper = player.type === 'goalkeeper';
+  const funStatLabels = isGoalkeeper
+    ? [
+        { key: "DIV", label: "Diving" },
+        { key: "HAN", label: "Handling" },
+        { key: "KIC", label: "Kicking" },
+        { key: "REF", label: "Reflexes" },
+        { key: "SPE", label: "Speed" },
+        { key: "POS", label: "Positioning" }
+      ]
+    : [
+        { key: "PAC", label: "Pace" },
+        { key: "SHO", label: "Shooting" },
+        { key: "PAS", label: "Passing" },
+        { key: "DRI", label: "Dribbling" },
+        { key: "DEF", label: "Defending" },
+        { key: "PHY", label: "Physical" }
+      ];
+
+  const age = calculateAge(player.dateOfBirth || '');
+  const topPositions = getTopPositions();
+  const missingInfoAlerts = getMissingInfoAlerts();
+  const hasAlerts = missingInfoAlerts.length > 0;
+  const isCaptain = player.matchStats?.captainGames > 0;
+  const captainCount = player.matchStats?.captainGames || 0;
+  const potmCount = player.matchStats?.playerOfTheMatchCount || 0;
+
+  // Updated displayName logic
+  let determinedDisplayName = player.name || 'No Name';
+  const nameOnShirtValue = player.kit_sizes?.nameOnShirt;
+
+  if (nameOnShirtValue && nameOnShirtValue.trim() !== "") {
+    const playerFullNameParts = player.name ? player.name.split(' ') : [];
+    // Handle cases where player.name might be just a surname or single name
+    const playerLastName = playerFullNameParts.length > 0 ? playerFullNameParts[playerFullNameParts.length - 1] : '';
+    
+    // Use nameOnShirt if it's different from the extracted last name, 
+    // OR if player.name is a single word (suggesting nameOnShirt is a deliberate choice like a nickname).
+    if (nameOnShirtValue.trim().toLowerCase() !== playerLastName.trim().toLowerCase() || playerFullNameParts.length <= 1) {
+      determinedDisplayName = nameOnShirtValue.trim();
+    }
+  }
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && onUpdatePhoto) {
+      onUpdatePhoto(player, file);
+    }
+  };
+
+  const handleSaveDesign = (designId: string) => {
+    setSelectedDesign(designId);
     if (onSaveCardDesign) {
       onSaveCardDesign(player, designId);
     }
   };
 
-  if (showBackside) {
-    return (
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const getPlayStyleIcon = (styleValue: string) => {
+    const style = playStylesWithIcons.find(s => s.value === styleValue);
+    return style ? style.icon : "";
+  };
+
+  const cardStyle = { 
+    backgroundImage: currentDesign.bgImage,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center 20%'
+  };
+
+  // Define allowed pointer events
+  type AllowedPointerEvents = "auto" | "none";
+
+  // Updated getFaceStyle with explicit typing
+  const getFaceStyle = (face: "front" | "back"): React.CSSProperties => {
+    // face is visible if:
+    //  - front face, not flipped
+    //  - back face, flipped
+    const isVisible = (face === "front" && !flipped) || (face === "back" && flipped);
+    return {
+      zIndex: isVisible ? 20 : 10,
+      pointerEvents: isVisible ? "auto" : "none" as AllowedPointerEvents,
+    };
+  };
+
+  // --- Handler for Player Action buttons ---
+  const handleButtonAction = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    handler?: (player: Player) => void,
+    actionName?: string
+  ) => {
+    console.log(`[FifaCard] handleButtonAction: Action "${actionName}" for player "${player.name}". Flipped: ${flipped}`);
+    e.preventDefault();
+    e.stopPropagation();
+    if (handler) {
+      console.log(`[FifaCard] Handler found for "${actionName}". Executing handler.`);
+      handler(player);
+    } else {
+      console.warn(`[FifaCard] No handler provided for action "${actionName}".`);
+      if (toast) {
+        toast({
+          title: "Action Not Implemented",
+          description: `The action "${actionName}" is not available for this player.`,
+          variant: "destructive",
+        });
+      } else {
+        console.error("[FifaCard] Toast function is not available to report unimplemented action.");
+      }
+    }
+  };
+
+  // Container with perspective for 3D effect
+  return (
+    <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
       <div 
-        className="relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105 rounded-xl overflow-hidden"
+        className="relative w-full h-full transition-transform duration-700"
         style={{
-          background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
-          border: '2px solid rgba(148, 163, 184, 0.3)',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+          transformStyle: 'preserve-3d',
+          transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          zIndex: 100, 
+          position: 'relative'
         }}
       >
-        {/* Header */}
-        <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); onFlip(); }}
-            className="text-white hover:bg-white/10 bg-black/20"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Player Management
-          </Button>
-          <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-            <div className="w-4 h-4 bg-white/40 rounded-sm"></div>
+        {/* Front of card */}
+        <div 
+          className={
+            `absolute inset-0 w-full h-full rounded-2xl ${currentDesign.border} border-4 ${currentDesign.shadow} shadow-xl overflow-hidden`
+          }
+          style={{
+            ...cardStyle,
+            ...getFaceStyle("front"),
+            backfaceVisibility: 'hidden',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%'
+          }}
+        >
+          {canManageCard && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFlipped(true)}
+              className="absolute top-3 right-3 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+              title="Manage Player Card"
+            >
+              <Settings className="h-4 w-4 text-white" />
+            </Button>
+          )}
+
+          {onClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+            >
+              <X className="h-4 w-4 text-white" />
+            </Button>
+          )}
+
+          {hasAlerts && (
+            <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
+              {missingInfoAlerts.slice(0, 3).map((alert, index) => {
+                const IconComponent = alert.icon;
+                return (
+                  <div key={index} title={alert.message} className="bg-orange-500/90 rounded-full p-1">
+                    <IconComponent className="h-3 w-3 text-white" />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {isCaptain && (
+            <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-yellow-500/90 rounded-full px-2 py-1">
+              <Crown className="h-4 w-4 text-white" />
+              <span className="text-white text-xs font-bold">{captainCount}</span>
+            </div>
+          )}
+
+          {potmCount > 0 && (
+            <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-20 flex items-center gap-1 bg-purple-500/90 rounded-full px-2 py-1">
+              <Award className="h-4 w-4 text-white" />
+              <span className="text-white text-xs font-bold">{potmCount}</span>
+            </div>
+          )}
+
+          <div className="p-4 h-full flex flex-col justify-end relative z-10">
+            {topPositions.length > 0 && ( // Changed condition from topPositions.length >= 3
+              <div className="absolute left-2 top-16 space-y-1">
+                {topPositions.map((pos) => (
+                  <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
+                    {pos.display}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="relative mx-auto mb-4 h-44 flex items-center justify-center">
+              <div className="relative h-40 w-40">
+                {/* Custom photo container with feathered border */}
+                <div 
+                  className="h-40 w-40 rounded-full overflow-hidden border-3 border-white/70 shadow-lg"
+                  style={{
+                    background: player.photoUrl ? 'none' : 'rgba(255,255,255,0.3)',
+                    boxShadow: 'inset 0 0 20px rgba(0,0,0,0.1), 0 8px 32px rgba(0,0,0,0.3)'
+                  }}
+                >
+                  {player.photoUrl ? (
+                    <img 
+                      src={player.photoUrl} 
+                      alt={determinedDisplayName}
+                      className="h-full w-full object-cover"
+                      style={{
+                        maskImage: 'radial-gradient(circle, black 60%, transparent 100%)',
+                        WebkitMaskImage: 'radial-gradient(circle, black 60%, transparent 100%)'
+                      }}
+                    />
+                  ) : (
+                    <div className="h-full w-full flex items-center justify-center text-white font-bold text-2xl">
+                      {player.name ? getInitials(player.name) : 'PL'}
+                    </div>
+                  )}
+                </div>
+                {onUpdatePhoto && canManageCard && (
+                  <label className="absolute -bottom-2 -right-2 bg-white/90 text-gray-800 rounded-full p-2 cursor-pointer hover:bg-white transition-colors shadow-lg">
+                    <Camera className="h-4 w-4" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handlePhotoUpload}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="text-center">
+                <h1 className="text-xl font-bold text-white drop-shadow-lg truncate">
+                  {determinedDisplayName}
+                </h1>
+              </div>
+
+              <div className="flex justify-between items-center px-1">
+                {funStatLabels.map(stat => (
+                  <div key={stat.key} className="text-center flex-1">
+                    <div className="text-white text-xs font-bold mb-1 drop-shadow-md">{stat.key}</div>
+                    <div className="text-white text-lg font-bold drop-shadow-md">
+                      {funStats[stat.key] || '--'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-center gap-2 h-8 items-center">
+                {selectedPlayStyles.map((style, index) => (
+                  <div key={index} className="text-2xl drop-shadow-lg leading-none">
+                    {getPlayStyleIcon(style)}
+                  </div>
+                ))}
+              </div>
+
+              {/* Modified text section at the bottom */}
+              <div className={`grid grid-cols-3 text-sm font-bold pt-3 ${currentDesign.textColor}`}>
+                <span className="text-left pl-1">
+                  #{player.squadNumber || 'XX'}
+                </span>
+                <span className="text-center">
+                  Age {age}
+                </span>
+                <span className="text-right pr-1">
+                  {isGoalkeeper ? 'GK' : 'OUTFIELD'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="p-6 pt-16 space-y-4 h-full overflow-y-auto">
-          {/* Player Actions */}
-          <div>
-            <h3 className="text-white font-bold mb-3 text-lg">Player Actions</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { icon: Pencil, label: 'Edit', action: () => onEdit?.() },
-                { icon: Users, label: 'Parents', action: () => onManageParents?.(player) },
-                { icon: Calendar, label: 'History', action: () => onViewHistory?.(player) },
-                { icon: Target, label: 'Objectives', action: () => onManageObjectives?.(player) },
-                { icon: MessageSquare, label: 'Comments', action: () => onManageComments?.(player) },
-                { icon: BarChart3, label: 'Stats', action: () => onViewStats?.(player) },
-                { icon: RefreshCw, label: 'Transfer', action: () => onTransferPlayer?.(player) },
-                { icon: UserMinus, label: 'Leave', action: () => onLeaveTeam?.(player) }
-              ].map((action, index) => (
+        {/* Back of card - management view */}
+        <div 
+          className={
+            `absolute inset-0 w-full h-full rounded-2xl bg-gray-900 border-2 border-gray-700 shadow-xl overflow-hidden flex flex-col`
+          }
+          style={{
+            ...getFaceStyle("back"),
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%'
+          }}
+        >
+          {/* Header: place Back and Close Buttons at top-right like the Front */}
+          <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
+            <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
+            <div className="absolute right-3 top-3 flex space-x-2">
+              {onClose && (
                 <Button
-                  key={index}
+                  variant="ghost"
                   size="sm"
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    action.action(); 
-                  }}
-                  className="h-12 flex flex-col items-center justify-center text-xs bg-slate-700 text-white border border-slate-600 hover:bg-slate-600"
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}
+                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" 
+                  style={{ pointerEvents: 'auto' }}
                 >
-                  <action.icon className="h-4 w-4 mb-1" />
-                  {action.label}
+                  <X className="h-4 w-4" />
                 </Button>
-              ))}
-            </div>
-          </div>
-
-          {/* Photo Management */}
-          <div>
-            <h3 className="text-white font-bold mb-3 text-lg">Photo Management</h3>
-            <div className="space-y-2">
-              <label className="block">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file && onUpdatePhoto) {
-                      onUpdatePhoto(player, file);
-                    }
-                  }}
-                  className="hidden"
-                />
-                <Button
-                  size="sm"
-                  className="w-full bg-blue-600 text-white hover:bg-blue-700 border-0"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Upload Photo
-                </Button>
-              </label>
+              )}
               <Button
-                variant="destructive"
+                variant="ghost"
                 size="sm"
-                onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(player); }}
-                className="w-full bg-red-600 hover:bg-red-700"
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setFlipped(false); }}
+                className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30"
+                style={{ pointerEvents: 'auto' }}
+                title="Back to card front"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Photo
+                <ArrowLeft className="h-4 w-4" />
               </Button>
             </div>
           </div>
-
-          {/* Play Styles */}
-          <div>
-            <h3 className="text-white font-bold mb-3 text-lg">Play Styles (Max 3)</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {Object.entries(playStyleIcons).map(([style, icon]) => (
+          
+          {/* Content - Compact layout, ensure it's scrollable and interactive */}
+          <div className="flex-1 p-3 space-y-3 overflow-y-auto" style={{ position: 'relative', zIndex: 1 }}>
+            {/* Player Actions - All 9 buttons in 3x3 grid */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-semibold text-white">Player Actions</h3>
+              
+              <div 
+                className="grid grid-cols-3 gap-1"
+                style={{ position: 'relative', zIndex: 1, pointerEvents: 'auto' }}
+              >
                 <Button
-                  key={style}
+                  variant="outline"
                   size="sm"
-                  onClick={(e) => { e.stopPropagation(); handlePlayStyleToggle(style); }}
-                  className={`h-12 flex flex-col items-center justify-center text-xs ${
-                    selectedPlayStyles.includes(style) 
-                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
-                      : 'bg-slate-700 text-white border border-slate-600 hover:bg-slate-600'
-                  }`}
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onEdit, 'Edit Player')}
+                  title="Edit Player"
+                  disabled={!onEdit}
                 >
-                  <span className="text-lg mb-1">{icon}</span>
-                  {style}
+                  <Edit className="h-3 w-3" />
                 </Button>
-              ))}
-            </div>
-            <p className="text-slate-300 text-xs mt-2">Selected: {selectedPlayStyles.length}/3</p>
-          </div>
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onManageParents, 'Manage Parents')}
+                  title="Manage Parents"
+                  disabled={!onManageParents}
+                >
+                  <Users className="h-3 w-3" />
+                </Button>
 
-          {/* FIFA Stats */}
-          <div>
-            <h3 className="text-white font-bold mb-3 text-lg">FIFA Stats</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { label: 'PAC', key: 'pace' },
-                { label: 'SHO', key: 'shooting' },
-                { label: 'PAS', key: 'passing' },
-                { label: 'DRI', key: 'dribbling' },
-                { label: 'DEF', key: 'defending' },
-                { label: 'PHY', key: 'physical' }
-              ].map((stat) => (
-                <div key={stat.key} className="text-center">
-                  <label className="text-slate-300 text-xs">{stat.label}</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="99"
-                    value={tempStats[stat.key] || 50}
-                    onChange={(e) => setTempStats({...tempStats, [stat.key]: parseInt(e.target.value) || 50})}
-                    className="mt-1 text-center bg-slate-700 border-slate-600 text-white"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </div>
-              ))}
-            </div>
-            <Button
-              onClick={(e) => { e.stopPropagation(); handleSaveStats(); }}
-              size="sm"
-              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white"
-            >
-              Save Stats
-            </Button>
-          </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onManageAttributes, 'Manage Attributes')}
+                  title="Manage Attributes"
+                  disabled={!onManageAttributes}
+                >
+                  <Brain className="h-3 w-3" />
+                </Button>
 
-          {/* Card Design */}
-          <div>
-            <h3 className="text-white font-bold mb-3 text-lg">Card Design</h3>
-            <Select value={selectedCardDesign} onValueChange={handleCardDesignChange}>
-              <SelectTrigger onClick={(e) => e.stopPropagation()} className="bg-slate-700 border-slate-600 text-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600 text-white z-50">
-                {Object.entries(designs).map(([key, design]) => (
-                  <SelectItem key={key} value={key} className="text-white hover:bg-slate-600 focus:bg-slate-600">{design.name}</SelectItem>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onManageObjectives, 'Manage Objectives')}
+                  title="Manage Objectives"
+                  disabled={!onManageObjectives}
+                >
+                  <Target className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onManageComments, 'Manage Comments')}
+                  title="Manage Comments"
+                  disabled={!onManageComments}
+                >
+                  <MessageSquare className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onViewStats, 'View Statistics')}
+                  title="View Statistics"
+                  disabled={!onViewStats}
+                >
+                  <BarChart3 className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onViewHistory, 'View History')}
+                  title="View History"
+                  disabled={!onViewHistory}
+                >
+                  <Calendar className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onTransferPlayer, 'Transfer Player')}
+                  title="Transfer Player"
+                  disabled={!onTransferPlayer || !isUserStaffContext}
+                >
+                  <RefreshCw className="h-3 w-3" />
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full h-8 border-red-400/50 hover:bg-red-400/10 text-red-400 bg-transparent text-xs"
+                  onClick={e => handleButtonAction(e, onLeaveTeam, 'Leave Team')}
+                  title="Leave Team"
+                  disabled={!onLeaveTeam || !isUserStaffContext}
+                >
+                  <UserMinus className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Photo Management */}
+            {onDeletePhoto && player.photoUrl && (
+              <div className="border-t border-white/20 pt-3">
+                <label className="text-sm font-medium mb-2 block text-white">Photo Management</label>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full text-xs"
+                  onClick={e => handleButtonAction(e, onDeletePhoto, 'Delete Photo')}
+                  title="Delete Photo"
+                >
+                  <Trash2 className="h-3 w-3 mr-2" />
+                  Delete Photo
+                </Button>
+              </div>
+            )}
+
+            {/* Play Style Selector */}
+            <div className="border-t border-white/20 pt-3">
+              <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
+              <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
+                {playStylesWithIcons.map(style => (
+                  <Button
+                    key={style.value}
+                    variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => togglePlayStyle(style.value)}
+                    disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                    className="text-sm p-1 h-6 w-6"
+                    title={style.label}
+                  >
+                    {style.icon}
+                  </Button>
                 ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Front side - FIFA-style card matching reference image exactly
-  return (
-    <div 
-      className="relative w-56 h-80 mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105 rounded-2xl overflow-hidden"
-      onClick={onFlip}
-      style={{
-        background: currentDesign.background,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        border: '3px solid rgba(255,255,255,0.8)',
-        boxShadow: `0 0 20px ${currentDesign.className.includes('yellow') ? 'rgba(251, 191, 36, 0.6)' : 
-                                  currentDesign.className.includes('gray') ? 'rgba(156, 163, 175, 0.6)' :
-                                  currentDesign.className.includes('amber') ? 'rgba(217, 119, 6, 0.6)' :
-                                  currentDesign.className.includes('purple') ? 'rgba(192, 132, 252, 0.6)' :
-                                  currentDesign.className.includes('blue') ? 'rgba(96, 165, 250, 0.6)' :
-                                  currentDesign.className.includes('pink') ? 'rgba(244, 114, 182, 0.6)' :
-                                  currentDesign.className.includes('green') ? 'rgba(34, 197, 94, 0.6)' :
-                                  currentDesign.className.includes('indigo') ? 'rgba(129, 140, 248, 0.6)' :
-                                  currentDesign.className.includes('orange') ? 'rgba(251, 146, 60, 0.6)' :
-                                  'rgba(239, 68, 68, 0.6)'}`
-      }}
-    >
-      {/* Top left - Overall rating and position */}
-      <div className="absolute top-2 left-2 z-20">
-        <div className="bg-gray-700/90 rounded px-1.5 py-1 text-center min-w-[32px]">
-          <div className="text-sm font-black text-white leading-none">{overall}</div>
-          <div className="text-[7px] font-bold text-gray-300 uppercase">{positionAbbr}</div>
-        </div>
-      </div>
-
-      {/* Top right corner icons */}
-      <div className="absolute top-2 right-2 z-20 flex space-x-1">
-        <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-[10px]">
-          🏠
-        </div>
-        <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center text-white font-bold text-[10px]">
-          ⭐
-        </div>
-        <div className="w-5 h-5 bg-gray-400/80 rounded-full flex items-center justify-center">
-          <div className="w-1.5 h-1.5 bg-white/80 rounded-sm"></div>
-        </div>
-      </div>
-
-      {/* Left side position indicators */}
-      <div className="absolute top-10 left-2 z-20 space-y-0.5">
-        <div className="bg-gray-700/90 text-white text-[7px] font-bold px-1 py-0.5 rounded uppercase">
-          CB+++
-        </div>
-        <div className="bg-gray-700/90 text-white text-[7px] font-bold px-1 py-0.5 rounded">
-          Midfielder Right
-        </div>
-        <div className="bg-gray-700/90 text-white text-[7px] font-bold px-1 py-0.5 rounded uppercase">
-          LB+
-        </div>
-      </div>
-
-      {/* Large circular player image */}
-      <div className="absolute top-12 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="relative w-32 h-32">
-          <div 
-            className="w-full h-full rounded-full overflow-hidden border-2 border-white/40"
-            style={{
-              background: 'radial-gradient(circle at center, rgba(255,255,255,0.1) 0%, rgba(0,0,0,0.2) 100%)'
-            }}
-          >
-            <img 
-              src={player.photo_url || 'https://via.placeholder.com/128'} 
-              alt={player.name} 
-              className="w-full h-full object-cover" 
-            />
-            {/* Subtle circular fade overlay matching reference */}
-            <div className="absolute inset-0 rounded-full bg-gradient-to-b from-transparent 70% to-black/15" />
-          </div>
-          {/* Camera icon */}
-          <div className="absolute bottom-1 right-1 w-4 h-4 bg-white/80 rounded-full flex items-center justify-center">
-            <Camera className="w-2 h-2 text-gray-600" />
-          </div>
-        </div>
-      </div>
-
-      {/* Player name - positioned like reference */}
-      <div className="absolute bottom-16 left-2 right-2 text-center z-20">
-        <div className="bg-gradient-to-r from-green-600 to-green-700 py-1 px-2 rounded">
-          <h3 className="text-white font-black text-sm leading-tight drop-shadow-sm">
-            {overall} {player.name} {overall}
-          </h3>
-        </div>
-      </div>
-
-      {/* Stats grid - matching reference layout */}
-      <div className="absolute bottom-6 left-2 right-2 z-20">
-        <div className="grid grid-cols-6 gap-1 text-center mb-1">
-          {[
-            { label: 'PAC', value: playerStats.pace || 50 },
-            { label: 'SHO', value: playerStats.shooting || 50 },
-            { label: 'PAS', value: playerStats.passing || 50 },
-            { label: 'DRI', value: playerStats.dribbling || 50 },
-            { label: 'DEF', value: playerStats.defending || 50 },
-            { label: 'PHY', value: playerStats.physical || 50 }
-          ].map((stat, index) => (
-            <div key={index}>
-              <div className="text-white font-black text-xs leading-none">{stat.value}</div>
-              <div className="text-white/90 text-[7px] font-bold uppercase">{stat.label}</div>
+              </div>
+              <div className="text-xs text-gray-400 mt-1">
+                Selected: {selectedPlayStyles.length}/3
+              </div>
             </div>
-          ))}
-        </div>
+            
+            {/* Fun Stats Editor */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-white">FIFA Stats</label>
+              <div className="grid grid-cols-3 gap-1">
+                {funStatLabels.map(stat => (
+                  <div key={stat.key} className="text-center">
+                    <div className="text-xs mb-1 text-white">{stat.key}</div>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={99}
+                      value={funStats[stat.key] || ''}
+                      onChange={(e) => updateStat(stat.key, e.target.value)}
+                      className="w-full text-center h-6 bg-white/10 border-white/20 text-white text-xs"
+                      placeholder="--"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
 
-        {/* Play style icons - matching reference */}
-        <div className="flex justify-center space-x-1 mb-1">
-          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-xs">✓</span>
-          </div>
-          <div className="w-5 h-5 bg-yellow-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-xs">⚡</span>
-          </div>
-          <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-xs">🎯</span>
+            {/* Card Design Selector */}
+            <div>
+              <label className="text-sm font-medium mb-2 block text-white">Card Design</label>
+              <Select value={selectedDesign} onValueChange={handleSaveDesign}>
+                <SelectTrigger className="w-full bg-white/10 border-white/20 text-white h-6">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(cardDesigns).map(([id, design]) => (
+                    <SelectItem key={id} value={id}>
+                      {design.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Bottom info - matching purple text from reference */}
-      <div className="absolute bottom-1 left-2 right-2 flex justify-between items-center z-20">
-        <span className="text-purple-300 font-bold text-xs">#{player.squad_number || 23}</span>
-        <span className="text-purple-300 font-bold text-xs">Age {age}</span>
-        <span className="text-purple-300 font-bold text-xs">{player.type?.toUpperCase() || 'OUTFIELD'}</span>
       </div>
     </div>
   );
 };
+
+export default FifaStylePlayerCard;

@@ -24,11 +24,11 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
   const [formData, setFormData] = useState({
     firstName: player?.name?.split(' ')[0] || '',
     surname: player?.name?.split(' ').slice(1).join(' ') || '',
-    dateOfBirth: player?.date_of_birth || '',
-    squadNumber: player?.squad_number || 0,
+    dateOfBirth: player?.dateOfBirth || '',
+    squadNumber: player?.squadNumber || 0,
     type: player?.type || 'outfield' as 'outfield' | 'goalkeeper',
     availability: player?.availability || 'green' as 'amber' | 'green' | 'red',
-    subscriptionType: player?.subscription_type || 'full_squad' as 'full_squad' | 'training' | 'trialist',
+    subscriptionType: player?.subscriptionType || 'full_squad' as 'full_squad' | 'training' | 'trialist',
     kit_sizes: player?.kit_sizes || {},
     nameOnShirt: (player?.kit_sizes as any)?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
   });
@@ -50,11 +50,11 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       
     onSubmit({
       name: fullName,
-      date_of_birth: formData.dateOfBirth,
-      squad_number: formData.squadNumber,
+      dateOfBirth: formData.dateOfBirth,
+      squadNumber: formData.squadNumber,
       type: formData.type,
       availability: formData.availability,
-      subscription_type: formData.subscriptionType,
+      subscriptionType: formData.subscriptionType,
       team_id: teamId,
       kit_sizes: {
         ...formData.kit_sizes,

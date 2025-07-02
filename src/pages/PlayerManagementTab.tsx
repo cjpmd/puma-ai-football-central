@@ -38,8 +38,7 @@ const PlayerManagementTab = () => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [performanceTrends, setPerformanceTrends] = useState<Map<string, PerformanceTrend>>(new Map());
-  const [viewMode, setViewMode] = useState<'table' | 'cards'>('cards');
-  const [flippedCards, setFlippedCards] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
@@ -95,14 +94,7 @@ const PlayerManagementTab = () => {
 
   // Remove player mutation
   const removePlayerMutation = useMutation({
-    mutationFn: async (playerId: string) => {
-      const { error } = await supabase
-        .from('players')
-        .update({ status: 'inactive' })
-        .eq('id', playerId);
-      if (error) throw error;
-      return playerId;
-    },
+    mutationFn: (playerId: string) => playersService.removePlayerFromSquad(playerId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['active-players'] });
       toast({
@@ -121,18 +113,18 @@ const PlayerManagementTab = () => {
 
   // Delete player photo mutation
   const deletePlayerPhotoMutation = useMutation({
-    mutationFn: (playerId: string) => playersService.deletePlayerPhoto(playerId),
+    mutationFn: (player: Player) => playersService.deletePlayerPhoto(player),
     onSuccess: (updatedPlayer) => {
       queryClient.invalidateQueries({ queryKey: ['active-players', selectedTeamId] });
       toast({
         title: 'Photo Deleted',
-        description: 'Photo has been successfully deleted.',
+        description: `Photo for ${updatedPlayer.name} has been successfully deleted.`,
       });
     },
     onError: (error: any, variables) => {
       toast({
         title: 'Error Deleting Photo',
-        description: error.message || 'Failed to delete photo.',
+        description: error.message || `Failed to delete photo for ${variables.name}.`,
         variant: 'destructive',
       });
     },
@@ -213,12 +205,12 @@ const PlayerManagementTab = () => {
   };
 
   const handleDeletePlayerPhoto = (playerToDeletePhoto: Player) => {
-    if (!playerToDeletePhoto.photo_url) {
+    if (!playerToDeletePhoto.photoUrl) {
       toast({ title: 'No Photo to Delete', description: `This player does not have a photo.` });
       return;
     }
     if (window.confirm(`Are you sure you want to delete the photo for ${playerToDeletePhoto.name}? This action cannot be undone.`)) {
-      deletePlayerPhotoMutation.mutate(playerToDeletePhoto.id);
+      deletePlayerPhotoMutation.mutate(playerToDeletePhoto);
     }
   };
 
@@ -230,7 +222,7 @@ const PlayerManagementTab = () => {
     });
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { fun_stats: stats }
+      data: { funStats: stats }
     });
   };
 
@@ -242,7 +234,7 @@ const PlayerManagementTab = () => {
     });
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { play_style: JSON.stringify(playStyles) }
+      data: { playStyle: JSON.stringify(playStyles) }
     });
   };
 
@@ -254,7 +246,7 @@ const PlayerManagementTab = () => {
     });
     updatePlayerMutation.mutate({
       id: player.id,
-      data: { card_design_id: designId }
+      data: { cardDesignId: designId }
     });
   };
 
@@ -337,7 +329,7 @@ const PlayerManagementTab = () => {
   };
 
   const renderTopPositions = (player: Player) => {
-    const positions = player.match_stats?.minutesByPosition || {};
+    const positions = player.matchStats?.minutesByPosition || {};
     
     // Convert positions object to array and ensure values are numbers
     const positionEntries = Object.entries(positions).map(([position, minutes]) => [
@@ -475,34 +467,22 @@ const PlayerManagementTab = () => {
                     <FifaStylePlayerCard
                       key={player.id}
                       player={player}
-                      showBackside={flippedCards.has(player.id)}
-                      onFlip={() => {
-                        setFlippedCards(prev => {
-                          const newSet = new Set(prev);
-                          if (newSet.has(player.id)) {
-                            newSet.delete(player.id);
-                          } else {
-                            newSet.add(player.id);
-                          }
-                          return newSet;
-                        });
-                      }}
-                      isEditable={true}
-                      onEdit={() => handleEditPlayer(player)}
-                      onManageParents={() => handleManageParents(player)}
-                      onRemoveFromSquad={() => handleRemoveFromSquad(player)}
-                      onUpdatePhoto={(player, file) => handleUpdatePhoto(player, file)}
-                      onDeletePhoto={() => handleDeletePlayerPhoto(player)}
-                      onSaveFunStats={(player, stats) => handleSaveFunStats(player, stats)}
-                      onSavePlayStyle={(player, playStyles) => handleSavePlayStyle(player, playStyles)}
-                      onSaveCardDesign={(player, designId) => handleSaveCardDesign(player, designId)}
-                      onManageAttributes={() => handleManageAttributes(player)}
-                      onManageObjectives={() => handleManageObjectives(player)}
-                      onManageComments={() => handleManageComments(player)}
-                      onViewStats={() => handleViewStats(player)}
-                      onViewHistory={() => handleViewHistory(player)}
-                      onTransferPlayer={() => handleTransferPlayer(player)}
-                      onLeaveTeam={() => handleLeaveTeam(player)}
+                      team={selectedTeam}
+                      onEdit={handleEditPlayer}
+                      onManageParents={handleManageParents}
+                      onRemoveFromSquad={handleRemoveFromSquad}
+                      onUpdatePhoto={handleUpdatePhoto}
+                      onDeletePhoto={handleDeletePlayerPhoto}
+                      onSaveFunStats={handleSaveFunStats}
+                      onSavePlayStyle={handleSavePlayStyle}
+                      onSaveCardDesign={handleSaveCardDesign}
+                      onManageAttributes={handleManageAttributes}
+                      onManageObjectives={handleManageObjectives}
+                      onManageComments={handleManageComments}
+                      onViewStats={handleViewStats}
+                      onViewHistory={handleViewHistory}
+                      onTransferPlayer={handleTransferPlayer}
+                      onLeaveTeam={handleLeaveTeam}
                     />
                   ))}
                 </div>
@@ -544,8 +524,8 @@ const PlayerManagementTab = () => {
                               {player.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'}
                             </Badge>
                           </TableCell>
-                          <TableCell>{player.match_stats?.totalGames || 0}</TableCell>
-                          <TableCell>{player.match_stats?.totalMinutes || 0}</TableCell>
+                          <TableCell>{player.matchStats?.totalGames || 0}</TableCell>
+                          <TableCell>{player.matchStats?.totalMinutes || 0}</TableCell>
                           <TableCell>
                             {renderTopPositions(player)}
                           </TableCell>

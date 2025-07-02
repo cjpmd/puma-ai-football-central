@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Team, PlayerAttribute, PlayerAttributeGroup, DEFAULT_PLAYER_ATTRIBUTES } from '@/types';
+import { Team, PlayerAttributeGroup, DEFAULT_PLAYER_ATTRIBUTES, PlayerAttribute } from '@/types/team';
 import { Plus, X, Edit, Eye, EyeOff } from 'lucide-react';
 
 interface TeamAttributeSettingsProps {

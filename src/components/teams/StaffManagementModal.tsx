@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Team, Staff } from '@/types';
+import { Team, TeamStaff } from '@/types/team';
 import { UserPlus, Trash2, Users, Mail, Phone, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,15 +26,15 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   onClose,
   onUpdate
 }) => {
-  const [staff, setStaff] = useState<Staff[]>([]);
+  const [staff, setStaff] = useState<TeamStaff[]>([]);
   const [loading, setLoading] = useState(false);
   const [isInvitingStaff, setIsInvitingStaff] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
     phone: '',
-    role: 'coach' as Staff['role']
+    role: 'coach' as TeamStaff['role']
   });
   const { toast } = useToast();
 
@@ -81,15 +81,14 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       console.log('StaffManagementModal: Raw staff data:', data);
 
       if (data) {
-        const staffMembers: Staff[] = data.map(record => {
+        const staffMembers: TeamStaff[] = data.map(record => {
           try {
             return {
               id: record.id,
               name: record.name || '',
               email: record.email || '',
               phone: record.phone || '',
-              team_id: team.id,
-              role: record.role as Staff['role'],
+              role: record.role as TeamStaff['role'],
               user_id: record.user_id || undefined,
               coachingBadges: [],
               certificates: [],
@@ -103,8 +102,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               name: record.name || 'Unknown',
               email: record.email || '',
               phone: record.phone || '',
-              role: (record.role as Staff['role']) || 'helper',
-              team_id: team.id,
+              role: (record.role as TeamStaff['role']) || 'helper',
               user_id: record.user_id || undefined,
               coachingBadges: [],
               certificates: [],
@@ -285,7 +283,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
-  const getRoleColor = (role: Staff['role']) => {
+  const getRoleColor = (role: TeamStaff['role']) => {
     switch (role) {
       case 'manager': return 'bg-blue-500';
       case 'assistant_manager': return 'bg-purple-500';
@@ -295,7 +293,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
-  const getRoleLabel = (role: Staff['role']) => {
+  const getRoleLabel = (role: TeamStaff['role']) => {
     return role.replace('_', ' ').split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
@@ -386,7 +384,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     <Label htmlFor="staffRole">Role</Label>
                     <Select 
                       value={newStaff.role}
-                      onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as Staff['role'] }))}
+                      onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
                     >
                       <SelectTrigger id="staffRole">
                         <SelectValue />

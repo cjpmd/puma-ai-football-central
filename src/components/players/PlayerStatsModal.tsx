@@ -42,7 +42,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     return null;
   }
 
-  const { match_stats: matchStats } = player;
+  const { matchStats } = player;
 
   // Filter out matches with "Unknown" opponent
   const filteredRecentGames = (matchStats?.recentGames || []).filter(game => 

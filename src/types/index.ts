@@ -1,378 +1,390 @@
-export interface User {
+export type UserRole = 
+  | "admin" 
+  | "team_manager" 
+  | "team_assistant_manager" 
+  | "team_coach" 
+  | "team_helper" 
+  | "parent" 
+  | "player" 
+  | "club_admin" 
+  | "club_chair" 
+  | "club_secretary"
+  | "global_admin";
+
+export type SubscriptionType = "free" | "premium" | "pro" | "analytics_plus";
+export type PlayerSubscriptionType = "full_squad" | "training" | "trialist";
+export type SubscriptionStatus = "active" | "inactive" | "pending" | "paused";
+
+export type User = {
   id: string;
   email: string;
-  name?: string;
-  roles?: string[];
-  created_at?: string;
-  updated_at?: string;
-}
+  name: string;
+  phone?: string;
+  roles: UserRole[];
+  faId?: string;
+  coachingBadges?: any[];
+};
 
-export interface Team {
+export type Team = {
   id: string;
   name: string;
-  age_group?: string;
-  season_start?: string;
-  season_end?: string;
-  logo_url?: string;
-  game_format?: string;
-  game_duration?: number;
-  subscription_type?: string;
-  manager_name?: string;
-  manager_email?: string;
-  manager_phone?: string;
-  created_at?: string;
-  updated_at?: string;
-  club_id?: string;
-  performance_categories?: string[];
-  kit_icons?: {
-    home?: string;
-    away?: string;
+  ageGroup: string;
+  seasonStart: string;
+  seasonEnd: string;
+  clubId?: string;
+  subscriptionType: SubscriptionType;
+  gameFormat: GameFormat;
+  gameDuration?: number; // Added game duration in minutes
+  kitIcons: {
+    home: string;
+    away: string;
+    training: string;
+    goalkeeper: string;
   };
-  // Extended properties for team settings
-  playerAttributes?: Record<PlayerAttributeGroup, PlayerAttribute[]>;
-  kitDesigns?: KitDesigns;
-  nameDisplayOption?: NameDisplayOption;
-  faConnection?: FAConnection;
-  staff?: Staff[];
-  isReadOnly?: boolean;
-  // Camel case aliases for backward compatibility
-  ageGroup?: string;
-  seasonStart?: string;
-  seasonEnd?: string;
-  logoUrl?: string;
-  gameFormat?: string;
-  gameDuration?: number;
-  subscriptionType?: string;
+  logoUrl?: string | null;
+  performanceCategories: string[];
   managerName?: string;
   managerEmail?: string;
   managerPhone?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  clubId?: string;
-  performanceCategories?: string[];
-  kitIcons?: {
-    home?: string;
-    away?: string;
-    training?: string;
-    goalkeeper?: string;
+  privacySettings?: {
+    showScoresToParents: boolean;
+    showScoresToPlayers: boolean;
+    showPlayerStatsToParents: boolean;
+    showPlayerStatsToPlayers: boolean;
   };
-}
+  isReadOnly?: boolean; // For linked teams
+  kitDesigns?: any; // Added this property
+  createdAt: string;
+  updatedAt: string;
+};
 
-export interface Club {
+export type Club = {
   id: string;
   name: string;
-  logo_url?: string;
-  created_at?: string;
-  updated_at?: string;
-  subscription_type?: string;
-  reference_number?: string;
-  serial_number?: string;
-  userRole?: string; // For linked clubs
-  isReadOnly?: boolean; // For linked clubs
-  teams?: any[];
-  // Camel case aliases for backward compatibility
-  logoUrl?: string;
-  subscriptionType?: string;
   referenceNumber?: string;
   serialNumber?: string;
-}
+  teams?: string[]; // Array of team IDs - made optional
+  subscriptionType: SubscriptionType;
+  logoUrl?: string | null;
+  officials?: ClubOfficial[];
+  facilities?: Facility[];
+  userRole?: string; // For linked clubs
+  isReadOnly?: boolean; // For linked clubs
+  createdAt: string;
+  updatedAt: string;
+};
 
-export interface Player {
+export type PlayerAttribute = {
   id: string;
   name: string;
-  squad_number: number;
-  date_of_birth: string;
+  group: "goalkeeping" | "mental" | "physical" | "technical";
+  value: number; // 1-10
+  enabled: boolean; // Added enabled flag for attributes
+};
+
+export type PlayerObjective = {
+  id: string;
+  title: string;
+  description: string;
+  difficultyRating: number; // 1-5
+  reviewDate: string;
+  status: "ongoing" | "improving" | "complete";
+  createdAt: string;
+  createdBy: string;
+};
+
+export type PlayerComment = {
+  id: string;
+  text: string;
+  createdAt: string;
+  createdBy: string;
+};
+
+export type Position = 
+  | "GK" | "SK" 
+  | "DL" | "DCL" | "DC" | "DCR" | "DR" 
+  | "WBL" | "DCML" | "DCM" | "DCMR" | "WBR" 
+  | "ML" | "MCL" | "MC" | "MCR" | "MR" 
+  | "AML" | "AMCL" | "AMC" | "AMCR" | "AMR" 
+  | "STCL" | "STC" | "STCR"
+  | "DM" | "STL" | "STR" 
+  | "none"; // Added "none" as a valid Position
+
+export type Formation = 
+  | "1-1-3-1" | "2-3-1" | "3-2-1" 
+  | "3-2-3" | "2-4-2" | "3-3-2" 
+  | "custom";
+
+export type GameFormat = 
+  | "3-a-side" | "4-a-side" | "5-a-side" 
+  | "7-a-side" | "9-a-side" | "11-a-side";
+
+export type MatchStats = {
+  totalGames: number;
+  captainGames: number;
+  playerOfTheMatchCount: number;
+  totalMinutes: number;
+  minutesByPosition: Record<Position, number>;
+  performanceCategoryStats?: Record<string, {
+    totalMinutes: number;
+    totalGames: number;
+    captainGames: number;
+    potmCount: number;
+    minutesByPosition: Record<string, number>;
+  }>;
+  recentGames: {
+    id: string;
+    date: string;
+    opponent?: string;
+    captain: boolean;
+    playerOfTheMatch: boolean;
+    minutes: number;
+    minutesByPosition: Record<Position, number>;
+    performanceCategory?: string;
+    wasSubstitute?: boolean;
+  }[];
+};
+
+export type KitSizes = {
+  size?: string;
+  quantity?: number;
+  nameOnShirt?: string;
+  [key: string]: any; // Allow additional properties
+};
+
+export type Player = {
+  id: string;
+  name: string;
+  dateOfBirth?: string;
+  squadNumber?: number;
+  position?: string;
+  type?: 'goalkeeper' | 'outfield';
+  subscriptionType?: 'full_squad' | 'training' | 'trialist';
+  availability?: 'green' | 'amber' | 'red';
   team_id: string;
-  status?: string;
-  subscription_type?: string;
-  subscription_status?: string;
-  photo_url?: string;
-  availability?: string;
-  attributes?: any[];
-  objectives?: any[];
-  comments?: any[];
-  match_stats?: any;
-  parent_id?: string;
+  teamId?: string; // Allow both for compatibility
+  attributes?: PlayerAttribute[];
+  objectives?: PlayerObjective[]; // Added this property
+  comments?: PlayerComment[]; // Added this property
+  kit_sizes?: KitSizes;
+  matchStats?: {
+    totalGames: number;
+    totalMinutes: number;
+    captainGames: number;
+    playerOfTheMatchCount: number;
+    minutesByPosition: Record<string, number>;
+    performanceCategoryStats?: Record<string, any>;
+    recentGames?: any[];
+  };
+  leaveDate?: string;
+  photoUrl?: string; // New field for player photos
+  subscriptionStatus?: SubscriptionStatus; // Added this property
+  status?: string; // Added this property
+  leaveComments?: string; // Added this property
+  cardDesignId?: string; // Added for FIFA-style card designs
+  funStats?: Record<string, number>; // Added for FIFA-style fun stats
+  playStyle?: string; // Added for FIFA-style play styles
+  user_id?: string; // Added to support direct user link for the player
   created_at?: string;
   updated_at?: string;
-  leave_date?: string;
-  leave_comments?: string;
-  performance_category_id?: string;
-  type?: string;
-  play_style?: string;
-  card_design_id?: string;
-  linking_code?: string;
-  kit_sizes?: any;
-  fun_stats?: any;
-}
+};
+
+export type Parent = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  playerId: string;
+  linkCode: string;
+  subscriptionType?: PlayerSubscriptionType;
+  subscriptionStatus?: SubscriptionStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PlayerTransfer = {
+  id: string;
+  playerId: string;
+  fromTeamId?: string;
+  toTeamId?: string;
+  transferDate: string;
+  status: "pending" | "accepted" | "rejected";
+  dataTransferOptions: {
+    full: boolean;
+    attributes: boolean;
+    comments: boolean;
+    objectives: boolean;
+    events: boolean;
+  };
+  requestedBy: string;
+  acceptedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AttributeHistory = {
+  id: string;
+  playerId: string;
+  attributeName: string;
+  attributeGroup: string;
+  value: number;
+  recordedDate: string;
+  recordedBy: string;
+  createdAt: string;
+};
+
+export type EventType = 
+  | "fixture" | "friendly" | "tournament" 
+  | "festival" | "training" | "social";
+
+export type TeamSelection = {
+  teamId: string;
+  formation: Formation;
+  performanceCategory?: string;
+  captainId?: string;
+  players: {
+    playerId: string;
+    position: Position;
+  }[];
+  substitutes: string[]; // Player IDs
+};
+
+export type Period = {
+  id: string;
+  name: string;
+  duration: number; // minutes
+  teamSelections: Record<string, TeamSelection>; // key is team ID
+};
 
 export interface Event {
-  id: string;
-  team_id: string;
+  id?: string;
+  teamId: string;
   title: string;
   description?: string;
-  location?: string;
+  type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   date: string;
-  start_time?: string;
-  end_time?: string;
-  meeting_time?: string;
-  type: 'training' | 'fixture' | 'friendly' | 'tournament' | 'festival' | 'social';
-  event_type: 'training' | 'fixture' | 'friendly' | 'tournament' | 'festival' | 'social';
-  is_recurring?: boolean;
-  recurrence_rule?: string;
-  created_at?: string;
-  updated_at?: string;
-  mandatory?: boolean;
-  game_format?: string;
-  game_duration?: number;
-  opponent?: string;
-  is_home?: boolean;
-  facility_id?: string;
-  facility_booking_id?: string;
-  training_notes?: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
   notes?: string;
-  coach_notes?: string;
-  staff_notes?: string;
+  gameFormat?: GameFormat;
+  gameDuration?: number; // Added game duration in minutes
+  opponent?: string;
+  isHome?: boolean;
+  facilityId?: string;
+  trainingNotes?: string;
   scores?: {
     home: number;
     away: number;
   };
-  player_of_match_id?: string;
-  kit_selection?: 'home' | 'away' | 'training';
+  playerOfTheMatchId?: string;
+  meetingTime?: string;
   teams?: string[];
-  total_minutes?: number;
-  attendance?: {
-    [player_id: string]: 'confirmed' | 'maybe' | 'declined' | 'pending';
-  };
+  kitSelection?: 'home' | 'away' | 'training';
 }
 
-export interface EventSelection {
+export type EquipmentItem = {
   id: string;
-  event_id: string;
-  player_id: string;
-  status: 'confirmed' | 'maybe' | 'declined' | 'pending';
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Staff {
-  id: string;
-  name: string;
-  role: string;
-  team_id: string;
-  email?: string;
-  phone?: string;
-  photo_url?: string;
-  bio?: string;
-  created_at?: string;
-  updated_at?: string;
-  user_id?: string;
-  coachingBadges?: any[];
-  certificates?: any[];
-  createdAt?: string;
-  updatedAt?: string;
-}
-
-export interface PerformanceCategory {
-  id: string;
+  teamId: string;
   name: string;
   description?: string;
-  team_id: string;
-  created_at?: string;
-  updated_at?: string;
-}
+  quantity: number;
+  condition: 'excellent' | 'good' | 'fair' | 'poor';
+  createdAt: string;
+  updatedAt: string;
+};
 
-export interface Parent {
+export type Facility = {
   id: string;
+  clubId: string;
   name: string;
-  email: string;
-  phone?: string;
-  playerId?: string;
-  subscriptionType?: string;
-  subscriptionStatus?: string;
-  linkCode?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  isUserLinked?: boolean;
-  userId?: string;
-  relationship?: string;
-}
+  description?: string;
+  bookableUnits: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-export interface CardDesign {
+export type ClubRole = 'admin' | 'chair' | 'secretary';
+
+export type ClubOfficial = {
   id: string;
-  name: string;
-  team_id: string;
-  background_color: string;
-  text_color: string;
-  font_family: string;
-  border_style: string;
-  border_color: string;
-  layout_style: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface Attendance {
-  id: string;
-  event_id: string;
-  player_id: string;
-  status: 'confirmed' | 'maybe' | 'declined' | 'pending';
-  notes?: string;
-  created_at?: string;
-  updated_at?: string;
-}
-
-// Base types that need to be defined first
-export type SubscriptionType = 'free' | 'premium' | 'pro' | 'analytics_plus' | 'full_squad' | 'training' | 'trialist';
-export type GameFormat = '3-a-side' | '4-a-side' | '5-a-side' | '7-a-side' | '9-a-side' | '11-a-side';
-export type NameDisplayOption = 'firstName' | 'surname' | 'fullName' | 'initials';
-export type PlayerAttributeGroup = "goalkeeping" | "mental" | "physical" | "technical";
-
-export interface KitDesign {
-  shirtColor: string;
-  sleeveColor: string;
-  hasStripes: boolean;
-  stripeColor: string;
-  shortsColor: string;
-  socksColor: string;
-}
-
-export interface KitDesigns {
-  home: KitDesign;
-  away: KitDesign;
-  training: KitDesign;
-  goalkeeper: KitDesign;
-}
-
-export interface FAConnection {
-  provider: string;
-  isConnected: boolean;
-  syncEnabled: boolean;
-  lastSync?: string;
-}
-
-export interface ClubOfficial {
-  id: string;
-  club_id: string;
-  user_id: string;
-  role: string;
-  assigned_at: string;
-  assigned_by?: string;
+  clubId: string;
+  userId: string;
+  role: ClubRole;
+  assignedAt: string;
+  assignedBy?: string;
+  createdAt: string;
+  updatedAt: string;
   profile?: {
-    id: string;
-    name?: string;
-    email?: string;
+    name: string;
+    email: string;
   };
-}
+};
 
-export interface Facility {
+export type FacilityAvailability = {
   id: string;
-  name: string;
-  description?: string;
-  club_id: string;
-  bookable_units: string;
+  facilityId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  bookedByTeamId?: string;
+  eventType?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type StaffCertification = {
+  id: string;
+  userId: string;
+  clubId: string;
+  certificationType: string;
+  certificationName: string;
+  awardedDate: string;
+  expiryDate?: string;
+  awardedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type TeamSubscription = {
+  id: string;
+  teamId: string;
+  subscriptionType: string;
+  status: string;
+  startDate: string;
+  endDate?: string;
+  valuePerPeriod?: number;
+  billingPeriod?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ClubEvent = {
+  id: string;
+  teamId: string;
+  title: string;
+  eventType: string;
+  date: string;
+  startTime?: string;
+  endTime?: string;
+  location?: string;
+  opponent?: string;
+  totalMinutes?: number;
+  playerOfMatchId?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Profile = {
+  id: string;
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  roles: string[];
+  fa_id: string | null;
+  coaching_badges: any[];
+  managed_player_ids?: string[]; // Added to support players managed by this user (e.g. parent)
   created_at: string;
   updated_at: string;
-}
-
-export type Position = 'GK' | 'CB' | 'LB' | 'RB' | 'CM' | 'LM' | 'RM' | 'CAM' | 'CDM' | 'LW' | 'RW' | 'ST' | 'CF' | 
-  'SK' | 'DL' | 'DCL' | 'DC' | 'DCR' | 'DR' | 'WBL' | 'DCML' | 'DCM' | 'DCMR' | 'WBR' | 'ML' | 'MCL' | 'MC' | 'MCR' | 'MR' | 
-  'AML' | 'AMCL' | 'AMC' | 'AMCR' | 'AMR' | 'STCL' | 'STC' | 'STCR' | 'STL' | 'STR' | 'DM';
-
-export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '5-3-2' | '3-4-3' | 
-  '1-1-3-1' | '2-3-1' | '3-2-1' | '3-2-3' | '2-4-2' | '3-3-2' | 'custom';
-
-export interface PlayerAttribute {
-  id: string;
-  name: string;
-  group: PlayerAttributeGroup;
-  value: number;
-  max_value?: number;
-  created_at?: string;
-  updated_at?: string;
-  enabled?: boolean;
-}
-
-export const DEFAULT_PLAYER_ATTRIBUTES: PlayerAttribute[] = [
-  // Goalkeeping
-  { id: 'shot_stopping', name: 'Shot Stopping', group: 'goalkeeping', value: 5, enabled: true },
-  { id: 'distribution', name: 'Distribution', group: 'goalkeeping', value: 5, enabled: true },
-  { id: 'positioning', name: 'Positioning', group: 'goalkeeping', value: 5, enabled: true },
-  { id: 'communication', name: 'Communication', group: 'goalkeeping', value: 5, enabled: true },
-  
-  // Technical
-  { id: 'first_touch', name: 'First Touch', group: 'technical', value: 5, enabled: true },
-  { id: 'passing', name: 'Passing', group: 'technical', value: 5, enabled: true },
-  { id: 'shooting', name: 'Shooting', group: 'technical', value: 5, enabled: true },
-  { id: 'dribbling', name: 'Dribbling', group: 'technical', value: 5, enabled: true },
-  { id: 'crossing', name: 'Crossing', group: 'technical', value: 5, enabled: true },
-  { id: 'tackling', name: 'Tackling', group: 'technical', value: 5, enabled: true },
-  { id: 'heading', name: 'Heading', group: 'technical', value: 5, enabled: true },
-  
-  // Physical
-  { id: 'pace', name: 'Pace', group: 'physical', value: 5, enabled: true },
-  { id: 'strength', name: 'Strength', group: 'physical', value: 5, enabled: true },
-  { id: 'stamina', name: 'Stamina', group: 'physical', value: 5, enabled: true },
-  { id: 'agility', name: 'Agility', group: 'physical', value: 5, enabled: true },
-  { id: 'balance', name: 'Balance', group: 'physical', value: 5, enabled: true },
-  
-  // Mental
-  { id: 'decision_making', name: 'Decision Making', group: 'mental', value: 5, enabled: true },
-  { id: 'concentration', name: 'Concentration', group: 'mental', value: 5, enabled: true },
-  { id: 'teamwork', name: 'Teamwork', group: 'mental', value: 5, enabled: true },
-  { id: 'leadership', name: 'Leadership', group: 'mental', value: 5, enabled: true },
-  { id: 'creativity', name: 'Creativity', group: 'mental', value: 5, enabled: true }
-];
-
-export interface PlayerComment {
-  id: string;
-  text: string;
-  created_at: string;
-  created_by: string;
-}
-
-export interface PlayerObjective {
-  id: string;
-  title: string;
-  description?: string;
-  completed: boolean;
-  created_at: string;
-  target_date?: string;
-  difficulty_rating?: number;
-  review_date?: string;
-  status?: 'ongoing' | 'improving' | 'complete';
-  created_by?: string;
-}
-
-export interface PlayerTransfer {
-  id: string;
-  player_id: string;
-  from_team_id: string;
-  to_team_id: string;
-  transfer_date: string;
-  status: 'pending' | 'approved' | 'rejected';
-  requested_by: string;
-  accepted_by?: string;
-  fromTeamId?: string;
-  toTeamId?: string;
-  transferDate?: string;
-}
-
-export interface AttributeHistory {
-  id: string;
-  player_id: string;
-  attribute_name: string;
-  attribute_group: string;
-  value: number;
-  recorded_date: string;
-  recorded_by: string;
-  attributeName?: string;
-  recordedDate?: string;
-  recordedBy?: string;
-}
-
-// Additional missing types
-export type SubscriptionStatus = 'active' | 'pending' | 'inactive' | 'paused';
-export type UserRole = 'global_admin' | 'club_admin' | 'club_chair' | 'club_secretary' | 'team_manager' | 'team_assistant_manager' | 'team_coach' | 'team_helper' | 'admin' | 'manager' | 'coach' | 'player' | 'parent';
-export type PlayerSubscriptionType = 'full_squad' | 'training' | 'trialist';
+};

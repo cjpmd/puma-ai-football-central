@@ -1,132 +1,266 @@
 
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
-import { toast } from "sonner";
-import { supabase } from '@/integrations/supabase/client';
-import { Player } from '@/types';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, UserPlus, UserMinus, Crown } from 'lucide-react';
+import { useSquadManagement } from '@/hooks/useSquadManagement';
+import { useQuery } from '@tanstack/react-query';
+import { playersService } from '@/services/playersService';
+import { SquadPlayer } from '@/types/teamSelection';
+import { toast } from 'sonner';
 
 interface SquadManagementProps {
-  eventId: string;
   teamId: string;
+  eventId?: string;
   globalCaptainId?: string;
-  onSquadChange?: (newSquadPlayers: any[]) => void;
+  onSquadChange?: (squadPlayers: SquadPlayer[]) => void;
   onCaptainChange?: (captainId: string) => void;
-  onClose?: () => void;
 }
 
 export const SquadManagement: React.FC<SquadManagementProps> = ({ 
-  eventId, 
   teamId, 
+  eventId,
   globalCaptainId,
   onSquadChange,
-  onCaptainChange,
-  onClose 
+  onCaptainChange
 }) => {
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const {
+    squadPlayers,
+    loading: squadLoading,
+    addPlayerToSquad,
+    removePlayerFromSquad,
+    updatePlayerAvailability
+  } = useSquadManagement(teamId, eventId);
 
-  useEffect(() => {
-    loadPlayers();
-  }, [teamId, eventId]);
+  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
-  const loadPlayers = async () => {
-    setLoading(true);
+  // Get all team players for adding to squad
+  const { data: allPlayers = [], isLoading: playersLoading, error: playersError } = useQuery({
+    queryKey: ['team-players', teamId],
+    queryFn: () => playersService.getActivePlayersByTeamId(teamId),
+    enabled: !!teamId,
+  });
+
+  console.log('SquadManagement render:', {
+    teamId,
+    eventId,
+    squadPlayers: squadPlayers.length,
+    allPlayers: allPlayers.length,
+    playersLoading,
+    playersError
+  });
+
+  // Filter out players already in squad
+  const availableToAdd = allPlayers.filter(
+    player => !squadPlayers.some(squadPlayer => squadPlayer.id === player.id)
+  );
+
+  console.log('Available players to add:', availableToAdd.length);
+
+  const handleAddPlayer = async () => {
+    if (!selectedPlayerId) {
+      toast.error('Please select a player to add');
+      return;
+    }
+    
     try {
-      // Fetch all active players for the team
-      const { data: teamPlayers, error: teamPlayersError } = await supabase
-        .from('players')
-        .select('*')
-        .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('name');
-
-      if (teamPlayersError) throw teamPlayersError;
-
-      // For now, we'll use a simple approach to get selected players
-      // This would need to be updated based on your actual squad management system
-      const selectedPlayerIds: string[] = [];
-
-      setPlayers((teamPlayers || []) as Player[]);
-      setSelectedPlayers(selectedPlayerIds);
-      
-      if (onSquadChange) {
-        onSquadChange(teamPlayers || []);
-      }
+      console.log('Adding player to squad:', selectedPlayerId);
+      await addPlayerToSquad(selectedPlayerId);
+      setSelectedPlayerId('');
+      onSquadChange?.(squadPlayers);
+      toast.success('Player added to squad successfully');
     } catch (error: any) {
-      console.error("Error loading players:", error);
-      toast.error(error.message || "Failed to load players.");
-    } finally {
-      setLoading(false);
+      console.error('Error adding player to squad:', error);
+      toast.error(error.message || 'Failed to add player to squad');
     }
   };
 
-  const togglePlayerSelection = (playerId: string) => {
-    setSelectedPlayers(prev => {
-      if (prev.includes(playerId)) {
-        return prev.filter(id => id !== playerId);
-      } else {
-        return [...prev, playerId];
-      }
-    });
-  };
-
-  const saveSelections = async () => {
-    setLoading(true);
+  const handleRemovePlayer = async (playerId: string) => {
     try {
-      // This would be implemented based on your squad management requirements
-      toast.success("Squad selections saved successfully!");
-      if (onClose) onClose();
+      console.log('Removing player from squad:', playerId);
+      await removePlayerFromSquad(playerId);
+      onSquadChange?.(squadPlayers);
+      toast.success('Player removed from squad');
     } catch (error: any) {
-      console.error("Error saving squad selections:", error);
-      toast.error(error.message || "Failed to save squad selections.");
-    } finally {
-      setLoading(false);
+      console.error('Error removing player from squad:', error);
+      toast.error(error.message || 'Failed to remove player from squad');
     }
   };
+
+  const handleAvailabilityChange = async (playerId: string, status: string) => {
+    try {
+      console.log('Updating availability:', { playerId, status });
+      await updatePlayerAvailability(playerId, status as 'available' | 'unavailable' | 'pending' | 'maybe');
+      onSquadChange?.(squadPlayers);
+      toast.success('Availability updated');
+    } catch (error: any) {
+      console.error('Error updating availability:', error);
+      toast.error(error.message || 'Failed to update availability');
+    }
+  };
+
+  const handleCaptainChange = (captainId: string) => {
+    onCaptainChange?.(captainId);
+    toast.success('Captain updated');
+  };
+
+  const getAvailabilityColor = (status: string) => {
+    switch (status) {
+      case 'available': return 'bg-green-100 text-green-800';
+      case 'unavailable': return 'bg-red-100 text-red-800';
+      case 'maybe': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (squadLoading || playersLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading squad...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (playersError) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <p className="text-red-600">Error loading players: {playersError.message}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <CardHeader>
-        <CardTitle>Manage Squad</CardTitle>
-      </CardHeader>
-      <CardContent className="flex-grow">
-        <ScrollArea className="h-[400px]">
-          {loading ? (
-            <div className="text-center py-4">Loading players...</div>
+    <div className="space-y-6">
+      {/* Team Captain Selection */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Crown className="h-4 w-4 text-yellow-500" />
+            Team Captain
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <Select value={globalCaptainId || ''} onValueChange={handleCaptainChange}>
+            <SelectTrigger className="h-8">
+              <SelectValue placeholder="Select captain..." />
+            </SelectTrigger>
+            <SelectContent>
+              {squadPlayers
+                .filter(p => p.availabilityStatus === 'available')
+                .map((player) => (
+                  <SelectItem key={player.id} value={player.id}>
+                    #{player.squadNumber} {player.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      {/* Squad Management */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Squad Management
+            <Badge variant="secondary">{squadPlayers.length} players</Badge>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add Player Section */}
+          {availableToAdd.length > 0 ? (
+            <div className="flex gap-2">
+              <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select player to add to squad..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableToAdd.map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      #{player.squadNumber} {player.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button 
+                onClick={handleAddPlayer} 
+                disabled={!selectedPlayerId}
+                size="sm"
+              >
+                <UserPlus className="h-4 w-4 mr-1" />
+                Add
+              </Button>
+            </div>
           ) : (
-            <div className="space-y-2">
-              {players.map(player => (
-                <Card key={player.id} className="p-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-puma-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                        {player.squad_number}
-                      </div>
-                      <span className="font-medium">{player.name}</span>
-                    </div>
-                    <Checkbox
-                      id={`player-${player.id}`}
-                      checked={selectedPlayers.includes(player.id)}
-                      onCheckedChange={() => togglePlayerSelection(player.id)}
-                    />
-                  </div>
-                </Card>
-              ))}
+            <div className="text-center py-4 text-muted-foreground">
+              {allPlayers.length === 0 
+                ? 'No players found in this team'
+                : 'All players are already in the squad'
+              }
             </div>
           )}
-        </ScrollArea>
-      </CardContent>
-      <div className="p-4">
-        <Button onClick={saveSelections} disabled={loading} className="w-full bg-puma-blue-500 hover:bg-puma-blue-600">
-          {loading ? "Saving..." : "Save Selections"}
-        </Button>
-      </div>
+
+          {/* Squad Players List */}
+          <div className="space-y-2">
+            {squadPlayers.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No players in squad. Add players to get started.
+              </div>
+            ) : (
+              squadPlayers.map((player) => (
+                <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline">#{player.squadNumber}</Badge>
+                    <span className="font-medium">{player.name}</span>
+                    {player.id === globalCaptainId && (
+                      <Crown className="h-4 w-4 text-yellow-500" />
+                    )}
+                    {player.type === 'goalkeeper' && (
+                      <Badge variant="secondary">GK</Badge>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={player.availabilityStatus}
+                      onValueChange={(value) => handleAvailabilityChange(player.id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="available">Available</SelectItem>
+                        <SelectItem value="unavailable">Unavailable</SelectItem>
+                        <SelectItem value="maybe">Maybe</SelectItem>
+                        <SelectItem value="pending">Pending</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Badge className={getAvailabilityColor(player.availabilityStatus)}>
+                      {player.availabilityStatus}
+                    </Badge>
+                    
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemovePlayer(player.id)}
+                    >
+                      <UserMinus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

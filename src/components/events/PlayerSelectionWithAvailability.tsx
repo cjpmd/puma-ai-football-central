@@ -7,10 +7,10 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, Star, Clock, AlertCircle, Grid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { GameFormat, NameDisplayOption } from '@/types';
+import { GameFormat } from '@/types';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
 import { formatPlayerName } from '@/utils/nameUtils';
-// NameDisplayOption is now in @/types
+import { NameDisplayOption } from '@/types/team';
 
 interface Player {
   id: string;

@@ -76,7 +76,7 @@ const CalendarEventsPage = () => {
   // Update defaults when team changes
   useEffect(() => {
     if (currentTeam) {
-      setEventGameFormat((currentTeam.gameFormat || '7-a-side') as GameFormat);
+      setEventGameFormat(currentTeam.gameFormat || '7-a-side');
       setEventGameDuration(currentTeam.gameDuration || 90);
     }
   }, [currentTeam]);
@@ -287,27 +287,27 @@ const CalendarEventsPage = () => {
       if (error) {
         console.error('Error loading fresh team data:', error);
         // Fall back to cached values
-        setEventGameFormat(teamDefaultGameFormat as GameFormat);
+        setEventGameFormat(teamDefaultGameFormat);
         setEventGameDuration(teamDefaultGameDuration);
-        setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat as GameFormat, gameDuration: teamDefaultGameDuration });
+        setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat, gameDuration: teamDefaultGameDuration });
       } else {
         console.log('Fresh team data loaded for create modal:', freshTeam);
         // Use fresh database values
         const freshFormat = (freshTeam.game_format || '7-a-side') as GameFormat;
         const freshDuration = freshTeam.game_duration || 90;
         
-        setEventGameFormat(freshFormat as GameFormat);
+        setEventGameFormat(freshFormat);
         setEventGameDuration(freshDuration);
-        setFreshTeamDefaults({ gameFormat: freshFormat as GameFormat, gameDuration: freshDuration });
+        setFreshTeamDefaults({ gameFormat: freshFormat, gameDuration: freshDuration });
         
         console.log('Set create modal defaults - gameFormat:', freshTeam.game_format, 'gameDuration:', freshTeam.game_duration);
       }
     } catch (error) {
       console.error('Error loading fresh team data:', error);
       // Fall back to cached values
-      setEventGameFormat(teamDefaultGameFormat as GameFormat);
+      setEventGameFormat(teamDefaultGameFormat);
       setEventGameDuration(teamDefaultGameDuration);
-      setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat as GameFormat, gameDuration: teamDefaultGameDuration });
+      setFreshTeamDefaults({ gameFormat: teamDefaultGameFormat, gameDuration: teamDefaultGameDuration });
     }
     
     setIsCreateModalOpen(true);
@@ -341,7 +341,7 @@ const CalendarEventsPage = () => {
     setEventNotes('');
     setEventEventType('training');
     setEventOpponent('');
-    setEventGameFormat(teamDefaultGameFormat as GameFormat);
+    setEventGameFormat(teamDefaultGameFormat);
     setEventGameDuration(teamDefaultGameDuration);
     setEventKitSelection('home');
   };

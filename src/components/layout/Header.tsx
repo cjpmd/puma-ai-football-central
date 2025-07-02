@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { UserLoginModal } from "@/components/modals/UserLoginModal";
 import { UserSignupModal } from "@/components/modals/UserSignupModal";
@@ -28,12 +29,15 @@ export function Header() {
         </div>
         
         {/* Team Logo Display */}
-        {showTeamLogo && currentTeam?.logo_url && (
-          <img 
-            src={currentTeam.logo_url} 
-            alt="Team logo" 
-            className="w-8 h-8 rounded-full object-cover"
-          />
+        {showTeamLogo && currentTeam && (
+          <div className="flex items-center ml-4 pl-4 border-l">
+            <EntityHeader 
+              logoUrl={currentTeam.logoUrl}
+              entityName={currentTeam.name}
+              entityType="team"
+              className="text-sm"
+            />
+          </div>
         )}
         
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">

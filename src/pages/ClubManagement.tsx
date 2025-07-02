@@ -94,7 +94,7 @@ export const ClubManagement = () => {
             id: club.id,
             name: club.name,
             referenceNumber: club.reference_number || undefined,
-            subscription_type: club.subscription_type as Club['subscription_type'],
+            subscriptionType: club.subscription_type as Club['subscriptionType'],
             serialNumber: club.serial_number,
             logoUrl: club.logo_url,
             createdAt: club.created_at,
@@ -122,9 +122,9 @@ export const ClubManagement = () => {
       
       const { data, error } = await supabase.from('clubs').insert([{
         name: clubData.name,
-        reference_number: clubData.reference_number,
-        subscription_type: clubData.subscription_type || 'free',
-        logo_url: clubData.logo_url
+        reference_number: clubData.referenceNumber,
+        subscription_type: clubData.subscriptionType || 'free',
+        logo_url: clubData.logoUrl
       }]).select().single();
 
       if (error) throw error;
@@ -157,9 +157,9 @@ export const ClubManagement = () => {
         .from('clubs')
         .update({
           name: clubData.name,
-          reference_number: clubData.reference_number,
-          subscription_type: clubData.subscription_type,
-          logo_url: clubData.logo_url
+          reference_number: clubData.referenceNumber,
+          subscription_type: clubData.subscriptionType,
+          logo_url: clubData.logoUrl
         })
         .eq('id', selectedClub.id);
 
@@ -199,9 +199,9 @@ export const ClubManagement = () => {
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-3 flex-1">
             <div className="w-8 h-8 flex items-center justify-center rounded bg-muted">
-              {club.logo_url ? (
+              {club.logoUrl ? (
                 <img 
-                  src={club.logo_url} 
+                  src={club.logoUrl} 
                   alt={`${club.name} logo`}
                   className="w-7 h-7 object-contain rounded"
                 />
@@ -212,9 +212,9 @@ export const ClubManagement = () => {
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
                 {club.name}
-                {club.serial_number && (
+                {club.serialNumber && (
                   <Badge variant="secondary" className="text-xs">
-                    #{club.serial_number}
+                    #{club.serialNumber}
                   </Badge>
                 )}
                 {isLinked && (
@@ -223,9 +223,9 @@ export const ClubManagement = () => {
                   </Badge>
                 )}
               </CardTitle>
-              {club.reference_number && (
+              {club.referenceNumber && (
                 <CardDescription>
-                  Ref: {club.reference_number}
+                  Ref: {club.referenceNumber}
                 </CardDescription>
               )}
             </div>
@@ -237,20 +237,20 @@ export const ClubManagement = () => {
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Subscription:</span>
             <Badge variant="outline" className="capitalize">
-              {club.subscription_type}
+              {club.subscriptionType}
             </Badge>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Teams:</span>
             <span className="font-medium flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {(club as any).teams?.length || 0}
+              {club.teams?.length || 0}
             </span>
           </div>
           <div className="flex justify-between items-center text-sm">
             <span className="text-muted-foreground">Serial Number:</span>
             <span className="font-mono text-xs">
-              {club.serial_number || 'Auto-generated'}
+              {club.serialNumber || 'Auto-generated'}
             </span>
           </div>
           {isLinked && club.userRole && (
@@ -366,7 +366,7 @@ export const ClubManagement = () => {
                   ))}
                   {/* Linked Clubs */}
                   {linkedClubs.map((club) => (
-                    <LinkedClubCard key={club.id} club={club} onUnlink={() => {}} />
+                    <LinkedClubCard key={club.id} club={club} />
                   ))}
                 </div>
               </div>
@@ -454,7 +454,7 @@ export const ClubManagement = () => {
                     <ClubCard key={club.id} club={club} />
                   ))}
                   {linkedClubs.map((club) => (
-                    <LinkedClubCard key={club.id} club={club} onUnlink={() => {}} />
+                    <LinkedClubCard key={club.id} club={club} />
                   ))}
                 </div>
               </div>

@@ -31,7 +31,37 @@ export interface FAConnection {
 
 export type NameDisplayOption = 'firstName' | 'surname' | 'fullName' | 'initials';
 
-// Team interface is now defined in src/types/index.ts
+export interface Team {
+  id: string;
+  name: string;
+  ageGroup: string;
+  seasonStart: string;
+  seasonEnd: string;
+  clubId?: string;
+  subscriptionType: string;
+  gameFormat: string;
+  gameDuration?: number; // Added game duration in minutes
+  kitIcons: KitIcons;
+  logoUrl?: string | null;
+  performanceCategories: string[];
+  managerName?: string;
+  managerEmail?: string;
+  managerPhone?: string;
+  privacySettings?: {
+    showScoresToParents: boolean;
+    showScoresToPlayers: boolean;
+    showPlayerStatsToParents: boolean;
+    showPlayerStatsToPlayers: boolean;
+  };
+  isReadOnly?: boolean;
+  kitDesigns?: KitDesigns;
+  playerAttributes?: Record<PlayerAttributeGroup, PlayerAttribute[]>;
+  faConnection?: FAConnection;
+  staff?: TeamStaff[];
+  nameDisplayOption?: NameDisplayOption;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface TeamStaff {
   id: string;

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -130,32 +131,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Top header with entity logo and name */}
         <div className="h-16 border-b bg-background flex items-center px-6">
           <div className="flex-1">
-            {/* Logo */}
-            <div className="flex items-center space-x-3">
-              {currentClub?.logo_url && (
-                <img 
-                  src={currentClub.logo_url} 
-                  alt="Club logo" 
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              )}
-              {currentTeam?.logo_url && (
-                <img 
-                  src={currentTeam.logo_url} 
-                  alt="Team logo" 
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              )}
-            </div>
             {currentClub ? (
               <EntityHeader 
-                logoUrl={currentClub.logo_url}
+                logoUrl={currentClub.logoUrl}
                 entityName={currentClub.name}
                 entityType="club"
               />
             ) : currentTeam ? (
               <EntityHeader 
-                logoUrl={currentTeam.logo_url}
+                logoUrl={currentTeam.logoUrl}
                 entityName={currentTeam.name}
                 entityType="team"
               />

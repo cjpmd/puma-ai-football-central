@@ -7,11 +7,10 @@ import { Player, Parent } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { playersService } from '@/services/playersService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlusCircle, Copy, User, X, Unlink } from 'lucide-react';
+import { PlusCircle, Copy, User, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
 
 interface PlayerParentModalProps {
   player: Player | null;
@@ -32,7 +31,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     email: '',
     phone: '',
     playerId: player?.id || '',
-    subscriptionType: player?.subscription_type || 'full_squad',
+    subscriptionType: player?.subscriptionType || 'full_squad',
     subscriptionStatus: 'active'
   });
 
@@ -56,7 +55,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
         email: '',
         phone: '',
         playerId: player?.id || '',
-        subscriptionType: player?.subscription_type || 'full_squad',
+        subscriptionType: player?.subscriptionType || 'full_squad',
         subscriptionStatus: 'active'
       });
       toast({
@@ -68,6 +67,27 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
       toast({
         title: 'Error',
         description: error.message || 'Failed to add parent',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateParentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Parent> }) => 
+      playersService.updateParent(id, data),
+    onSuccess: () => {
+      if (player?.id) {
+        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      }
+      toast({
+        title: 'Parent Updated',
+        description: 'Parent details have been updated.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update parent',
         variant: 'destructive',
       });
     },
@@ -88,26 +108,6 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
       toast({
         title: 'Error',
         description: error.message || 'Failed to remove parent',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const removeUserLinkMutation = useMutation({
-    mutationFn: playersService.removeUserParentLink,
-    onSuccess: () => {
-      if (player?.id) {
-        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
-      }
-      toast({
-        title: 'User Link Removed',
-        description: 'User link has been removed from the player.',
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to remove user link',
         variant: 'destructive',
       });
     },
@@ -147,15 +147,9 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     }
   };
 
-  const handleDelete = (parent: Parent) => {
-    if (parent.isUserLinked) {
-      if (window.confirm('Are you sure you want to remove this user link?')) {
-        removeUserLinkMutation.mutate(parent.id);
-      }
-    } else {
-      if (window.confirm('Are you sure you want to remove this parent?')) {
-        deleteParentMutation.mutate(parent.id);
-      }
+  const handleDelete = (parentId: string) => {
+    if (window.confirm('Are you sure you want to remove this parent?')) {
+      deleteParentMutation.mutate(parentId);
     }
   };
 
@@ -176,7 +170,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
         email: '',
         phone: '',
         playerId: player?.id || '',
-        subscriptionType: player?.subscription_type || 'full_squad',
+        subscriptionType: player?.subscriptionType || 'full_squad',
         subscriptionStatus: 'active'
       });
     }
@@ -327,27 +321,15 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => handleDelete(parent)}
+                            onClick={() => handleDelete(parent.id)}
                             className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
                           >
-                            {parent.isUserLinked ? <Unlink className="h-4 w-4" /> : <X className="h-4 w-4" />}
+                            <X className="h-4 w-4" />
                           </Button>
                         </div>
                         <div className="space-y-2">
-                          <div className="flex justify-between items-center">
+                          <div className="flex justify-between">
                             <Label className="font-bold">{parent.name}</Label>
-                            <div className="flex gap-2">
-                              {parent.isUserLinked && (
-                                <Badge variant="secondary" className="text-xs">
-                                  User Linked
-                                </Badge>
-                              )}
-                              {parent.relationship && (
-                                <Badge variant="outline" className="text-xs">
-                                  {parent.relationship}
-                                </Badge>
-                              )}
-                            </div>
                           </div>
                           <div>
                             <Label className="text-sm text-muted-foreground">Email:</Label>
@@ -359,42 +341,38 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                               <div>{parent.phone}</div>
                             </div>
                           )}
-                          {!parent.isUserLinked && (
-                            <>
-                              <div>
-                                <Label className="text-sm text-muted-foreground">Subscription:</Label>
-                                <div>
-                                  {parent.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'} 
-                                  {' • '}
-                                  <span className="capitalize">{parent.subscriptionStatus}</span>
-                                </div>
-                              </div>
-                              <div>
-                                <Label className="text-sm text-muted-foreground">Link Code:</Label>
-                                <div className="flex items-center gap-2">
-                                  <code className="bg-muted px-1 py-0.5 rounded text-sm">
-                                    {parent.linkCode}
-                                  </code>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 p-0"
-                                    onClick={() => copyToClipboard(parent.linkCode || '')}
-                                  >
-                                    <Copy className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="text-xs h-7"
-                                    onClick={() => regenerateLinkCodeMutation.mutate(parent.id)}
-                                  >
-                                    Regenerate
-                                  </Button>
-                                </div>
-                              </div>
-                            </>
-                          )}
+                          <div>
+                            <Label className="text-sm text-muted-foreground">Subscription:</Label>
+                            <div>
+                              {parent.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'} 
+                              {' • '}
+                              <span className="capitalize">{parent.subscriptionStatus}</span>
+                            </div>
+                          </div>
+                          <div>
+                            <Label className="text-sm text-muted-foreground">Link Code:</Label>
+                            <div className="flex items-center gap-2">
+                              <code className="bg-muted px-1 py-0.5 rounded text-sm">
+                                {parent.linkCode}
+                              </code>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 p-0"
+                                onClick={() => copyToClipboard(parent.linkCode)}
+                              >
+                                <Copy className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-xs h-7"
+                                onClick={() => regenerateLinkCodeMutation.mutate(parent.id)}
+                              >
+                                Regenerate
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
