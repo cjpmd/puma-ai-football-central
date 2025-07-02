@@ -2075,6 +2075,10 @@ export type Database = {
         Args: { p_event_id: string }
         Returns: undefined
       }
+      standardize_position_name: {
+        Args: { input_position: string }
+        Returns: string
+      }
       update_all_completed_events_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -183,6 +183,38 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     }
   };
 
+  const handleFixPositionsComprehensively = async () => {
+    setIsRegenerating(true);
+    try {
+      console.log('🔧 STARTING COMPREHENSIVE POSITION STANDARDIZATION');
+      
+      // Test the standardization first
+      await playerStatsService.testPositionStandardization();
+      
+      // Debug current player positions before fix
+      await debugPlayerPositions(player.id, player.name);
+      
+      // Use the new comprehensive position standardization
+      await playerStatsService.regenerateAllPlayerStatsWithStandardizedPositions();
+      
+      // Debug positions after fix
+      console.log('🎯 POST-STANDARDIZATION DEBUG:');
+      await debugPlayerPositions(player.id, player.name);
+      
+      // Invalidate and refetch player data
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+      
+      toast.success('🎉 Position standardization complete! All player stats now use consistent position names based on actual team selections.');
+    } catch (error) {
+      console.error('Error fixing positions:', error);
+      toast.error('Failed to standardize positions');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   return (
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -216,6 +248,23 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>This will rebuild all statistics from the correct team selection data</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={handleFixPositionsComprehensively}
+                      disabled={isRegenerating}
+                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                      Fix Positions
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
                   </TooltipContent>
                 </Tooltip>
               </div>
