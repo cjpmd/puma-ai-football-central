@@ -581,11 +581,39 @@ export const UserManagementSystem = () => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const handleEditUser = (user: UserProfile) => {
-    toast({
-      title: 'Edit User',
-      description: `Editing functionality for ${user.name} can be implemented here`,
-    });
+  const handleEditUser = async (user: UserProfile) => {
+    try {
+      // For now, allow editing of user roles - this can be expanded later
+      const newRoles = prompt(
+        `Edit roles for ${user.name} (comma-separated):\nCurrent roles: ${user.roles.join(', ')}`, 
+        user.roles.join(', ')
+      );
+      
+      if (newRoles === null) return; // User cancelled
+      
+      const rolesArray = newRoles.split(',').map(role => role.trim()).filter(role => role);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update({ roles: rolesArray })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'User Updated',
+        description: `${user.name}'s roles have been updated`,
+      });
+
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error updating user:', error);
+      toast({
+        title: 'Update Error',
+        description: error.message || 'Failed to update user',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleDeleteUser = async (user: UserProfile) => {

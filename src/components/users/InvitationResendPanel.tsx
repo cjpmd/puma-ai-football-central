@@ -131,31 +131,32 @@ export const InvitationResendPanel: React.FC = () => {
                     Created: {new Date(invitation.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {invitation.status === 'pending' && (
+                  <div className="flex items-center gap-2">
+                    {invitation.status === 'pending' && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => resendInvitation(invitation)}
+                        disabled={resendingId === invitation.id || deletingId === invitation.id}
+                      >
+                        {resendingId === invitation.id ? 'Sending...' : 'Resend'}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => resendInvitation(invitation)}
-                      disabled={resendingId === invitation.id || deletingId === invitation.id}
+                      onClick={() => deleteInvitation(invitation)}
+                      disabled={deletingId === invitation.id || resendingId === invitation.id}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      title={invitation.status === 'accepted' ? 'Delete accepted invitation' : 'Delete invitation'}
                     >
-                      {resendingId === invitation.id ? 'Sending...' : 'Resend'}
+                      {deletingId === invitation.id ? (
+                        'Deleting...'
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
                     </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteInvitation(invitation)}
-                    disabled={deletingId === invitation.id || resendingId === invitation.id}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                  >
-                    {deletingId === invitation.id ? (
-                      'Deleting...'
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                </div>
+                  </div>
               </div>
             ))}
           </div>
