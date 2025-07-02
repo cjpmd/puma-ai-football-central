@@ -113,9 +113,9 @@ export const userInvitationService = {
         .from('profiles')
         .select('id')
         .eq('email', email)
-        .single();
+        .maybeSingle();
 
-      if (profileError && profileError.code !== 'PGRST116') {
+      if (profileError) {
         console.error('Error fetching user profile:', profileError);
         throw profileError;
       }

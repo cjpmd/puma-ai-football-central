@@ -200,6 +200,8 @@ export type Parent = {
   subscriptionStatus?: SubscriptionStatus;
   createdAt: string;
   updatedAt: string;
+  isLinked?: boolean; // Added to distinguish linked vs manual parents
+  userId?: string; // Added for linked parents
 };
 
 export type PlayerTransfer = {

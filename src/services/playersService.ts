@@ -206,29 +206,101 @@ export const playersService = {
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
     console.log('Fetching parents for player:', playerId);
     
-    const { data, error } = await supabase
+    // Get parents from the parents table
+    const { data: parentsData, error: parentsError } = await supabase
       .from('parents')
       .select('*')
       .eq('player_id', playerId);
 
-    if (error) {
-      console.error('Error fetching parents:', error);
-      throw error;
+    if (parentsError) {
+      console.error('Error fetching parents:', parentsError);
+      throw parentsError;
+    }
+
+    // Get linked parents from user_players table
+    const { data: linkedParentsData, error: linkedParentsError } = await supabase
+      .from('user_players')
+      .select('user_id, relationship')
+      .eq('player_id', playerId)
+      .eq('relationship', 'parent');
+
+    if (linkedParentsError) {
+      console.error('Error fetching linked parents:', linkedParentsError);
+      throw linkedParentsError;
+    }
+
+    // Get profile data for linked parents
+    const linkedParentsWithProfiles = [];
+    if (linkedParentsData && linkedParentsData.length > 0) {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email, phone')
+        .in('id', linkedParentsData.map(lp => lp.user_id));
+
+      if (profilesError) {
+        console.error('Error fetching profiles for linked parents:', profilesError);
+      } else {
+        for (const link of linkedParentsData) {
+          const profile = profilesData?.find(p => p.id === link.user_id);
+          if (profile) {
+            linkedParentsWithProfiles.push({
+              link,
+              profile
+            });
+          }
+        }
+      }
     }
 
     // Transform database fields to match our TypeScript types
-    const parents = (data || []).map(parent => ({
+    const parents = (parentsData || []).map(parent => ({
       ...parent,
       playerId: parent.player_id,
       linkCode: parent.link_code,
       subscriptionType: parent.subscription_type as 'full_squad' | 'training' | 'trialist',
       subscriptionStatus: parent.subscription_status as 'active' | 'inactive' | 'pending' | 'paused',
       createdAt: parent.created_at,
-      updatedAt: parent.updated_at
+      updatedAt: parent.updated_at,
+      isLinked: false
     }));
 
-    console.log('Parents fetched successfully:', parents);
-    return parents;
+    // Add linked parents from user accounts
+    const linkedParents = linkedParentsWithProfiles.map(({ link, profile }) => ({
+      id: `linked_${link.user_id}`,
+      name: profile.name || 'Unknown',
+      email: profile.email || '',
+      phone: profile.phone || '',
+      playerId: playerId,
+      subscriptionType: 'full_squad' as const,
+      subscriptionStatus: 'active' as const,
+      linkCode: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isLinked: true,
+      userId: link.user_id
+    }));
+
+    const allParents = [...parents, ...linkedParents];
+    console.log('All parents fetched successfully:', allParents);
+    return allParents;
+  },
+
+  async removeLinkedParent(playerId: string, userId: string): Promise<void> {
+    console.log('Removing linked parent:', userId, 'from player:', playerId);
+    
+    const { error } = await supabase
+      .from('user_players')
+      .delete()
+      .eq('player_id', playerId)
+      .eq('user_id', userId)
+      .eq('relationship', 'parent');
+
+    if (error) {
+      console.error('Error removing linked parent:', error);
+      throw error;
+    }
+
+    console.log('Linked parent removed successfully');
   },
 
   async createParent(parentData: Partial<Parent>): Promise<Parent> {

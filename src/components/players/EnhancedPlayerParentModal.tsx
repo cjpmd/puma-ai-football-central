@@ -86,13 +86,20 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
     }
   };
 
-  const handleDeleteParent = async (parentId: string) => {
+  const handleDeleteParent = async (parent: Parent) => {
     if (!confirm('Are you sure you want to remove this parent?')) return;
     
     try {
       setIsLoading(true);
-      await playersService.deleteParent(parentId);
-      toast.success('Parent removed successfully');
+      if (parent.isLinked && parent.userId) {
+        // Remove linked parent
+        await playersService.removeLinkedParent(parent.playerId, parent.userId);
+        toast.success('Parent link removed successfully');
+      } else {
+        // Remove manual parent
+        await playersService.deleteParent(parent.id);
+        toast.success('Parent removed successfully');
+      }
       loadParents();
       onUpdate();
     } catch (error) {
@@ -178,10 +185,17 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
                               {parent.subscriptionStatus || 'Pending'}
                             </span>
                           </div>
-                          {parent.linkCode && (
+                          {parent.linkCode && !parent.isLinked && (
                             <div className="mt-2">
                               <span className="text-xs text-muted-foreground">
                                 Link Code: <code className="bg-gray-100 px-1 rounded">{parent.linkCode}</code>
+                              </span>
+                            </div>
+                          )}
+                          {parent.isLinked && (
+                            <div className="mt-2">
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ✓ Linked Account
                               </span>
                             </div>
                           )}
@@ -198,8 +212,9 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleDeleteParent(parent.id)}
+                            onClick={() => handleDeleteParent(parent)}
                             className="h-8 w-8 p-0 text-red-600"
+                            title={parent.isLinked ? "Remove parent link" : "Remove parent"}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
