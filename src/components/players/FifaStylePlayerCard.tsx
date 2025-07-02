@@ -37,33 +37,63 @@ const calculateOverall = (stats: any) => {
 const designs = {
   goldRare: {
     className: 'border-2 border-yellow-400',
-    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 25%, #d97706 50%, #92400e 75%, #451a03 100%)',
+    background: `url('/lovable-uploads/03f7b9d6-8512-4609-a849-1a8b690399ea.png')`,
     borderGlow: 'shadow-lg shadow-yellow-400/50',
     name: 'Gold Rare'
   },
   silverRare: {
     className: 'border-2 border-gray-400', 
-    background: 'linear-gradient(135deg, #e5e7eb 0%, #9ca3af 25%, #6b7280 50%, #374151 75%, #111827 100%)',
+    background: `url('/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png')`,
     borderGlow: 'shadow-lg shadow-gray-400/50',
     name: 'Silver Rare'
   },
   bronzeRare: {
     className: 'border-2 border-amber-600',
-    background: 'linear-gradient(135deg, #d97706 0%, #92400e 25%, #451a03 50%, #1c1917 75%, #0c0a09 100%)',
+    background: `url('/lovable-uploads/0e7b2d9e-64e2-46da-8a4f-01a3e2cd50df.png')`,
     borderGlow: 'shadow-lg shadow-amber-600/50',
     name: 'Bronze Rare'
   },
   purpleSpecial: {
     className: 'border-2 border-purple-400',
-    background: 'linear-gradient(135deg, #c084fc 0%, #a855f7 25%, #9333ea 50%, #7c3aed 75%, #5b21b6 100%)',
+    background: `url('/lovable-uploads/52998c71-592a-493d-bab1-7a1a5726080e.png')`,
     borderGlow: 'shadow-lg shadow-purple-400/50',
     name: 'Purple Special'
   },
   galaxyGems: {
     className: 'border-2 border-blue-400',
-    background: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 25%, #2563eb 50%, #1d4ed8 75%, #1e3a8a 100%)',
+    background: `url('/lovable-uploads/6cbbcb58-092a-4c48-adc4-12501ebc9a70.png')`,
     borderGlow: 'shadow-lg shadow-blue-400/50',
     name: 'Galaxy Gems'
+  },
+  iconicMoments: {
+    className: 'border-2 border-pink-400',
+    background: `url('/lovable-uploads/84d0f9c8-d146-41ef-86a0-871af15c0bc1.png')`,
+    borderGlow: 'shadow-lg shadow-pink-400/50',
+    name: 'Iconic Moments'
+  },
+  futureStars: {
+    className: 'border-2 border-green-400',
+    background: `url('/lovable-uploads/d7e37207-294b-4c2a-840b-2a55234ddb3b.png')`,
+    borderGlow: 'shadow-lg shadow-green-400/50',
+    name: 'Future Stars'
+  },
+  teamOfTheYear: {
+    className: 'border-2 border-indigo-400',
+    background: `url('/lovable-uploads/e312db4c-9834-4d19-8b74-abf4e871c7c1.png')`,
+    borderGlow: 'shadow-lg shadow-indigo-400/50',
+    name: 'Team of the Year'
+  },
+  heroCard: {
+    className: 'border-2 border-orange-400',
+    background: `url('/lovable-uploads/f10817a5-248b-4981-8539-e72f55ca861a.png')`,
+    borderGlow: 'shadow-lg shadow-orange-400/50',
+    name: 'Hero Card'
+  },
+  legendCard: {
+    className: 'border-2 border-red-400',
+    background: `url('/lovable-uploads/f930e1ff-b50a-437b-94f8-a51a79bf9fac.png')`,
+    borderGlow: 'shadow-lg shadow-red-400/50',
+    name: 'Legend Card'
   }
 };
 
@@ -206,15 +236,39 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           {/* Photo Management */}
           <div>
             <h3 className="text-white font-bold mb-3">Photo Management</h3>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(player); }}
-              className="w-full"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete Photo
-            </Button>
+            <div className="space-y-2">
+              <label className="block">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && onUpdatePhoto) {
+                      onUpdatePhoto(player, file);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-white border-white/30 hover:bg-white/20"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Camera className="h-4 w-4 mr-2" />
+                  Upload Photo
+                </Button>
+              </label>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(player); }}
+                className="w-full"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Photo
+              </Button>
+            </div>
           </div>
 
           {/* Play Styles */}
