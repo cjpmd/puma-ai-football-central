@@ -353,92 +353,129 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   // Front side - FIFA-style card matching reference images
   return (
     <div 
-      className="relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105"
+      className="relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105 rounded-3xl overflow-hidden"
       onClick={onFlip}
       style={{
-        clipPath: 'polygon(0% 0%, 100% 0%, 100% 85%, 85% 100%, 15% 100%, 0% 85%)',
         background: currentDesign.background,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
-        border: '3px solid rgba(255, 255, 255, 0.3)',
-        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.4), 0 5px 15px rgba(0, 0, 0, 0.2)'
+        border: '3px solid',
+        borderImageSource: currentDesign.background,
+        borderImageSlice: 1,
+        boxShadow: `0 0 20px ${currentDesign.className.includes('yellow') ? 'rgba(251, 191, 36, 0.4)' : 
+                                  currentDesign.className.includes('gray') ? 'rgba(156, 163, 175, 0.4)' :
+                                  currentDesign.className.includes('amber') ? 'rgba(217, 119, 6, 0.4)' :
+                                  currentDesign.className.includes('purple') ? 'rgba(192, 132, 252, 0.4)' :
+                                  currentDesign.className.includes('blue') ? 'rgba(96, 165, 250, 0.4)' :
+                                  currentDesign.className.includes('pink') ? 'rgba(244, 114, 182, 0.4)' :
+                                  currentDesign.className.includes('green') ? 'rgba(34, 197, 94, 0.4)' :
+                                  currentDesign.className.includes('indigo') ? 'rgba(129, 140, 248, 0.4)' :
+                                  currentDesign.className.includes('orange') ? 'rgba(251, 146, 60, 0.4)' :
+                                  'rgba(239, 68, 68, 0.4)'}`
       }}
     >
-      {/* Card overlay for better text contrast */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
+      {/* Card overlay */}
+      <div className="absolute inset-0 bg-black/20 rounded-3xl" />
       
       {/* Top left - Overall rating and position */}
-      <div className="absolute top-6 left-6 z-20">
-        <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center border border-white/20">
+      <div className="absolute top-4 left-4 z-20">
+        <div className="bg-black/80 backdrop-blur-sm rounded-lg px-3 py-2 text-center border border-white/30">
           <div className="text-3xl font-black text-white leading-none">{overall}</div>
           <div className="text-xs font-bold text-white/90 mt-1">{positionAbbr}</div>
         </div>
       </div>
 
-      {/* Top right - Additional info icons */}
-      <div className="absolute top-6 right-6 z-20 flex space-x-2">
-        <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-sm">
+      {/* Top right corner icons */}
+      <div className="absolute top-4 right-4 z-20 flex space-x-2">
+        <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-sm border-2 border-white">
           1
         </div>
-        <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
-          <div className="w-4 h-4 bg-white/60 rounded-sm"></div>
+        <div className="w-8 h-8 bg-gray-400/80 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+          <div className="w-3 h-3 bg-white/80 rounded-sm"></div>
         </div>
       </div>
 
-      {/* Player image */}
-      <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="w-40 h-48 rounded-lg overflow-hidden border-2 border-white/30 bg-white/10 backdrop-blur-sm">
-          <img 
-            src={player.photo_url || 'https://via.placeholder.com/160x192'} 
-            alt={player.name} 
-            className="w-full h-full object-cover" 
-          />
+      {/* Left side position indicators */}
+      <div className="absolute top-16 left-4 z-20 space-y-1">
+        <div className="bg-black/80 text-white text-xs font-bold px-2 py-1 rounded border border-white/30">
+          {positionAbbr}
+        </div>
+        <div className="bg-black/80 text-white text-xs font-bold px-2 py-1 rounded border border-white/30">
+          {player.play_style || 'Midfielder Right'}
+        </div>
+        <div className="bg-black/80 text-white text-xs font-bold px-2 py-1 rounded border border-white/30">
+          LB+
         </div>
       </div>
 
-      {/* Position indicators */}
-      <div className="absolute top-20 left-8 z-20 space-y-1">
-        <div className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">{positionAbbr}</div>
-        <div className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">
-          {player.type === 'goalkeeper' ? 'GK' : 'OUTFIELD'}
+      {/* Circular player image with camera icon */}
+      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="relative w-32 h-32">
+          <div 
+            className="w-full h-full rounded-full overflow-hidden border-4 border-white/40 bg-gradient-to-br from-white/20 to-transparent"
+            style={{
+              boxShadow: 'inset 0 0 20px rgba(0,0,0,0.3), 0 0 20px rgba(255,255,255,0.2)'
+            }}
+          >
+            <img 
+              src={player.photo_url || 'https://via.placeholder.com/128'} 
+              alt={player.name} 
+              className="w-full h-full object-cover" 
+            />
+            {/* Circular fade overlay */}
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-transparent via-transparent to-black/20" />
+          </div>
+          {/* Camera icon overlay */}
+          <div className="absolute bottom-2 right-2 w-6 h-6 bg-white/80 rounded-full flex items-center justify-center border border-gray-300">
+            <Camera className="w-3 h-3 text-gray-600" />
+          </div>
         </div>
       </div>
 
       {/* Player name */}
-      <div className="absolute bottom-24 left-4 right-4 text-center z-20">
-        <div className="bg-black/60 backdrop-blur-sm rounded-lg py-2 px-4 border border-white/20">
-          <h3 className="text-white font-black text-xl tracking-wide drop-shadow-lg">
-            {player.name}
-          </h3>
-        </div>
+      <div className="absolute top-56 left-4 right-4 text-center z-20">
+        <h3 className="text-white font-black text-2xl tracking-wide drop-shadow-lg">
+          {player.name}
+        </h3>
       </div>
 
-      {/* Stats section */}
-      <div className="absolute bottom-8 left-4 right-4 z-20">
-        <div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border border-white/20">
-          <div className="grid grid-cols-6 gap-2 text-center">
-            {[
-              { label: 'PAC', value: playerStats.pace || 50 },
-              { label: 'SHO', value: playerStats.shooting || 50 },
-              { label: 'PAS', value: playerStats.passing || 50 },
-              { label: 'DRI', value: playerStats.dribbling || 50 },
-              { label: 'DEF', value: playerStats.defending || 50 },
-              { label: 'PHY', value: playerStats.physical || 50 }
-            ].map((stat, index) => (
-              <div key={index}>
-                <div className="text-white font-bold text-lg leading-none">{stat.value}</div>
-                <div className="text-white/80 text-xs font-semibold mt-1">{stat.label}</div>
-              </div>
-            ))}
+      {/* Stats grid */}
+      <div className="absolute bottom-20 left-4 right-4 z-20">
+        <div className="grid grid-cols-6 gap-2 text-center mb-3">
+          {[
+            { label: 'PAC', value: playerStats.pace || 50 },
+            { label: 'SHO', value: playerStats.shooting || 50 },
+            { label: 'PAS', value: playerStats.passing || 50 },
+            { label: 'DRI', value: playerStats.dribbling || 50 },
+            { label: 'DEF', value: playerStats.defending || 50 },
+            { label: 'PHY', value: playerStats.physical || 50 }
+          ].map((stat, index) => (
+            <div key={index}>
+              <div className="text-white font-black text-xl leading-none">{stat.value}</div>
+              <div className="text-white/90 text-xs font-bold mt-1">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Play style icons */}
+        <div className="flex justify-center space-x-3 mb-3">
+          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+            <span className="text-white text-lg">✓</span>
+          </div>
+          <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center">
+            <span className="text-white text-lg">⚡</span>
+          </div>
+          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+            <span className="text-white text-lg">🎯</span>
           </div>
         </div>
       </div>
 
       {/* Bottom info */}
-      <div className="absolute bottom-2 left-4 right-4 flex justify-between items-center text-white/90 text-sm font-bold z-20">
-        <span>#{player.squad_number || 0}</span>
+      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center text-white font-bold text-sm z-20">
+        <span className="text-lg">#{player.squad_number || 23}</span>
         <span>Age {age}</span>
-        <span className="text-xs">{player.type?.toUpperCase() || 'OUTFIELD'}</span>
+        <span className="text-xs font-bold">{player.type?.toUpperCase() || 'OUTFIELD'}</span>
       </div>
     </div>
   );
