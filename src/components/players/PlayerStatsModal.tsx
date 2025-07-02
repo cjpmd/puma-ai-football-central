@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
+import { positionDebuggingService } from '@/services/positionDebuggingService';
 
 interface PlayerStatsModalProps {
   player: Player | null;
@@ -78,13 +79,50 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 
     return (
       <div className="flex flex-wrap gap-1">
-        {sortedPositions.map(([position, minutes]) => (
-          <Badge key={position} variant="outline" className="text-xs">
-            {position}: {minutes}m
-          </Badge>
-        ))}
+        {sortedPositions.map(([position, minutes]) => {
+          // Convert position to abbreviation for display
+          const abbreviation = getPositionAbbreviation(position);
+          return (
+            <Badge key={position} variant="outline" className="text-xs">
+              {abbreviation}: {minutes}m
+            </Badge>
+          );
+        })}
       </div>
     );
+  };
+
+  const getPositionAbbreviation = (position: string): string => {
+    // Map full position names to abbreviations
+    const positionMap: Record<string, string> = {
+      'Goalkeeper': 'GK',
+      'Right Back': 'RB',
+      'Centre Back': 'CB', 
+      'Center Back': 'CB',
+      'Left Back': 'LB',
+      'Right Midfielder': 'RM',
+      'Central Midfielder': 'CM',
+      'Centre Midfielder': 'CM',
+      'Left Midfielder': 'LM',
+      'Defensive Midfielder': 'CDM',
+      'Attacking Midfielder': 'CAM',
+      'Right Forward': 'RF',
+      'Centre Forward': 'CF',
+      'Center Forward': 'CF',
+      'Left Forward': 'LF',
+      'Right Wing': 'RW',
+      'Left Wing': 'LW',
+      // Legacy mappings
+      'Midfielder Right': 'RM',
+      'Midfielder Left': 'LM',
+      'Midfielder Centre': 'CM',
+      'Defender Right': 'RB',
+      'Defender Left': 'LB',
+      'Striker Centre': 'CF',
+      'Substitute': 'SUB'
+    };
+
+    return positionMap[position] || position;
   };
 
   const renderCategoryStats = (categoryStats: Record<string, any>) => {
@@ -120,11 +158,14 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 <div className="mt-3">
                   <p className="text-sm text-muted-foreground mb-2">Positions:</p>
                   <div className="flex flex-wrap gap-1">
-                    {Object.entries(stats.minutesByPosition as Record<string, number>).map(([position, minutes]) => (
-                      <Badge key={position} variant="outline" className="text-xs">
-                        {position}: {minutes}m
-                      </Badge>
-                    ))}
+                    {Object.entries(stats.minutesByPosition as Record<string, number>).map(([position, minutes]) => {
+                      const abbreviation = getPositionAbbreviation(position);
+                      return (
+                        <Badge key={position} variant="outline" className="text-xs">
+                          {abbreviation}: {minutes}m
+                        </Badge>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -215,6 +256,21 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     }
   };
 
+  const handleDebugAndrew = async () => {
+    if (player.name === 'Andrew McDonald') {
+      setIsRegenerating(true);
+      try {
+        await positionDebuggingService.debugAndrewMcDonaldData();
+        toast.success('Andrew McDonald debugging complete - check console');
+      } catch (error) {
+        console.error('Error debugging Andrew:', error);
+        toast.error('Failed to debug Andrew McDonald data');
+      } finally {
+        setIsRegenerating(false);
+      }
+    }
+  };
+
   return (
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -267,6 +323,24 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
                   </TooltipContent>
                 </Tooltip>
+                {player.name === 'Andrew McDonald' && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleDebugAndrew}
+                        disabled={isRegenerating}
+                        className="flex items-center gap-2"
+                      >
+                        🔍 Debug Andrew
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Special debugging for Andrew McDonald's position data issues</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
               </div>
             </DialogTitle>
           </DialogHeader>
@@ -362,7 +436,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                                 {index + 1}
                               </div>
                               <div>
-                                <div className="font-medium">{position}</div>
+                                <div className="font-medium">{getPositionAbbreviation(position)}</div>
                                 <div className="text-sm text-muted-foreground">
                                   {percentage}% of total minutes
                                 </div>
@@ -462,11 +536,14 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <TableCell>
                               <div className="flex flex-wrap gap-1">
                                 {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 ? (
-                                  Object.entries(game.minutesByPosition as Record<string, number>).map(([position, minutes]) => (
-                                    <Badge key={position} variant="outline" className="text-xs">
-                                      {position}: {minutes}m
-                                    </Badge>
-                                  ))
+                                  Object.entries(game.minutesByPosition as Record<string, number>).map(([position, minutes]) => {
+                                    const abbreviation = getPositionAbbreviation(position);
+                                    return (
+                                      <Badge key={position} variant="outline" className="text-xs">
+                                        {abbreviation}: {minutes}m
+                                      </Badge>
+                                    );
+                                  })
                                 ) : (
                                   <span className="text-muted-foreground text-xs">No position data</span>
                                 )}
