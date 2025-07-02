@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Player, Parent } from '@/types';
 import { playersService } from '@/services/playersService';
 import { UserInvitationModal } from '@/components/users/UserInvitationModal';
+import { userInvitationService } from '@/services/userInvitationService';
 import { toast } from 'sonner';
 import { Users, Mail, Plus, Edit, Trash2 } from 'lucide-react';
 
@@ -64,23 +65,26 @@ export const EnhancedPlayerParentModal: React.FC<EnhancedPlayerParentModalProps>
     
     try {
       setIsLoading(true);
-      await playersService.createParent({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        playerId: player.id,
-        subscriptionType: formData.subscriptionType,
-        subscriptionStatus: 'pending'
-      });
       
-      toast.success('Parent added successfully');
+      // Send invitation instead of creating manual parent
+      const inviteData = {
+        email: formData.email,
+        name: formData.name,
+        role: 'parent' as const,
+        teamId: player.team_id,
+        playerId: player.id
+      };
+      
+      await userInvitationService.inviteUser(inviteData);
+      
+      toast.success('Parent invitation sent successfully');
       setFormData({ name: '', email: '', phone: '', subscriptionType: 'full_squad' });
       setShowAddForm(false);
       loadParents();
       onUpdate();
     } catch (error) {
-      console.error('Error adding parent:', error);
-      toast.error('Failed to add parent');
+      console.error('Error sending parent invitation:', error);
+      toast.error('Failed to send parent invitation');
     } finally {
       setIsLoading(false);
     }

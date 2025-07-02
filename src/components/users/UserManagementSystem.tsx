@@ -406,7 +406,7 @@ export const UserManagementSystem = () => {
 
       if (userTeamsError) console.error('Error fetching user teams:', userTeamsError);
 
-      // Get teams data
+      // Get teams data using the correct foreign key
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name');
@@ -720,11 +720,11 @@ export const UserManagementSystem = () => {
                               <div>
                                 <span className="text-xs font-medium text-gray-500">Teams:</span>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.teams.map((team) => (
-                                    <Badge key={team.id} variant="outline" className="text-xs">
-                                      {team.name} ({team.role})
-                                    </Badge>
-                                  ))}
+                                   {user.teams.map((team, index) => (
+                                     <Badge key={`${team.id}-${index}`} variant="outline" className="text-xs">
+                                       {team.name} ({team.role})
+                                     </Badge>
+                                   ))}
                                 </div>
                               </div>
                             )}
@@ -732,11 +732,11 @@ export const UserManagementSystem = () => {
                               <div>
                                 <span className="text-xs font-medium text-gray-500">Clubs:</span>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.clubs.map((club) => (
-                                    <Badge key={club.id} variant="outline" className="text-xs">
-                                      {club.name} ({club.role})
-                                    </Badge>
-                                  ))}
+                                   {user.clubs.map((club, index) => (
+                                     <Badge key={`${club.id}-${index}`} variant="outline" className="text-xs">
+                                       {club.name} ({club.role})
+                                     </Badge>
+                                   ))}
                                 </div>
                               </div>
                             )}
@@ -750,12 +750,12 @@ export const UserManagementSystem = () => {
                               <div>
                                 <span className="text-xs font-medium text-gray-500">Player Links:</span>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.playerLinks.map((link) => (
-                                    <Badge key={link.id} variant="secondary" className="text-xs">
-                                      <Link2 className="h-3 w-3 mr-1" />
-                                      {link.name} ({link.relationship})
-                                    </Badge>
-                                  ))}
+                                   {user.playerLinks.map((link, index) => (
+                                     <Badge key={`${link.id}-${index}`} variant="secondary" className="text-xs">
+                                       <Link2 className="h-3 w-3 mr-1" />
+                                       {link.name} ({link.relationship})
+                                     </Badge>
+                                   ))}
                                 </div>
                               </div>
                             )}
@@ -763,12 +763,12 @@ export const UserManagementSystem = () => {
                               <div>
                                 <span className="text-xs font-medium text-gray-500">Staff Links:</span>
                                 <div className="flex flex-wrap gap-1 mt-1">
-                                  {user.staffLinks.map((link) => (
-                                    <Badge key={link.id} variant="secondary" className="text-xs">
-                                      <Shield className="h-3 w-3 mr-1" />
-                                      {link.name} ({link.relationship})
-                                    </Badge>
-                                  ))}
+                                   {user.staffLinks.map((link, index) => (
+                                     <Badge key={`${link.id}-${index}`} variant="secondary" className="text-xs">
+                                       <Shield className="h-3 w-3 mr-1" />
+                                       {link.name} ({link.relationship})
+                                     </Badge>
+                                   ))}
                                 </div>
                               </div>
                             )}
