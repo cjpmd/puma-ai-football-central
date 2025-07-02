@@ -130,7 +130,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   onTransferPlayer,
   onLeaveTeam
 }) => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [tempStats, setTempStats] = useState(player.fun_stats || {});
   const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
     typeof player.play_style === 'string' ? JSON.parse(player.play_style || '[]') : []
@@ -186,7 +185,12 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   if (showBackside) {
     return (
       <div 
-        className={`relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105 ${currentDesign.className} ${currentDesign.borderGlow} rounded-xl overflow-hidden bg-slate-800`}
+        className="relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105 rounded-xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+          border: '2px solid rgba(148, 163, 184, 0.3)',
+          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)'
+        }}
       >
         {/* Header */}
         <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-10">
@@ -194,7 +198,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             variant="ghost"
             size="sm"
             onClick={(e) => { e.stopPropagation(); onFlip(); }}
-            className="text-white hover:bg-white/20"
+            className="text-white hover:bg-white/10 bg-black/20"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Player Management
@@ -207,7 +211,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         <div className="p-6 pt-16 space-y-4 h-full overflow-y-auto">
           {/* Player Actions */}
           <div>
-            <h3 className="text-white font-bold mb-3">Player Actions</h3>
+            <h3 className="text-white font-bold mb-3 text-lg">Player Actions</h3>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { icon: Pencil, label: 'Edit', action: onEdit },
@@ -221,10 +225,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
               ].map((action, index) => (
                 <Button
                   key={index}
-                  variant="outline"
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); action.action?.(); }}
-                  className="h-12 flex flex-col items-center justify-center text-xs text-white border-white/30 hover:bg-white/20"
+                  className="h-12 flex flex-col items-center justify-center text-xs bg-slate-700 text-white border border-slate-600 hover:bg-slate-600"
                 >
                   <action.icon className="h-4 w-4 mb-1" />
                   {action.label}
@@ -235,7 +238,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
           {/* Photo Management */}
           <div>
-            <h3 className="text-white font-bold mb-3">Photo Management</h3>
+            <h3 className="text-white font-bold mb-3 text-lg">Photo Management</h3>
             <div className="space-y-2">
               <label className="block">
                 <input
@@ -250,9 +253,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                   className="hidden"
                 />
                 <Button
-                  variant="outline"
                   size="sm"
-                  className="w-full text-white border-white/30 hover:bg-white/20"
+                  className="w-full bg-blue-600 text-white hover:bg-blue-700 border-0"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Camera className="h-4 w-4 mr-2" />
@@ -263,7 +265,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 variant="destructive"
                 size="sm"
                 onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(player); }}
-                className="w-full"
+                className="w-full bg-red-600 hover:bg-red-700"
               >
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete Photo
@@ -273,27 +275,30 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
           {/* Play Styles */}
           <div>
-            <h3 className="text-white font-bold mb-3">Play Styles (Max 3)</h3>
+            <h3 className="text-white font-bold mb-3 text-lg">Play Styles (Max 3)</h3>
             <div className="grid grid-cols-3 gap-2">
               {Object.entries(playStyleIcons).map(([style, icon]) => (
                 <Button
                   key={style}
-                  variant={selectedPlayStyles.includes(style) ? "default" : "outline"}
                   size="sm"
                   onClick={(e) => { e.stopPropagation(); handlePlayStyleToggle(style); }}
-                  className="h-12 flex flex-col items-center justify-center text-xs"
+                  className={`h-12 flex flex-col items-center justify-center text-xs ${
+                    selectedPlayStyles.includes(style) 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-slate-700 text-white border border-slate-600 hover:bg-slate-600'
+                  }`}
                 >
                   <span className="text-lg mb-1">{icon}</span>
                   {style}
                 </Button>
               ))}
             </div>
-            <p className="text-white/70 text-xs mt-2">Selected: {selectedPlayStyles.length}/3</p>
+            <p className="text-slate-300 text-xs mt-2">Selected: {selectedPlayStyles.length}/3</p>
           </div>
 
           {/* FIFA Stats */}
           <div>
-            <h3 className="text-white font-bold mb-3">FIFA Stats</h3>
+            <h3 className="text-white font-bold mb-3 text-lg">FIFA Stats</h3>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'PAC', key: 'pace' },
@@ -304,14 +309,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 { label: 'PHY', key: 'physical' }
               ].map((stat) => (
                 <div key={stat.key} className="text-center">
-                  <label className="text-white/70 text-xs">{stat.label}</label>
+                  <label className="text-slate-300 text-xs">{stat.label}</label>
                   <Input
                     type="number"
                     min="1"
                     max="99"
                     value={tempStats[stat.key] || 50}
                     onChange={(e) => setTempStats({...tempStats, [stat.key]: parseInt(e.target.value) || 50})}
-                    className="mt-1 text-center"
+                    className="mt-1 text-center bg-slate-700 border-slate-600 text-white"
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
@@ -320,7 +325,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             <Button
               onClick={(e) => { e.stopPropagation(); handleSaveStats(); }}
               size="sm"
-              className="w-full mt-2"
+              className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white"
             >
               Save Stats
             </Button>
@@ -328,14 +333,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
           {/* Card Design */}
           <div>
-            <h3 className="text-white font-bold mb-3">Card Design</h3>
+            <h3 className="text-white font-bold mb-3 text-lg">Card Design</h3>
             <Select value={selectedCardDesign} onValueChange={handleCardDesignChange}>
               <SelectTrigger onClick={(e) => e.stopPropagation()} className="bg-slate-700 border-slate-600 text-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-700 border-slate-600">
+              <SelectContent className="bg-slate-700 border-slate-600 text-white z-50">
                 {Object.entries(designs).map(([key, design]) => (
-                  <SelectItem key={key} value={key} className="text-white hover:bg-slate-600">{design.name}</SelectItem>
+                  <SelectItem key={key} value={key} className="text-white hover:bg-slate-600 focus:bg-slate-600">{design.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -345,72 +350,95 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     );
   }
 
+  // Front side - FIFA-style card matching reference images
   return (
     <div 
-      className={`relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105 ${currentDesign.className} ${currentDesign.borderGlow} rounded-xl overflow-hidden`}
+      className="relative w-72 h-[450px] mx-auto cursor-pointer transform transition-all duration-300 hover:scale-105"
       onClick={onFlip}
       style={{
+        clipPath: 'polygon(0% 0%, 100% 0%, 100% 85%, 85% 100%, 15% 100%, 0% 85%)',
         background: currentDesign.background,
         backgroundSize: 'cover',
-        backgroundPosition: 'center'
+        backgroundPosition: 'center',
+        border: '3px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 15px 35px rgba(0, 0, 0, 0.4), 0 5px 15px rgba(0, 0, 0, 0.2)'
       }}
     >
-      {/* Card Background Texture */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20"></div>
+      {/* Card overlay for better text contrast */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/40" />
       
-      {/* Card Header - Overall Rating and Position */}
-      <div className="absolute top-4 left-4 flex flex-col items-center z-10">
-        <div className="bg-black/80 text-white rounded-lg px-2 py-1 text-center">
-          <div className="text-2xl font-bold leading-none">{overall}</div>
-          <div className="text-xs font-semibold">{positionAbbr}</div>
+      {/* Top left - Overall rating and position */}
+      <div className="absolute top-6 left-6 z-20">
+        <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-center border border-white/20">
+          <div className="text-3xl font-black text-white leading-none">{overall}</div>
+          <div className="text-xs font-bold text-white/90 mt-1">{positionAbbr}</div>
         </div>
       </div>
 
-      {/* Settings Icon */}
-      <div className="absolute top-4 right-4 z-10">
-        <div className="w-6 h-6 bg-white/20 rounded-full flex items-center justify-center">
-          <div className="w-4 h-4 bg-white/40 rounded-sm"></div>
+      {/* Top right - Additional info icons */}
+      <div className="absolute top-6 right-6 z-20 flex space-x-2">
+        <div className="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-black font-bold text-sm">
+          1
+        </div>
+        <div className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center">
+          <div className="w-4 h-4 bg-white/60 rounded-sm"></div>
         </div>
       </div>
 
-      {/* Player Image */}
-      <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-32 h-32 rounded-full overflow-hidden border-4 border-white/30 z-10">
-        <img 
-          src={player.photo_url || 'https://via.placeholder.com/150'} 
-          alt={player.name} 
-          className="w-full h-full object-cover" 
-        />
-      </div>
-
-      {/* Player Name */}
-      <div className="absolute top-56 left-4 right-4 text-center z-10">
-        <h3 className="text-white font-bold text-xl drop-shadow-lg">{player.name}</h3>
-      </div>
-
-      {/* Player Stats */}
-      <div className="absolute bottom-16 left-4 right-4 z-10">
-        <div className="grid grid-cols-6 gap-1 bg-black/60 rounded-lg p-3">
-          {[
-            { label: 'PAC', value: playerStats.pace || 50 },
-            { label: 'SHO', value: playerStats.shooting || 50 },
-            { label: 'PAS', value: playerStats.passing || 50 },
-            { label: 'DRI', value: playerStats.dribbling || 50 },
-            { label: 'DEF', value: playerStats.defending || 50 },
-            { label: 'PHY', value: playerStats.physical || 50 }
-          ].map((stat, index) => (
-            <div key={index} className="text-center">
-              <div className="text-white font-bold text-lg">{stat.value}</div>
-              <div className="text-white/80 text-xs font-semibold">{stat.label}</div>
-            </div>
-          ))}
+      {/* Player image */}
+      <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="w-40 h-48 rounded-lg overflow-hidden border-2 border-white/30 bg-white/10 backdrop-blur-sm">
+          <img 
+            src={player.photo_url || 'https://via.placeholder.com/160x192'} 
+            alt={player.name} 
+            className="w-full h-full object-cover" 
+          />
         </div>
       </div>
 
-      {/* Card Footer */}
-      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center text-white/70 text-sm z-10">
+      {/* Position indicators */}
+      <div className="absolute top-20 left-8 z-20 space-y-1">
+        <div className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">{positionAbbr}</div>
+        <div className="text-white text-xs font-bold bg-black/50 px-2 py-1 rounded">
+          {player.type === 'goalkeeper' ? 'GK' : 'OUTFIELD'}
+        </div>
+      </div>
+
+      {/* Player name */}
+      <div className="absolute bottom-24 left-4 right-4 text-center z-20">
+        <div className="bg-black/60 backdrop-blur-sm rounded-lg py-2 px-4 border border-white/20">
+          <h3 className="text-white font-black text-xl tracking-wide drop-shadow-lg">
+            {player.name}
+          </h3>
+        </div>
+      </div>
+
+      {/* Stats section */}
+      <div className="absolute bottom-8 left-4 right-4 z-20">
+        <div className="bg-black/70 backdrop-blur-sm rounded-lg p-3 border border-white/20">
+          <div className="grid grid-cols-6 gap-2 text-center">
+            {[
+              { label: 'PAC', value: playerStats.pace || 50 },
+              { label: 'SHO', value: playerStats.shooting || 50 },
+              { label: 'PAS', value: playerStats.passing || 50 },
+              { label: 'DRI', value: playerStats.dribbling || 50 },
+              { label: 'DEF', value: playerStats.defending || 50 },
+              { label: 'PHY', value: playerStats.physical || 50 }
+            ].map((stat, index) => (
+              <div key={index}>
+                <div className="text-white font-bold text-lg leading-none">{stat.value}</div>
+                <div className="text-white/80 text-xs font-semibold mt-1">{stat.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Bottom info */}
+      <div className="absolute bottom-2 left-4 right-4 flex justify-between items-center text-white/90 text-sm font-bold z-20">
         <span>#{player.squad_number || 0}</span>
         <span>Age {age}</span>
-        <span>{player.type === 'goalkeeper' ? 'GOALKEEPER' : 'OUTFIELD'}</span>
+        <span className="text-xs">{player.type?.toUpperCase() || 'OUTFIELD'}</span>
       </div>
     </div>
   );
