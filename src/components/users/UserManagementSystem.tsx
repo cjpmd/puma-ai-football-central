@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch } from 'lucide-react';
+import { Users, UserPlus, Search, Filter, Mail, Phone, Calendar, Shield, Link2, RefreshCw, UserCheck, Bug, CheckCircle, UserSearch, Trash2 } from 'lucide-react';
 import { UserInvitationModal } from './UserInvitationModal';
 import { UserLinkingPanel } from './UserLinkingPanel';
 import { DualRoleManagement } from './DualRoleManagement';
@@ -578,6 +578,42 @@ export const UserManagementSystem = () => {
     ).join(' ');
   };
 
+  const handleEditUser = (user: UserProfile) => {
+    toast({
+      title: 'Edit User',
+      description: `Editing functionality for ${user.name} can be implemented here`,
+    });
+  };
+
+  const handleDeleteUser = async (user: UserProfile) => {
+    if (!confirm(`Are you sure you want to delete user ${user.name}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'User Deleted',
+        description: `${user.name} has been deleted successfully`,
+      });
+
+      await loadUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Delete Error',
+        description: error.message || 'Failed to delete user',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const [activeTab, setActiveTab] = useState('users');
 
   if (loading) {
@@ -773,7 +809,30 @@ export const UserManagementSystem = () => {
                               </div>
                             )}
                           </div>
-                        )}
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Action buttons for each user */}
+                      <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleEditUser(user)}
+                          className="flex items-center gap-2"
+                        >
+                          <Users className="h-4 w-4" />
+                          Edit
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleDeleteUser(user)}
+                          className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
                       </div>
                     </div>
                   </div>
