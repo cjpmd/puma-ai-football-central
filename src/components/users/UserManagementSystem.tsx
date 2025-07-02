@@ -512,9 +512,9 @@ export const UserManagementSystem = () => {
 
         return {
           id: profile.id,
-          name: profile.name || 'Unknown',
-          email: profile.email || '',
-          phone: profile.phone || '',
+          name: profile.name || 'Unknown User',
+          email: profile.email || 'No Email',
+          phone: profile.phone,
           roles: Array.isArray(profile.roles) ? profile.roles : [],
           created_at: profile.created_at,
           teams: userTeams,
@@ -529,8 +529,8 @@ export const UserManagementSystem = () => {
     } catch (error: any) {
       console.error('Error loading users:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to load users',
+        title: 'Error Loading Users',
+        description: error.message || 'Failed to load user data',
         variant: 'destructive',
       });
     } finally {
@@ -541,18 +541,19 @@ export const UserManagementSystem = () => {
   const filterUsers = () => {
     let filtered = users;
 
-    // Search filter
+    // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.roles.some(role => role.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
-    // Role filter
+    // Apply role filter
     if (roleFilter !== 'all') {
       filtered = filtered.filter(user =>
-        user.roles.includes(roleFilter)
+        user.roles.some(role => role.toLowerCase().includes(roleFilter.toLowerCase()))
       );
     }
 
@@ -560,22 +561,24 @@ export const UserManagementSystem = () => {
   };
 
   const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'global_admin': return 'bg-red-500';
-      case 'club_admin': return 'bg-blue-500';
-      case 'team_manager': return 'bg-green-500';
-      case 'coach': return 'bg-purple-500';
-      case 'staff': return 'bg-orange-500';
-      case 'parent': return 'bg-pink-500';
-      case 'player': return 'bg-cyan-500';
-      default: return 'bg-gray-500';
-    }
+    const roleColors: Record<string, string> = {
+      admin: 'bg-red-500',
+      team_manager: 'bg-blue-500',
+      team_assistant_manager: 'bg-blue-400',
+      team_coach: 'bg-green-500',
+      team_helper: 'bg-yellow-500',
+      parent: 'bg-purple-500',
+      player: 'bg-gray-500',
+      club_admin: 'bg-orange-500',
+      club_chair: 'bg-pink-500',
+      club_secretary: 'bg-indigo-500',
+      global_admin: 'bg-black'
+    };
+    return roleColors[role] || 'bg-gray-400';
   };
 
-  const formatRoleName = (role: string): string => {
-    return role.split('_').map(word => 
-      word.charAt(0).toUpperCase() + word.slice(1)
-    ).join(' ');
+  const formatRoleName = (role: string) => {
+    return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   const handleEditUser = (user: UserProfile) => {
@@ -655,8 +658,35 @@ export const UserManagementSystem = () => {
             Refresh
           </Button>
           <Button
+            onClick={debugSpecificUser}
+            variant="outline"
+            size="sm"
+            className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+          >
+            <Bug className="h-4 w-4 mr-2" />
+            Debug User
+          </Button>
+          <Button
+            onClick={processPendingInvitations}
+            variant="outline"
+            size="sm"
+            className="bg-green-50 border-green-200 text-green-800 hover:bg-green-100"
+          >
+            <CheckCircle className="h-4 w-4 mr-2" />
+            Process Pending
+          </Button>
+          <Button
+            onClick={syncMissingProfiles}
+            variant="outline"
+            size="sm"
+            className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
+          >
+            <UserSearch className="h-4 w-4 mr-2" />
+            Sync Missing Profiles
+          </Button>
+          <Button
             onClick={() => setShowInviteModal(true)}
-            className="bg-puma-blue-500 hover:bg-puma-blue-600"
+            className="bg-puma-blue-600 hover:bg-puma-blue-700"
           >
             <UserPlus className="h-4 w-4 mr-2" />
             Invite User
@@ -681,22 +711,21 @@ export const UserManagementSystem = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search users by name or email..."
+                  placeholder="Search by name, email, or role..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10"
                 />
               </div>
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-full sm:w-48">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <Filter className="h-4 w-4 mr-2" />
                   <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="global_admin">Global Admin</SelectItem>
-                  <SelectItem value="club_admin">Club Admin</SelectItem>
-                  <SelectItem value="team_manager">Team Manager</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="coach">Coach</SelectItem>
                   <SelectItem value="staff">Staff</SelectItem>
                   <SelectItem value="parent">Parent</SelectItem>
@@ -710,7 +739,7 @@ export const UserManagementSystem = () => {
               {filteredUsers.map((user) => (
                 <Card key={user.id} className="p-4">
                   <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-4">
+                    <div className="flex items-start space-x-4 flex-1">
                       <Avatar className="h-12 w-12">
                         <AvatarFallback className="bg-puma-blue-100 text-puma-blue-800">
                           {user.name.charAt(0).toUpperCase()}
@@ -809,30 +838,29 @@ export const UserManagementSystem = () => {
                               </div>
                             )}
                           </div>
-                          )}
+                        )}
+                        
+                        {/* Action buttons for each user */}
+                        <div className="flex items-center gap-2 mt-4 pt-4 border-t">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditUser(user)}
+                            className="flex items-center gap-2"
+                          >
+                            <Users className="h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDeleteUser(user)}
+                            className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Delete
+                          </Button>
                         </div>
-                      </div>
-                      
-                      {/* Action buttons for each user */}
-                      <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleEditUser(user)}
-                          className="flex items-center gap-2"
-                        >
-                          <Users className="h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleDeleteUser(user)}
-                          className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
                       </div>
                     </div>
                   </div>
