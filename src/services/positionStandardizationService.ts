@@ -2,33 +2,50 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const positionStandardizationService = {
   /**
-   * Regenerate all player stats with standardized position names
+   * Regenerate all player stats with standardized position names using batch processing
    */
   async regenerateAllPlayerStatsWithStandardizedPositions(): Promise<void> {
-    console.log('🔧 Starting complete data regeneration with position standardization...');
+    console.log('🔧 Starting batch-safe data regeneration with position standardization...');
     
     try {
-      // Step 1: Regenerate event_player_stats with standardized positions
-      console.log('Step 1: Regenerating event_player_stats with standardized positions...');
-      const { error: regenerateError } = await supabase.rpc('regenerate_all_event_player_stats');
+      // Use the new batch-safe function to avoid timeouts
+      console.log('Step 1: Running batch-safe regeneration...');
+      const { error: batchError } = await supabase.rpc('regenerate_player_stats_batch_safe');
       
-      if (regenerateError) {
-        console.error('Error in standardized regeneration function:', regenerateError);
-        throw regenerateError;
+      if (batchError) {
+        console.error('Error in batch regeneration:', batchError);
+        throw batchError;
       }
       
       console.log('✅ Successfully regenerated event_player_stats with standardized positions');
       
-      // Step 2: Update all player match stats
-      console.log('Step 2: Updating all player match statistics with standardized positions...');
-      const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
+      // Step 2: Get all players and update their stats individually
+      console.log('Step 2: Updating individual player statistics...');
+      const { data: players, error: playersError } = await supabase
+        .from('players')
+        .select('id, name')
+        .eq('status', 'active');
+        
+      if (playersError) throw playersError;
       
-      if (updateError) {
-        console.error('Error updating match stats with standardized positions:', updateError);
-        throw updateError;
+      let processedCount = 0;
+      for (const player of players || []) {
+        try {
+          const { error: updateError } = await supabase.rpc('update_single_player_stats', {
+            player_uuid: player.id
+          });
+          
+          if (updateError) {
+            console.warn(`Failed to update stats for ${player.name}:`, updateError);
+          } else {
+            processedCount++;
+          }
+        } catch (err) {
+          console.warn(`Error updating ${player.name}:`, err);
+        }
       }
       
-      console.log('✅ Successfully updated all player match statistics with standardized positions');
+      console.log(`✅ Successfully updated ${processedCount} players out of ${players?.length || 0}`);
       
       // Verify the results
       const { data: statsCount } = await supabase

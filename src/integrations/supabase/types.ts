@@ -2071,6 +2071,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      regenerate_player_stats_batch_safe: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       send_availability_notifications: {
         Args: { p_event_id: string }
         Returns: undefined
@@ -2097,6 +2101,10 @@ export type Database = {
         Returns: undefined
       }
       update_player_match_stats: {
+        Args: { player_uuid: string }
+        Returns: undefined
+      }
+      update_single_player_stats: {
         Args: { player_uuid: string }
         Returns: undefined
       }
