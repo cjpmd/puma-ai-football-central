@@ -10,6 +10,7 @@ import { format, isSameDay } from 'date-fns';
 import { Calendar, Users, Trophy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
+import { KitAvatar } from '@/components/shared/KitAvatar';
 
 interface Event {
   id: string;
@@ -45,7 +46,7 @@ export function UpcomingEvents() {
       
       const { data: eventsData, error } = await supabase
         .from('events')
-        .select('id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id')
+        .select('id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id, kit_selection')
         .in('team_id', teamIds)
         .gte('date', today)
         .order('date', { ascending: true })
@@ -140,6 +141,19 @@ export function UpcomingEvents() {
               {nextEvent.opponent && (
                 <p className="text-sm text-muted-foreground">vs {nextEvent.opponent}</p>
               )}
+              {(nextEvent as any).kit_selection && (() => {
+                const team = teams.find(t => t.name === nextEvent.team_name);
+                const kitDesign = team?.kitDesigns?.[(nextEvent as any).kit_selection as 'home' | 'away' | 'training'];
+                
+                return (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {kitDesign && (
+                      <KitAvatar design={kitDesign} size="sm" />
+                    )}
+                    <span>Kit: {(nextEvent as any).kit_selection}</span>
+                  </div>
+                );
+              })()}
             </div>
             <div className="flex gap-2 mt-4">
               <Button 
@@ -185,6 +199,19 @@ export function UpcomingEvents() {
                   {event.opponent && (
                     <p className="text-xs text-muted-foreground">vs {event.opponent}</p>
                   )}
+                  {(event as any).kit_selection && (() => {
+                    const team = teams.find(t => t.name === event.team_name);
+                    const kitDesign = team?.kitDesigns?.[(event as any).kit_selection as 'home' | 'away' | 'training'];
+                    
+                    return (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {kitDesign && (
+                          <KitAvatar design={kitDesign} size="xs" />
+                        )}
+                        <span>Kit: {(event as any).kit_selection}</span>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="flex flex-col gap-1">
                   <Button 

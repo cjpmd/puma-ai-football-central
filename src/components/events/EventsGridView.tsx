@@ -6,6 +6,8 @@ import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { KitAvatar } from '@/components/shared/KitAvatar';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -25,6 +27,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   onScoreEdit
 }) => {
   const [performanceCategoryNames, setPerformanceCategoryNames] = useState<{ [eventId: string]: { [teamNumber: string]: string } }>({});
+  const { teams } = useAuth();
 
   useEffect(() => {
     loadPerformanceCategoryNames();
@@ -174,14 +177,24 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   >
                     {event.event_type}
                   </Badge>
-                  {(event as any).kit_selection && (
-                    <Badge 
-                      className={`text-xs text-white ${getKitBadgeColor((event as any).kit_selection)}`}
-                      variant="secondary"
-                    >
-                      {(event as any).kit_selection} kit
-                    </Badge>
-                  )}
+                  {(event as any).kit_selection && (() => {
+                    const team = teams.find(t => t.id === event.team_id);
+                    const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+                    
+                    return (
+                      <div className="flex items-center gap-1">
+                        {kitDesign && (
+                          <KitAvatar design={kitDesign} size="xs" />
+                        )}
+                        <Badge 
+                          className={`text-xs text-white ${getKitBadgeColor((event as any).kit_selection)}`}
+                          variant="secondary"
+                        >
+                          {(event as any).kit_selection} kit
+                        </Badge>
+                      </div>
+                    );
+                  })()}
                 </div>
                 {completed && matchType && teamScores.length > 0 && (
                   <div className="flex gap-1">

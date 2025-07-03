@@ -154,6 +154,7 @@ const CalendarEventsPage = () => {
       game_format: eventGameFormat,
       game_duration: eventGameDuration,
       opponent: isMatchType ? eventOpponent || undefined : undefined,
+      kit_selection: eventKitSelection as 'home' | 'away' | 'training',
     };
 
     console.log('Creating event with data:', newEvent);
@@ -241,6 +242,7 @@ const CalendarEventsPage = () => {
       game_format: eventGameFormat,
       game_duration: eventGameDuration,
       opponent: isMatchType ? eventOpponent || undefined : undefined,
+      kit_selection: eventKitSelection as 'home' | 'away' | 'training',
     };
 
     updateEvent(updatedEvent);
