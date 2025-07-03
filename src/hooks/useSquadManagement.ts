@@ -95,7 +95,7 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
       const userRole = userTeams[0].role;
       console.log('User role:', userRole);
 
-      if (!['manager', 'coach', 'admin', 'team_manager'].includes(userRole)) {
+      if (!['manager', 'coach', 'admin', 'team_manager', 'team_coach'].includes(userRole)) {
         console.error('User does not have permission to manage squad');
         throw new Error('You do not have permission to manage the squad');
       }
