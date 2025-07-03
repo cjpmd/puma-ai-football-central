@@ -15,20 +15,19 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
 
   const handleLogoChange = async (newLogoUrl: string | null) => {
     console.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
-    setLogoUrl(newLogoUrl);
     
     // Update parent component immediately for UI responsiveness
     onUpdate({ logoUrl: newLogoUrl });
     
-    // Small delay to ensure the logo upload is complete, then force UI refresh
+    // Force complete re-render by unmounting and remounting the component
+    setLogoUrl(null);
+    await new Promise(resolve => setTimeout(resolve, 100));
+    setLogoUrl(newLogoUrl);
+    
+    // Force a complete app refresh to ensure logo displays
     setTimeout(() => {
-      // Force browser to refresh the logo by updating the state
-      setLogoUrl(null);
-      setTimeout(() => {
-        setLogoUrl(newLogoUrl);
-        onUpdate({ logoUrl: newLogoUrl });
-      }, 100);
-    }, 500);
+      window.location.reload();
+    }, 1000);
   };
 
   return (

@@ -96,6 +96,7 @@ const TeamManagement = () => {
         managerName: team.manager_name,
         managerEmail: team.manager_email,
         managerPhone: team.manager_phone,
+        gameDuration: team.game_duration || 90,
         createdAt: team.created_at,
         updatedAt: team.updated_at,
         isReadOnly: true

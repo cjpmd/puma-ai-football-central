@@ -128,13 +128,37 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
       if (managerData && managerData.profiles) {
         console.log('Found team manager profile:', managerData.profiles);
-        // Auto-populate manager fields if they're empty
+        // Auto-populate manager fields and save them to database if empty
+        const managerInfo = {
+          managerName: managerData.profiles.name || '',
+          managerEmail: managerData.profiles.email || '',
+          managerPhone: managerData.profiles.phone || '',
+        };
+        
         setFormData(prev => ({
           ...prev,
-          managerName: prev.managerName || managerData.profiles.name || '',
-          managerEmail: prev.managerEmail || managerData.profiles.email || '',
-          managerPhone: prev.managerPhone || managerData.profiles.phone || '',
+          ...managerInfo
         }));
+        
+        // Auto-save manager info to database if any fields are empty
+        const needsUpdate = !formData.managerName || !formData.managerEmail;
+        if (needsUpdate) {
+          try {
+            await supabase
+              .from('teams')
+              .update({
+                manager_name: managerInfo.managerName,
+                manager_email: managerInfo.managerEmail,
+                manager_phone: managerInfo.managerPhone,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', team.id);
+            
+            onUpdate(managerInfo);
+          } catch (error) {
+            console.error('Error auto-saving manager info:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading team manager info:', error);
