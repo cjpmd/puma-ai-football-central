@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,11 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
     removePlayerFromSquad,
     updatePlayerAvailability
   } = useSquadManagement(teamId, eventId);
+
+  // Notify parent when squadPlayers changes
+  useEffect(() => {
+    onSquadChange?.(squadPlayers);
+  }, [squadPlayers, onSquadChange]);
 
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
 
@@ -69,7 +74,6 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
       console.log('Adding player to squad:', selectedPlayerId);
       await addPlayerToSquad(selectedPlayerId);
       setSelectedPlayerId('');
-      onSquadChange?.(squadPlayers);
       toast.success('Player added to squad successfully');
     } catch (error: any) {
       console.error('Error adding player to squad:', error);
@@ -81,7 +85,6 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
     try {
       console.log('Removing player from squad:', playerId);
       await removePlayerFromSquad(playerId);
-      onSquadChange?.(squadPlayers);
       toast.success('Player removed from squad');
     } catch (error: any) {
       console.error('Error removing player from squad:', error);
@@ -93,7 +96,6 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
     try {
       console.log('Updating availability:', { playerId, status });
       await updatePlayerAvailability(playerId, status as 'available' | 'unavailable' | 'pending' | 'maybe');
-      onSquadChange?.(squadPlayers);
       toast.success('Availability updated');
     } catch (error: any) {
       console.error('Error updating availability:', error);
