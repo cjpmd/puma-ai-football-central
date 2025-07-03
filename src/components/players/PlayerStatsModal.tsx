@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { supabase } from '@/integrations/supabase/client';
 import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
 import { positionDebuggingService } from '@/services/positionDebuggingService';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface PlayerStatsModalProps {
   player: Player | null;
@@ -37,6 +38,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const queryClient = useQueryClient();
+  const { isGlobalAdmin } = useAuthorization();
 
   // Don't render the modal if there's no player
   if (!player) {
@@ -400,87 +402,89 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Match Statistics - {player.name}</span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefreshStats}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-2"
-                >
-                  <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  Refresh Stats
-                </Button>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRegenerateStats}
-                      disabled={isRegenerating}
-                      className="flex items-center gap-2"
-                    >
-                      <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                      Fix All Data
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>This will rebuild all statistics from the correct team selection data</p>
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={handleFixPositionsComprehensively}
-                      disabled={isRegenerating}
-                      className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                    >
-                      <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                      Fix Positions
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
-                  </TooltipContent>
-                 </Tooltip>
-                 <Tooltip>
-                   <TooltipTrigger asChild>
-                     <Button
-                       variant="default"
-                       size="sm"
-                       onClick={handleCleanRebuild}
-                       disabled={isRegenerating}
-                       className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                     >
-                       <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                       Clean Rebuild
-                     </Button>
-                   </TooltipTrigger>
-                   <TooltipContent>
-                     <p>Clean rebuild: Removes duplicates and rebuilds data to exactly match team selections with position abbreviations</p>
-                   </TooltipContent>
-                 </Tooltip>
-                 {player.name === 'Andrew McDonald' && (
+              {isGlobalAdmin && (
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefreshStats}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-2"
+                  >
+                    <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    Refresh Stats
+                  </Button>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
-                        variant="destructive"
+                        variant="outline"
                         size="sm"
-                        onClick={handleDebugAndrew}
+                        onClick={handleRegenerateStats}
                         disabled={isRegenerating}
                         className="flex items-center gap-2"
                       >
-                        🔍 Debug Andrew
+                        <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                        Fix All Data
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Special debugging for Andrew McDonald's position data issues</p>
+                      <p>This will rebuild all statistics from the correct team selection data</p>
                     </TooltipContent>
                   </Tooltip>
-                )}
-              </div>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={handleFixPositionsComprehensively}
+                        disabled={isRegenerating}
+                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                      >
+                        <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                        Fix Positions
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
+                    </TooltipContent>
+                   </Tooltip>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <Button
+                         variant="default"
+                         size="sm"
+                         onClick={handleCleanRebuild}
+                         disabled={isRegenerating}
+                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                       >
+                         <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                         Clean Rebuild
+                       </Button>
+                     </TooltipTrigger>
+                     <TooltipContent>
+                       <p>Clean rebuild: Removes duplicates and rebuilds data to exactly match team selections with position abbreviations</p>
+                     </TooltipContent>
+                   </Tooltip>
+                   {player.name === 'Andrew McDonald' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDebugAndrew}
+                          disabled={isRegenerating}
+                          className="flex items-center gap-2"
+                        >
+                          🔍 Debug Andrew
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Special debugging for Andrew McDonald's position data issues</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              )}
             </DialogTitle>
           </DialogHeader>
           

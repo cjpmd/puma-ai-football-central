@@ -27,6 +27,7 @@ import { DataIntegrityChecker } from '@/components/debug/DataIntegrityChecker';
 import { ComprehensiveDataIntegrityChecker } from '@/components/debug/ComprehensiveDataIntegrityChecker';
 import { SimpleStatsRebuilder } from '@/components/debug/SimpleStatsRebuilder';
 import { DirectCopyRebuilder } from '@/components/debug/DirectCopyRebuilder';
+import { ProtectedComponent } from '@/components/auth/ProtectedComponent';
 
 const PlayerManagementTab = () => {
   const { teams } = useAuth();
@@ -414,13 +415,13 @@ const PlayerManagementTab = () => {
           </div>
         </div>
 
-        {/* Add the new DirectCopyRebuilder component at the top */}
-        <DirectCopyRebuilder />
-
-        {/* Keep existing debug components */}
-        <SimpleStatsRebuilder />
-        <ComprehensiveDataIntegrityChecker />
-        <DataIntegrityChecker />
+        {/* Admin-only debug components */}
+        <ProtectedComponent permission={{ resource: 'system', action: 'admin' }} showFallback={false}>
+          <DirectCopyRebuilder />
+          <SimpleStatsRebuilder />
+          <ComprehensiveDataIntegrityChecker />
+          <DataIntegrityChecker />
+        </ProtectedComponent>
 
         <Card>
           <CardHeader>
