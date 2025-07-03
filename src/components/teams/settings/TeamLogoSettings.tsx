@@ -19,6 +19,23 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
     
     // Update parent component immediately for UI responsiveness
     onUpdate({ logoUrl: newLogoUrl });
+    
+    // Force a refresh of the team data by re-fetching from database
+    try {
+      const { data: freshTeam, error } = await supabase
+        .from('teams')
+        .select('logo_url')
+        .eq('id', team.id)
+        .single();
+        
+      if (!error && freshTeam) {
+        console.log('Fresh logo URL from database:', freshTeam.logo_url);
+        setLogoUrl(freshTeam.logo_url);
+        onUpdate({ logoUrl: freshTeam.logo_url });
+      }
+    } catch (error) {
+      console.error('Error refreshing team logo:', error);
+    }
   };
 
   return (

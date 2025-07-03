@@ -101,8 +101,9 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
     try {
       console.log('Updating user:', user.id, 'with data:', formData);
       
-      // Remove specific team manager roles if team_manager role is being removed
+      // Remove ALL team manager roles for this specific user if team_manager role is being removed
       if (!formData.roles.includes('team_manager')) {
+        console.log('Removing all team_manager roles for user:', user.id);
         const { error: deleteTeamManagerError } = await supabase
           .from('user_teams')
           .delete()
@@ -111,6 +112,8 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
 
         if (deleteTeamManagerError) {
           console.error('Error removing team manager roles:', deleteTeamManagerError);
+        } else {
+          console.log('Successfully removed team_manager roles for user:', user.id);
         }
       }
 
