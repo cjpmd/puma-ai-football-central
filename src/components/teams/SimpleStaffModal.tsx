@@ -123,6 +123,38 @@ export const SimpleStaffModal: React.FC<SimpleStaffModalProps> = ({
     }
   };
 
+  const handleUpdateStaffRole = async (staffId: string, newRole: TeamStaff['role']) => {
+    try {
+      console.log('Updating staff role:', staffId, 'to role:', newRole);
+      
+      const { error } = await supabase
+        .from('team_staff')
+        .update({ 
+          role: newRole,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', staffId);
+
+      if (error) {
+        console.error('Error updating staff role:', error);
+        throw error;
+      }
+
+      await loadStaff();
+      toast({
+        title: 'Success',
+        description: 'Staff role updated successfully',
+      });
+    } catch (error: any) {
+      console.error('Error in handleUpdateStaffRole:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update staff role',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleRemoveStaff = async (staffId: string, staffName: string) => {
     try {
       const { error } = await supabase
@@ -285,9 +317,22 @@ export const SimpleStaffModal: React.FC<SimpleStaffModalProps> = ({
                         <div>
                           <div className="flex items-center gap-2">
                             <h4 className="font-semibold">{staffMember.name}</h4>
-                            <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
-                              {getRoleLabel(staffMember.role)}
-                            </Badge>
+                            <Select 
+                              value={staffMember.role}
+                              onValueChange={(value) => handleUpdateStaffRole(staffMember.id, value as TeamStaff['role'])}
+                            >
+                              <SelectTrigger className="w-auto h-auto p-1 text-xs">
+                                <Badge className={`text-white ${getRoleColor(staffMember.role)}`}>
+                                  {getRoleLabel(staffMember.role)}
+                                </Badge>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="manager">Manager</SelectItem>
+                                <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
+                                <SelectItem value="coach">Coach</SelectItem>
+                                <SelectItem value="helper">Helper</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
                             <div className="flex items-center gap-1">

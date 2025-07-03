@@ -101,6 +101,19 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
     try {
       console.log('Updating user:', user.id, 'with data:', formData);
       
+      // Force refresh user data to get latest team associations
+      console.log('Refreshing user team data before making changes...');
+      const { data: currentUserTeams, error: teamQueryError } = await supabase
+        .from('user_teams')
+        .select('*')
+        .eq('user_id', user.id);
+        
+      if (teamQueryError) {
+        console.error('Error fetching current user teams:', teamQueryError);
+      } else {
+        console.log('Current user teams before update:', currentUserTeams);
+      }
+
       // Remove ALL team manager roles for this specific user if team_manager role is being removed
       if (!formData.roles.includes('team_manager')) {
         console.log('Removing all team_manager roles for user:', user.id);
@@ -114,6 +127,15 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
           console.error('Error removing team manager roles:', deleteTeamManagerError);
         } else {
           console.log('Successfully removed team_manager roles for user:', user.id);
+          
+          // Verify deletion by checking again
+          const { data: verifyData, error: verifyError } = await supabase
+            .from('user_teams')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('role', 'team_manager');
+            
+          console.log('Verification after deletion - remaining team_manager roles:', verifyData);
         }
       }
 
