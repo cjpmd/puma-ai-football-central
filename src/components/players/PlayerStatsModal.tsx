@@ -259,17 +259,97 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const handleCleanRebuild = async () => {
     setIsRegenerating(true);
     try {
-      console.log('🧹 STARTING CLEAN REBUILD');
+      console.log('🧹 STARTING SIMPLE CLIENT-SIDE REBUILD');
       
-      // Use the clean rebuild function
-      const { error: cleanError } = await supabase.rpc('clean_and_regenerate_player_stats');
-      if (cleanError) throw cleanError;
+      // Step 1: Clear all event_player_stats
+      console.log('Clearing existing event_player_stats...');
+      const { error: deleteError } = await supabase
+        .from('event_player_stats')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Safe delete all
+        
+      if (deleteError) throw deleteError;
       
-      // Update all player stats
+      // Step 2: Get all event_selections
+      console.log('Getting event selections...');
+      const { data: selections, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select('*')
+        .order('created_at');
+        
+      if (selectionsError) throw selectionsError;
+      
+      console.log(`Processing ${selections?.length || 0} event selections...`);
+      
+      // Step 3: Process each selection and create event_player_stats
+      const statsToInsert = [];
+      
+      for (const selection of selections || []) {
+        const playerPositions = selection.player_positions as any[];
+        
+        for (const playerPos of playerPositions || []) {
+          const playerId = playerPos.playerId || playerPos.player_id;
+          if (!playerId || !playerPos.position) continue;
+          
+          // Convert position names to abbreviations
+          let position = playerPos.position;
+          const positionMap: Record<string, string> = {
+            'Midfielder Right': 'RM',
+            'Midfielder Left': 'LM', 
+            'Midfielder Centre': 'CM',
+            'Defender Right': 'RB',
+            'Defender Left': 'LB',
+            'Centre Back': 'CB',
+            'Center Back': 'CB',
+            'Striker Centre': 'CF',
+            'Right Wing': 'RW',
+            'Left Wing': 'LW',
+            'Right Forward': 'RF',
+            'Left Forward': 'LF',
+            'Centre Forward': 'CF',
+            'Central Midfielder': 'CM',
+            'Right Midfielder': 'RM',
+            'Left Midfielder': 'LM',
+            'Goalkeeper': 'GK'
+          };
+          
+          if (positionMap[position]) {
+            position = positionMap[position];
+          }
+          
+          statsToInsert.push({
+            event_id: selection.event_id,
+            player_id: playerId,
+            team_number: selection.team_number || 1,
+            period_number: selection.period_number || 1,
+            position: position,
+            minutes_played: playerPos.minutes || selection.duration_minutes || 90,
+            is_captain: playerId === selection.captain_id,
+            is_substitute: playerPos.isSubstitute || position.toLowerCase() === 'sub',
+            performance_category_id: selection.performance_category_id
+          });
+        }
+      }
+      
+      console.log(`Inserting ${statsToInsert.length} player stats records...`);
+      
+      // Step 4: Insert in batches to avoid timeouts
+      const batchSize = 100;
+      for (let i = 0; i < statsToInsert.length; i += batchSize) {
+        const batch = statsToInsert.slice(i, i + batchSize);
+        const { error: insertError } = await supabase
+          .from('event_player_stats')
+          .insert(batch);
+          
+        if (insertError) throw insertError;
+        console.log(`Inserted batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(statsToInsert.length/batchSize)}`);
+      }
+      
+      // Step 5: Update player match stats
       const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
       if (updateError) throw updateError;
       
-      // Debug Andrew's data after clean rebuild
+      // Debug Andrew's data after rebuild
       if (player.name === 'Andrew McDonald') {
         await positionDebuggingService.debugAndrewMcDonaldData();
       }
