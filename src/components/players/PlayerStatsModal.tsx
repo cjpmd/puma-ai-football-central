@@ -45,28 +45,38 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 
   const { matchStats } = player;
 
-  // Filter out matches with "Unknown" opponent
-  const filteredRecentGames = (matchStats?.recentGames || []).filter(game => 
-    game.opponent && game.opponent.toLowerCase() !== 'unknown'
+  // Ensure matchStats exists and has proper structure
+  const safeMatchStats = matchStats || {
+    totalGames: 0,
+    totalMinutes: 0,
+    captainGames: 0,
+    playerOfTheMatchCount: 0,
+    minutesByPosition: {},
+    recentGames: []
+  };
+
+  // Filter out matches with "Unknown" opponent - ensure recentGames is always an array
+  const filteredRecentGames = (Array.isArray(safeMatchStats.recentGames) ? safeMatchStats.recentGames : []).filter(game => 
+    game && game.opponent && game.opponent.toLowerCase() !== 'unknown'
   );
 
   // Get top 5 positions by minutes played
-  const topPositions = Object.entries(matchStats?.minutesByPosition || {})
+  const topPositions = Object.entries(safeMatchStats.minutesByPosition || {})
     .sort((a, b) => (b[1] as number) - (a[1] as number))
     .slice(0, 5)
     .map(([pos, minutes]) => ({ position: pos, minutes: minutes as number }));
 
   // Calculate average minutes per game
-  const avgMinutesPerGame = (matchStats?.totalGames || 0) > 0 ? 
-    Math.round((matchStats?.totalMinutes || 0) / (matchStats?.totalGames || 1)) : 0;
+  const avgMinutesPerGame = (safeMatchStats.totalGames || 0) > 0 ? 
+    Math.round((safeMatchStats.totalMinutes || 0) / (safeMatchStats.totalGames || 1)) : 0;
 
   // Calculate captain percentage
-  const captainPercentage = (matchStats?.totalGames || 0) > 0 ? 
-    Math.round(((matchStats?.captainGames || 0) / (matchStats?.totalGames || 1)) * 100) : 0;
+  const captainPercentage = (safeMatchStats.totalGames || 0) > 0 ? 
+    Math.round(((safeMatchStats.captainGames || 0) / (safeMatchStats.totalGames || 1)) * 100) : 0;
 
   // Calculate POTM percentage
-  const potmPercentage = (matchStats?.totalGames || 0) > 0 ? 
-    Math.round(((matchStats?.playerOfTheMatchCount || 0) / (matchStats?.totalGames || 1)) * 100) : 0;
+  const potmPercentage = (safeMatchStats.totalGames || 0) > 0 ? 
+    Math.round(((safeMatchStats.playerOfTheMatchCount || 0) / (safeMatchStats.totalGames || 1)) * 100) : 0;
 
   const renderPositionsPlayed = (minutesByPosition: Record<string, number>) => {
     if (!minutesByPosition || Object.keys(minutesByPosition).length === 0) {
