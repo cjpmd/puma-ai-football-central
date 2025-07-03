@@ -2055,6 +2055,10 @@ export type Database = {
           backup_created_at: string
         }[]
       }
+      clean_and_regenerate_player_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       debug_player_positions: {
         Args: { p_player_id: string; p_player_name?: string }
         Returns: undefined

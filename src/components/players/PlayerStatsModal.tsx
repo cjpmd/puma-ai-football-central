@@ -256,6 +256,38 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     }
   };
 
+  const handleCleanRebuild = async () => {
+    setIsRegenerating(true);
+    try {
+      console.log('🧹 STARTING CLEAN REBUILD');
+      
+      // Use the clean rebuild function
+      const { error: cleanError } = await supabase.rpc('clean_and_regenerate_player_stats');
+      if (cleanError) throw cleanError;
+      
+      // Update all player stats
+      const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
+      if (updateError) throw updateError;
+      
+      // Debug Andrew's data after clean rebuild
+      if (player.name === 'Andrew McDonald') {
+        await positionDebuggingService.debugAndrewMcDonaldData();
+      }
+      
+      // Invalidate and refetch player data
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
+      queryClient.invalidateQueries({ queryKey: ['active-players'] });
+      
+      toast.success('✅ Clean rebuild complete! Data now matches team selections exactly.');
+    } catch (error) {
+      console.error('Error in clean rebuild:', error);
+      toast.error('Failed to clean rebuild data');
+    } finally {
+      setIsRegenerating(false);
+    }
+  };
+
   const handleDebugAndrew = async () => {
     if (player.name === 'Andrew McDonald') {
       setIsRegenerating(true);
@@ -322,8 +354,25 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   <TooltipContent>
                     <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
                   </TooltipContent>
-                </Tooltip>
-                {player.name === 'Andrew McDonald' && (
+                 </Tooltip>
+                 <Tooltip>
+                   <TooltipTrigger asChild>
+                     <Button
+                       variant="default"
+                       size="sm"
+                       onClick={handleCleanRebuild}
+                       disabled={isRegenerating}
+                       className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                     >
+                       <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                       Clean Rebuild
+                     </Button>
+                   </TooltipTrigger>
+                   <TooltipContent>
+                     <p>Clean rebuild: Removes duplicates and rebuilds data to exactly match team selections with position abbreviations</p>
+                   </TooltipContent>
+                 </Tooltip>
+                 {player.name === 'Andrew McDonald' && (
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button
