@@ -140,7 +140,15 @@ export const SimpleStaffModal: React.FC<SimpleStaffModalProps> = ({
         throw error;
       }
 
-      await loadStaff();
+      // Immediately update the local state to reflect the change
+      setStaff(prevStaff => 
+        prevStaff.map(staffMember => 
+          staffMember.id === staffId 
+            ? { ...staffMember, role: newRole }
+            : staffMember
+        )
+      );
+
       toast({
         title: 'Success',
         description: 'Staff role updated successfully',

@@ -114,9 +114,13 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
         console.log('Current user teams before update:', currentUserTeams);
       }
 
-      // Remove ALL team manager roles for this specific user if team_manager role is being removed
-      if (!formData.roles.includes('team_manager')) {
-        console.log('Removing all team_manager roles for user:', user.id);
+      // Handle team_manager role changes properly
+      const currentHasTeamManager = user.roles.includes('team_manager');
+      const newHasTeamManager = formData.roles.includes('team_manager');
+      
+      if (currentHasTeamManager && !newHasTeamManager) {
+        // Removing team_manager role - delete all team_manager entries
+        console.log('Removing ALL team_manager roles for user:', user.id);
         const { error: deleteTeamManagerError } = await supabase
           .from('user_teams')
           .delete()
@@ -125,17 +129,9 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
 
         if (deleteTeamManagerError) {
           console.error('Error removing team manager roles:', deleteTeamManagerError);
+          throw deleteTeamManagerError;
         } else {
-          console.log('Successfully removed team_manager roles for user:', user.id);
-          
-          // Verify deletion by checking again
-          const { data: verifyData, error: verifyError } = await supabase
-            .from('user_teams')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('role', 'team_manager');
-            
-          console.log('Verification after deletion - remaining team_manager roles:', verifyData);
+          console.log('Successfully removed ALL team_manager roles for user:', user.id);
         }
       }
 
@@ -157,8 +153,11 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
       }
 
       // Re-add team manager roles if selected (only for teams they previously managed)
-      if (formData.roles.includes('team_manager')) {
+      if (!currentHasTeamManager && newHasTeamManager) {
+        // Adding team_manager role back - restore previous team associations
         const userTeams = user.teams.filter(team => team.role === 'team_manager');
+        console.log('Re-adding team_manager roles for teams:', userTeams);
+        
         for (const team of userTeams) {
           const { error: teamRoleError } = await supabase
             .from('user_teams')
