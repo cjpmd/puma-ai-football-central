@@ -17,27 +17,8 @@ export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpda
     console.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
     setLogoUrl(newLogoUrl);
     
-    // Save logo URL to database immediately
-    try {
-      const { error } = await supabase
-        .from('teams')
-        .update({ 
-          logo_url: newLogoUrl,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', team.id);
-
-      if (error) {
-        console.error('Error saving logo URL:', error);
-        throw error;
-      }
-
-      console.log('Logo URL saved to database successfully');
-      // Update parent component
-      onUpdate({ logoUrl: newLogoUrl });
-    } catch (error) {
-      console.error('Error saving team logo:', error);
-    }
+    // Update parent component immediately for UI responsiveness
+    onUpdate({ logoUrl: newLogoUrl });
   };
 
   return (

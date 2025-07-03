@@ -101,14 +101,17 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
     try {
       console.log('Updating user:', user.id, 'with data:', formData);
       
-      // First, remove all existing team roles
-      const { error: deleteTeamRolesError } = await supabase
-        .from('user_teams')
-        .delete()
-        .eq('user_id', user.id);
+      // Remove specific team manager roles if team_manager role is being removed
+      if (!formData.roles.includes('team_manager')) {
+        const { error: deleteTeamManagerError } = await supabase
+          .from('user_teams')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('role', 'team_manager');
 
-      if (deleteTeamRolesError) {
-        console.error('Error removing existing team roles:', deleteTeamRolesError);
+        if (deleteTeamManagerError) {
+          console.error('Error removing team manager roles:', deleteTeamManagerError);
+        }
       }
 
       // Update the profile
@@ -128,20 +131,19 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
         throw profileError;
       }
 
-      // Re-add team manager roles if selected
+      // Re-add team manager roles if selected (only for teams they previously managed)
       if (formData.roles.includes('team_manager')) {
-        // Get user's teams and add back the team_manager role
         const userTeams = user.teams.filter(team => team.role === 'team_manager');
         for (const team of userTeams) {
           const { error: teamRoleError } = await supabase
             .from('user_teams')
-            .insert({
+            .upsert({
               user_id: user.id,
               team_id: team.id,
               role: 'team_manager'
             });
 
-          if (teamRoleError && !teamRoleError.message.includes('duplicate')) {
+          if (teamRoleError) {
             console.error('Error re-adding team manager role:', teamRoleError);
           }
         }
