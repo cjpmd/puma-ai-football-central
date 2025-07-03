@@ -59,6 +59,18 @@ export const UserTeamManagement = () => {
 
   useEffect(() => {
     loadData();
+    
+    // Listen for invitation deletions to update the view
+    const handleInvitationDeleted = (event: CustomEvent) => {
+      console.log('Invitation deleted event received:', event.detail);
+      loadData(); // Refresh the data to remove deleted invitations
+    };
+    
+    window.addEventListener('invitationDeleted', handleInvitationDeleted as EventListener);
+    
+    return () => {
+      window.removeEventListener('invitationDeleted', handleInvitationDeleted as EventListener);
+    };
   }, []);
 
   const loadData = async () => {

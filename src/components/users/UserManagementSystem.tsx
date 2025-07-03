@@ -18,6 +18,7 @@ import { InvitationResendPanel } from './InvitationResendPanel';
 import { UserTeamManagement } from './UserTeamManagement';
 import { UserEditModal } from './UserEditModal';
 import { userInvitationService } from '@/services/userInvitationService';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface UserProfile {
   id: string;
@@ -62,6 +63,7 @@ export const UserManagementSystem = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+  const { isGlobalAdmin } = useAuthorization();
 
   useEffect(() => {
     loadUsers();
@@ -647,50 +649,54 @@ export const UserManagementSystem = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={fixSpecificUser}
-            variant="outline"
-            size="sm"
-            className="bg-red-50 border-red-200 text-red-800 hover:bg-red-100"
-          >
-            <UserCheck className="h-4 w-4 mr-2" />
-            Fix Missing User
-          </Button>
-          <Button
-            onClick={loadUsers}
-            variant="outline"
-            size="sm"
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-          <Button
-            onClick={debugSpecificUser}
-            variant="outline"
-            size="sm"
-            className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
-          >
-            <Bug className="h-4 w-4 mr-2" />
-            Debug User
-          </Button>
-          <Button
-            onClick={processPendingInvitations}
-            variant="outline"
-            size="sm"
-            className="bg-green-50 border-green-200 text-green-800 hover:bg-green-100"
-          >
-            <CheckCircle className="h-4 w-4 mr-2" />
-            Process Pending
-          </Button>
-          <Button
-            onClick={syncMissingProfiles}
-            variant="outline"
-            size="sm"
-            className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
-          >
-            <UserSearch className="h-4 w-4 mr-2" />
-            Sync Missing Profiles
-          </Button>
+          {isGlobalAdmin && (
+            <>
+              <Button
+                onClick={fixSpecificUser}
+                variant="outline"
+                size="sm"
+                className="bg-red-50 border-red-200 text-red-800 hover:bg-red-100"
+              >
+                <UserCheck className="h-4 w-4 mr-2" />
+                Fix Missing User
+              </Button>
+              <Button
+                onClick={loadUsers}
+                variant="outline"
+                size="sm"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              <Button
+                onClick={debugSpecificUser}
+                variant="outline"
+                size="sm"
+                className="bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100"
+              >
+                <Bug className="h-4 w-4 mr-2" />
+                Debug User
+              </Button>
+              <Button
+                onClick={processPendingInvitations}
+                variant="outline"
+                size="sm"
+                className="bg-green-50 border-green-200 text-green-800 hover:bg-green-100"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Process Pending
+              </Button>
+              <Button
+                onClick={syncMissingProfiles}
+                variant="outline"
+                size="sm"
+                className="bg-blue-50 border-blue-200 text-blue-800 hover:bg-blue-100"
+              >
+                <UserSearch className="h-4 w-4 mr-2" />
+                Sync Missing Profiles
+              </Button>
+            </>
+          )}
           <Button
             onClick={() => setShowInviteModal(true)}
             className="bg-puma-blue-600 hover:bg-puma-blue-700"

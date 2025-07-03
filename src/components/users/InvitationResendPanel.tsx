@@ -70,8 +70,13 @@ export const InvitationResendPanel: React.FC = () => {
   };
 
   const deleteInvitation = async (invitation: UserInvitation) => {
+    if (!window.confirm(`Are you sure you want to permanently delete the invitation for ${invitation.email}? This action cannot be undone.`)) {
+      return;
+    }
+
     setDeletingId(invitation.id);
     try {
+      // Delete from database - this will be permanent
       const { error } = await supabase
         .from('user_invitations')
         .delete()
@@ -79,11 +84,18 @@ export const InvitationResendPanel: React.FC = () => {
 
       if (error) throw error;
 
-      // Add to localStorage to prevent it from showing up again
+      // Add to localStorage to prevent it from showing up again in case of cache issues
       addToDeletedInvitations(invitation.id);
+      
       // Remove from local state
       setInvitations(prev => prev.filter(inv => inv.id !== invitation.id));
-      toast.success(`Invitation for ${invitation.email} deleted`);
+      
+      // Clear from browser storage to ensure clean state
+      window.dispatchEvent(new CustomEvent('invitationDeleted', { 
+        detail: { invitationId: invitation.id, email: invitation.email }
+      }));
+      
+      toast.success(`Invitation for ${invitation.email} permanently deleted`);
     } catch (error) {
       console.error('Error deleting invitation:', error);
       toast.error('Failed to delete invitation');
