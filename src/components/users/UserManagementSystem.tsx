@@ -16,6 +16,7 @@ import { DualRoleManagement } from './DualRoleManagement';
 import { BulkUserImport } from './BulkUserImport';
 import { InvitationResendPanel } from './InvitationResendPanel';
 import { UserTeamManagement } from './UserTeamManagement';
+import { UserEditModal } from './UserEditModal';
 import { userInvitationService } from '@/services/userInvitationService';
 
 interface UserProfile {
@@ -57,6 +58,8 @@ export const UserManagementSystem = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
@@ -581,39 +584,15 @@ export const UserManagementSystem = () => {
     return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
-  const handleEditUser = async (user: UserProfile) => {
-    try {
-      // For now, allow editing of user roles - this can be expanded later
-      const newRoles = prompt(
-        `Edit roles for ${user.name} (comma-separated):\nCurrent roles: ${user.roles.join(', ')}`, 
-        user.roles.join(', ')
-      );
-      
-      if (newRoles === null) return; // User cancelled
-      
-      const rolesArray = newRoles.split(',').map(role => role.trim()).filter(role => role);
-      
-      const { error } = await supabase
-        .from('profiles')
-        .update({ roles: rolesArray })
-        .eq('id', user.id);
+  const handleEditUser = (userToEdit: UserProfile) => {
+    console.log('Opening edit modal for user:', userToEdit);
+    setEditingUser(userToEdit);
+    setShowEditModal(true);
+  };
 
-      if (error) throw error;
-
-      toast({
-        title: 'User Updated',
-        description: `${user.name}'s roles have been updated`,
-      });
-
-      await loadUsers();
-    } catch (error: any) {
-      console.error('Error updating user:', error);
-      toast({
-        title: 'Update Error',
-        description: error.message || 'Failed to update user',
-        variant: 'destructive',
-      });
-    }
+  const handleEditModalClose = () => {
+    setShowEditModal(false);
+    setEditingUser(null);
   };
 
   const handleDeleteUser = async (user: UserProfile) => {
@@ -945,6 +924,13 @@ export const UserManagementSystem = () => {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         onInviteSent={loadUsers}
+      />
+      
+      <UserEditModal
+        user={editingUser}
+        isOpen={showEditModal}
+        onClose={handleEditModalClose}
+        onUserUpdated={loadUsers}
       />
     </div>
   );

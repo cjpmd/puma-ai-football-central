@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogoUpload } from '@/components/shared/LogoUpload';
 import { Team } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeamLogoSettingsProps {
   team: Team;
@@ -12,11 +13,31 @@ interface TeamLogoSettingsProps {
 export const TeamLogoSettings: React.FC<TeamLogoSettingsProps> = ({ team, onUpdate }) => {
   const [logoUrl, setLogoUrl] = useState(team.logoUrl || null);
 
-  const handleLogoChange = (newLogoUrl: string | null) => {
+  const handleLogoChange = async (newLogoUrl: string | null) => {
     console.log('TeamLogoSettings: Logo changed to:', newLogoUrl);
     setLogoUrl(newLogoUrl);
-    // Update parent component immediately
-    onUpdate({ logoUrl: newLogoUrl });
+    
+    // Save logo URL to database immediately
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .update({ 
+          logo_url: newLogoUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', team.id);
+
+      if (error) {
+        console.error('Error saving logo URL:', error);
+        throw error;
+      }
+
+      console.log('Logo URL saved to database successfully');
+      // Update parent component
+      onUpdate({ logoUrl: newLogoUrl });
+    } catch (error) {
+      console.error('Error saving team logo:', error);
+    }
   };
 
   return (

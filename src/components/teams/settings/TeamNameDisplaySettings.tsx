@@ -37,7 +37,10 @@ export const TeamNameDisplaySettings: React.FC<TeamNameDisplaySettingsProps> = (
       
       const { error } = await supabase
         .from('teams')
-        .update({ name_display_option: nameDisplayOption })
+        .update({ 
+          name_display_option: nameDisplayOption,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', team.id);
 
       if (error) {

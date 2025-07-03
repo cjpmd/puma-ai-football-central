@@ -394,7 +394,10 @@ export const TeamStaffSettings: React.FC<TeamStaffSettingsProps> = ({
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={handleUpdateStaff}>
+              <Button 
+                onClick={handleUpdateStaff}
+                disabled={!newStaff.name || !newStaff.email}
+              >
                 Update Staff Member
               </Button>
               <Button 

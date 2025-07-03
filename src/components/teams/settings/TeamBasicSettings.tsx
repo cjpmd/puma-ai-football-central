@@ -101,10 +101,45 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     loadFreshTeamData();
   }, [team.id]);
 
-  // Load available clubs on mount
+  // Load available clubs and team manager info on mount
   useEffect(() => {
     loadAvailableClubs();
-  }, []);
+    loadTeamManagerInfo();
+  }, [team.id]);
+
+  const loadTeamManagerInfo = async () => {
+    try {
+      // Get team manager from user_teams table
+      const { data: managerData, error } = await supabase
+        .from('user_teams')
+        .select(`
+          user_id,
+          profiles!inner(name, email, phone)
+        `)
+        .eq('team_id', team.id)
+        .eq('role', 'team_manager')
+        .limit(1)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading team manager:', error);
+        return;
+      }
+
+      if (managerData && managerData.profiles) {
+        console.log('Found team manager profile:', managerData.profiles);
+        // Auto-populate manager fields if they're empty
+        setFormData(prev => ({
+          ...prev,
+          managerName: prev.managerName || managerData.profiles.name || '',
+          managerEmail: prev.managerEmail || managerData.profiles.email || '',
+          managerPhone: prev.managerPhone || managerData.profiles.phone || '',
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading team manager info:', error);
+    }
+  };
 
   const loadAvailableClubs = async () => {
     try {
