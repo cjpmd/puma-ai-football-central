@@ -149,19 +149,19 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Games</p>
-                  <p className="font-medium">{stats?.totalGames || 0}</p>
+                  <p className="font-medium">{stats?.games || 0}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Minutes</p>
-                  <p className="font-medium">{stats?.totalMinutes || 0}</p>
+                  <p className="font-medium">{stats?.minutes || 0}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Captain</p>
                   <p className="font-medium">{stats?.captainGames || 0}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">POTM</p>
-                  <p className="font-medium">{stats?.potmCount || 0}</p>
+                  <p className="text-muted-foreground">Avg Minutes</p>
+                  <p className="font-medium">{stats?.averageMinutes || 0}</p>
                 </div>
               </div>
               {stats?.minutesByPosition && (
