@@ -361,34 +361,59 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const updatePlayerPosition = (targetPeriodId: string, positionIndex: number, playerId: string, sourcePeriodId?: string | null, sourcePositionId?: string | null) => {
     console.log('Updating player position:', { targetPeriodId, positionIndex, playerId, sourcePeriodId, sourcePositionId });
     
-    // First, remove this player from ALL periods if they're not being moved within the same period
     const updatedPeriods = periods.map(period => {
-      const newPositions = [...period.positions];
-      const newSubstitutes = [...period.substitutes];
-      
-      // Remove this player from ALL positions and substitutes in ALL periods
-      newPositions.forEach(pos => {
-        if (pos.playerId === playerId) {
-          pos.playerId = undefined;
+      if (period.id === targetPeriodId) {
+        const newPositions = [...period.positions];
+        const newSubstitutes = [...period.substitutes];
+        
+        // Check if there's already a player in the target position
+        const displacedPlayerId = newPositions[positionIndex]?.playerId;
+        
+        // Remove the dragged player from all positions and substitutes in THIS period only
+        newPositions.forEach(pos => {
+          if (pos.playerId === playerId) {
+            pos.playerId = undefined;
+          }
+        });
+        
+        const subIndex = newSubstitutes.indexOf(playerId);
+        if (subIndex > -1) {
+          newSubstitutes.splice(subIndex, 1);
         }
-      });
-      
-      const subIndex = newSubstitutes.indexOf(playerId);
-      if (subIndex > -1) {
-        newSubstitutes.splice(subIndex, 1);
+        
+        // If there was a displaced player, move them to substitutes
+        if (displacedPlayerId && displacedPlayerId !== playerId && !newSubstitutes.includes(displacedPlayerId)) {
+          newSubstitutes.push(displacedPlayerId);
+        }
+        
+        // Place the new player in the target position
+        if (newPositions[positionIndex]) {
+          newPositions[positionIndex].playerId = playerId;
+          console.log('Assigned player to position:', newPositions[positionIndex]);
+        }
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
+      } else if (sourcePeriodId && period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
+        // Only remove from source period if moving between different periods
+        const newPositions = period.positions.map(pos => ({
+          ...pos,
+          playerId: pos.playerId === playerId ? undefined : pos.playerId
+        }));
+        
+        const newSubstitutes = period.substitutes.filter(id => id !== playerId);
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
       }
       
-      // If this is the target period, place the player in the new position
-      if (period.id === targetPeriodId && newPositions[positionIndex]) {
-        newPositions[positionIndex].playerId = playerId;
-        console.log('Assigned player to position:', newPositions[positionIndex]);
-      }
-      
-      return {
-        ...period,
-        positions: newPositions,
-        substitutes: newSubstitutes
-      };
+      return period;
     });
     
     console.log('Updated periods after position change:', updatedPeriods);
@@ -398,33 +423,45 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const addToSubstitutes = (targetPeriodId: string, playerId: string, sourcePeriodId?: string | null, sourcePositionId?: string | null) => {
     console.log('Adding to substitutes:', { targetPeriodId, playerId, sourcePeriodId, sourcePositionId });
     
-    // First, remove this player from ALL periods
     const updatedPeriods = periods.map(period => {
-      const newPositions = [...period.positions];
-      const newSubstitutes = [...period.substitutes];
-      
-      // Remove this player from ALL positions and substitutes in ALL periods
-      newPositions.forEach(pos => {
-        if (pos.playerId === playerId) {
-          pos.playerId = undefined;
+      if (period.id === targetPeriodId) {
+        const newPositions = [...period.positions];
+        const newSubstitutes = [...period.substitutes];
+        
+        // Remove the player from all positions in THIS period only
+        newPositions.forEach(pos => {
+          if (pos.playerId === playerId) {
+            pos.playerId = undefined;
+          }
+        });
+        
+        // Add to substitutes if not already there
+        if (!newSubstitutes.includes(playerId)) {
+          newSubstitutes.push(playerId);
         }
-      });
-      
-      const subIndex = newSubstitutes.indexOf(playerId);
-      if (subIndex > -1) {
-        newSubstitutes.splice(subIndex, 1);
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
+      } else if (sourcePeriodId && period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
+        // Only remove from source period if moving between different periods
+        const newPositions = period.positions.map(pos => ({
+          ...pos,
+          playerId: pos.playerId === playerId ? undefined : pos.playerId
+        }));
+        
+        const newSubstitutes = period.substitutes.filter(id => id !== playerId);
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
       }
       
-      // If this is the target period, add to substitutes
-      if (period.id === targetPeriodId && !newSubstitutes.includes(playerId)) {
-        newSubstitutes.push(playerId);
-      }
-      
-      return {
-        ...period,
-        positions: newPositions,
-        substitutes: newSubstitutes
-      };
+      return period;
     });
     
     onPeriodsChange(updatedPeriods);
