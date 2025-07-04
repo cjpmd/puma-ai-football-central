@@ -47,6 +47,7 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
                 player={player}
                 isCaptain={player.id === globalCaptainId}
                 nameDisplayOption={nameDisplayOption}
+                isCircular={true}
               />
             </div>
           ))
