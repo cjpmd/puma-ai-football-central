@@ -37,12 +37,18 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
           </div>
         ) : (
           substitutes.map((player) => (
-            <PlayerIcon
+            <div
               key={player.id}
-              player={player}
-              isCaptain={player.id === globalCaptainId}
-              nameDisplayOption={nameDisplayOption}
-            />
+              id={`substitutes-${id.replace('substitutes-', '')}-${player.id}`}
+              className="cursor-grab active:cursor-grabbing touch-none select-none print:cursor-default"
+              draggable
+            >
+              <PlayerIcon
+                player={player}
+                isCaptain={player.id === globalCaptainId}
+                nameDisplayOption={nameDisplayOption}
+              />
+            </div>
           ))
         )}
       </div>

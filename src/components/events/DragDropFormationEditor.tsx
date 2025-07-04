@@ -294,7 +294,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const dragId = event.active.id as string;
     console.log('Drag started with ID:', dragId);
     
-    // Simplified ID parsing - more reliable approach
     let playerId: string;
     let periodId: string | null = null;
     let positionId: string | null = null;
@@ -308,6 +307,17 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       positionId = dragId;
       setDraggedFromPeriod(periodId);
       setDraggedFromPosition(positionId);
+    } else if (dragId.startsWith('substitutes-')) {
+      // Handle dragging from substitutes: substitutes-periodId-playerId
+      const parts = dragId.replace('substitutes-', '').split('-');
+      if (parts.length >= 2) {
+        periodId = parts.slice(0, -1).join('-'); // Handle period IDs with dashes
+        playerId = parts[parts.length - 1];
+      } else {
+        playerId = parts[0];
+      }
+      setDraggedFromPeriod(periodId);
+      setDraggedFromPosition('substitutes');
     } else {
       // Direct player ID from available players
       playerId = dragId;
@@ -340,11 +350,14 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     
     console.log('Drag ended:', { dragId, targetId, previousPeriod, previousPosition });
     
-    // Extract player ID from drag ID - simplified approach
+    // Extract player ID from drag ID
     let playerId: string;
     if (dragId.includes('-position-')) {
       const parts = dragId.split('-position-');
       playerId = parts[1].split('-').pop() || '';
+    } else if (dragId.startsWith('substitutes-')) {
+      const parts = dragId.replace('substitutes-', '').split('-');
+      playerId = parts[parts.length - 1];
     } else {
       playerId = dragId;
     }
