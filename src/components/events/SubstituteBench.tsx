@@ -27,8 +27,8 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
         ref={setNodeRef}
         className={`
           flex flex-wrap gap-2 p-3 rounded-lg border-2 border-dashed min-h-[100px]
-          ${isOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50'}
-          transition-colors duration-200
+          ${isOver ? 'border-solid border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.02]' : 'border-gray-300 bg-gray-50 hover:border-gray-400'}
+          transition-all duration-200 ease-in-out
         `}
       >
         {substitutes.length === 0 ? (

@@ -1,5 +1,15 @@
 import { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core';
+import { 
+  DndContext, 
+  DragEndEvent, 
+  DragOverlay, 
+  DragStartEvent,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  closestCenter
+} from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,8 +64,25 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
   const [draggedFromPeriod, setDraggedFromPeriod] = useState<string | null>(null);
+  const [draggedFromPosition, setDraggedFromPosition] = useState<string | null>(null);
   const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
+
+  // Configure sensors for better drag responsiveness
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: {
+      distance: 3, // Require 3px of movement before activating
+    },
+  });
+
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: {
+      delay: 100, // 100ms delay for touch to prevent conflicts with scrolling
+      tolerance: 3, // 3px tolerance
+    },
+  });
+
+  const sensors = useSensors(pointerSensor, touchSensor);
   
   const gameFormatFormations = getFormationsByFormat(gameFormat as any);
   const mappedNameDisplayOption = mapNameDisplayOption(nameDisplayOption);
@@ -267,24 +294,29 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const dragId = event.active.id as string;
     console.log('Drag started with ID:', dragId);
     
-    // Extract player ID and period ID from the drag ID
+    // Simplified ID parsing - more reliable approach
     let playerId: string;
     let periodId: string | null = null;
+    let positionId: string | null = null;
     
     if (dragId.includes('-position-')) {
       // Format: periodId-position-index-playerId
-      const parts = dragId.split('-');
+      const parts = dragId.split('-position-');
       periodId = parts[0];
-      playerId = parts[parts.length - 1];
+      const positionAndPlayer = parts[1].split('-');
+      playerId = positionAndPlayer[positionAndPlayer.length - 1];
+      positionId = dragId;
       setDraggedFromPeriod(periodId);
+      setDraggedFromPosition(positionId);
     } else {
       // Direct player ID from available players
       playerId = dragId;
       setDraggedFromPeriod(null);
+      setDraggedFromPosition(null);
     }
     
     const player = squadPlayers.find(p => p.id === playerId);
-    console.log('Drag started for player:', player?.name, 'ID:', playerId, 'from period:', periodId);
+    console.log('Drag started for player:', player?.name, 'ID:', playerId, 'from period:', periodId, 'from position:', positionId);
     setDraggedPlayer(player || null);
   };
 
@@ -292,8 +324,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const { active, over } = event;
     
     // Reset drag state
+    const previousPeriod = draggedFromPeriod;
+    const previousPosition = draggedFromPosition;
     setDraggedPlayer(null);
     setDraggedFromPeriod(null);
+    setDraggedFromPosition(null);
     
     if (!over) {
       console.log('Drag ended with no target');
@@ -303,43 +338,48 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const dragId = active.id as string;
     const targetId = over.id as string;
     
-    console.log('Drag ended:', { dragId, targetId });
+    console.log('Drag ended:', { dragId, targetId, previousPeriod, previousPosition });
     
-    // Extract player ID from drag ID
+    // Extract player ID from drag ID - simplified approach
     let playerId: string;
     if (dragId.includes('-position-')) {
-      const parts = dragId.split('-');
-      playerId = parts[parts.length - 1];
+      const parts = dragId.split('-position-');
+      playerId = parts[1].split('-').pop() || '';
     } else {
       playerId = dragId;
     }
     
     if (targetId.includes('-position-')) {
       const [periodId, positionIndex] = targetId.split('-position-');
-      updatePlayerPosition(periodId, parseInt(positionIndex), playerId);
+      updatePlayerPosition(periodId, parseInt(positionIndex), playerId, previousPeriod, previousPosition);
     } else if (targetId.startsWith('substitutes-')) {
       const periodId = targetId.replace('substitutes-', '');
-      addToSubstitutes(periodId, playerId);
+      addToSubstitutes(periodId, playerId, previousPeriod, previousPosition);
     }
   };
 
-  const updatePlayerPosition = (targetPeriodId: string, positionIndex: number, playerId: string) => {
-    console.log('Updating player position:', { targetPeriodId, positionIndex, playerId, draggedFromPeriod });
+  const updatePlayerPosition = (targetPeriodId: string, positionIndex: number, playerId: string, sourcePeriodId?: string | null, sourcePositionId?: string | null) => {
+    console.log('Updating player position:', { targetPeriodId, positionIndex, playerId, sourcePeriodId, sourcePositionId });
     
     const updatedPeriods = periods.map(period => {
-      // Only modify the target period and the source period (if different)
       if (period.id === targetPeriodId) {
+        // Target period - handle placement
         const newPositions = [...period.positions];
+        const newSubstitutes = [...period.substitutes];
         
-        // Remove player from any existing position in THIS period only
-        newPositions.forEach(pos => {
-          if (pos.playerId === playerId) {
-            pos.playerId = undefined;
+        // Only remove from THIS period if moving within the same period
+        if (sourcePeriodId === targetPeriodId) {
+          // Moving within same period - remove from old position/substitutes
+          newPositions.forEach(pos => {
+            if (pos.playerId === playerId) {
+              pos.playerId = undefined;
+            }
+          });
+          const subIndex = newSubstitutes.indexOf(playerId);
+          if (subIndex > -1) {
+            newSubstitutes.splice(subIndex, 1);
           }
-        });
-        
-        // Remove from substitutes in THIS period only
-        const newSubstitutes = period.substitutes.filter(id => id !== playerId);
+        }
         
         // Add to new position
         if (newPositions[positionIndex]) {
@@ -352,8 +392,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           positions: newPositions,
           substitutes: newSubstitutes
         };
-      } else if (draggedFromPeriod && period.id === draggedFromPeriod && period.id !== targetPeriodId) {
-        // Remove player from source period only if dragging between different periods
+      } else if (sourcePeriodId && period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
+        // Source period - only remove if moving between different periods
         const newPositions = period.positions.map(pos => ({
           ...pos,
           playerId: pos.playerId === playerId ? undefined : pos.playerId
@@ -375,29 +415,37 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     onPeriodsChange(updatedPeriods);
   };
 
-  const addToSubstitutes = (targetPeriodId: string, playerId: string) => {
-    console.log('Adding to substitutes:', { targetPeriodId, playerId, draggedFromPeriod });
+  const addToSubstitutes = (targetPeriodId: string, playerId: string, sourcePeriodId?: string | null, sourcePositionId?: string | null) => {
+    console.log('Adding to substitutes:', { targetPeriodId, playerId, sourcePeriodId, sourcePositionId });
     
     const updatedPeriods = periods.map(period => {
       if (period.id === targetPeriodId) {
-        // Remove from positions in THIS period only
-        const newPositions = period.positions.map(pos => ({
-          ...pos,
-          playerId: pos.playerId === playerId ? undefined : pos.playerId
-        }));
+        // Target period - handle substitute addition
+        const newPositions = [...period.positions];
+        const newSubstitutes = [...period.substitutes];
+        
+        // Only remove from THIS period if moving within the same period
+        if (sourcePeriodId === targetPeriodId) {
+          // Moving within same period - remove from old position
+          newPositions.forEach(pos => {
+            if (pos.playerId === playerId) {
+              pos.playerId = undefined;
+            }
+          });
+        }
         
         // Add to substitutes if not already there
-        const newSubstitutes = period.substitutes.includes(playerId) 
-          ? period.substitutes 
-          : [...period.substitutes, playerId];
+        if (!newSubstitutes.includes(playerId)) {
+          newSubstitutes.push(playerId);
+        }
         
         return {
           ...period,
           positions: newPositions,
           substitutes: newSubstitutes
         };
-      } else if (draggedFromPeriod && period.id === draggedFromPeriod && period.id !== targetPeriodId) {
-        // Remove player from source period only if dragging between different periods
+      } else if (sourcePeriodId && period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
+        // Source period - only remove if moving between different periods
         const newPositions = period.positions.map(pos => ({
           ...pos,
           playerId: pos.playerId === playerId ? undefined : pos.playerId
@@ -567,6 +615,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   return (
     <div className="space-y-4 print:text-sm">
       <DndContext 
+        sensors={sensors}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart} 
         onDragEnd={handleDragEnd}
       >
@@ -716,7 +766,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         {/* Drag Overlay with improved visual feedback */}
         <DragOverlay>
           {draggedPlayer && (
-            <div className="transform scale-110 shadow-2xl">
+            <div className="transform scale-110 shadow-2xl opacity-95 z-50">
               <PlayerIcon 
                 player={draggedPlayer} 
                 isDragging 

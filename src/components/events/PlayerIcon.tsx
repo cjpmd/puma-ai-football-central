@@ -36,9 +36,16 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     disabled: player.availabilityStatus !== 'available',
   });
 
+  // Improved drag styles with better visual feedback
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-  } : undefined;
+    zIndex: 1000,
+    transition: 'none', // Disable transitions during drag for smoothness
+    cursor: 'grabbing',
+  } : {
+    transition: 'all 0.2s ease-in-out', // Smooth transitions when not dragging
+    cursor: player.availabilityStatus === 'available' ? 'grab' : 'not-allowed',
+  };
 
   const getDisplayName = () => {
     const nameParts = player.name.split(' ');
@@ -84,9 +91,12 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         className={`
           relative flex flex-col items-center justify-center ${circularSize} border-2
           ${getAvailabilityStyle()}
-          ${actualIsDragging ? 'shadow-lg scale-110' : 'shadow-sm'}
+          ${actualIsDragging ? 'shadow-lg scale-110 opacity-50' : 'shadow-sm'}
           ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
-          transition-all duration-200
+          ${player.availabilityStatus === 'available' ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
+          transition-all duration-200 ease-in-out
+          touch-none select-none
+          print:scale-100 print:shadow-none
         `}
       >
         {/* Captain indicator */}

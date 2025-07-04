@@ -40,12 +40,15 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     }
   });
 
-  // Improved transform with better visual feedback
+  // Improved transform with better visual feedback and smooth transitions
   const style = transform ? {
     transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
     zIndex: 1000,
     cursor: 'grabbing',
-  } : undefined;
+    transition: 'none', // Disable transitions during drag for smoothness
+  } : {
+    transition: 'all 0.2s ease-in-out', // Smooth transitions when not dragging
+  };
 
   const getPositionGroupColor = () => {
     switch (position.positionGroup) {
@@ -73,8 +76,9 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         className={`
           ${slotSize} rounded-full border-2 border-dashed flex items-center justify-center
           ${getPositionGroupColor()}
-          ${isOver ? 'border-solid bg-opacity-75 scale-110 ring-2 ring-blue-300' : ''}
+          ${isOver ? 'border-solid bg-opacity-75 scale-110 ring-4 ring-primary/30 shadow-lg' : ''}
           transition-all duration-200 ease-in-out
+          ${player ? '' : 'hover:border-solid hover:scale-105'}
         `}
       >
         {player ? (
@@ -87,8 +91,9 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
               cursor-grab active:cursor-grabbing print:cursor-default 
               ${isDragging ? 'opacity-30' : 'opacity-100'} 
               touch-none select-none
-              transition-opacity duration-150
-              hover:scale-105
+              transition-all duration-150 ease-in-out
+              hover:scale-105 hover:shadow-md
+              active:scale-110
             `}
           >
             <PlayerIcon 
