@@ -1,5 +1,5 @@
 
-import { useDroppable } from '@dnd-kit/core';
+import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { PlayerIcon } from './PlayerIcon';
 import { SquadPlayer } from '@/types/teamSelection';
 
@@ -10,6 +10,51 @@ interface SubstituteBenchProps {
   nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
 }
 
+// Individual draggable substitute component
+const DraggableSubstitute: React.FC<{
+  player: SquadPlayer;
+  periodId: string;
+  globalCaptainId?: string;
+  nameDisplayOption: 'surname' | 'first' | 'full' | 'initials';
+}> = ({ player, periodId, globalCaptainId, nameDisplayOption }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `${periodId}|substitutes|${player.id}`,
+    data: {
+      playerId: player.id,
+      sourcePeriodId: periodId,
+      sourceLocation: 'substitutes'
+    }
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 1000,
+  } : {};
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
+      className={`cursor-grab active:cursor-grabbing touch-none select-none print:cursor-default ${isDragging ? 'opacity-50' : ''}`}
+    >
+      <PlayerIcon
+        player={player}
+        isCaptain={player.id === globalCaptainId}
+        nameDisplayOption={nameDisplayOption}
+        isCircular={true}
+      />
+    </div>
+  );
+};
+
 export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
   id,
   substitutes,
@@ -19,6 +64,9 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
   const { isOver, setNodeRef } = useDroppable({
     id: id,
   });
+
+  // Extract period ID from the id prop (format: substitutes-{periodId})
+  const periodId = id.replace('substitutes-', '');
 
   return (
     <div className="space-y-2">
@@ -37,19 +85,13 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
           </div>
         ) : (
           substitutes.map((player) => (
-            <div
+            <DraggableSubstitute
               key={player.id}
-              id={`substitutes-${id.replace('substitutes-', '')}-${player.id}`}
-              className="cursor-grab active:cursor-grabbing touch-none select-none print:cursor-default"
-              draggable
-            >
-              <PlayerIcon
-                player={player}
-                isCaptain={player.id === globalCaptainId}
-                nameDisplayOption={nameDisplayOption}
-                isCircular={true}
-              />
-            </div>
+              player={player}
+              periodId={periodId}
+              globalCaptainId={globalCaptainId}
+              nameDisplayOption={nameDisplayOption}
+            />
           ))
         )}
       </div>
