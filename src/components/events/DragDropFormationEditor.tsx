@@ -305,6 +305,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         periodId = parts[0];
         location = parts[1];
         playerId = parts[2];
+      } else if (parts.length === 2) {
+        // Handle legacy format: just in case
+        console.warn('Legacy 2-part drag ID format detected:', dragId);
+        playerId = parts[1];
+        // Try to extract period from first part if it looks like a position ID
+        if (parts[0].includes('-position-')) {
+          periodId = parts[0].split('-position-')[0];
+          location = `position-${parts[0].split('-position-')[1]}`;
+        }
       } else {
         playerId = dragId;
       }

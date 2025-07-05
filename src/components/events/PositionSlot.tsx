@@ -32,7 +32,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     transform,
     isDragging,
   } = useDraggable({
-    id: player ? `${id}|${player.id}` : '',
+    id: player ? `${id.split('-position-')[0]}|position-${id.split('-position-')[1]}|${player.id}` : '',
     disabled: !player,
     data: {
       playerId: player?.id,
