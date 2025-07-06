@@ -41,14 +41,17 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
     }
   });
 
-  // Improved transform with better visual feedback and smooth transitions
+  // Enhanced transform with smooth animations and snapping
   const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.05)`,
     zIndex: 1000,
     cursor: 'grabbing',
-    transition: 'none', // Disable transitions during drag for smoothness
+    transition: 'none',
+    filter: 'brightness(1.1) drop-shadow(0 8px 16px rgba(0,0,0,0.2))',
   } : {
-    transition: 'all 0.2s ease-in-out', // Smooth transitions when not dragging
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', // Smooth snapping back
+    transform: 'scale(1)',
+    filter: 'none',
   };
 
   const getPositionGroupColor = () => {
@@ -77,9 +80,10 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         className={`
           ${slotSize} rounded-full border-2 border-dashed flex items-center justify-center
           ${getPositionGroupColor()}
-          ${isOver ? 'border-solid bg-opacity-75 scale-110 ring-4 ring-primary/30 shadow-lg' : ''}
-          transition-all duration-200 ease-in-out
-          ${player ? '' : 'hover:border-solid hover:scale-105'}
+          ${isOver ? 'border-solid bg-opacity-90 scale-110 ring-4 ring-primary/40 shadow-2xl animate-pulse' : ''}
+          transition-all duration-300 ease-out
+          ${player ? '' : 'hover:border-solid hover:scale-105 hover:shadow-lg'}
+          ${!player ? 'animate-[pulse_3s_ease-in-out_infinite] opacity-60' : ''}
         `}
       >
         {player ? (

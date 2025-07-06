@@ -33,9 +33,15 @@ const DraggableSubstitute: React.FC<{
   });
 
   const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.05)`,
     zIndex: 1000,
-  } : {};
+    filter: 'brightness(1.1) drop-shadow(0 8px 16px rgba(0,0,0,0.2))',
+    transition: 'none',
+  } : {
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    transform: 'scale(1)',
+    filter: 'none',
+  };
 
   return (
     <div
@@ -75,8 +81,8 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
         ref={setNodeRef}
         className={`
           flex flex-wrap gap-2 p-3 rounded-lg border-2 border-dashed min-h-[100px]
-          ${isOver ? 'border-solid border-primary bg-primary/10 ring-2 ring-primary/20 scale-[1.02]' : 'border-gray-300 bg-gray-50 hover:border-gray-400'}
-          transition-all duration-200 ease-in-out
+          ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 scale-[1.03] shadow-lg animate-pulse' : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'}
+          transition-all duration-300 ease-out
         `}
       >
         {substitutes.length === 0 ? (

@@ -36,15 +36,18 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     disabled: player.availabilityStatus !== 'available',
   });
 
-  // Improved drag styles with better visual feedback
+  // Enhanced drag styles with smooth animations and visual feedback
   const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.1)`,
     zIndex: 1000,
-    transition: 'none', // Disable transitions during drag for smoothness
+    transition: 'none',
     cursor: 'grabbing',
+    filter: 'brightness(1.15) drop-shadow(0 12px 24px rgba(0,0,0,0.25))',
   } : {
-    transition: 'all 0.2s ease-in-out', // Smooth transitions when not dragging
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     cursor: player.availabilityStatus === 'available' ? 'grab' : 'not-allowed',
+    transform: 'scale(1)',
+    filter: 'none',
   };
 
   const getDisplayName = () => {

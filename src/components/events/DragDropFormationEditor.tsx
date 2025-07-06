@@ -68,17 +68,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
 
-  // Configure sensors for better drag responsiveness
+  // Enhanced sensors for smooth mobile-first drag experience
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
-      distance: 3, // Require 3px of movement before activating
+      distance: 5, // Slightly more distance to prevent accidental drags
+      delay: 0,
     },
   });
 
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
-      delay: 100, // 100ms delay for touch to prevent conflicts with scrolling
-      tolerance: 3, // 3px tolerance
+      delay: 150, // Longer delay for better touch experience
+      tolerance: 5, // More tolerance for touch variations
     },
   });
 
@@ -758,10 +759,16 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         )}
 
-        {/* Drag Overlay with improved visual feedback */}
-        <DragOverlay>
+        {/* Enhanced Drag Overlay with smooth animations */}
+        <DragOverlay
+          adjustScale={false}
+          dropAnimation={{
+            duration: 300,
+            easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
           {draggedPlayer && (
-            <div className="transform scale-110 shadow-2xl opacity-95 z-50">
+            <div className="transform scale-125 shadow-2xl opacity-90 z-50 animate-pulse">
               <PlayerIcon 
                 player={draggedPlayer} 
                 isDragging 
