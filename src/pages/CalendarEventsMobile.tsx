@@ -14,6 +14,7 @@ import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSe
 import { EventForm } from '@/components/events/EventForm';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { DatabaseEvent } from '@/types/event';
+import { GameFormat } from '@/types';
 
 export default function CalendarEventsMobile() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
@@ -159,7 +160,7 @@ export default function CalendarEventsMobile() {
       type: dbEvent.event_type as 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
       opponent: dbEvent.opponent,
       isHome: dbEvent.is_home,
-      gameFormat: dbEvent.game_format,
+      gameFormat: dbEvent.game_format as GameFormat,
       gameDuration: dbEvent.game_duration,
       scores: dbEvent.scores,
       playerOfMatchId: dbEvent.player_of_match_id,
@@ -182,7 +183,7 @@ export default function CalendarEventsMobile() {
   return (
     <MobileLayout>
       <div className="space-y-4">
-        {/* Month Navigation */}
+        {/* Header Actions */}
         <div className="flex items-center justify-between">
           <Button
             variant="outline"
