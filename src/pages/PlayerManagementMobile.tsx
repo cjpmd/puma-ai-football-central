@@ -222,7 +222,7 @@ export default function PlayerManagementMobile() {
           </Badge>
         </div>
 
-        {/* Player Cards Grid - Side by Side with Better Sizing */}
+        {/* Player Cards Grid - Single Column with Max Width */}
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-8">
@@ -237,7 +237,7 @@ export default function PlayerManagementMobile() {
             <div className="grid grid-cols-1 gap-4">
               {filteredPlayers.map((player) => (
                 <div key={player.id} className="flex justify-center">
-                  <div className="w-full max-w-[280px]">
+                  <div className="w-full max-w-[300px]">
                     <FifaStylePlayerCard
                       player={player}
                       team={currentTeam}

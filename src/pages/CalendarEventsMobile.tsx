@@ -230,7 +230,7 @@ export default function CalendarEventsMobile() {
             
             <div className="grid grid-cols-7 gap-1">
               {calendarDays.map(day => {
-                const dayEvents = getEventsForDay(day);
+                const dayEventsCount = getEventsForDay(day);
                 const isCurrentMonth = isSameMonth(day, currentDate);
                 const isToday = isSameDay(day, new Date());
                 const isSelected = selectedDate && isSameDay(day, selectedDate);
@@ -249,7 +249,7 @@ export default function CalendarEventsMobile() {
                   >
                     <div className="text-center">
                       <div className="text-sm">{format(day, 'd')}</div>
-                      {dayEvents.length > 0 && (
+                      {dayEventsCount.length > 0 && (
                         <div className="flex justify-center mt-1">
                           <div className="w-1 h-1 bg-primary rounded-full" />
                         </div>
