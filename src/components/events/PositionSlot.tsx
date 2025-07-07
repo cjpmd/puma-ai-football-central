@@ -49,7 +49,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
           positionAbbreviation={position.abbreviation}
           showPositionLabel={false}
           isLarger={isLarger}
-          dragId={id.replace('-position-', '|position-')}
+          dragId={`${id}|${player.id}`}
         />
       ) : (
         <div className="flex flex-col items-center justify-center text-center">

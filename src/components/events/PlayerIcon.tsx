@@ -1,4 +1,3 @@
-
 import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
@@ -27,35 +26,18 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   isLarger = false,
   dragId
 }) => {
-  // Only enable dragging for:
-  // 1. Available players pool (no positionAbbreviation and no dragId)
-  // 2. Players with explicit dragId (substitutes and positioned players)
-  const shouldEnableDrag = player.availabilityStatus === 'available' && (dragId || !positionAbbreviation);
+  // Only enable dragging for available players
+  const shouldEnableDrag = player.availabilityStatus === 'available';
   
   const {
     attributes,
     listeners,
     setNodeRef,
-    transform,
     isDragging: dndIsDragging,
   } = useDraggable({
     id: dragId || player.id,
     disabled: !shouldEnableDrag,
   });
-
-  // Enhanced drag styles with smooth animations and visual feedback
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.1)`,
-    zIndex: 1000,
-    transition: 'none',
-    cursor: 'grabbing',
-    filter: 'brightness(1.15) drop-shadow(0 12px 24px rgba(0,0,0,0.25))',
-  } : {
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    cursor: shouldEnableDrag ? 'grab' : 'default',
-    transform: 'scale(1)',
-    filter: 'none',
-  };
 
   const getDisplayName = () => {
     const nameParts = player.name.split(' ');
@@ -95,13 +77,12 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     return (
       <div 
         ref={shouldEnableDrag ? setNodeRef : undefined}
-        style={style}
         {...(shouldEnableDrag ? listeners : {})}
         {...(shouldEnableDrag ? attributes : {})}
         className={`
           relative flex flex-col items-center justify-center ${circularSize} border-2
           ${getAvailabilityStyle()}
-          ${actualIsDragging ? 'shadow-lg scale-110 opacity-50' : 'shadow-sm'}
+          ${actualIsDragging ? 'opacity-50' : 'shadow-sm'}
           ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : shouldEnableDrag ? 'cursor-grab print:cursor-default' : 'cursor-default'}
           ${player.availabilityStatus === 'available' && shouldEnableDrag ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
           transition-all duration-200 ease-in-out
@@ -140,7 +121,6 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   return (
     <div 
       ref={setNodeRef}
-      style={style}
       {...listeners}
       {...attributes}
       className={`

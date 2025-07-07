@@ -1,5 +1,5 @@
 
-import { useDroppable, useDraggable } from '@dnd-kit/core';
+import { useDroppable } from '@dnd-kit/core';
 import { PlayerIcon } from './PlayerIcon';
 import { SquadPlayer } from '@/types/teamSelection';
 
@@ -9,26 +9,6 @@ interface SubstituteBenchProps {
   globalCaptainId?: string;
   nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
 }
-
-// Individual draggable substitute component
-const DraggableSubstitute: React.FC<{
-  player: SquadPlayer;
-  periodId: string;
-  globalCaptainId?: string;
-  nameDisplayOption: 'surname' | 'first' | 'full' | 'initials';
-}> = ({ player, periodId, globalCaptainId, nameDisplayOption }) => {
-  const dragId = `${periodId}|substitutes|${player.id}`;
-
-  return (
-    <PlayerIcon
-      player={player}
-      isCaptain={player.id === globalCaptainId}
-      nameDisplayOption={nameDisplayOption}
-      isCircular={true}
-      dragId={dragId}
-    />
-  );
-};
 
 export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
   id,
@@ -60,12 +40,13 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
           </div>
         ) : (
           substitutes.map((player) => (
-            <DraggableSubstitute
+            <PlayerIcon
               key={player.id}
               player={player}
-              periodId={periodId}
-              globalCaptainId={globalCaptainId}
+              isCaptain={player.id === globalCaptainId}
               nameDisplayOption={nameDisplayOption}
+              isCircular={true}
+              dragId={`${periodId}|substitutes|${player.id}`}
             />
           ))
         )}
