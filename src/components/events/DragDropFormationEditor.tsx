@@ -444,6 +444,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     
     const updatedPeriods = periods.map(period => {
       if (period.id === targetPeriodId) {
+        const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
         // If dragging from a position within the same period, remove from position
