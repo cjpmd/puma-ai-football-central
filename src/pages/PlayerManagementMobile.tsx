@@ -70,6 +70,7 @@ export default function PlayerManagementMobile() {
         name: player.name,
         squadNumber: player.squad_number,
         teamId: player.team_id,
+        team_id: player.team_id, // Add the required team_id property
         dateOfBirth: player.date_of_birth,
         type: player.type,
         availability: player.availability,
@@ -111,7 +112,7 @@ export default function PlayerManagementMobile() {
     player.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Mock team data for the cards
+  // Mock team data for the cards - removed invalid managerId property
   const currentTeam: Team = teams[0] || {
     id: 'mock-team-id',
     name: 'Team',
@@ -121,7 +122,6 @@ export default function PlayerManagementMobile() {
     seasonStart: undefined,
     seasonEnd: undefined,
     subscriptionType: 'basic',
-    managerId: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
