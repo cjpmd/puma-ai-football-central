@@ -13,6 +13,7 @@ interface PlayerIconProps {
   positionAbbreviation?: string;
   showPositionLabel?: boolean;
   isLarger?: boolean;
+  dragId?: string; // Custom drag ID for positioned players
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
@@ -23,10 +24,13 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   isCircular = false,
   positionAbbreviation,
   showPositionLabel = false,
-  isLarger = false
+  isLarger = false,
+  dragId
 }) => {
-  // Only enable dragging for available players pool - disable for positioned players
-  const shouldEnableDrag = player.availabilityStatus === 'available' && !positionAbbreviation;
+  // Only enable dragging for:
+  // 1. Available players pool (no positionAbbreviation and no dragId)
+  // 2. Players with explicit dragId (substitutes and positioned players)
+  const shouldEnableDrag = player.availabilityStatus === 'available' && (dragId || !positionAbbreviation);
   
   const {
     attributes,
@@ -35,7 +39,7 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     transform,
     isDragging: dndIsDragging,
   } = useDraggable({
-    id: player.id,
+    id: dragId || player.id,
     disabled: !shouldEnableDrag,
   });
 

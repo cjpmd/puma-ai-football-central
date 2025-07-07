@@ -68,18 +68,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
 
-  // Enhanced sensors for smooth mobile-first drag experience
+  // Enhanced sensors with stricter activation constraints to prevent accidental drags
   const pointerSensor = useSensor(PointerSensor, {
     activationConstraint: {
-      distance: 5,
-      delay: 0,
+      distance: 8, // Increased from 5 to prevent clicks from triggering drags
+      delay: 100, // Added delay to distinguish clicks from drags
     },
   });
 
   const touchSensor = useSensor(TouchSensor, {
     activationConstraint: {
-      delay: 150,
-      tolerance: 5,
+      delay: 200, // Increased delay for better touch experience
+      tolerance: 8, // Increased tolerance
     },
   });
 
@@ -344,7 +344,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     let playerId: string;
     if (dragId.includes('|')) {
       const parts = dragId.split('|');
-      playerId = parts[2];
+      playerId = parts[parts.length - 1]; // Always take the last part as player ID
     } else {
       playerId = dragId;
     }
@@ -403,7 +403,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             }
           } else if (sourceLocation === 'substitutes') {
             // Remove from substitutes if moving from substitutes to position within same period
-            const subIndex = newSubstitutes.indexOf(playerId);
+            const subIndex = newSubstitutes.findIndex(id => id === playerId);
             if (subIndex > -1) {
               newSubstitutes.splice(subIndex, 1);
               console.log(`Removed player ${playerId} from substitutes in same period ${targetPeriodId}`);
@@ -434,7 +434,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in period ${sourcePeriodId}`);
           }
         } else if (sourceLocation === 'substitutes') {
-          const subIndex = newSubstitutes.indexOf(playerId);
+          const subIndex = newSubstitutes.findIndex(id => id === playerId);
           if (subIndex > -1) {
             newSubstitutes.splice(subIndex, 1);
             console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);
@@ -463,7 +463,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
-        // First, remove the player from any existing location in this period
+        // Remove player from their current location in this period
         if (sourcePeriodId === targetPeriodId) {
           if (sourceLocation?.startsWith('position-')) {
             const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
@@ -472,17 +472,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in same period ${targetPeriodId}`);
             }
           }
-          // Remove from substitutes if they're already there (to prevent duplicates)
-          const existingSubIndex = newSubstitutes.indexOf(playerId);
-          if (existingSubIndex > -1) {
-            newSubstitutes.splice(existingSubIndex, 1);
-            console.log(`Removed existing player ${playerId} from substitutes in period ${targetPeriodId} to prevent duplicate`);
-          }
         }
         
-        // Add player to substitutes (they should not already be there after cleanup above)
-        newSubstitutes.push(playerId);
-        console.log(`Added player ${playerId} to substitutes in period ${targetPeriodId}`);
+        // Ensure player is not already in substitutes to prevent duplicates
+        if (!newSubstitutes.includes(playerId)) {
+          newSubstitutes.push(playerId);
+          console.log(`Added player ${playerId} to substitutes in period ${targetPeriodId}`);
+        } else {
+          console.log(`Player ${playerId} already in substitutes in period ${targetPeriodId} - not adding duplicate`);
+        }
         
         return {
           ...period,
@@ -501,7 +499,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in period ${sourcePeriodId}`);
           }
         } else if (sourceLocation === 'substitutes') {
-          const subIndex = newSubstitutes.indexOf(playerId);
+          const subIndex = newSubstitutes.findIndex(id => id === playerId);
           if (subIndex > -1) {
             newSubstitutes.splice(subIndex, 1);
             console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);

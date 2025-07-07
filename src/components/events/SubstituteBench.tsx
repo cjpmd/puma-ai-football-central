@@ -17,47 +17,16 @@ const DraggableSubstitute: React.FC<{
   globalCaptainId?: string;
   nameDisplayOption: 'surname' | 'first' | 'full' | 'initials';
 }> = ({ player, periodId, globalCaptainId, nameDisplayOption }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
-    id: `${periodId}|substitutes|${player.id}`,
-    data: {
-      playerId: player.id,
-      sourcePeriodId: periodId,
-      sourceLocation: 'substitutes'
-    }
-  });
-
-  const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.05)`,
-    zIndex: 1000,
-    filter: 'brightness(1.1) drop-shadow(0 8px 16px rgba(0,0,0,0.2))',
-    transition: 'none',
-  } : {
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    transform: 'scale(1)',
-    filter: 'none',
-  };
+  const dragId = `${periodId}|substitutes|${player.id}`;
 
   return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      {...listeners}
-      {...attributes}
-      className={`cursor-grab active:cursor-grabbing touch-none select-none print:cursor-default ${isDragging ? 'opacity-50' : ''}`}
-    >
-      <PlayerIcon
-        player={player}
-        isCaptain={player.id === globalCaptainId}
-        nameDisplayOption={nameDisplayOption}
-        isCircular={true}
-      />
-    </div>
+    <PlayerIcon
+      player={player}
+      isCaptain={player.id === globalCaptainId}
+      nameDisplayOption={nameDisplayOption}
+      isCircular={true}
+      dragId={dragId}
+    />
   );
 };
 
