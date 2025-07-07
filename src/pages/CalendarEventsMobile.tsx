@@ -416,7 +416,8 @@ export default function CalendarEventsMobile() {
           </DialogHeader>
           <EventForm
             event={convertToEventFormat(selectedEvent)}
-            onSave={() => {
+            teamId={teams?.[0]?.id || ''}
+            onSubmit={(eventData) => {
               setShowEventForm(false);
               setSelectedEvent(null);
               loadEvents();
