@@ -12,7 +12,7 @@ interface PlayerIconProps {
   positionAbbreviation?: string;
   showPositionLabel?: boolean;
   isLarger?: boolean;
-  dragId?: string; // Custom drag ID for positioned players
+  dragId?: string;
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
@@ -26,7 +26,6 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   isLarger = false,
   dragId
 }) => {
-  // Only enable dragging for available players
   const shouldEnableDrag = player.availabilityStatus === 'available';
   
   const {
@@ -56,22 +55,20 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   };
 
   const getAvailabilityStyle = () => {
-    const baseStyle = isCircular ? 'rounded-full' : 'rounded-lg';
-    
     switch (player.availabilityStatus) {
       case 'available':
-        return `border-green-500 bg-green-50 ${baseStyle}`;
+        return 'border-emerald-400 bg-gradient-to-br from-emerald-400 to-green-600';
       case 'unavailable':
-        return `border-red-500 bg-red-50 opacity-60 ${baseStyle}`;
+        return 'border-red-400 bg-gradient-to-br from-red-400 to-red-600 opacity-60';
       case 'maybe':
-        return `border-yellow-500 bg-yellow-50 ${baseStyle}`;
+        return 'border-yellow-400 bg-gradient-to-br from-yellow-400 to-orange-500';
       default:
-        return `border-gray-300 bg-gray-50 ${baseStyle}`;
+        return 'border-slate-400 bg-gradient-to-br from-slate-400 to-slate-600';
     }
   };
 
   const actualIsDragging = isDragging || dndIsDragging;
-  const circularSize = isLarger ? 'w-16 h-16' : 'w-14 h-14';
+  const circularSize = isLarger ? 'w-18 h-18' : 'w-16 h-16';
 
   if (isCircular) {
     return (
@@ -80,37 +77,53 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         {...(shouldEnableDrag ? listeners : {})}
         {...(shouldEnableDrag ? attributes : {})}
         className={`
-          relative flex flex-col items-center justify-center ${circularSize} border-2
-          ${getAvailabilityStyle()}
-          ${actualIsDragging ? 'opacity-50' : 'shadow-sm'}
-          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : shouldEnableDrag ? 'cursor-grab print:cursor-default' : 'cursor-default'}
-          ${player.availabilityStatus === 'available' && shouldEnableDrag ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
+          relative flex flex-col items-center group
+          ${actualIsDragging ? 'opacity-50 z-50' : 'z-10'}
+          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : shouldEnableDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}
+          ${shouldEnableDrag ? 'hover:scale-105 active:scale-110' : ''}
           transition-all duration-200 ease-in-out
-          ${shouldEnableDrag ? 'touch-none select-none' : ''}
-          print:scale-100 print:shadow-none
+          touch-none select-none
         `}
       >
-        {/* Captain indicator */}
-        {(isCaptain || player.squadRole === 'captain') && (
-          <Crown className={`absolute -top-1 -right-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-yellow-500`} />
-        )}
+        {/* Main player avatar */}
+        <div className={`
+          ${circularSize} rounded-full border-4 border-white shadow-lg
+          ${getAvailabilityStyle()}
+          flex items-center justify-center relative overflow-hidden
+          ${actualIsDragging ? 'rotate-12' : 'group-hover:shadow-xl'}
+          transition-all duration-200
+        `}>
+          {/* Player initials/avatar */}
+          <div className="w-full h-full rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">
+              {player.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+            </span>
+          </div>
+          
+          {/* Captain indicator */}
+          {(isCaptain || player.squadRole === 'captain') && (
+            <div className="absolute -top-1 -right-1 w-6 h-6 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center shadow-md">
+              <Crown className="h-3 w-3 text-yellow-900" />
+            </div>
+          )}
+        </div>
         
-        {/* Content inside circle - position abbreviation, name, squad number */}
-        <div className="flex flex-col items-center justify-center text-center leading-none">
-          {/* Position abbreviation above name if provided */}
+        {/* Player info below avatar */}
+        <div className="mt-2 text-center min-w-0">
+          {/* Position abbreviation */}
           {showPositionLabel && positionAbbreviation && (
-            <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-blue-600 mb-0.5`}>
+            <div className="text-xs font-bold text-blue-600 mb-1">
               {positionAbbreviation}
             </div>
           )}
           
-          {/* Player name in center */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium leading-tight`}>
-            {getDisplayName()}
+          {/* Player name */}
+          <div className="bg-black bg-opacity-75 text-white px-2 py-1 rounded text-xs font-medium whitespace-nowrap max-w-20 truncate">
+            {getDisplayName().toUpperCase()}
           </div>
           
-          {/* Squad number below name */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-gray-600 mt-0.5`}>
+          {/* Squad number */}
+          <div className="bg-black bg-opacity-60 text-white px-2 py-0.5 rounded-b text-xs">
             #{player.squadNumber}
           </div>
         </div>
@@ -124,28 +137,29 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
       {...listeners}
       {...attributes}
       className={`
-        relative flex flex-col items-center p-2 rounded-lg border-2 min-w-[80px] max-w-[100px]
-        ${getAvailabilityStyle()}
-        ${actualIsDragging ? 'shadow-lg transform rotate-2' : 'shadow-sm'}
-        ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
-        transition-all duration-200
+        relative flex flex-col items-center p-3 rounded-xl border-2 min-w-[90px] max-w-[110px]
+        ${getAvailabilityStyle()} border-white shadow-lg
+        ${actualIsDragging ? 'shadow-2xl transform rotate-2 scale-105' : 'shadow-md'}
+        ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab active:cursor-grabbing'}
+        transition-all duration-200 hover:scale-105
+        touch-none select-none
       `}
     >
       {/* Captain indicator */}
       {(isCaptain || player.squadRole === 'captain') && (
-        <Crown className="absolute -top-1 -right-1 h-4 w-4 text-yellow-500" />
+        <Crown className="absolute -top-2 -right-2 h-5 w-5 text-yellow-400 bg-white rounded-full p-1 shadow-md" />
       )}
       
       {/* Squad number */}
       <Badge 
         variant={player.type === 'goalkeeper' ? 'secondary' : 'outline'} 
-        className="mb-1 text-xs"
+        className="mb-2 text-xs bg-white border-white text-slate-700 shadow-sm"
       >
         #{player.squadNumber}
       </Badge>
       
       {/* Player name */}
-      <span className="text-xs font-medium text-center leading-tight">
+      <span className="text-xs font-medium text-center leading-tight text-white drop-shadow-md">
         {getDisplayName()}
       </span>
     </div>
