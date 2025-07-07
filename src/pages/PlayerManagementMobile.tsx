@@ -145,24 +145,24 @@ export default function PlayerManagementMobile() {
     toast({ title: 'Remove Player', description: `Remove functionality for ${player.name} coming soon` });
   };
 
-  const handleUpdatePhoto = async (player: Player, file: File) => {
-    toast({ title: 'Update Photo', description: `Photo update for ${player.name} coming soon` });
+  const handleUpdatePhoto = async (file: File) => {
+    toast({ title: 'Update Photo', description: `Photo update coming soon` });
   };
 
   const handleDeletePhoto = (player: Player) => {
     toast({ title: 'Delete Photo', description: `Photo deletion for ${player.name} coming soon` });
   };
 
-  const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
-    toast({ title: 'Save Stats', description: `Stats update for ${player.name} coming soon` });
+  const handleSaveFunStats = (stats: Record<string, number>) => {
+    toast({ title: 'Save Stats', description: `Stats update coming soon` });
   };
 
-  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
-    toast({ title: 'Save Play Style', description: `Play style update for ${player.name} coming soon` });
+  const handleSavePlayStyle = (playStyles: string[]) => {
+    toast({ title: 'Save Play Style', description: `Play style update coming soon` });
   };
 
-  const handleSaveCardDesign = (player: Player, designId: string) => {
-    toast({ title: 'Save Card Design', description: `Card design update for ${player.name} coming soon` });
+  const handleSaveCardDesign = (designId: string) => {
+    toast({ title: 'Save Card Design', description: `Card design update coming soon` });
   };
 
   const handleManageAttributes = (player: Player) => {
@@ -244,11 +244,11 @@ export default function PlayerManagementMobile() {
                       onEdit={() => handleEditPlayer(player)}
                       onManageParents={() => handleManageParents(player)}
                       onRemoveFromSquad={() => handleRemoveFromSquad(player)}
-                      onUpdatePhoto={(file) => handleUpdatePhoto(player, file)}
+                      onUpdatePhoto={handleUpdatePhoto}
                       onDeletePhoto={() => handleDeletePhoto(player)}
-                      onSaveFunStats={(stats) => handleSaveFunStats(player, stats)}
-                      onSavePlayStyle={(playStyles) => handleSavePlayStyle(player, playStyles)}
-                      onSaveCardDesign={(designId) => handleSaveCardDesign(player, designId)}
+                      onSaveFunStats={handleSaveFunStats}
+                      onSavePlayStyle={handleSavePlayStyle}
+                      onSaveCardDesign={handleSaveCardDesign}
                       onManageAttributes={() => handleManageAttributes(player)}
                       onManageObjectives={() => handleManageObjectives(player)}
                       onManageComments={() => handleManageComments(player)}
