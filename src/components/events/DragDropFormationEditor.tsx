@@ -769,27 +769,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         )}
 
-        <DragOverlay 
-          style={{
-            cursor: 'grabbing',
-          }}
-        >
+        <DragOverlay>
           {draggedPlayer && (
-            <div 
-              className="opacity-90 scale-110 shadow-lg"
-              style={{
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-              }}
-            >
-              <PlayerIcon 
-                player={draggedPlayer} 
-                isCaptain={draggedPlayer.id === globalCaptainId}
-                nameDisplayOption={mappedNameDisplayOption}
-                isCircular={true}
-                isDragging={true}
-              />
-            </div>
+            <PlayerIcon 
+              player={draggedPlayer} 
+              isCaptain={draggedPlayer.id === globalCaptainId}
+              nameDisplayOption={mappedNameDisplayOption}
+              isCircular={true}
+              isDragging={true}
+            />
           )}
         </DragOverlay>
       </DndContext>
