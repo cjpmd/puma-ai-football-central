@@ -393,6 +393,22 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           console.log(`Displaced player ${displacedPlayerId} moved to substitutes in period ${targetPeriodId}`);
         }
         
+        // Remove player from their original position if moving within the same period
+        if (sourcePeriodId === targetPeriodId && sourceLocation?.startsWith('position-')) {
+          const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
+          if (newPositions[sourcePositionIndex]?.playerId === playerId) {
+            newPositions[sourcePositionIndex].playerId = undefined;
+            console.log(`Removed player ${playerId} from original position ${sourcePositionIndex} in same period ${targetPeriodId}`);
+          }
+        } else if (sourcePeriodId === targetPeriodId && sourceLocation === 'substitutes') {
+          // Remove from substitutes if moving from substitutes to position within same period
+          const subIndex = newSubstitutes.indexOf(playerId);
+          if (subIndex > -1) {
+            newSubstitutes.splice(subIndex, 1);
+            console.log(`Removed player ${playerId} from substitutes in same period ${targetPeriodId}`);
+          }
+        }
+        
         // Place the dragged player in the new position
         if (newPositions[positionIndex]) {
           newPositions[positionIndex].playerId = playerId;
@@ -406,30 +422,28 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         };
       } else if (sourcePeriodId && period.id === sourcePeriodId) {
         // Remove player from source position only if this is a different period
-        if (sourcePeriodId !== targetPeriodId) {
-          const newPositions = [...period.positions];
-          const newSubstitutes = [...period.substitutes];
-          
-          if (sourceLocation?.startsWith('position-')) {
-            const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
-            if (newPositions[sourcePositionIndex]?.playerId === playerId) {
-              newPositions[sourcePositionIndex].playerId = undefined;
-              console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in period ${sourcePeriodId}`);
-            }
-          } else if (sourceLocation === 'substitutes') {
-            const subIndex = newSubstitutes.indexOf(playerId);
-            if (subIndex > -1) {
-              newSubstitutes.splice(subIndex, 1);
-              console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);
-            }
+        const newPositions = [...period.positions];
+        const newSubstitutes = [...period.substitutes];
+        
+        if (sourceLocation?.startsWith('position-')) {
+          const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
+          if (newPositions[sourcePositionIndex]?.playerId === playerId) {
+            newPositions[sourcePositionIndex].playerId = undefined;
+            console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in period ${sourcePeriodId}`);
           }
-          
-          return {
-            ...period,
-            positions: newPositions,
-            substitutes: newSubstitutes
-          };
+        } else if (sourceLocation === 'substitutes') {
+          const subIndex = newSubstitutes.indexOf(playerId);
+          if (subIndex > -1) {
+            newSubstitutes.splice(subIndex, 1);
+            console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);
+          }
         }
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
       }
       
       return period;
