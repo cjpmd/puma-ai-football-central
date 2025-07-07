@@ -457,28 +457,33 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
-        // Remove from source position if in same period
-        if (sourcePeriodId === targetPeriodId) {
-          newPositions.forEach(pos => {
-            if (pos.playerId === playerId) {
-              pos.playerId = undefined;
-              console.log('Removed from position for substitutes move');
-            }
-          });
+        // CRITICAL FIX: Always remove from positions when moving to substitutes
+        // Check if player is currently in a position in this period
+        let wasInPosition = false;
+        newPositions.forEach(pos => {
+          if (pos.playerId === playerId) {
+            pos.playerId = undefined;
+            wasInPosition = true;
+            console.log('Removed player from position slot when moving to substitutes');
+          }
+        });
+        
+        // Remove from substitutes first to avoid duplicates
+        const existingSubIndex = newSubstitutes.indexOf(playerId);
+        if (existingSubIndex > -1) {
+          newSubstitutes.splice(existingSubIndex, 1);
         }
         
-        // Add to substitutes if not already there
-        if (!newSubstitutes.includes(playerId)) {
-          newSubstitutes.push(playerId);
-          console.log('Added to substitutes');
-        }
+        // Add to substitutes
+        newSubstitutes.push(playerId);
+        console.log('Added to substitutes:', playerId);
         
         return {
           ...period,
           positions: newPositions,
           substitutes: newSubstitutes
         };
-      } else if (period.id === sourcePeriodId) {
+      } else if (period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
         // Only remove from source period if it's different from target
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
