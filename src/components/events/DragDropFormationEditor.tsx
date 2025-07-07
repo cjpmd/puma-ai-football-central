@@ -463,20 +463,26 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
-        // If dragging from a position within the same period, remove from position
-        if (sourcePeriodId === targetPeriodId && sourceLocation?.startsWith('position-')) {
-          const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
-          if (newPositions[sourcePositionIndex]?.playerId === playerId) {
-            newPositions[sourcePositionIndex].playerId = undefined;
-            console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in same period ${targetPeriodId}`);
+        // First, remove the player from any existing location in this period
+        if (sourcePeriodId === targetPeriodId) {
+          if (sourceLocation?.startsWith('position-')) {
+            const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
+            if (newPositions[sourcePositionIndex]?.playerId === playerId) {
+              newPositions[sourcePositionIndex].playerId = undefined;
+              console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in same period ${targetPeriodId}`);
+            }
+          }
+          // Remove from substitutes if they're already there (to prevent duplicates)
+          const existingSubIndex = newSubstitutes.indexOf(playerId);
+          if (existingSubIndex > -1) {
+            newSubstitutes.splice(existingSubIndex, 1);
+            console.log(`Removed existing player ${playerId} from substitutes in period ${targetPeriodId} to prevent duplicate`);
           }
         }
         
-        // Add player to substitutes if not already there
-        if (!newSubstitutes.includes(playerId)) {
-          newSubstitutes.push(playerId);
-          console.log(`Added player ${playerId} to substitutes in period ${targetPeriodId}`);
-        }
+        // Add player to substitutes (they should not already be there after cleanup above)
+        newSubstitutes.push(playerId);
+        console.log(`Added player ${playerId} to substitutes in period ${targetPeriodId}`);
         
         return {
           ...period,
