@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
@@ -69,12 +70,12 @@ export default function PlayerManagementMobile() {
         name: player.name,
         squadNumber: player.squad_number,
         teamId: player.team_id,
-        team_id: player.team_id, // Add the required team_id property
+        team_id: player.team_id,
         dateOfBirth: player.date_of_birth,
         type: (player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield') as 'goalkeeper' | 'outfield',
         availability: player.availability,
         status: player.status || 'active',
-        subscriptionType: player.subscription_type || 'full_squad',
+        subscriptionType: (player.subscription_type || 'full_squad') as 'full_squad' | 'training' | 'trialist',
         subscriptionStatus: player.subscription_status || 'active',
         attributes: player.attributes || [],
         objectives: player.objectives || [],
@@ -120,7 +121,7 @@ export default function PlayerManagementMobile() {
     gameFormat: '11v11',
     seasonStart: undefined,
     seasonEnd: undefined,
-    subscriptionType: 'basic',
+    subscriptionType: 'free' as const,
     kitIcons: {
       home: '',
       away: '',
