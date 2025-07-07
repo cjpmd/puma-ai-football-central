@@ -1,15 +1,15 @@
 
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Plus, Filter, MoreVertical } from 'lucide-react';
+import { Search, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
+import { Player, Team } from '@/types';
 
 // Use the actual database player type
 type DatabasePlayerRow = {
@@ -41,18 +41,8 @@ type DatabasePlayerRow = {
   updated_at: string;
 };
 
-// Transform database row to display player
-interface DisplayPlayer {
-  id: string;
-  name: string;
-  squad_number: number;
-  position: string;
-  age: number;
-  availability_status: string;
-}
-
 export default function PlayerManagementMobile() {
-  const [players, setPlayers] = useState<DisplayPlayer[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -75,13 +65,33 @@ export default function PlayerManagementMobile() {
       if (error) throw error;
       
       // Transform database players to display format
-      const transformedPlayers: DisplayPlayer[] = (data || []).map((player: DatabasePlayerRow) => ({
+      const transformedPlayers: Player[] = (data || []).map((player: DatabasePlayerRow) => ({
         id: player.id,
         name: player.name,
-        squad_number: player.squad_number,
-        position: player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield',
-        age: calculateAge(player.date_of_birth),
-        availability_status: player.availability
+        squadNumber: player.squad_number,
+        teamId: player.team_id,
+        dateOfBirth: player.date_of_birth,
+        type: player.type,
+        availability: player.availability,
+        status: player.status || 'active',
+        subscriptionType: player.subscription_type || 'full_squad',
+        subscriptionStatus: player.subscription_status || 'active',
+        attributes: player.attributes || [],
+        objectives: player.objectives || [],
+        comments: player.comments || [],
+        matchStats: player.match_stats || {},
+        kitSizes: player.kit_sizes || {},
+        performanceCategoryId: player.performance_category_id,
+        photoUrl: player.photo_url,
+        cardDesignId: player.card_design_id || 'goldRare',
+        funStats: player.fun_stats || {},
+        playStyle: player.play_style,
+        linkingCode: player.linking_code,
+        parentId: player.parent_id,
+        leaveDate: player.leave_date,
+        leaveComments: player.leave_comments,
+        createdAt: player.created_at,
+        updatedAt: player.updated_at
       }));
       
       setPlayers(transformedPlayers);
@@ -96,35 +106,85 @@ export default function PlayerManagementMobile() {
     }
   };
 
-  const calculateAge = (dateOfBirth: string): number => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
-    }
-    
-    return age;
-  };
-
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    player.position.toLowerCase().includes(searchTerm.toLowerCase())
+    player.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getAvailabilityColor = (status: string) => {
-    switch (status) {
-      case 'green': return 'bg-green-500';
-      case 'amber': return 'bg-yellow-500';
-      case 'red': return 'bg-red-500';
-      default: return 'bg-gray-500';
-    }
+  // Mock team data for the cards
+  const currentTeam: Team = teams[0] || {
+    id: 'mock-team-id',
+    name: 'Team',
+    logoUrl: undefined,
+    ageGroup: 'Unknown',
+    gameFormat: '11v11',
+    seasonStart: undefined,
+    seasonEnd: undefined,
+    subscriptionType: 'basic',
+    managerId: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
   };
 
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  // Placeholder handlers for player actions
+  const handleEditPlayer = (player: Player) => {
+    toast({ title: 'Edit Player', description: `Edit functionality for ${player.name} coming soon` });
+  };
+
+  const handleManageParents = (player: Player) => {
+    toast({ title: 'Manage Parents', description: `Parent management for ${player.name} coming soon` });
+  };
+
+  const handleRemoveFromSquad = (player: Player) => {
+    toast({ title: 'Remove Player', description: `Remove functionality for ${player.name} coming soon` });
+  };
+
+  const handleUpdatePhoto = async (player: Player, file: File) => {
+    toast({ title: 'Update Photo', description: `Photo update for ${player.name} coming soon` });
+  };
+
+  const handleDeletePhoto = (player: Player) => {
+    toast({ title: 'Delete Photo', description: `Photo deletion for ${player.name} coming soon` });
+  };
+
+  const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
+    toast({ title: 'Save Stats', description: `Stats update for ${player.name} coming soon` });
+  };
+
+  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
+    toast({ title: 'Save Play Style', description: `Play style update for ${player.name} coming soon` });
+  };
+
+  const handleSaveCardDesign = (player: Player, designId: string) => {
+    toast({ title: 'Save Card Design', description: `Card design update for ${player.name} coming soon` });
+  };
+
+  const handleManageAttributes = (player: Player) => {
+    toast({ title: 'Manage Attributes', description: `Attributes for ${player.name} coming soon` });
+  };
+
+  const handleManageObjectives = (player: Player) => {
+    toast({ title: 'Manage Objectives', description: `Objectives for ${player.name} coming soon` });
+  };
+
+  const handleManageComments = (player: Player) => {
+    toast({ title: 'Manage Comments', description: `Comments for ${player.name} coming soon` });
+  };
+
+  const handleViewStats = (player: Player) => {
+    toast({ title: 'View Stats', description: `Stats for ${player.name} coming soon` });
+  };
+
+  const handleViewHistory = (player: Player) => {
+    toast({ title: 'View History', description: `History for ${player.name} coming soon` });
+  };
+
+  const handleTransferPlayer = (player: Player) => {
+    toast({ title: 'Transfer Player', description: `Transfer for ${player.name} coming soon` });
+  };
+
+  const handleLeaveTeam = (player: Player) => {
+    toast({ title: 'Leave Team', description: `Leave team for ${player.name} coming soon` });
   };
 
   return (
@@ -149,8 +209,15 @@ export default function PlayerManagementMobile() {
           </Button>
         </div>
 
-        {/* Players List */}
-        <div className="space-y-3">
+        {/* Player Count Badge */}
+        <div className="flex justify-center">
+          <Badge variant="secondary" className="text-sm">
+            {filteredPlayers.length} player{filteredPlayers.length !== 1 ? 's' : ''}
+          </Badge>
+        </div>
+
+        {/* Player Cards Grid - Scaled for Mobile */}
+        <div className="space-y-4">
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
@@ -161,42 +228,31 @@ export default function PlayerManagementMobile() {
               <p className="text-muted-foreground">No players found</p>
             </div>
           ) : (
-            filteredPlayers.map((player) => (
-              <Card key={player.id} className="touch-manipulation">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <Avatar className="h-12 w-12">
-                        <AvatarFallback className="text-lg font-medium">
-                          {getInitials(player.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${getAvailabilityColor(player.availability_status)}`} />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-lg truncate">{player.name}</h3>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <Badge variant="outline" className="text-xs">
-                          #{player.squad_number}
-                        </Badge>
-                        <Badge variant="secondary" className="text-xs">
-                          {player.position}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          Age {player.age}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
+            <div className="grid grid-cols-2 gap-3 justify-items-center">
+              {filteredPlayers.map((player) => (
+                <div key={player.id} className="transform scale-75 origin-top">
+                  <FifaStylePlayerCard
+                    player={player}
+                    team={currentTeam}
+                    onEdit={handleEditPlayer}
+                    onManageParents={handleManageParents}
+                    onRemoveFromSquad={handleRemoveFromSquad}
+                    onUpdatePhoto={handleUpdatePhoto}
+                    onDeletePhoto={handleDeletePhoto}
+                    onSaveFunStats={handleSaveFunStats}
+                    onSavePlayStyle={handleSavePlayStyle}
+                    onSaveCardDesign={handleSaveCardDesign}
+                    onManageAttributes={handleManageAttributes}
+                    onManageObjectives={handleManageObjectives}
+                    onManageComments={handleManageComments}
+                    onViewStats={handleViewStats}
+                    onViewHistory={handleViewHistory}
+                    onTransferPlayer={handleTransferPlayer}
+                    onLeaveTeam={handleLeaveTeam}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </div>
