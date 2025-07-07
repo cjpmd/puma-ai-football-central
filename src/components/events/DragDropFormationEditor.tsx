@@ -330,6 +330,28 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
     console.log('Processing drop for player:', playerId, 'to target:', overId);
 
+    // Extract period ID from both source and target
+    const getSourcePeriodId = (id: string): string | null => {
+      if (id.includes('|')) {
+        return id.split('|')[0];
+      }
+      return null; // From available players
+    };
+
+    const getTargetPeriodId = (id: string): string | null => {
+      if (id.includes('-position-')) {
+        return id.split('-position-')[0];
+      } else if (id.startsWith('substitutes-')) {
+        return id.replace('substitutes-', '');
+      }
+      return null;
+    };
+
+    const sourcePeriodId = getSourcePeriodId(activeId);
+    const targetPeriodId = getTargetPeriodId(overId);
+
+    console.log('Period IDs:', { sourcePeriodId, targetPeriodId });
+
     // Handle different drop targets
     if (overId.includes('-position-')) {
       // Dropping on a position slot: "period-1-position-0"
@@ -337,19 +359,19 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       const periodId = parts[0];
       const positionIndex = parseInt(parts[1]);
       console.log('Dropping on position:', { periodId, positionIndex });
-      movePlayerToPosition(playerId, periodId, positionIndex, activeId);
+      movePlayerToPosition(playerId, periodId, positionIndex, sourcePeriodId);
     } else if (overId.startsWith('substitutes-')) {
       // Dropping on substitutes bench: "substitutes-period-1"
       const periodId = overId.replace('substitutes-', '');
       console.log('Dropping on substitutes for period:', periodId);
-      movePlayerToSubstitutes(playerId, periodId, activeId);
+      movePlayerToSubstitutes(playerId, periodId, sourcePeriodId);
     } else {
       console.log('Unknown drop target:', overId);
     }
   };
 
-  const movePlayerToPosition = (playerId: string, targetPeriodId: string, positionIndex: number, sourceId: string) => {
-    console.log('Moving player to position:', { playerId, targetPeriodId, positionIndex, sourceId });
+  const movePlayerToPosition = (playerId: string, targetPeriodId: string, positionIndex: number, sourcePeriodId: string | null) => {
+    console.log('Moving player to position:', { playerId, targetPeriodId, positionIndex, sourcePeriodId });
     
     const updatedPeriods = periods.map(period => {
       if (period.id === targetPeriodId) {
@@ -360,27 +382,28 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const displacedPlayerId = newPositions[positionIndex]?.playerId;
         if (displacedPlayerId && displacedPlayerId !== playerId) {
           console.log('Displacing player:', displacedPlayerId);
-          newSubstitutes.push(displacedPlayerId);
+          // Add displaced player to substitutes if not already there
+          if (!newSubstitutes.includes(displacedPlayerId)) {
+            newSubstitutes.push(displacedPlayerId);
+          }
         }
         
         // Remove player from source location within the same period
-        if (sourceId.startsWith(targetPeriodId)) {
-          if (sourceId.includes('substitutes')) {
-            // Remove from substitutes
-            const subIndex = newSubstitutes.indexOf(playerId);
-            if (subIndex > -1) {
-              newSubstitutes.splice(subIndex, 1);
-              console.log('Removed from substitutes');
-            }
-          } else if (sourceId.includes('position')) {
-            // Remove from another position
-            newPositions.forEach(pos => {
-              if (pos.playerId === playerId) {
-                pos.playerId = undefined;
-                console.log('Removed from previous position');
-              }
-            });
+        if (sourcePeriodId === targetPeriodId) {
+          // Remove from substitutes if coming from substitutes
+          const subIndex = newSubstitutes.indexOf(playerId);
+          if (subIndex > -1) {
+            newSubstitutes.splice(subIndex, 1);
+            console.log('Removed from substitutes');
           }
+          
+          // Remove from other positions
+          newPositions.forEach(pos => {
+            if (pos.playerId === playerId) {
+              pos.playerId = undefined;
+              console.log('Removed from previous position');
+            }
+          });
         }
         
         // Assign player to new position
@@ -394,8 +417,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           positions: newPositions,
           substitutes: newSubstitutes
         };
-      } else {
-        // Remove player from other periods
+      } else if (period.id === sourcePeriodId) {
+        // Only remove from source period if it's different from target
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
@@ -418,13 +441,16 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       }
+      
+      // Return unchanged for other periods
+      return period;
     });
     
     onPeriodsChange(updatedPeriods);
   };
 
-  const movePlayerToSubstitutes = (playerId: string, targetPeriodId: string, sourceId: string) => {
-    console.log('Moving player to substitutes:', { playerId, targetPeriodId, sourceId });
+  const movePlayerToSubstitutes = (playerId: string, targetPeriodId: string, sourcePeriodId: string | null) => {
+    console.log('Moving player to substitutes:', { playerId, targetPeriodId, sourcePeriodId });
     
     const updatedPeriods = periods.map(period => {
       if (period.id === targetPeriodId) {
@@ -432,7 +458,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newSubstitutes = [...period.substitutes];
         
         // Remove from source position if in same period
-        if (sourceId.startsWith(targetPeriodId) && sourceId.includes('position')) {
+        if (sourcePeriodId === targetPeriodId) {
           newPositions.forEach(pos => {
             if (pos.playerId === playerId) {
               pos.playerId = undefined;
@@ -452,8 +478,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           positions: newPositions,
           substitutes: newSubstitutes
         };
-      } else {
-        // Remove player from other periods
+      } else if (period.id === sourcePeriodId) {
+        // Only remove from source period if it's different from target
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
@@ -476,6 +502,9 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       }
+      
+      // Return unchanged for other periods
+      return period;
     });
     
     onPeriodsChange(updatedPeriods);
@@ -632,7 +661,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         onDragStart={handleDragStart} 
         onDragEnd={handleDragEnd}
       >
-        {/* Time Validation Alert */}
         {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -644,7 +672,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Alert>
         )}
 
-        {/* Collapsible Available Players Pool */}
         <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
           <Card className="print:shadow-none print:border">
             <CollapsibleTrigger asChild>
@@ -671,19 +698,14 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               <CardContent className="pt-0">
                 <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] print:bg-gray-100">
                   {unusedPlayers.map((player) => (
-                    <div 
-                      key={player.id} 
-                      id={player.id}
-                      className="cursor-grab active:cursor-grabbing touch-none select-none print:cursor-default"
-                      draggable
-                    >
-                      <PlayerIcon 
-                        player={player} 
-                        isCaptain={player.id === globalCaptainId}
-                        nameDisplayOption={mappedNameDisplayOption}
-                        isCircular={true}
-                      />
-                    </div>
+                    <PlayerIcon
+                      key={player.id}
+                      player={player}
+                      isCaptain={player.id === globalCaptainId}
+                      nameDisplayOption={mappedNameDisplayOption}
+                      isCircular={true}
+                      dragId={player.id}
+                    />
                   ))}
                   {unusedPlayers.length === 0 && (
                     <div className="text-sm text-muted-foreground">All available players are assigned</div>
@@ -694,9 +716,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         </Collapsible>
 
-        {/* Formation Periods - Organized by Halves with Responsive Grid */}
         <div className="space-y-6">
-          {/* First Half */}
           {firstHalf.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -718,7 +738,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             </div>
           )}
 
-          {/* Second Half */}
           {secondHalf.length > 0 && (
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -741,7 +760,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           )}
         </div>
 
-        {/* Playing Time Summary - 3 Column Layout */}
         {Object.keys(playingTimeSummary).length > 0 && (
           <Card className="print:shadow-none print:border print:break-inside-avoid">
             <CardHeader className="pb-3">
@@ -773,10 +791,9 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         )}
 
-        {/* Simple Drag Overlay - No Transform Applied */}
         <DragOverlay>
           {draggedPlayer && (
-            <div className="opacity-80 cursor-grabbing">
+            <div className="opacity-80">
               <PlayerIcon 
                 player={draggedPlayer} 
                 isCaptain={draggedPlayer.id === globalCaptainId}
