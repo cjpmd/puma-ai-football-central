@@ -457,7 +457,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       } else if (sourcePeriodId && period.id === sourcePeriodId) {
-        // Always remove player from source position when moving to substitutes, even within same period
+        // Remove player from source position when moving to substitutes
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
@@ -474,6 +474,9 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             newSubstitutes.splice(subIndex, 1);
             console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);
           }
+        } else if (sourceLocation === 'substitutes' && sourcePeriodId === targetPeriodId) {
+          // If dragging within the same period's substitutes, don't add duplicate
+          return period;
         }
         
         return {
