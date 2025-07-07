@@ -76,7 +76,7 @@ export default function PlayerManagementMobile() {
         availability: (player.availability || 'green') as 'green' | 'amber' | 'red',
         status: player.status || 'active',
         subscriptionType: (player.subscription_type || 'full_squad') as 'full_squad' | 'training' | 'trialist',
-        subscriptionStatus: player.subscription_status || 'active',
+        subscriptionStatus: (player.subscription_status || 'active') as 'active' | 'inactive' | 'pending' | 'paused',
         attributes: player.attributes || [],
         objectives: player.objectives || [],
         comments: player.comments || [],
