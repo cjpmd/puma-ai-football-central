@@ -11,7 +11,38 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-interface Player {
+// Use the actual database player type
+type DatabasePlayerRow = {
+  id: string;
+  name: string;
+  squad_number: number;
+  team_id: string;
+  availability: string;
+  type: string;
+  date_of_birth: string;
+  attributes?: any;
+  objectives?: any;
+  comments?: any;
+  match_stats?: any;
+  kit_sizes?: any;
+  subscription_type?: string;
+  subscription_status?: string;
+  status?: string;
+  leave_date?: string;
+  leave_comments?: string;
+  performance_category_id?: string;
+  photo_url?: string;
+  card_design_id?: string;
+  fun_stats?: any;
+  play_style?: string;
+  linking_code?: string;
+  parent_id?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+// Transform database row to display player
+interface DisplayPlayer {
   id: string;
   name: string;
   squad_number: number;
@@ -21,7 +52,7 @@ interface Player {
 }
 
 export default function PlayerManagementMobile() {
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [players, setPlayers] = useState<DisplayPlayer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -42,7 +73,18 @@ export default function PlayerManagementMobile() {
         .order('squad_number', { ascending: true });
 
       if (error) throw error;
-      setPlayers(data || []);
+      
+      // Transform database players to display format
+      const transformedPlayers: DisplayPlayer[] = (data || []).map((player: DatabasePlayerRow) => ({
+        id: player.id,
+        name: player.name,
+        squad_number: player.squad_number,
+        position: player.type === 'goalkeeper' ? 'Goalkeeper' : 'Outfield',
+        age: calculateAge(player.date_of_birth),
+        availability_status: player.availability
+      }));
+      
+      setPlayers(transformedPlayers);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -54,6 +96,19 @@ export default function PlayerManagementMobile() {
     }
   };
 
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date();
+    const birthDate = new Date(dateOfBirth);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age;
+  };
+
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     player.position.toLowerCase().includes(searchTerm.toLowerCase())
@@ -61,9 +116,9 @@ export default function PlayerManagementMobile() {
 
   const getAvailabilityColor = (status: string) => {
     switch (status) {
-      case 'available': return 'bg-green-500';
-      case 'unavailable': return 'bg-red-500';
-      case 'maybe': return 'bg-yellow-500';
+      case 'green': return 'bg-green-500';
+      case 'amber': return 'bg-yellow-500';
+      case 'red': return 'bg-red-500';
       default: return 'bg-gray-500';
     }
   };
