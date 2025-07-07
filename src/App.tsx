@@ -7,16 +7,21 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "./contexts/AuthContext";
 import { AuthorizationProvider } from "./contexts/AuthorizationContext";
+import { ResponsiveRoute } from "./components/routing/ResponsiveRoute";
 
 // Import all pages
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
+import DashboardMobile from "./pages/DashboardMobile";
 import Auth from "./pages/Auth";
 import PlayerManagement from "./pages/PlayerManagement";
+import PlayerManagementMobile from "./pages/PlayerManagementMobile";
 import TeamManagement from "./pages/TeamManagement";
 import StaffManagement from "./pages/StaffManagement";
 import CalendarEvents from "./pages/CalendarEvents";
+import CalendarEventsMobile from "./pages/CalendarEventsMobile";
 import Analytics from "./pages/Analytics";
+import AnalyticsMobile from "./pages/AnalyticsMobile";
 import ClubManagement from "./pages/ClubManagement";
 import UserManagement from "./pages/UserManagement";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
@@ -38,14 +43,46 @@ const App = () => (
             <AuthorizationProvider>
               <Routes>
                 <Route path="/" element={<Index />} />
-                <Route path="/dashboard" element={<Dashboard />} />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <ResponsiveRoute 
+                      desktopComponent={<Dashboard />} 
+                      mobileComponent={<DashboardMobile />} 
+                    />
+                  } 
+                />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/players" element={<PlayerManagement />} />
+                <Route 
+                  path="/players" 
+                  element={
+                    <ResponsiveRoute 
+                      desktopComponent={<PlayerManagement />} 
+                      mobileComponent={<PlayerManagementMobile />} 
+                    />
+                  } 
+                />
                 <Route path="/player-management" element={<PlayerManagementTab />} />
                 <Route path="/teams" element={<TeamManagement />} />
                 <Route path="/staff" element={<StaffManagement />} />
-                <Route path="/calendar" element={<CalendarEvents />} />
-                <Route path="/analytics" element={<Analytics />} />
+                <Route 
+                  path="/calendar" 
+                  element={
+                    <ResponsiveRoute 
+                      desktopComponent={<CalendarEvents />} 
+                      mobileComponent={<CalendarEventsMobile />} 
+                    />
+                  } 
+                />
+                <Route 
+                  path="/analytics" 
+                  element={
+                    <ResponsiveRoute 
+                      desktopComponent={<Analytics />} 
+                      mobileComponent={<AnalyticsMobile />} 
+                    />
+                  } 
+                />
                 <Route path="/clubs" element={<ClubManagement />} />
                 <Route path="/users" element={<UserManagement />} />
                 <Route path="/subscriptions" element={<SubscriptionManagement />} />
