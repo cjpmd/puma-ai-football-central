@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
@@ -72,7 +71,7 @@ export default function PlayerManagementMobile() {
         teamId: player.team_id,
         team_id: player.team_id, // Add the required team_id property
         dateOfBirth: player.date_of_birth,
-        type: player.type,
+        type: (player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield') as 'goalkeeper' | 'outfield',
         availability: player.availability,
         status: player.status || 'active',
         subscriptionType: player.subscription_type || 'full_squad',
@@ -112,7 +111,7 @@ export default function PlayerManagementMobile() {
     player.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Mock team data for the cards - removed invalid managerId property
+  // Mock team data for the cards - complete Team object with all required properties
   const currentTeam: Team = teams[0] || {
     id: 'mock-team-id',
     name: 'Team',
@@ -122,11 +121,17 @@ export default function PlayerManagementMobile() {
     seasonStart: undefined,
     seasonEnd: undefined,
     subscriptionType: 'basic',
+    kitIcons: {
+      home: '',
+      away: '',
+      training: '',
+      goalkeeper: ''
+    },
+    performanceCategories: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
 
-  // Placeholder handlers for player actions
   const handleEditPlayer = (player: Player) => {
     toast({ title: 'Edit Player', description: `Edit functionality for ${player.name} coming soon` });
   };
