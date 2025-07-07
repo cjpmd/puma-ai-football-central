@@ -94,7 +94,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
             {...attributes}
             className={`
               cursor-grab active:cursor-grabbing print:cursor-default 
-              ${isDragging ? 'opacity-30' : 'opacity-100'} 
+              ${isDragging ? 'opacity-0 pointer-events-none' : 'opacity-100'} 
               touch-none select-none
               transition-all duration-150 ease-in-out
               hover:scale-105 hover:shadow-md

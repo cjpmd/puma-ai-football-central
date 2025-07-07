@@ -342,7 +342,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     setDraggedFromPosition(null);
     
     if (!over) {
-      console.log('Drag ended with no target');
+      console.log('Drag ended with no target - player should snap back to original position');
+      // Player snaps back automatically when drag is cancelled
       return;
     }
 
