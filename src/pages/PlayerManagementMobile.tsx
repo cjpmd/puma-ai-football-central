@@ -234,10 +234,10 @@ export default function PlayerManagementMobile() {
               <p className="text-muted-foreground">No players found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               {filteredPlayers.map((player) => (
                 <div key={player.id} className="flex justify-center">
-                  <div className="transform scale-90 w-full max-w-[200px]">
+                  <div className="w-full max-w-[280px]">
                     <FifaStylePlayerCard
                       player={player}
                       team={currentTeam}

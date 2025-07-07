@@ -142,6 +142,41 @@ export default function CalendarEventsMobile() {
     }
   };
 
+  // Convert DatabaseEvent to Event format for EventForm
+  const convertToEventFormat = (dbEvent: DatabaseEvent | null) => {
+    if (!dbEvent) return null;
+    
+    return {
+      id: dbEvent.id,
+      teamId: dbEvent.team_id,
+      title: dbEvent.title,
+      description: dbEvent.description,
+      date: dbEvent.date,
+      startTime: dbEvent.start_time,
+      endTime: dbEvent.end_time,
+      location: dbEvent.location,
+      notes: dbEvent.notes,
+      type: dbEvent.event_type as 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
+      opponent: dbEvent.opponent,
+      isHome: dbEvent.is_home,
+      gameFormat: dbEvent.game_format,
+      gameDuration: dbEvent.game_duration,
+      scores: dbEvent.scores,
+      playerOfMatchId: dbEvent.player_of_match_id,
+      coachNotes: dbEvent.coach_notes,
+      staffNotes: dbEvent.staff_notes,
+      trainingNotes: dbEvent.training_notes,
+      facilityId: dbEvent.facility_id,
+      facilityBookingId: dbEvent.facility_booking_id,
+      meetingTime: dbEvent.meeting_time,
+      totalMinutes: dbEvent.total_minutes,
+      teams: dbEvent.teams,
+      kitSelection: dbEvent.kit_selection as 'home' | 'away' | 'training',
+      createdAt: dbEvent.created_at,
+      updatedAt: dbEvent.updated_at
+    };
+  };
+
   const dayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
 
   return (
@@ -379,7 +414,7 @@ export default function CalendarEventsMobile() {
             </DialogTitle>
           </DialogHeader>
           <EventForm
-            event={selectedEvent}
+            event={convertToEventFormat(selectedEvent)}
             onSave={() => {
               setShowEventForm(false);
               setSelectedEvent(null);
@@ -413,15 +448,12 @@ export default function CalendarEventsMobile() {
           </DialogHeader>
           {selectedEvent && (
             <PostGameEditor
-              event={selectedEvent}
-              onSave={() => {
+              eventId={selectedEvent.id}
+              isOpen={showPostGameEdit}
+              onClose={() => {
                 setShowPostGameEdit(false);
                 setSelectedEvent(null);
                 loadEvents();
-              }}
-              onCancel={() => {
-                setShowPostGameEdit(false);
-                setSelectedEvent(null);
               }}
             />
           )}
