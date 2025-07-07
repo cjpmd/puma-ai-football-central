@@ -1,3 +1,4 @@
+
 import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
@@ -24,6 +25,9 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   showPositionLabel = false,
   isLarger = false
 }) => {
+  // Only enable dragging for available players pool - disable for positioned players
+  const shouldEnableDrag = player.availabilityStatus === 'available' && !positionAbbreviation;
+  
   const {
     attributes,
     listeners,
@@ -32,12 +36,22 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     isDragging: dndIsDragging,
   } = useDraggable({
     id: player.id,
+    disabled: !shouldEnableDrag,
   });
 
+  // Enhanced drag styles with smooth animations and visual feedback
   const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(1.1)`,
     zIndex: 1000,
-  } : undefined;
+    transition: 'none',
+    cursor: 'grabbing',
+    filter: 'brightness(1.15) drop-shadow(0 12px 24px rgba(0,0,0,0.25))',
+  } : {
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    cursor: shouldEnableDrag ? 'grab' : 'default',
+    transform: 'scale(1)',
+    filter: 'none',
+  };
 
   const getDisplayName = () => {
     const nameParts = player.name.split(' ');
@@ -70,42 +84,24 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     }
   };
 
-  const getPositionColorStyle = () => {
-    if (!positionAbbreviation) return '';
-    
-    // Color coding based on position type
-    if (positionAbbreviation.includes('GK')) {
-      return 'bg-yellow-100 border-yellow-400 text-yellow-800';
-    }
-    if (positionAbbreviation.includes('D')) {
-      return 'bg-blue-100 border-blue-400 text-blue-800';
-    }
-    if (positionAbbreviation.includes('M')) {
-      return 'bg-green-100 border-green-400 text-green-800';
-    }
-    if (positionAbbreviation.includes('S') || positionAbbreviation.includes('F')) {
-      return 'bg-red-100 border-red-400 text-red-800';
-    }
-    return '';
-  };
-
-  const circularSize = isLarger ? 'w-16 h-16' : 'w-14 h-14';
   const actualIsDragging = isDragging || dndIsDragging;
+  const circularSize = isLarger ? 'w-16 h-16' : 'w-14 h-14';
 
   if (isCircular) {
     return (
       <div 
-        ref={setNodeRef}
+        ref={shouldEnableDrag ? setNodeRef : undefined}
         style={style}
-        {...listeners}
-        {...attributes}
+        {...(shouldEnableDrag ? listeners : {})}
+        {...(shouldEnableDrag ? attributes : {})}
         className={`
           relative flex flex-col items-center justify-center ${circularSize} border-2
-          ${positionAbbreviation ? getPositionColorStyle() : getAvailabilityStyle()}
+          ${getAvailabilityStyle()}
           ${actualIsDragging ? 'shadow-lg scale-110 opacity-50' : 'shadow-sm'}
-          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
-          ${player.availabilityStatus === 'available' ? 'hover:scale-105 hover:shadow-md' : ''}
+          ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : shouldEnableDrag ? 'cursor-grab print:cursor-default' : 'cursor-default'}
+          ${player.availabilityStatus === 'available' && shouldEnableDrag ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
           transition-all duration-200 ease-in-out
+          ${shouldEnableDrag ? 'touch-none select-none' : ''}
           print:scale-100 print:shadow-none
         `}
       >
