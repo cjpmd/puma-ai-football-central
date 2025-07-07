@@ -334,16 +334,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     
-    // Reset drag state
+    // Store drag context before resetting
     const previousPeriod = draggedFromPeriod;
     const previousPosition = draggedFromPosition;
+    
+    // Reset drag state
     setDraggedPlayer(null);
     setDraggedFromPeriod(null);
     setDraggedFromPosition(null);
     
     if (!over) {
       console.log('Drag ended with no target - player should snap back to original position');
-      // Player snaps back automatically when drag is cancelled
+      // No changes needed - player stays in original position
       return;
     }
 
