@@ -1,3 +1,4 @@
+import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
 import { Crown } from 'lucide-react';
 import { SquadPlayer } from '@/types/teamSelection';
@@ -23,6 +24,21 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   showPositionLabel = false,
   isLarger = false
 }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging: dndIsDragging,
+  } = useDraggable({
+    id: player.id,
+  });
+
+  const style = transform ? {
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    zIndex: 1000,
+  } : undefined;
+
   const getDisplayName = () => {
     const nameParts = player.name.split(' ');
     
@@ -54,15 +70,39 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     }
   };
 
+  const getPositionColorStyle = () => {
+    if (!positionAbbreviation) return '';
+    
+    // Color coding based on position type
+    if (positionAbbreviation.includes('GK')) {
+      return 'bg-yellow-100 border-yellow-400 text-yellow-800';
+    }
+    if (positionAbbreviation.includes('D')) {
+      return 'bg-blue-100 border-blue-400 text-blue-800';
+    }
+    if (positionAbbreviation.includes('M')) {
+      return 'bg-green-100 border-green-400 text-green-800';
+    }
+    if (positionAbbreviation.includes('S') || positionAbbreviation.includes('F')) {
+      return 'bg-red-100 border-red-400 text-red-800';
+    }
+    return '';
+  };
+
   const circularSize = isLarger ? 'w-16 h-16' : 'w-14 h-14';
+  const actualIsDragging = isDragging || dndIsDragging;
 
   if (isCircular) {
     return (
       <div 
+        ref={setNodeRef}
+        style={style}
+        {...listeners}
+        {...attributes}
         className={`
           relative flex flex-col items-center justify-center ${circularSize} border-2
-          ${getAvailabilityStyle()}
-          ${isDragging ? 'shadow-lg scale-110 opacity-50' : 'shadow-sm'}
+          ${positionAbbreviation ? getPositionColorStyle() : getAvailabilityStyle()}
+          ${actualIsDragging ? 'shadow-lg scale-110 opacity-50' : 'shadow-sm'}
           ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
           ${player.availabilityStatus === 'available' ? 'hover:scale-105 hover:shadow-md' : ''}
           transition-all duration-200 ease-in-out
@@ -99,10 +139,14 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
 
   return (
     <div 
+      ref={setNodeRef}
+      style={style}
+      {...listeners}
+      {...attributes}
       className={`
         relative flex flex-col items-center p-2 rounded-lg border-2 min-w-[80px] max-w-[100px]
         ${getAvailabilityStyle()}
-        ${isDragging ? 'shadow-lg transform rotate-2' : 'shadow-sm'}
+        ${actualIsDragging ? 'shadow-lg transform rotate-2' : 'shadow-sm'}
         ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : 'cursor-grab print:cursor-default'}
         transition-all duration-200
       `}

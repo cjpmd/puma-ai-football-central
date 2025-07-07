@@ -1,4 +1,3 @@
-import { Droppable, Draggable } from 'react-beautiful-dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -46,41 +45,20 @@ export const AvailablePlayersPool: React.FC<AvailablePlayersPoolProps> = ({
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="pt-0">
-            <Droppable droppableId="available-players" direction="horizontal">
-              {(provided, snapshot) => (
-                <div
-                  ref={provided.innerRef}
-                  {...provided.droppableProps}
-                  className={`flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] print:bg-gray-100 ${
-                    snapshot.isDraggingOver ? 'bg-primary/10' : ''
-                  }`}
-                >
-                  {players.map((player, index) => (
-                    <Draggable key={player.id} draggableId={player.id} index={index}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          className={snapshot.isDragging ? 'opacity-50' : ''}
-                        >
-                          <PlayerIcon 
-                            player={player} 
-                            isCaptain={player.id === globalCaptainId}
-                            nameDisplayOption={nameDisplayOption}
-                            isCircular={true}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  ))}
-                  {players.length === 0 && (
-                    <div className="text-sm text-muted-foreground">All available players are assigned</div>
-                  )}
-                  {provided.placeholder}
-                </div>
+            <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] print:bg-gray-100">
+              {players.map((player) => (
+                <PlayerIcon 
+                  key={player.id}
+                  player={player} 
+                  isCaptain={player.id === globalCaptainId}
+                  nameDisplayOption={nameDisplayOption}
+                  isCircular={true}
+                />
+              ))}
+              {players.length === 0 && (
+                <div className="text-sm text-muted-foreground">All available players are assigned</div>
               )}
-            </Droppable>
+            </div>
           </CardContent>
         </CollapsibleContent>
       </Card>
