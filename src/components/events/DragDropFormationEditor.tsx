@@ -575,21 +575,21 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const { firstHalf, secondHalf } = organizeByHalves();
 
   const renderPeriodCard = (period: FormationPeriod) => (
-    <Card key={period.id} className="min-h-[600px] print:shadow-none print:border print:break-inside-avoid overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-slate-50 to-slate-100">
+    <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
+      <CardHeader className="pb-3">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-center flex-1">
-              <CardTitle className="text-lg mb-2 font-bold text-slate-800">Period {period.periodNumber}</CardTitle>
+              <CardTitle className="text-lg mb-2">Period {period.periodNumber}</CardTitle>
               <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                <span className="font-medium">{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
+                <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
                 <div className="flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   <Input
                     type="number"
                     value={period.duration}
                     onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                    className="w-20 h-7 text-xs text-center border-slate-300"
+                    className="w-20 h-7 text-xs text-center"
                     min="1"
                     max="90"
                   />
@@ -602,7 +602,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                 size="sm"
                 variant="ghost"
                 onClick={() => deletePeriod(period.id)}
-                className="h-6 w-6 p-0 print:hidden hover:bg-red-100 hover:text-red-600"
+                className="h-6 w-6 p-0 print:hidden"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -610,7 +610,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </div>
           
           <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-            <SelectTrigger className="h-8 text-sm border-slate-300">
+            <SelectTrigger className="h-7 text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -624,55 +624,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-4 p-0">
-        {/* Modern Football Pitch Design */}
-        <div className="relative h-[400px] print:h-[350px] mx-4 mb-4 rounded-xl overflow-hidden shadow-lg">
-          {/* Gradient Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-400 via-green-500 to-emerald-600" />
+      <CardContent className="space-y-4">
+        <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
+          <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
           
-          {/* Pitch Pattern Overlay */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute inset-0" style={{
-              backgroundImage: `
-                linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px),
-                linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)
-              `,
-              backgroundSize: '20px 20px'
-            }} />
-          </div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
+          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
+          <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+          <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
           
-          {/* Pitch Markings */}
-          <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 300" preserveAspectRatio="none">
-            {/* Outer boundary */}
-            <rect x="10" y="10" width="380" height="280" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            
-            {/* Centre circle */}
-            <circle cx="200" cy="150" r="50" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            <circle cx="200" cy="150" r="2" fill="rgba(255,255,255,0.8)" />
-            
-            {/* Centre line */}
-            <line x1="200" y1="10" x2="200" y2="290" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            
-            {/* Penalty boxes */}
-            <rect x="10" y="80" width="60" height="140" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            <rect x="330" y="80" width="60" height="140" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            
-            {/* Goal boxes */}
-            <rect x="10" y="120" width="25" height="60" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            <rect x="365" y="120" width="25" height="60" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            
-            {/* Penalty spots */}
-            <circle cx="50" cy="150" r="2" fill="rgba(255,255,255,0.8)" />
-            <circle cx="350" cy="150" r="2" fill="rgba(255,255,255,0.8)" />
-            
-            {/* Corner arcs */}
-            <path d="M 10 10 A 10 10 0 0 1 20 10" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            <path d="M 380 10 A 10 10 0 0 1 390 20" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            <path d="M 10 290 A 10 10 0 0 1 10 280" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-            <path d="M 390 280 A 10 10 0 0 1 380 290" fill="none" stroke="rgba(255,255,255,0.8)" strokeWidth="2" />
-          </svg>
-          
-          {/* Players positioned on the pitch */}
           <div className="relative h-full">
             {period.positions.map((position, posIndex) => (
               <PositionSlot
@@ -688,28 +648,24 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </div>
         </div>
 
-        {/* Substitutes section with modern styling */}
-        <div className="px-4 pb-4">
-          <SubstituteBench
-            id={`substitutes-${period.id}`}
-            substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-            globalCaptainId={globalCaptainId}
-            nameDisplayOption={mappedNameDisplayOption}
-          />
-        </div>
+        <SubstituteBench
+          id={`substitutes-${period.id}`}
+          substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
+          globalCaptainId={globalCaptainId}
+          nameDisplayOption={mappedNameDisplayOption}
+        />
       </CardContent>
     </Card>
   );
 
   return (
-    <div className="space-y-6 print:text-sm bg-slate-50 min-h-screen">
+    <div className="space-y-4 print:text-sm">
       <DndContext 
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart} 
         onDragEnd={handleDragEnd}
       >
-        {/* Time Check Alert */}
         {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
@@ -721,26 +677,23 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Alert>
         )}
 
-        {/* Available Players Section */}
         <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
-          <Card className="print:shadow-none print:border shadow-lg border-slate-200">
+          <Card className="print:shadow-none print:border">
             <CollapsibleTrigger asChild>
-              <CardHeader className="pb-3 cursor-pointer hover:bg-slate-50 print:hover:bg-white transition-colors rounded-t-lg">
+              <CardHeader className="pb-2 cursor-pointer hover:bg-gray-50 print:hover:bg-white">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-3 text-slate-800">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                      <Users className="h-5 w-5 text-blue-600" />
-                    </div>
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4" />
                     Available Players ({unusedPlayers.length})
                   </CardTitle>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     {unusedPlayers.length === 0 && (
-                      <Badge variant="secondary" className="text-xs bg-green-100 text-green-700">All assigned</Badge>
+                      <Badge variant="secondary" className="text-xs">All assigned</Badge>
                     )}
                     {availablePlayersOpen ? (
-                      <ChevronUp className="h-5 w-5 text-slate-400" />
+                      <ChevronUp className="h-4 w-4" />
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-slate-400" />
+                      <ChevronDown className="h-4 w-4" />
                     )}
                   </div>
                 </div>
@@ -748,7 +701,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             </CollapsibleTrigger>
             <CollapsibleContent>
               <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-3 p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg min-h-[80px] border-2 border-dashed border-slate-300">
+                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] print:bg-gray-100">
                   {unusedPlayers.map((player) => (
                     <PlayerIcon
                       key={player.id}
@@ -760,9 +713,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     />
                   ))}
                   {unusedPlayers.length === 0 && (
-                    <div className="flex-1 flex items-center justify-center text-slate-500 text-sm font-medium">
-                      All available players are assigned
-                    </div>
+                    <div className="text-sm text-muted-foreground">All available players are assigned</div>
                   )}
                 </div>
               </CardContent>
@@ -770,7 +721,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Card>
         </Collapsible>
 
-        {/* Periods Organization and Rendering */}
         <div className="space-y-6">
           {firstHalf.length > 0 && (
             <div>
@@ -815,19 +765,13 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           )}
         </div>
 
-        {/* Playing Time Summary */}
         {Object.keys(playingTimeSummary).length > 0 && (
-          <Card className="print:shadow-none print:border print:break-inside-avoid shadow-lg border-slate-200">
-            <CardHeader className="pb-3 bg-gradient-to-r from-slate-50 to-slate-100">
-              <CardTitle className="text-slate-800 flex items-center gap-3">
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Clock className="h-5 w-5 text-green-600" />
-                </div>
-                Playing Time Summary
-              </CardTitle>
+          <Card className="print:shadow-none print:border print:break-inside-avoid">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Playing Time Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
                 {Object.entries(playingTimeSummary)
                   .sort(([, a], [, b]) => b - a)
                   .map(([playerId, minutes]) => {
@@ -835,15 +779,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     if (!player) return null;
                     
                     return (
-                      <div key={playerId} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-200">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <Badge variant="outline" className="text-xs px-2 py-1 bg-white border-slate-300">#{player.squadNumber}</Badge>
-                          <span className="font-medium text-sm truncate text-slate-700">{player.name}</span>
+                      <div key={playerId} className="flex items-center justify-between py-1 border-b border-gray-100 last:border-b-0">
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <Badge variant="outline" className="text-xs px-1 py-0">#{player.squadNumber}</Badge>
+                          <span className="font-medium text-xs truncate">{player.name}</span>
                           {player.id === globalCaptainId && (
-                            <Badge variant="secondary" className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800">C</Badge>
+                            <Badge variant="secondary" className="text-xs px-1 py-0">C</Badge>
                           )}
                         </div>
-                        <Badge variant="secondary" className="text-sm ml-3 bg-blue-100 text-blue-800 font-semibold">{minutes}m</Badge>
+                        <Badge variant="secondary" className="text-xs ml-2">{minutes}m</Badge>
                       </div>
                     );
                   })}
@@ -854,7 +798,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
         <DragOverlay>
           {draggedPlayer && (
-            <div className="opacity-90 transform rotate-2 scale-110">
+            <div className="opacity-80">
               <PlayerIcon 
                 player={draggedPlayer} 
                 isCaptain={draggedPlayer.id === globalCaptainId}
