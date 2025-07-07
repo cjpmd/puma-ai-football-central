@@ -222,7 +222,7 @@ export default function PlayerManagementMobile() {
           </Badge>
         </div>
 
-        {/* Player Cards Grid - Scaled for Mobile */}
+        {/* Player Cards Grid - Side by Side with Better Sizing */}
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-8">
@@ -234,28 +234,30 @@ export default function PlayerManagementMobile() {
               <p className="text-muted-foreground">No players found</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3 justify-items-center">
+            <div className="grid grid-cols-2 gap-4">
               {filteredPlayers.map((player) => (
-                <div key={player.id} className="transform scale-75 origin-top">
-                  <FifaStylePlayerCard
-                    player={player}
-                    team={currentTeam}
-                    onEdit={() => toast({ title: 'Edit Player', description: `Edit functionality for ${player.name} coming soon` })}
-                    onManageParents={() => toast({ title: 'Manage Parents', description: `Parent management for ${player.name} coming soon` })}
-                    onRemoveFromSquad={() => toast({ title: 'Remove Player', description: `Remove functionality for ${player.name} coming soon` })}
-                    onUpdatePhoto={async () => toast({ title: 'Update Photo', description: `Photo update for ${player.name} coming soon` })}
-                    onDeletePhoto={() => toast({ title: 'Delete Photo', description: `Photo deletion for ${player.name} coming soon` })}
-                    onSaveFunStats={() => toast({ title: 'Save Stats', description: `Stats update for ${player.name} coming soon` })}
-                    onSavePlayStyle={() => toast({ title: 'Save Play Style', description: `Play style update for ${player.name} coming soon` })}
-                    onSaveCardDesign={() => toast({ title: 'Save Card Design', description: `Card design update for ${player.name} coming soon` })}
-                    onManageAttributes={() => toast({ title: 'Manage Attributes', description: `Attributes for ${player.name} coming soon` })}
-                    onManageObjectives={() => toast({ title: 'Manage Objectives', description: `Objectives for ${player.name} coming soon` })}
-                    onManageComments={() => toast({ title: 'Manage Comments', description: `Comments for ${player.name} coming soon` })}
-                    onViewStats={() => toast({ title: 'View Stats', description: `Stats for ${player.name} coming soon` })}
-                    onViewHistory={() => toast({ title: 'View History', description: `History for ${player.name} coming soon` })}
-                    onTransferPlayer={() => toast({ title: 'Transfer Player', description: `Transfer for ${player.name} coming soon` })}
-                    onLeaveTeam={() => toast({ title: 'Leave Team', description: `Leave team for ${player.name} coming soon` })}
-                  />
+                <div key={player.id} className="flex justify-center">
+                  <div className="transform scale-90 w-full max-w-[200px]">
+                    <FifaStylePlayerCard
+                      player={player}
+                      team={currentTeam}
+                      onEdit={() => handleEditPlayer(player)}
+                      onManageParents={() => handleManageParents(player)}
+                      onRemoveFromSquad={() => handleRemoveFromSquad(player)}
+                      onUpdatePhoto={(file) => handleUpdatePhoto(player, file)}
+                      onDeletePhoto={() => handleDeletePhoto(player)}
+                      onSaveFunStats={(stats) => handleSaveFunStats(player, stats)}
+                      onSavePlayStyle={(playStyles) => handleSavePlayStyle(player, playStyles)}
+                      onSaveCardDesign={(designId) => handleSaveCardDesign(player, designId)}
+                      onManageAttributes={() => handleManageAttributes(player)}
+                      onManageObjectives={() => handleManageObjectives(player)}
+                      onManageComments={() => handleManageComments(player)}
+                      onViewStats={() => handleViewStats(player)}
+                      onViewHistory={() => handleViewHistory(player)}
+                      onTransferPlayer={() => handleTransferPlayer(player)}
+                      onLeaveTeam={() => handleLeaveTeam(player)}
+                    />
+                  </div>
                 </div>
               ))}
             </div>

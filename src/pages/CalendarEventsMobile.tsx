@@ -4,48 +4,26 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight, Edit, Users, Trophy } from 'lucide-react';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Use the actual database event type from supabase
-type DatabaseEventRow = {
-  id: string;
-  team_id: string;
-  title: string;
-  description?: string;
-  date: string;
-  start_time?: string;
-  end_time?: string;
-  location?: string;
-  notes?: string;
-  event_type: string;
-  opponent?: string;
-  is_home?: boolean;
-  game_format?: string;
-  game_duration?: number;
-  scores?: any;
-  player_of_match_id?: string;
-  coach_notes?: string;
-  staff_notes?: string;
-  training_notes?: string;
-  facility_id?: string;
-  facility_booking_id?: string;
-  meeting_time?: string;
-  total_minutes?: number;
-  teams?: any;
-  kit_selection?: string;
-  created_at: string;
-  updated_at: string;
-};
+import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
+import { EventForm } from '@/components/events/EventForm';
+import { PostGameEditor } from '@/components/events/PostGameEditor';
+import { DatabaseEvent } from '@/types/event';
 
 export default function CalendarEventsMobile() {
-  const [events, setEvents] = useState<DatabaseEventRow[]>([]);
+  const [events, setEvents] = useState<DatabaseEvent[]>([]);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [showTeamSelection, setShowTeamSelection] = useState(false);
+  const [showPostGameEdit, setShowPostGameEdit] = useState(false);
   const { toast } = useToast();
   const { teams } = useAuth();
 
@@ -69,7 +47,7 @@ export default function CalendarEventsMobile() {
         .order('date', { ascending: true });
 
       if (error) throw error;
-      setEvents(data || []);
+      setEvents((data || []) as DatabaseEvent[]);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -105,6 +83,65 @@ export default function CalendarEventsMobile() {
     }
   };
 
+  const isEventCompleted = (event: DatabaseEvent) => {
+    const today = new Date();
+    const eventDate = new Date(event.date);
+    
+    if (eventDate < today) return true;
+    
+    if (isSameDay(eventDate, today) && event.end_time) {
+      const [hours, minutes] = event.end_time.split(':').map(Number);
+      const eventEndTime = new Date();
+      eventEndTime.setHours(hours, minutes, 0, 0);
+      return new Date() > eventEndTime;
+    }
+    
+    return false;
+  };
+
+  const isMatchType = (eventType: string) => {
+    return ['match', 'fixture', 'friendly'].includes(eventType);
+  };
+
+  const handleEditEvent = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
+    setShowEventForm(true);
+  };
+
+  const handleTeamSelection = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
+    setShowTeamSelection(true);
+  };
+
+  const handlePostGameEdit = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
+    setShowPostGameEdit(true);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Event deleted successfully',
+      });
+      
+      loadEvents();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete event',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const dayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
 
   return (
@@ -136,7 +173,10 @@ export default function CalendarEventsMobile() {
         </div>
 
         {/* Add Event Button */}
-        <Button className="w-full h-12">
+        <Button 
+          className="w-full h-12"
+          onClick={() => setShowEventForm(true)}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Event
         </Button>
@@ -201,37 +241,74 @@ export default function CalendarEventsMobile() {
                 </p>
               ) : (
                 <div className="space-y-3">
-                  {dayEvents.map((event) => (
-                    <div key={event.id} className="border rounded-lg p-3 space-y-2">
-                      <div className="flex items-start justify-between">
-                        <h4 className="font-medium">{event.title}</h4>
-                        <Badge className={`text-white text-xs ${getEventTypeColor(event.event_type)}`}>
-                          {event.event_type}
-                        </Badge>
+                  {dayEvents.map((event) => {
+                    const completed = isEventCompleted(event);
+                    const matchType = isMatchType(event.event_type);
+                    
+                    return (
+                      <div key={event.id} className="border rounded-lg p-3 space-y-2">
+                        <div className="flex items-start justify-between">
+                          <h4 className="font-medium">{event.title}</h4>
+                          <Badge className={`text-white text-xs ${getEventTypeColor(event.event_type)}`}>
+                            {event.event_type}
+                          </Badge>
+                        </div>
+                        
+                        {event.start_time && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <Clock className="h-4 w-4 mr-2" />
+                            {event.start_time}
+                            {event.end_time && ` - ${event.end_time}`}
+                          </div>
+                        )}
+                        
+                        {event.location && (
+                          <div className="flex items-center text-sm text-muted-foreground">
+                            <MapPin className="h-4 w-4 mr-2" />
+                            {event.location}
+                          </div>
+                        )}
+                        
+                        {event.opponent && (
+                          <div className="text-sm text-muted-foreground">
+                            vs {event.opponent}
+                          </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditEvent(event)}
+                          >
+                            <Edit className="h-3 w-3 mr-1" />
+                            Edit
+                          </Button>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTeamSelection(event)}
+                          >
+                            <Users className="h-3 w-3 mr-1" />
+                            Team
+                          </Button>
+                          
+                          {completed && matchType && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePostGameEdit(event)}
+                            >
+                              <Trophy className="h-3 w-3 mr-1" />
+                              Result
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      
-                      {event.start_time && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4 mr-2" />
-                          {event.start_time}
-                          {event.end_time && ` - ${event.end_time}`}
-                        </div>
-                      )}
-                      
-                      {event.location && (
-                        <div className="flex items-center text-sm text-muted-foreground">
-                          <MapPin className="h-4 w-4 mr-2" />
-                          {event.location}
-                        </div>
-                      )}
-                      
-                      {event.opponent && (
-                        <div className="text-sm text-muted-foreground">
-                          vs {event.opponent}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
@@ -264,9 +341,22 @@ export default function CalendarEventsMobile() {
                         {event.start_time && ` at ${event.start_time}`}
                       </div>
                     </div>
-                    <Badge className={`text-white text-xs ${getEventTypeColor(event.event_type)}`}>
-                      {event.event_type}
-                    </Badge>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditEvent(event)}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTeamSelection(event)}
+                      >
+                        <Users className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
                 {events.length > 3 && (
@@ -279,6 +369,64 @@ export default function CalendarEventsMobile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Event Form Modal */}
+      <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedEvent ? 'Edit Event' : 'Create Event'}
+            </DialogTitle>
+          </DialogHeader>
+          <EventForm
+            event={selectedEvent}
+            onSave={() => {
+              setShowEventForm(false);
+              setSelectedEvent(null);
+              loadEvents();
+            }}
+            onCancel={() => {
+              setShowEventForm(false);
+              setSelectedEvent(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Selection Modal */}
+      {selectedEvent && (
+        <EnhancedTeamSelectionManager
+          event={selectedEvent}
+          isOpen={showTeamSelection}
+          onClose={() => {
+            setShowTeamSelection(false);
+            setSelectedEvent(null);
+          }}
+        />
+      )}
+
+      {/* Post Game Edit Modal */}
+      <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
+        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Post-Game Report</DialogTitle>
+          </DialogHeader>
+          {selectedEvent && (
+            <PostGameEditor
+              event={selectedEvent}
+              onSave={() => {
+                setShowPostGameEdit(false);
+                setSelectedEvent(null);
+                loadEvents();
+              }}
+              onCancel={() => {
+                setShowPostGameEdit(false);
+                setSelectedEvent(null);
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </MobileLayout>
   );
 }
