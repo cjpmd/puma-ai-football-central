@@ -457,31 +457,30 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       } else if (sourcePeriodId && period.id === sourcePeriodId) {
-        // Remove player from source position only if this is a different period
-        if (sourcePeriodId !== targetPeriodId) {
-          const newPositions = [...period.positions];
-          const newSubstitutes = [...period.substitutes];
-          
-          if (sourceLocation?.startsWith('position-')) {
-            const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
-            if (newPositions[sourcePositionIndex]?.playerId === playerId) {
-              newPositions[sourcePositionIndex].playerId = undefined;
-              console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in period ${sourcePeriodId}`);
-            }
-          } else if (sourceLocation === 'substitutes') {
-            const subIndex = newSubstitutes.indexOf(playerId);
-            if (subIndex > -1) {
-              newSubstitutes.splice(subIndex, 1);
-              console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);
-            }
+        // Always remove player from source position when moving to substitutes, even within same period
+        const newPositions = [...period.positions];
+        const newSubstitutes = [...period.substitutes];
+        
+        if (sourceLocation?.startsWith('position-')) {
+          const sourcePositionIndex = parseInt(sourceLocation.replace('position-', ''));
+          if (newPositions[sourcePositionIndex]?.playerId === playerId) {
+            newPositions[sourcePositionIndex].playerId = undefined;
+            console.log(`Removed player ${playerId} from position ${sourcePositionIndex} in period ${sourcePeriodId}`);
           }
-          
-          return {
-            ...period,
-            positions: newPositions,
-            substitutes: newSubstitutes
-          };
+        } else if (sourceLocation === 'substitutes' && sourcePeriodId !== targetPeriodId) {
+          // Only remove from substitutes if moving to different period
+          const subIndex = newSubstitutes.indexOf(playerId);
+          if (subIndex > -1) {
+            newSubstitutes.splice(subIndex, 1);
+            console.log(`Removed player ${playerId} from substitutes in period ${sourcePeriodId}`);
+          }
         }
+        
+        return {
+          ...period,
+          positions: newPositions,
+          substitutes: newSubstitutes
+        };
       }
       
       return period;
