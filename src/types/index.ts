@@ -277,7 +277,7 @@ export interface Event {
     home: number;
     away: number;
   };
-  playerOfMatchId?: string;
+  playerOfTheMatchId?: string;
   coachNotes?: string;
   staffNotes?: string;
   trainingNotes?: string;

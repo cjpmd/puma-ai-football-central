@@ -74,13 +74,9 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
     gameDuration: event?.gameDuration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
-    isHome: event?.isHome ?? true,
     facilityId: event?.facilityId || '',
     trainingNotes: event?.trainingNotes || '',
     notes: event?.notes || '',
-    homeScore: event?.scores?.home || 0,
-    awayScore: event?.scores?.away || 0,
-    playerOfTheMatchId: event?.playerOfMatchId || '',
     kitSelection: event?.kitSelection || 'home' as 'home' | 'away' | 'training',
     latitude: event?.latitude,
     longitude: event?.longitude
@@ -117,13 +113,9 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         gameFormat: event.gameFormat || teamDefaultGameFormat,
         gameDuration: event.gameDuration || teamDefaultGameDuration,
         opponent: event.opponent || '',
-        isHome: event.isHome ?? true,
         facilityId: event.facilityId || '',
         trainingNotes: event.trainingNotes || '',
         notes: event.notes || '',
-        homeScore: event.scores?.home || 0,
-        awayScore: event.scores?.away || 0,
-        playerOfTheMatchId: event.playerOfMatchId || '',
         kitSelection: event.kitSelection || 'home',
         latitude: event.latitude,
         longitude: event.longitude
@@ -285,10 +277,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       startTime: primaryTimeSlot.startTime || formData.startTime,
       endTime: primaryTimeSlot.endTime || formData.endTime,
       opponent: requiresOpponent ? formData.opponent : undefined,
-      scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
-        ? { home: formData.homeScore, away: formData.awayScore }
-        : undefined,
-      playerOfMatchId: formData.playerOfTheMatchId || undefined
+      type: formData.type, // Make sure type is explicitly set
     };
 
     if (formData.latitude && formData.longitude) {
@@ -531,76 +520,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                   {facilities.map((facility) => (
                     <SelectItem key={facility.id} value={facility.id}>
                       {facility.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          {/* Home/Away toggle for fixtures and friendlies */}
-          {(formData.type === 'fixture' || formData.type === 'friendly') && (
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="isHome" className="text-right">Home game</Label>
-              <div className="col-span-2">
-                <Switch
-                  id="isHome"
-                  checked={formData.isHome}
-                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
-                />
-              </div>
-            </div>
-          )}
-          
-          {/* Scores Section */}
-          {(formData.type === 'fixture' || formData.type === 'friendly') && (
-            <>
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor="homeScore" className="text-right">
-                  {formData.isHome ? 'Our Score' : 'Opponent Score'}
-                </Label>
-                <Input
-                  id="homeScore"
-                  type="number"
-                  min="0"
-                  value={formData.homeScore}
-                  onChange={(e) => setFormData(prev => ({ ...prev, homeScore: parseInt(e.target.value) || 0 }))}
-                  className="col-span-2"
-                />
-              </div>
-              
-              <div className="grid grid-cols-3 items-center gap-4">
-                <Label htmlFor="awayScore" className="text-right">
-                  {formData.isHome ? 'Opponent Score' : 'Our Score'}
-                </Label>
-                <Input
-                  id="awayScore"
-                  type="number"
-                  min="0"
-                  value={formData.awayScore}
-                  onChange={(e) => setFormData(prev => ({ ...prev, awayScore: parseInt(e.target.value) || 0 }))}
-                  className="col-span-2"
-                />
-              </div>
-            </>
-          )}
-          
-          {/* Player of the Match */}
-          {(formData.type === 'fixture' || formData.type === 'friendly') && (
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="playerOfTheMatch" className="text-right">Player of the Match</Label>
-              <Select
-                value={formData.playerOfTheMatchId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, playerOfTheMatchId: value === 'none' ? '' : value }))}
-              >
-                <SelectTrigger className="col-span-2">
-                  <SelectValue placeholder="Select player of the match" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No player selected</SelectItem>
-                  {players.map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

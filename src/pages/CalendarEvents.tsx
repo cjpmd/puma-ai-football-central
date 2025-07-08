@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -140,7 +139,7 @@ export default function CalendarEvents() {
       gameFormat: dbEvent.game_format as GameFormat,
       gameDuration: dbEvent.game_duration,
       scores: dbEvent.scores,
-      playerOfMatchId: dbEvent.player_of_match_id,
+      playerOfTheMatchId: dbEvent.player_of_match_id,
       coachNotes: dbEvent.coach_notes,
       staffNotes: dbEvent.staff_notes,
       trainingNotes: dbEvent.training_notes,
@@ -167,6 +166,7 @@ export default function CalendarEvents() {
           id: selectedEvent.id,
           ...eventData,
           team_id: eventData.teamId,
+          event_type: eventData.type,
         });
         
         toast({
@@ -178,6 +178,7 @@ export default function CalendarEvents() {
         await eventsService.createEvent({
           ...eventData,
           team_id: eventData.teamId,
+          event_type: eventData.type,
         });
         
         toast({
