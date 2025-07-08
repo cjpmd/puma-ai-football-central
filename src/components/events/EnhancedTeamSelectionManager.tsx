@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Save, Users, Gamepad2, Target, Plus, X } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText } from 'lucide-react';
 import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
+import { MatchDayPackView } from './MatchDayPackView';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
 import { DatabaseEvent } from '@/types/event';
@@ -44,6 +44,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
+  const [showMatchDayPack, setShowMatchDayPack] = useState(false);
 
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
@@ -316,6 +317,16 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   if (!isOpen) return null;
 
+  // Show Match Day Pack view if requested
+  if (showMatchDayPack) {
+    return (
+      <MatchDayPackView 
+        event={event} 
+        onClose={() => setShowMatchDayPack(false)} 
+      />
+    );
+  }
+
   const currentTeam = getCurrentTeam();
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
@@ -340,6 +351,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               <Badge variant="outline">
                 {currentTeam?.periods.length || 0} period(s)
               </Badge>
+              <Button 
+                onClick={() => setShowMatchDayPack(true)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                📦 Generate Match Day Pack
+              </Button>
               <Button onClick={saveSelections} disabled={saving}>
                 <Save className="h-4 w-4 mr-1" />
                 {saving ? 'Saving...' : 'Save Selection'}

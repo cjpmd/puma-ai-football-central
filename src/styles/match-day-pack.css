@@ -1,0 +1,127 @@
+
+.match-day-pack {
+  background: white;
+  color: black;
+}
+
+.page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 20mm;
+  margin: 0 auto;
+  background: white;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  margin-bottom: 10mm;
+}
+
+.page-break {
+  break-after: page;
+}
+
+.no-print {
+  display: block;
+}
+
+/* Print styles */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  
+  body {
+    margin: 0;
+    padding: 0;
+    background: white !important;
+  }
+  
+  .match-day-pack {
+    background: white !important;
+  }
+  
+  .page {
+    width: 210mm;
+    height: 297mm;
+    padding: 15mm;
+    margin: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+  
+  .page:last-child {
+    page-break-after: auto;
+  }
+  
+  .page-break {
+    page-break-after: always;
+  }
+  
+  .no-print {
+    display: none !important;
+  }
+  
+  /* Ensure text is readable */
+  h1, h2, h3, h4, h5, h6 {
+    color: black !important;
+  }
+  
+  p, div, span, label {
+    color: black !important;
+  }
+  
+  /* Ensure borders show in print */
+  .border, [class*="border"] {
+    border: 1px solid #ccc !important;
+  }
+  
+  /* Background colors for better print visibility */
+  .bg-green-100 {
+    background-color: #f0f9f0 !important;
+  }
+  
+  .bg-gray-50 {
+    background-color: #f9f9f9 !important;
+  }
+  
+  .bg-gray-200 {
+    background-color: #e5e5e5 !important;
+  }
+  
+  /* Input and textarea styles for print */
+  input, textarea {
+    border: 1px solid #333 !important;
+    background: white !important;
+    color: black !important;
+    -webkit-appearance: none;
+    box-shadow: none !important;
+  }
+  
+  /* Card styles */
+  .bg-white {
+    background: white !important;
+    border: 1px solid #ccc !important;
+  }
+  
+  /* Remove any hover effects in print */
+  *:hover {
+    background: inherit !important;
+  }
+}
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+/* Screen styles for better preview */
+@media screen {
+  .match-day-pack {
+    background: #f5f5f5;
+    padding: 20px;
+  }
+  
+  .page {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+  }
+}
