@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { MapPin, Cloud } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LocationInputProps {
   value: string;
@@ -33,39 +34,55 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const loadGoogleMaps = () => {
-      if (window.google && window.google.maps) {
+    const loadGoogleMaps = async () => {
+      if (typeof window !== 'undefined' && window.google && window.google.maps) {
         setIsLoaded(true);
         return;
       }
 
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.GOOGLE_MAPS_API_KEY || 'YOUR_API_KEY'}&libraries=places`;
-      script.onload = () => setIsLoaded(true);
-      document.head.appendChild(script);
+      try {
+        const { data, error } = await supabase.functions.invoke('google-maps-config');
+        
+        if (error) {
+          console.error('Error getting Google Maps config:', error);
+          return;
+        }
+
+        const script = document.createElement('script');
+        script.src = data.scriptUrl;
+        script.onload = () => setIsLoaded(true);
+        script.onerror = () => console.error('Failed to load Google Maps API');
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error('Error loading Google Maps:', error);
+      }
     };
 
     loadGoogleMaps();
   }, []);
 
   useEffect(() => {
-    if (isLoaded && inputRef.current && !autocompleteRef.current) {
-      autocompleteRef.current = new google.maps.places.Autocomplete(inputRef.current, {
-        types: ['address'],
-        componentRestrictions: { country: 'gb' } // Restrict to UK
-      });
+    if (isLoaded && inputRef.current && !autocompleteRef.current && window.google) {
+      try {
+        autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
+          types: ['address'],
+          componentRestrictions: { country: 'gb' } // Restrict to UK
+        });
 
-      autocompleteRef.current.addListener('place_changed', () => {
-        const place = autocompleteRef.current?.getPlace();
-        if (place && place.geometry && place.geometry.location) {
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
-          const address = place.formatted_address || '';
-          
-          onChange(address);
-          onLocationSelect?.({ lat, lng, address });
-        }
-      });
+        autocompleteRef.current.addListener('place_changed', () => {
+          const place = autocompleteRef.current?.getPlace();
+          if (place && place.geometry && place.geometry.location) {
+            const lat = place.geometry.location.lat();
+            const lng = place.geometry.location.lng();
+            const address = place.formatted_address || '';
+            
+            onChange(address);
+            onLocationSelect?.({ lat, lng, address });
+          }
+        });
+      } catch (error) {
+        console.error('Error initializing Google Places Autocomplete:', error);
+      }
     }
   }, [isLoaded, onChange, onLocationSelect]);
 
