@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
+import { Edit, Users, Trophy, Trash2, Cloud } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { KitAvatar } from '@/components/shared/KitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { WeatherService } from '@/services/weatherService';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -16,6 +17,12 @@ interface EventsGridViewProps {
   onPostGameEdit: (event: DatabaseEvent) => void;
   onDeleteEvent: (eventId: string) => void;
   onScoreEdit: (event: DatabaseEvent) => void;
+}
+
+interface WeatherData {
+  temp: number;
+  description: string;
+  icon: string;
 }
 
 export const EventsGridView: React.FC<EventsGridViewProps> = ({
@@ -27,10 +34,12 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   onScoreEdit
 }) => {
   const [performanceCategoryNames, setPerformanceCategoryNames] = useState<{ [eventId: string]: { [teamNumber: string]: string } }>({});
+  const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const { teams } = useAuth();
 
   useEffect(() => {
     loadPerformanceCategoryNames();
+    loadEventWeather();
   }, [events]);
 
   const loadPerformanceCategoryNames = async () => {
@@ -69,6 +78,34 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     } catch (error) {
       console.error('Error in loadPerformanceCategoryNames:', error);
     }
+  };
+
+  const loadEventWeather = async () => {
+    const weatherData: { [eventId: string]: WeatherData } = {};
+    
+    for (const event of events) {
+      if (event.latitude && event.longitude) {
+        try {
+          const weather = await WeatherService.getWeatherForecast(
+            event.latitude,
+            event.longitude,
+            event.date
+          );
+          
+          if (weather) {
+            weatherData[event.id] = {
+              temp: weather.temp,
+              description: weather.description,
+              icon: weather.icon
+            };
+          }
+        } catch (error) {
+          console.log(`Failed to load weather for event ${event.id}:`, error);
+        }
+      }
+    }
+    
+    setEventWeather(weatherData);
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
@@ -165,6 +202,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         const completed = isEventCompleted(event);
         const matchType = isMatchType(event.event_type);
         const teamScores = getTeamScores(event);
+        const weather = eventWeather[event.id];
         
         return (
           <Card key={event.id} className="flex flex-col">
@@ -196,15 +234,30 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                     );
                   })()}
                 </div>
-                {completed && matchType && teamScores.length > 0 && (
-                  <div className="flex gap-1">
-                    {teamScores.map((score) => (
-                      <span key={score.teamNumber} className="text-lg">
-                        {score.outcomeIcon}
+                <div className="flex items-center gap-1">
+                  {weather && (
+                    <div className="flex items-center gap-1">
+                      <img 
+                        src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
+                        alt={weather.description}
+                        className="w-6 h-6"
+                        title={`${Math.round(weather.temp)}°C - ${weather.description}`}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round(weather.temp)}°C
                       </span>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  )}
+                  {completed && matchType && teamScores.length > 0 && (
+                    <div className="flex gap-1">
+                      {teamScores.map((score) => (
+                        <span key={score.teamNumber} className="text-lg">
+                          {score.outcomeIcon}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
             </CardHeader>
