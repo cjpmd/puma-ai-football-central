@@ -534,7 +534,9 @@ export type Database = {
           id: string
           is_home: boolean | null
           kit_selection: string | null
+          latitude: number | null
           location: string | null
+          longitude: number | null
           meeting_time: string | null
           notes: string | null
           opponent: string | null
@@ -563,7 +565,9 @@ export type Database = {
           id?: string
           is_home?: boolean | null
           kit_selection?: string | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           meeting_time?: string | null
           notes?: string | null
           opponent?: string | null
@@ -592,7 +596,9 @@ export type Database = {
           id?: string
           is_home?: boolean | null
           kit_selection?: string | null
+          latitude?: number | null
           location?: string | null
+          longitude?: number | null
           meeting_time?: string | null
           notes?: string | null
           opponent?: string | null

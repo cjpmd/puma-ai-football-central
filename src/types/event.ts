@@ -8,6 +8,8 @@ export interface DatabaseEvent {
   start_time?: string;
   end_time?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   notes?: string;
   event_type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   opponent?: string;

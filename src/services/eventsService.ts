@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
 import { playerStatsService } from './playerStatsService';
@@ -11,6 +10,8 @@ export interface CreateEventData {
   start_time?: string;
   end_time?: string;
   location?: string;
+  latitude?: number;
+  longitude?: number;
   notes?: string;
   event_type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   opponent?: string;
@@ -60,9 +61,9 @@ export const eventsService = {
   },
 
   async createEvent(eventData: CreateEventData): Promise<DatabaseEvent> {
-    console.log('Creating event with data (including game_duration):', eventData);
+    console.log('Creating event with data (including coordinates):', eventData);
     
-    // Ensure game_duration is included in the database insert
+    // Ensure coordinates are included in the database insert
     const dbEventData = {
       team_id: eventData.team_id,
       title: eventData.title,
@@ -71,6 +72,8 @@ export const eventsService = {
       start_time: eventData.start_time,
       end_time: eventData.end_time,
       location: eventData.location,
+      latitude: eventData.latitude,
+      longitude: eventData.longitude,
       notes: eventData.notes,
       event_type: eventData.event_type,
       opponent: eventData.opponent,
@@ -78,11 +81,11 @@ export const eventsService = {
       scores: eventData.scores,
       player_of_match_id: eventData.player_of_match_id,
       game_format: eventData.game_format,
-      game_duration: eventData.game_duration, // Explicitly include game_duration
+      game_duration: eventData.game_duration,
       kit_selection: eventData.kit_selection
     };
     
-    console.log('Database event data with game_duration:', dbEventData);
+    console.log('Database event data with coordinates:', dbEventData);
     
     const { data, error } = await supabase
       .from('events')
@@ -94,15 +97,15 @@ export const eventsService = {
       console.error('Error creating event:', error);
       throw error;
     }
-    console.log('Event created successfully with game_duration:', data);
+    console.log('Event created successfully with coordinates:', data);
     return data as DatabaseEvent;
   },
 
   async updateEvent(eventData: UpdateEventData): Promise<DatabaseEvent> {
     const { id, ...updateData } = eventData;
-    console.log('Updating event with data (including game_duration):', updateData);
+    console.log('Updating event with data (including coordinates):', updateData);
     
-    // Ensure all fields are properly included in the update, especially game_duration
+    // Ensure all fields are properly included in the update, including coordinates
     const cleanUpdateData = {
       team_id: updateData.team_id,
       title: updateData.title,
@@ -111,6 +114,8 @@ export const eventsService = {
       start_time: updateData.start_time,
       end_time: updateData.end_time,
       location: updateData.location,
+      latitude: updateData.latitude,
+      longitude: updateData.longitude,
       notes: updateData.notes,
       event_type: updateData.event_type,
       opponent: updateData.opponent,
@@ -118,7 +123,7 @@ export const eventsService = {
       scores: updateData.scores,
       player_of_match_id: updateData.player_of_match_id,
       game_format: updateData.game_format,
-      game_duration: updateData.game_duration, // Explicitly include game_duration
+      game_duration: updateData.game_duration,
       kit_selection: updateData.kit_selection,
       coach_notes: updateData.coach_notes,
       staff_notes: updateData.staff_notes,
@@ -126,7 +131,7 @@ export const eventsService = {
       updated_at: new Date().toISOString()
     };
     
-    console.log('Clean update data with game_duration:', cleanUpdateData);
+    console.log('Clean update data with coordinates:', cleanUpdateData);
     
     const { data, error } = await supabase
       .from('events')
@@ -139,7 +144,7 @@ export const eventsService = {
       console.error('Error updating event:', error);
       throw error;
     }
-    console.log('Event updated successfully with game_duration:', data);
+    console.log('Event updated successfully with coordinates:', data);
     return data as DatabaseEvent;
   },
 

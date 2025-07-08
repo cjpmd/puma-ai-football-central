@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,8 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { LocationInput } from '@/components/ui/location-input';
+import { WeatherService } from '@/services/weatherService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Event, GameFormat } from '@/types';
@@ -39,6 +40,12 @@ interface Player {
   name: string;
 }
 
+interface WeatherData {
+  temp: number;
+  description: string;
+  icon: string;
+}
+
 export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, onCancel }) => {
   const { teams } = useAuth();
   const [facilities, setFacilities] = useState<Facility[]>([]);
@@ -49,6 +56,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   ]);
   const [teamDefaultGameFormat, setTeamDefaultGameFormat] = useState<GameFormat>('7-a-side');
   const [teamDefaultGameDuration, setTeamDefaultGameDuration] = useState<number>(90);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   
   const [formData, setFormData] = useState({
     type: event?.type || 'training' as const,
@@ -186,6 +195,23 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     }
   };
 
+  const handleLocationSelect = async (location: { lat: number; lng: number; address: string }) => {
+    setCoordinates({ lat: location.lat, lng: location.lng });
+    setFormData(prev => ({ ...prev, location: location.address }));
+    
+    // Fetch weather data for the location
+    try {
+      const weatherData = await WeatherService.getWeatherForecast(
+        location.lat, 
+        location.lng, 
+        formData.date
+      );
+      setWeather(weatherData);
+    } catch (error) {
+      console.error('Error fetching weather:', error);
+    }
+  };
+
   const handleNumberOfTeamsChange = (newNumber: number) => {
     setNumberOfTeams(newNumber);
     
@@ -241,7 +267,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
       playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
-      kitSelection: formData.kitSelection
+      kitSelection: formData.kitSelection,
+      ...(coordinates && {
+        latitude: coordinates.lat,
+        longitude: coordinates.lng
+      })
     };
 
     console.log('Final event data being submitted:', eventData);
@@ -482,15 +512,17 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         )}
 
-        {/* Location and Facility */}
+        {/* Enhanced Location Input with Weather */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
+            <LocationInput
               value={formData.location}
-              onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+              onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+              onLocationSelect={handleLocationSelect}
+              label="Location"
+              placeholder="Enter location or postcode"
               required
+              weather={weather}
             />
           </div>
 
