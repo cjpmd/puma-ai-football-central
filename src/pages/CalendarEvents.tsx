@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar, Grid3X3, List, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -352,21 +353,28 @@ export default function CalendarEvents() {
         )}
 
         {/* Event Form Modal */}
-        {showEventForm && (
-          <EventForm
-            event={convertToEventFormat(selectedEvent)}
-            teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
-            onSubmit={(eventData) => {
-              setShowEventForm(false);
-              setSelectedEvent(null);
-              loadEvents();
-            }}
-            onCancel={() => {
-              setShowEventForm(false);
-              setSelectedEvent(null);
-            }}
-          />
-        )}
+        <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedEvent ? 'Edit Event' : 'Create New Event'}
+              </DialogTitle>
+            </DialogHeader>
+            <EventForm
+              event={convertToEventFormat(selectedEvent)}
+              teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
+              onSubmit={(eventData) => {
+                setShowEventForm(false);
+                setSelectedEvent(null);
+                loadEvents();
+              }}
+              onCancel={() => {
+                setShowEventForm(false);
+                setSelectedEvent(null);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
 
         {/* Team Selection Modal */}
         {selectedEvent && (
