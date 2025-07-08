@@ -268,13 +268,21 @@ export default function CalendarEvents() {
         </CardContent>
       </Card>
 
-      {/* Add debug section temporarily */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="border-2 border-dashed border-yellow-400 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4 text-yellow-600">Debug Panel (Development Only)</h3>
-          <LocationDebug />
+      {/* Enhanced debug section - now more prominent */}
+      <div className="border-2 border-dashed border-blue-400 p-4 rounded-lg bg-blue-50 dark:bg-blue-950">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="h-2 w-2 bg-blue-500 rounded-full animate-pulse"></div>
+          <h3 className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+            Location & Weather Debug Panel
+          </h3>
+          <Badge variant="secondary">API Testing</Badge>
         </div>
-      )}
+        <p className="text-sm text-blue-600 dark:text-blue-400 mb-4">
+          Use this panel to test your Google Maps and Weather API integration. 
+          If location selection isn't working in event forms, debug here first.
+        </p>
+        <LocationDebug />
+      </div>
 
       {/* Events Display */}
       {filteredEvents.length === 0 ? (

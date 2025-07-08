@@ -4,14 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { LocationInput } from '@/components/ui/location-input';
 import { WeatherService } from '@/services/weatherService';
+import { supabase } from '@/integrations/supabase/client';
 
 export const LocationDebug = () => {
   const [location, setLocation] = useState('');
   const [coordinates, setCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [weather, setWeather] = useState<any>(null);
   const [logs, setLogs] = useState<string[]>([]);
+  const [isGoogleMapsLoaded, setIsGoogleMapsLoaded] = useState(false);
 
   const addLog = (message: string) => {
+    console.log(`[LocationDebug] ${message}`);
     setLogs(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
   };
 
@@ -20,49 +23,117 @@ export const LocationDebug = () => {
     setCoordinates({ lat: locationData.lat, lng: locationData.lng });
     
     try {
+      addLog('Fetching weather data...');
       const weatherData = await WeatherService.getCurrentWeather(locationData.lat, locationData.lng);
-      setWeather(weatherData);
-      addLog(`Weather loaded: ${weatherData?.temp}°C - ${weatherData?.description}`);
+      if (weatherData) {
+        setWeather(weatherData);
+        addLog(`Weather loaded: ${weatherData.temp}°C - ${weatherData.description}`);
+      } else {
+        addLog('Weather data is null');
+      }
     } catch (error) {
-      addLog(`Weather error: ${error}`);
+      addLog(`Weather error: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
-  const testApiKeys = async () => {
-    addLog('Testing API connections...');
+  const testGoogleMapsScript = async () => {
+    addLog('Testing Google Maps script loading...');
     
-    // Test if we can load Google Maps
     try {
-      const response = await fetch('/api/test-google-maps');
-      addLog(`Google Maps API: ${response.ok ? 'OK' : 'Failed'}`);
+      const { data, error } = await supabase.functions.invoke('google-maps-config');
+      
+      if (error) {
+        addLog(`Google Maps config error: ${JSON.stringify(error)}`);
+        return;
+      }
+      
+      addLog(`Google Maps script URL received: ${data?.scriptUrl ? 'Yes' : 'No'}`);
+      
+      // Check if script is already loaded
+      if (window.google && window.google.maps) {
+        addLog('Google Maps already loaded in window');
+        setIsGoogleMapsLoaded(true);
+      } else {
+        addLog('Google Maps not found in window');
+        setIsGoogleMapsLoaded(false);
+      }
+      
     } catch (error) {
-      addLog(`Google Maps API: Error - ${error}`);
+      addLog(`Google Maps test error: ${error instanceof Error ? error.message : String(error)}`);
     }
+  };
+
+  const testWeatherAPI = async () => {
+    addLog('Testing Weather API with London coordinates...');
     
-    // Test weather API with a known location (London)
     try {
       const weather = await WeatherService.getCurrentWeather(51.5074, -0.1278);
-      addLog(`Weather API: ${weather ? 'OK' : 'Failed'}`);
+      if (weather) {
+        addLog(`Weather API test successful: ${weather.temp}°C - ${weather.description}`);
+      } else {
+        addLog('Weather API returned null');
+      }
     } catch (error) {
-      addLog(`Weather API: Error - ${error}`);
+      addLog(`Weather API test error: ${error instanceof Error ? error.message : String(error)}`);
     }
+  };
+
+  const testSupabaseFunctions = async () => {
+    addLog('Testing Supabase functions directly...');
+    
+    // Test weather function directly
+    try {
+      const { data, error } = await supabase.functions.invoke('weather-data', {
+        body: { lat: 51.5074, lng: -0.1278 }
+      });
+      
+      if (error) {
+        addLog(`Weather function error: ${JSON.stringify(error)}`);
+      } else {
+        addLog(`Weather function success: ${JSON.stringify(data)}`);
+      }
+    } catch (error) {
+      addLog(`Weather function exception: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const clearLogs = () => {
+    setLogs([]);
   };
 
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle>Location & Weather Debug</CardTitle>
+          <CardTitle>Location & Weather Debug Panel</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button onClick={testApiKeys}>Test API Connections</Button>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={testGoogleMapsScript} variant="outline">
+              Test Google Maps
+            </Button>
+            <Button onClick={testWeatherAPI} variant="outline">
+              Test Weather API
+            </Button>
+            <Button onClick={testSupabaseFunctions} variant="outline">
+              Test Supabase Functions
+            </Button>
+            <Button onClick={clearLogs} variant="outline">
+              Clear Logs
+            </Button>
+          </div>
+          
+          <div className="p-2 bg-muted rounded text-sm">
+            <p><strong>Google Maps Status:</strong> {isGoogleMapsLoaded ? '✅ Loaded' : '❌ Not Loaded'}</p>
+            <p><strong>Window.google:</strong> {typeof window !== 'undefined' && window.google ? '✅ Available' : '❌ Not Available'}</p>
+          </div>
           
           <LocationInput
             value={location}
             onChange={setLocation}
             onLocationSelect={handleLocationSelect}
             label="Test Location Input"
-            placeholder="Try entering a postcode like 'SW1A 1AA'"
+            placeholder="Try entering a postcode like 'SW1A 1AA' or 'DD5 2BG'"
             weather={weather}
           />
           
@@ -84,11 +155,18 @@ export const LocationDebug = () => {
           )}
           
           <div className="space-y-2">
-            <h4 className="font-medium">Debug Logs:</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium">Debug Logs:</h4>
+              <span className="text-sm text-muted-foreground">({logs.length} entries)</span>
+            </div>
             <div className="bg-black text-green-400 p-2 rounded text-sm max-h-48 overflow-y-auto font-mono">
-              {logs.map((log, index) => (
-                <div key={index}>{log}</div>
-              ))}
+              {logs.length === 0 ? (
+                <div className="text-gray-500">No logs yet. Click the test buttons above to start debugging.</div>
+              ) : (
+                logs.map((log, index) => (
+                  <div key={index}>{log}</div>
+                ))
+              )}
             </div>
           </div>
         </CardContent>
