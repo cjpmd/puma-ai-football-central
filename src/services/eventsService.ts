@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Event } from '@/types';
 
@@ -24,7 +23,7 @@ export const eventsService = {
         is_home: eventData.isHome,
         kit_selection: eventData.kitSelection,
         teams: eventData.teams,  // Save the teams array
-        facility_id: eventData.facilityId,
+        facility_id: eventData.facilityId || null, // Convert empty string to null
         meeting_time: eventData.meetingTime,
         notes: eventData.notes,
         training_notes: eventData.trainingNotes
@@ -67,7 +66,7 @@ export const eventsService = {
         is_home: eventData.isHome,
         kit_selection: eventData.kitSelection,
         teams: eventData.teams,  // Save the teams array
-        facility_id: eventData.facilityId,
+        facility_id: eventData.facilityId || null, // Convert empty string to null
         meeting_time: eventData.meetingTime,
         notes: eventData.notes,
         training_notes: eventData.trainingNotes
