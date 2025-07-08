@@ -263,26 +263,34 @@ export interface Event {
   teamId: string;
   title: string;
   description?: string;
-  type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   date: string;
   startTime?: string;
   endTime?: string;
   location?: string;
   notes?: string;
-  gameFormat?: GameFormat;
-  gameDuration?: number; // Added game duration in minutes
+  type: 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly';
   opponent?: string;
   isHome?: boolean;
-  facilityId?: string;
-  trainingNotes?: string;
+  gameFormat?: GameFormat;
+  gameDuration?: number;
   scores?: {
     home: number;
     away: number;
   };
-  playerOfTheMatchId?: string;
+  playerOfMatchId?: string;
+  coachNotes?: string;
+  staffNotes?: string;
+  trainingNotes?: string;
+  facilityId?: string;
+  facilityBookingId?: string;
   meetingTime?: string;
+  totalMinutes?: number;
   teams?: string[];
   kitSelection?: 'home' | 'away' | 'training';
+  createdAt?: string;
+  updatedAt?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export type EquipmentItem = {

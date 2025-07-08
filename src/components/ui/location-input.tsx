@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { MapPin, Cloud, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 interface LocationInputProps {
   value: string;
@@ -18,6 +19,7 @@ interface LocationInputProps {
     description: string;
     icon: string;
   } | null;
+  className?: string;
 }
 
 export const LocationInput: React.FC<LocationInputProps> = ({
@@ -27,7 +29,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   label = "Location",
   placeholder = "Enter location or postcode",
   required = false,
-  weather
+  weather,
+  className
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
@@ -133,7 +136,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   }, [isLoaded, onChange, onLocationSelect]);
 
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       <Label htmlFor="location" className="flex items-center gap-2">
         <MapPin className="h-4 w-4" />
         {label}

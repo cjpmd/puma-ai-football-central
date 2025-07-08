@@ -288,11 +288,15 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       scores: (formData.type === 'fixture' || formData.type === 'friendly') && (formData.homeScore > 0 || formData.awayScore > 0) 
         ? { home: formData.homeScore, away: formData.awayScore }
         : undefined,
-      playerOfTheMatchId: formData.playerOfTheMatchId || undefined,
-      kitSelection: formData.kitSelection,
-      latitude: formData.latitude || coordinates?.lat,
-      longitude: formData.longitude || coordinates?.lng
+      playerOfMatchId: formData.playerOfTheMatchId || undefined
     };
+
+    if (formData.latitude && formData.longitude) {
+      // @ts-ignore - Add these properties even if they're not in the type
+      eventData.latitude = formData.latitude;
+      // @ts-ignore
+      eventData.longitude = formData.longitude;
+    }
 
     console.log('Final event data being submitted:', eventData);
     onSubmit(eventData);
