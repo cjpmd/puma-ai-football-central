@@ -75,7 +75,17 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
         .order('period_number', { ascending: true });
       
       if (error) throw error;
-      return data || [];
+      
+      // Transform the data to ensure proper types
+      return (data || []).map(selection => ({
+        ...selection,
+        player_positions: Array.isArray(selection.player_positions) 
+          ? selection.player_positions 
+          : JSON.parse(selection.player_positions as string || '[]'),
+        substitute_players: Array.isArray(selection.substitute_players)
+          ? selection.substitute_players
+          : JSON.parse(selection.substitute_players as string || '[]')
+      })) as EventSelection[];
     }
   });
 
@@ -106,6 +116,20 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
       
       if (error) throw error;
       return data;
+    }
+  });
+
+  // Load performance categories
+  const { data: performanceCategories = [] } = useQuery({
+    queryKey: ['performance-categories', event.team_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .eq('team_id', event.team_id);
+      
+      if (error) throw error;
+      return data || [];
     }
   });
 
@@ -192,7 +216,10 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
   const getPerformanceCategory = (teamNumber: number) => {
     const selections = teamSelections[teamNumber] || [];
     const selection = selections[0];
-    return selection?.performance_categories?.name || 'No Category';
+    if (!selection?.performance_category_id) return 'No Category';
+    
+    const category = performanceCategories.find(cat => cat.id === selection.performance_category_id);
+    return category?.name || 'No Category';
   };
 
   return (
