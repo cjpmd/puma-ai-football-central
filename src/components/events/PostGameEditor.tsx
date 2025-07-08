@@ -74,11 +74,12 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         }
       });
 
-      // Update event with unique teams and properly cast event_type
+      // Update event with unique teams and properly handle types
       const teamsArray = Array.from(uniqueTeams.values());
       const updatedEventData: DatabaseEvent = {
         ...eventData,
         event_type: eventData.event_type as DatabaseEvent['event_type'],
+        scores: eventData.scores as DatabaseEvent['scores'],
         teams: teamsArray
       };
 
