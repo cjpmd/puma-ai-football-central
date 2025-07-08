@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Event } from '@/types';
 
@@ -85,6 +86,23 @@ export const eventsService = {
       return data;
     } catch (error) {
       console.error('Error updating event:', error);
+      throw error;
+    }
+  },
+  
+  async getEventById(eventId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('events')
+        .select('*')
+        .eq('id', eventId)
+        .single();
+        
+      if (error) throw error;
+      
+      return data;
+    } catch (error) {
+      console.error('Error fetching event:', error);
       throw error;
     }
   },
