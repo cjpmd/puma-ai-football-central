@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -82,11 +81,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Initialize teams based on event.teams length or default to 1
+  // Initialize teams based on event.teams length when main squad is loaded
   useEffect(() => {
-    if (mainSquadPlayers.length > 0 && teamSelections.length === 0) {
-      // Determine number of teams from event.teams if available
-      const teamCount = event.teams?.length || 1;
+    if (mainSquadPlayers.length > 0) {
+      // Determine number of teams from event.teams if available, otherwise default to 1
+      const eventTeamsArray = event.teams as any[] || [];
+      const teamCount = Math.max(eventTeamsArray.length, 1);
+      
+      console.log('Initializing team selections with count:', teamCount, 'from event.teams:', eventTeamsArray);
       
       // Create initial team selections
       const initialTeamSelections: TeamSelection[] = [];
@@ -101,14 +103,15 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         });
       }
       
+      console.log('Setting initial team selections:', initialTeamSelections);
       setTeamSelections(initialTeamSelections);
     }
-  }, [mainSquadPlayers, event.teams]);
+  }, [mainSquadPlayers, event.teams, event.id]); // Added event.teams and event.id as dependencies
 
   // Load existing team selections
   useEffect(() => {
     const loadExistingSelections = async () => {
-      if (!event.id || !teamId) return;
+      if (!event.id || !teamId || teamSelections.length === 0) return;
       
       try {
         console.log('Loading existing selections for event:', event.id, 'team:', teamId);
@@ -137,44 +140,39 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             return acc;
           }, {} as Record<number, any[]>);
 
-          const loadedTeamSelections: TeamSelection[] = [];
+          const loadedTeamSelections: TeamSelection[] = [...teamSelections];
 
           for (const [teamNum, selections] of Object.entries(groupedSelections)) {
-            const periods: FormationPeriod[] = selections.map(selection => ({
-              id: `period-${selection.period_number}`,
-              periodNumber: selection.period_number,
-              formation: selection.formation,
-              duration: selection.duration_minutes,
-              positions: (selection.player_positions || []).map((pos: any, index: number) => ({
-                id: `position-${index}`,
-                positionName: pos.position,
-                abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
-                positionGroup: pos.positionGroup || 'midfielder',
-                x: pos.x || 50,
-                y: pos.y || 50,
-                playerId: pos.playerId || pos.player_id
-              })),
-              substitutes: selection.substitute_players || [],
-              captainId: selection.captain_id || undefined
-            }));
+            const teamIndex = parseInt(teamNum) - 1;
+            if (teamIndex >= 0 && teamIndex < loadedTeamSelections.length) {
+              const periods: FormationPeriod[] = selections.map(selection => ({
+                id: `period-${selection.period_number}`,
+                periodNumber: selection.period_number,
+                formation: selection.formation,
+                duration: selection.duration_minutes,
+                positions: (selection.player_positions || []).map((pos: any, index: number) => ({
+                  id: `position-${index}`,
+                  positionName: pos.position,
+                  abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
+                  positionGroup: pos.positionGroup || 'midfielder',
+                  x: pos.x || 50,
+                  y: pos.y || 50,
+                  playerId: pos.playerId || pos.player_id
+                })),
+                substitutes: selection.substitute_players || [],
+                captainId: selection.captain_id || undefined
+              }));
 
-            // For team 1, use main squad. For additional teams, start with empty squad
-            let squadForTeam: SquadPlayer[] = [];
-            if (parseInt(teamNum) === 1) {
-              squadForTeam = mainSquadPlayers;
+              loadedTeamSelections[teamIndex] = {
+                ...loadedTeamSelections[teamIndex],
+                periods,
+                globalCaptainId: periods[0]?.captainId,
+                performanceCategory: selections[0]?.performance_category_id || 'none'
+              };
             }
-
-            loadedTeamSelections.push({
-              teamNumber: parseInt(teamNum),
-              squadPlayers: squadForTeam,
-              periods,
-              globalCaptainId: periods[0]?.captainId,
-              performanceCategory: selections[0]?.performance_category_id || 'none'
-            });
           }
 
-          // Sort by team number
-          loadedTeamSelections.sort((a, b) => a.teamNumber - b.teamNumber);
+          console.log('Updated team selections with existing data:', loadedTeamSelections);
           setTeamSelections(loadedTeamSelections);
         }
       } catch (error) {
@@ -183,10 +181,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       }
     };
 
-    if (mainSquadPlayers.length > 0) {
-      loadExistingSelections();
-    }
-  }, [event.id, teamId, mainSquadPlayers]);
+    loadExistingSelections();
+  }, [event.id, teamId, teamSelections.length]); // Only run when teamSelections are initialized
 
   const addTeam = () => {
     const newTeamNumber = teamSelections.length + 1;
