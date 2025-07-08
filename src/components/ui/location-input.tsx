@@ -151,8 +151,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   useEffect(() => {
     return () => {
       if (autocompleteRef.current) {
-        // Clean up listeners
-        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        // Simply set the reference to null for cleanup
         autocompleteRef.current = null;
       }
     };
