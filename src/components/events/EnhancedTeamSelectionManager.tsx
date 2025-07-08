@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import {
   Dialog,
@@ -44,20 +45,37 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     setError(null);
 
     try {
+      // Query event_selections instead of team_selections
       const { data, error } = await supabase
-        .from('team_selections')
+        .from('event_selections')
         .select('*')
-        .eq('event_id', event.id)
-        .single();
+        .eq('event_id', event.id);
 
       if (error) {
-        console.error('Error loading team selection:', error);
+        console.error('Error loading event selections:', error);
         setError(error.message);
         // Initialize a default team selection if none exists
         setTeamSelection(createDefaultTeamSelection(event.id, event.team_id));
       } else {
-        if (data) {
-          setTeamSelection(data as TeamSelectionState);
+        if (data && data.length > 0) {
+          // Convert event_selections data to TeamSelectionState format
+          const selectionData = data[0];
+          const convertedSelection: TeamSelectionState = {
+            teamId: selectionData.team_id,
+            eventId: selectionData.event_id,
+            squadPlayers: [], // Will need to be populated from actual player data
+            periods: [{
+              id: selectionData.id,
+              periodNumber: selectionData.period_number || 1,
+              formation: selectionData.formation,
+              duration: selectionData.duration_minutes || 90,
+              positions: [], // Will need to be populated from player_positions
+              substitutes: [], // Will need to be populated from substitutes
+              captainId: selectionData.captain_id
+            }],
+            globalCaptainId: selectionData.captain_id,
+          };
+          setTeamSelection(convertedSelection);
         } else {
           // If no data is found, initialize a default team selection
           setTeamSelection(createDefaultTeamSelection(event.id, event.team_id));
@@ -96,14 +114,27 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     setError(null);
 
     try {
+      // Convert TeamSelectionState back to event_selections format
+      const eventSelectionData = {
+        event_id: teamSelection.eventId,
+        team_id: teamSelection.teamId,
+        formation: teamSelection.periods[0]?.formation || '4-4-2',
+        duration_minutes: teamSelection.periods[0]?.duration || 90,
+        period_number: teamSelection.periods[0]?.periodNumber || 1,
+        captain_id: teamSelection.globalCaptainId,
+        player_positions: [],
+        substitutes: [],
+        staff_selection: []
+      };
+
       const { data, error } = await supabase
-        .from('team_selections')
-        .upsert(teamSelection, { onConflict: 'event_id' })
+        .from('event_selections')
+        .upsert(eventSelectionData, { onConflict: 'event_id,team_id,period_number' })
         .select()
         .single();
 
       if (error) {
-        console.error('Error saving team selection:', error);
+        console.error('Error saving event selection:', error);
         setError(error.message);
         toast({
           title: 'Error',
@@ -115,7 +146,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           title: 'Success',
           description: 'Team selection saved successfully.',
         });
-        setTeamSelection(data as TeamSelectionState);
+        // Update state with saved data
+        loadTeamSelection();
       }
     } finally {
       setLoading(false);
@@ -170,11 +202,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               {teamSelection && (
                 <>
                   <TeamSelector
-                    selectedTeams={teamSelection.periods.map(period => period.teamId)}
+                    selectedTeams={teamSelection.periods.map(period => period.id)}
                     onTeamsChange={(teams) => {
                       const newPeriods = teams.map((teamId, index) => ({
                         ...teamSelection.periods[index],
-                        teamId: teamId,
+                        id: teamId,
                       }));
                       handleTeamSelectionChange({ ...teamSelection, periods: newPeriods });
                     }}
