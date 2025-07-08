@@ -110,9 +110,14 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           componentRestrictions: { country: 'gb' }
         });
 
-        autocompleteRef.current.addListener('place_changed', () => {
+        const autocomplete = autocompleteRef.current;
+
+        // Use the newer addEventListener method instead of addListener
+        const placeChangedListener = () => {
           console.log('[LocationInput] Place changed event triggered');
-          const place = autocompleteRef.current?.getPlace();
+          const place = autocomplete.getPlace();
+          
+          console.log('[LocationInput] Selected place:', place);
           
           if (place && place.geometry && place.geometry.location) {
             const lat = place.geometry.location.lat();
@@ -122,10 +127,17 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             console.log('[LocationInput] Location selected:', { lat, lng, address });
             onChange(address);
             onLocationSelect?.({ lat, lng, address });
+          } else if (place && place.formatted_address) {
+            // Handle case where geometry might not be available but we have an address
+            console.log('[LocationInput] Place selected without geometry:', place.formatted_address);
+            onChange(place.formatted_address);
           } else {
-            console.warn('[LocationInput] Place selected but no geometry available');
+            console.warn('[LocationInput] Place selected but no usable data available');
           }
-        });
+        };
+
+        // Add the event listener
+        autocomplete.addListener('place_changed', placeChangedListener);
         
         console.log('[LocationInput] Autocomplete initialized successfully');
       } catch (error) {
@@ -134,6 +146,17 @@ export const LocationInput: React.FC<LocationInputProps> = ({
       }
     }
   }, [isLoaded, onChange, onLocationSelect]);
+
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (autocompleteRef.current) {
+        // Clean up listeners
+        google.maps.event.clearInstanceListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <div className={cn("space-y-2", className)}>

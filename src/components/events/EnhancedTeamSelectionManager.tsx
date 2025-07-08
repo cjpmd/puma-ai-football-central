@@ -81,14 +81,28 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Initialize teams based on event.teams length when main squad is loaded
+  // Initialize teams based on event data when main squad is loaded
   useEffect(() => {
     if (mainSquadPlayers.length > 0) {
-      // Determine number of teams from event.teams if available, otherwise default to 1
-      const eventTeamsArray = event.teams as any[] || [];
-      const teamCount = Math.max(eventTeamsArray.length, 1);
+      // Determine number of teams from event data
+      let teamCount = 1;
       
-      console.log('Initializing team selections with count:', teamCount, 'from event.teams:', eventTeamsArray);
+      // Check if event.teams exists and is an array
+      if (event.teams && Array.isArray(event.teams)) {
+        teamCount = Math.max(event.teams.length, 1);
+      } else if (event.teams && typeof event.teams === 'string') {
+        // Handle case where teams might be stored as a string
+        try {
+          const parsedTeams = JSON.parse(event.teams);
+          if (Array.isArray(parsedTeams)) {
+            teamCount = Math.max(parsedTeams.length, 1);
+          }
+        } catch (e) {
+          console.warn('Could not parse teams data:', event.teams);
+        }
+      }
+      
+      console.log('Initializing team selections with count:', teamCount, 'from event data:', event.teams);
       
       // Create initial team selections
       const initialTeamSelections: TeamSelection[] = [];
@@ -106,7 +120,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       console.log('Setting initial team selections:', initialTeamSelections);
       setTeamSelections(initialTeamSelections);
     }
-  }, [mainSquadPlayers, event.teams, event.id]); // Added event.teams and event.id as dependencies
+  }, [mainSquadPlayers, event.teams, event.id]);
 
   // Load existing team selections
   useEffect(() => {
@@ -182,7 +196,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     };
 
     loadExistingSelections();
-  }, [event.id, teamId, teamSelections.length]); // Only run when teamSelections are initialized
+  }, [event.id, teamId, teamSelections.length]);
 
   const addTeam = () => {
     const newTeamNumber = teamSelections.length + 1;
