@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,6 +12,7 @@ import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSe
 import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { EventsGridView } from '@/components/events/EventsGridView';
 import { CalendarGridView } from '@/components/events/CalendarGridView';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 
@@ -159,238 +159,240 @@ export default function CalendarEvents() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <DashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
             <p>Loading events...</p>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   const eventTypes = Array.from(new Set(events.map(e => e.event_type)));
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Calendar & Events
-              </CardTitle>
-              <CardDescription>
-                Manage your team's schedule and events
-              </CardDescription>
+    <DashboardLayout>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Calendar & Events
+                </CardTitle>
+                <CardDescription>
+                  Manage your team's schedule and events
+                </CardDescription>
+              </div>
+              <Button onClick={() => setShowEventForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Event
+              </Button>
             </div>
-            <Button onClick={() => setShowEventForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Event
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            {/* View Mode Selector */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">View:</span>
-              <div className="flex rounded-lg border">
-                <Button
-                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('grid')}
-                  className="rounded-r-none"
-                >
-                  <Grid3X3 className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('calendar')}
-                  className="rounded-none border-x"
-                >
-                  <Calendar className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'default' : 'ghost'}
-                  size="sm"
-                  onClick={() => setViewMode('list')}
-                  className="rounded-l-none"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              {/* View Mode Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">View:</span>
+                <div className="flex rounded-lg border">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="rounded-r-none"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('calendar')}
+                    className="rounded-none border-x"
+                  >
+                    <Calendar className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="rounded-l-none"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Filters */}
+              <div className="flex gap-4 flex-1">
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedEventType} onValueChange={setSelectedEventType}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {eventTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            {/* Filters */}
-            <div className="flex gap-4 flex-1">
-              <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by team" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Teams</SelectItem>
-                  {teams.map((team) => (
-                    <SelectItem key={team.id} value={team.id}>
-                      {team.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={selectedEventType} onValueChange={setSelectedEventType}>
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  {eventTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type.charAt(0).toUpperCase() + type.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Event Count */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
             </div>
-          </div>
-
-          {/* Event Count */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Events Display */}
-      {filteredEvents.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold mb-2">No Events Found</h3>
-            <p className="text-muted-foreground mb-4">
-              {events.length === 0 
-                ? "You haven't created any events yet. Get started by adding your first event!"
-                : "No events match your current filters. Try adjusting your search criteria."
-              }
-            </p>
-            <Button onClick={() => setShowEventForm(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Your First Event
-            </Button>
           </CardContent>
         </Card>
-      ) : (
-        <>
-          {viewMode === 'grid' && (
-            <EventsGridView
-              events={filteredEvents}
-              onEditEvent={handleEditEvent}
-              onTeamSelection={handleTeamSelection}
-              onPostGameEdit={handlePostGameEdit}
-              onDeleteEvent={handleDeleteEvent}
-              onScoreEdit={handleScoreEdit}
-            />
-          )}
-          
-          {viewMode === 'calendar' && (
-            <CalendarGridView
-              events={filteredEvents}
-              onEditEvent={handleEditEvent}
-              onTeamSelection={handleTeamSelection}
-              onPostGameEdit={handlePostGameEdit}
-              onDeleteEvent={handleDeleteEvent}
-            />
-          )}
-          
-          {viewMode === 'list' && (
-            <div className="space-y-4">
-              {filteredEvents.map((event) => (
-                <Card key={event.id}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold">{event.title}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {new Date(event.date).toLocaleDateString()} 
-                          {event.start_time && ` at ${event.start_time}`}
-                        </p>
-                        {event.location && (
-                          <p className="text-sm text-muted-foreground">{event.location}</p>
-                        )}
+
+        {/* Events Display */}
+        {filteredEvents.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Events Found</h3>
+              <p className="text-muted-foreground mb-4">
+                {events.length === 0 
+                  ? "You haven't created any events yet. Get started by adding your first event!"
+                  : "No events match your current filters. Try adjusting your search criteria."
+                }
+              </p>
+              <Button onClick={() => setShowEventForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Event
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {viewMode === 'grid' && (
+              <EventsGridView
+                events={filteredEvents}
+                onEditEvent={handleEditEvent}
+                onTeamSelection={handleTeamSelection}
+                onPostGameEdit={handlePostGameEdit}
+                onDeleteEvent={handleDeleteEvent}
+                onScoreEdit={handleScoreEdit}
+              />
+            )}
+            
+            {viewMode === 'calendar' && (
+              <CalendarGridView
+                events={filteredEvents}
+                onEditEvent={handleEditEvent}
+                onTeamSelection={handleTeamSelection}
+                onPostGameEdit={handlePostGameEdit}
+                onDeleteEvent={handleDeleteEvent}
+              />
+            )}
+            
+            {viewMode === 'list' && (
+              <div className="space-y-4">
+                {filteredEvents.map((event) => (
+                  <Card key={event.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">{event.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(event.date).toLocaleDateString()} 
+                            {event.start_time && ` at ${event.start_time}`}
+                          </p>
+                          {event.location && (
+                            <p className="text-sm text-muted-foreground">{event.location}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditEvent(event)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTeamSelection(event)}
+                          >
+                            Team
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditEvent(event)}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleTeamSelection(event)}
-                        >
-                          Team
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
-      {/* Event Form Modal */}
-      {showEventForm && (
-        <EventForm
-          event={convertToEventFormat(selectedEvent)}
-          teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
-          onSubmit={(eventData) => {
-            setShowEventForm(false);
-            setSelectedEvent(null);
-            loadEvents();
-          }}
-          onCancel={() => {
-            setShowEventForm(false);
-            setSelectedEvent(null);
-          }}
-        />
-      )}
+        {/* Event Form Modal */}
+        {showEventForm && (
+          <EventForm
+            event={convertToEventFormat(selectedEvent)}
+            teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
+            onSubmit={(eventData) => {
+              setShowEventForm(false);
+              setSelectedEvent(null);
+              loadEvents();
+            }}
+            onCancel={() => {
+              setShowEventForm(false);
+              setSelectedEvent(null);
+            }}
+          />
+        )}
 
-      {/* Team Selection Modal */}
-      {selectedEvent && (
-        <EnhancedTeamSelectionManager
-          event={selectedEvent}
-          isOpen={showTeamSelection}
-          onClose={() => {
-            setShowTeamSelection(false);
-            setSelectedEvent(null);
-          }}
-        />
-      )}
+        {/* Team Selection Modal */}
+        {selectedEvent && (
+          <EnhancedTeamSelectionManager
+            event={selectedEvent}
+            isOpen={showTeamSelection}
+            onClose={() => {
+              setShowTeamSelection(false);
+              setSelectedEvent(null);
+            }}
+          />
+        )}
 
-      {/* Post Game Edit Modal */}
-      {selectedEvent && (
-        <PostGameEditor
-          eventId={selectedEvent.id}
-          isOpen={showPostGameEdit}
-          onClose={() => {
-            setShowPostGameEdit(false);
-            setSelectedEvent(null);
-            loadEvents();
-          }}
-        />
-      )}
-    </div>
+        {/* Post Game Edit Modal */}
+        {selectedEvent && (
+          <PostGameEditor
+            eventId={selectedEvent.id}
+            isOpen={showPostGameEdit}
+            onClose={() => {
+              setShowPostGameEdit(false);
+              setSelectedEvent(null);
+              loadEvents();
+            }}
+          />
+        )}
+      </div>
+    </DashboardLayout>
   );
 }
