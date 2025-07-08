@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,7 @@ import { CalendarGridView } from '@/components/events/CalendarGridView';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
+import { eventsService } from '@/services/eventsService';
 
 type ViewMode = 'grid' | 'calendar' | 'list';
 
@@ -96,13 +98,8 @@ export default function CalendarEvents() {
 
   const handleDeleteEvent = async (eventId: string) => {
     try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId);
-
-      if (error) throw error;
-
+      await eventsService.deleteEvent(eventId);
+      
       toast({
         title: 'Success',
         description: 'Event deleted successfully',
@@ -154,8 +151,54 @@ export default function CalendarEvents() {
       teams: dbEvent.teams,
       kitSelection: dbEvent.kit_selection as 'home' | 'away' | 'training',
       createdAt: dbEvent.created_at,
-      updatedAt: dbEvent.updated_at
+      updatedAt: dbEvent.updated_at,
+      latitude: dbEvent.latitude,
+      longitude: dbEvent.longitude
     };
+  };
+
+  const handleFormSubmit = async (eventData: any) => {
+    try {
+      setLoading(true);
+      
+      if (selectedEvent) {
+        // Update existing event
+        await eventsService.updateEvent({
+          id: selectedEvent.id,
+          ...eventData,
+          team_id: eventData.teamId,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Event updated successfully',
+        });
+      } else {
+        // Create new event
+        await eventsService.createEvent({
+          ...eventData,
+          team_id: eventData.teamId,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Event created successfully',
+        });
+      }
+      
+      setShowEventForm(false);
+      setSelectedEvent(null);
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error submitting event:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save event',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (loading) {
@@ -354,7 +397,7 @@ export default function CalendarEvents() {
 
         {/* Event Form Modal */}
         <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {selectedEvent ? 'Edit Event' : 'Create New Event'}
@@ -363,11 +406,7 @@ export default function CalendarEvents() {
             <EventForm
               event={convertToEventFormat(selectedEvent)}
               teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
-              onSubmit={(eventData) => {
-                setShowEventForm(false);
-                setSelectedEvent(null);
-                loadEvents();
-              }}
+              onSubmit={handleFormSubmit}
               onCancel={() => {
                 setShowEventForm(false);
                 setSelectedEvent(null);
