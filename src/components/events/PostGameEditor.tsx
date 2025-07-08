@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -75,10 +74,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
         }
       });
 
-      // Update event with unique teams
+      // Update event with unique teams and properly cast event_type
       const teamsArray = Array.from(uniqueTeams.values());
-      const updatedEventData = {
+      const updatedEventData: DatabaseEvent = {
         ...eventData,
+        event_type: eventData.event_type as DatabaseEvent['event_type'],
         teams: teamsArray
       };
 
