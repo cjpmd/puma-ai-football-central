@@ -198,9 +198,9 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({ event, onClo
       {/* Page 1: Cover Page */}
       <div className="page-break min-h-screen p-8 flex flex-col">
         <div className="text-center mb-8">
-          {eventTeam?.logo_url && (
+          {eventTeam?.logoUrl && (
             <img 
-              src={eventTeam.logo_url} 
+              src={eventTeam.logoUrl} 
               alt="Club Logo" 
               className="h-24 w-24 mx-auto mb-6 object-contain"
             />
