@@ -1,0 +1,110 @@
+
+/* Match Day Pack Print Styles */
+@media print {
+  /* Hide all non-essential elements */
+  .print\\:hidden {
+    display: none !important;
+  }
+  
+  /* Page break handling */
+  .page-break {
+    page-break-before: always;
+    break-before: page;
+  }
+  
+  .page-break:first-child {
+    page-break-before: auto;
+    break-before: auto;
+  }
+  
+  /* A4 page setup */
+  @page {
+    size: A4;
+    margin: 0.5in;
+  }
+  
+  /* Ensure content fits on page */
+  body {
+    font-size: 12pt;
+    line-height: 1.4;
+  }
+  
+  /* Remove borders and shadows from form elements */
+  .print\\:border-none {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  
+  /* Make text areas look like plain text */
+  textarea {
+    resize: none;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Ensure buttons are hidden */
+  button {
+    display: none !important;
+  }
+  
+  /* Card styling for print */
+  .card {
+    border: 1px solid #e5e7eb !important;
+    box-shadow: none !important;
+    margin-bottom: 1rem;
+  }
+  
+  /* Prevent page breaks inside cards */
+  .card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  
+  /* Grid adjustments for print */
+  .grid {
+    gap: 0.5rem !important;
+  }
+  
+  /* Weather icon sizing */
+  .weather-icon {
+    max-width: 48px !important;
+    max-height: 48px !important;
+  }
+  
+  /* Formation grid styling */
+  .formation-grid {
+    background: #f9fafb !important;
+    border: 2px solid #d1d5db !important;
+  }
+  
+  /* Handwritten areas */
+  .handwritten-area {
+    min-height: 2in;
+    border: 2px dashed #9ca3af !important;
+  }
+  
+  /* Remove interactive states */
+  *:hover,
+  *:focus,
+  *:active {
+    background: inherit !important;
+    border-color: inherit !important;
+  }
+}
+
+/* Screen-only styles */
+@media screen {
+  .match-day-pack {
+    background: #f8fafc;
+  }
+  
+  .page-break {
+    border-bottom: 2px dashed #e5e7eb;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+  }
+}

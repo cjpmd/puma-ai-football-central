@@ -40,7 +40,19 @@ export class WeatherService {
         return null;
       }
 
-      return data;
+      // Ensure we have all required fields
+      if (data && typeof data.temp === 'number') {
+        return {
+          temp: data.temp,
+          description: data.description || 'Unknown',
+          icon: data.icon || '01d',
+          humidity: data.humidity || 0,
+          windSpeed: data.windSpeed || data.wind_speed || 0,
+          feels_like: data.feels_like || data.temp
+        };
+      }
+
+      return null;
     } catch (error) {
       console.error('Error fetching weather forecast:', error);
       return null;
