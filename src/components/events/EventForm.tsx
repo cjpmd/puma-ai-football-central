@@ -5,18 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { LocationInput } from '@/components/ui/location-input';
 import { WeatherService } from '@/services/weatherService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Event, GameFormat } from '@/types';
-import { CalendarIcon, Clock } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { TeamSelector } from './TeamSelector';
 
 interface EventFormProps {
   event?: Event | null;
@@ -53,7 +53,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const { teams } = useAuth();
   const [facilities, setFacilities] = useState<Facility[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [numberOfTeams, setNumberOfTeams] = useState(1);
+  const [numberOfTeams, setNumberOfTeams] = useState(event?.teams?.length || 1);
+  const [selectedTeams, setSelectedTeams] = useState<string[]>(event?.teams || [teamId]);
   const [teamTimeSlots, setTeamTimeSlots] = useState<TeamTimeSlot[]>([
     { teamNumber: 1, meetingTime: '09:00', startTime: '10:00', endTime: '11:30' }
   ]);
@@ -79,7 +80,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     notes: event?.notes || '',
     kitSelection: event?.kitSelection || 'home' as 'home' | 'away' | 'training',
     latitude: event?.latitude,
-    longitude: event?.longitude
+    longitude: event?.longitude,
   });
 
   useEffect(() => {
@@ -92,8 +93,10 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     // Update form data when team defaults are loaded or when editing an existing event
     if (event) {
       console.log('Editing existing event, using event-specific values');
-      const eventTeams = (event as any).teams || [teamId];
+      const eventTeams = event.teams || [teamId];
+      setSelectedTeams(eventTeams);
       setNumberOfTeams(eventTeams.length || 1);
+      
       const initialSlots = eventTeams.map((_: any, index: number) => ({
         teamNumber: index + 1,
         meetingTime: event.meetingTime || '09:00',
@@ -219,6 +222,16 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const handleNumberOfTeamsChange = (newNumber: number) => {
     setNumberOfTeams(newNumber);
     
+    // Create an array of team IDs
+    // For the first team, use the actual teamId
+    // For additional teams, we'll use teamId as a base identifier
+    const teams: string[] = [teamId];
+    for (let i = 1; i < newNumber; i++) {
+      teams.push(teamId);
+    }
+    
+    setSelectedTeams(teams);
+    
     const newSlots: TeamTimeSlot[] = [];
     for (let i = 1; i <= newNumber; i++) {
       const existingSlot = teamTimeSlots.find(slot => slot.teamNumber === i);
@@ -235,6 +248,11 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       }
     }
     setTeamTimeSlots(newSlots);
+  };
+
+  const handleTeamsChange = (teams: string[]) => {
+    setSelectedTeams(teams);
+    setNumberOfTeams(teams.length);
   };
 
   const updateTeamTimeSlot = (teamNumber: number, field: keyof Omit<TeamTimeSlot, 'teamNumber'>, value: string) => {
@@ -268,22 +286,21 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     const primaryTimeSlot = teamTimeSlots[0];
     
     console.log('Submitting event with game duration:', formData.gameDuration);
+    console.log('Teams selected:', selectedTeams);
     
     const eventData: Partial<Event> = {
       ...formData,
       teamId,
-      teams: numberOfTeams > 1 ? Array(numberOfTeams).fill(teamId) : [teamId],
+      teams: selectedTeams,
       meetingTime: primaryTimeSlot.meetingTime,
       startTime: primaryTimeSlot.startTime || formData.startTime,
       endTime: primaryTimeSlot.endTime || formData.endTime,
       opponent: requiresOpponent ? formData.opponent : undefined,
-      type: formData.type, // Make sure type is explicitly set
+      type: formData.type as any, // Make sure type is explicitly set
     };
 
     if (formData.latitude && formData.longitude) {
-      // @ts-ignore - Add these properties even if they're not in the type
       eventData.latitude = formData.latitude;
-      // @ts-ignore
       eventData.longitude = formData.longitude;
     }
 
@@ -298,94 +315,94 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   return (
     <ScrollArea className="max-h-[70vh]">
       <form onSubmit={handleSubmit} className="space-y-4 p-1">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="type" className="text-right">Event Type</Label>
-            <Select
-              value={formData.type}
-              onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as any }))}
-            >
-              <SelectTrigger className="col-span-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {eventTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="title" className="text-right">Title</Label>
-            <Input
-              id="title"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              required
-              className="col-span-2"
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="description" className="text-right">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Add event description..."
-              className="col-span-2"
-              rows={2}
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="kitSelection" className="text-right">Kit</Label>
-            <Select
-              value={formData.kitSelection}
-              onValueChange={(value: 'home' | 'away' | 'training') => {
-                setFormData(prev => ({ ...prev, kitSelection: value }));
-              }}
-            >
-              <SelectTrigger className="col-span-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {kitOptions.map((kit) => (
-                  <SelectItem key={kit} value={kit}>
-                    {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="gameFormat" className="text-right">Game Format</Label>
-            <Select
-              value={formData.gameFormat}
-              onValueChange={(value) => {
-                setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }));
-              }}
-            >
-              <SelectTrigger className="col-span-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {gameFormats.map((format) => (
-                  <SelectItem key={format} value={format}>
-                    {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="gameDuration" className="text-right">Game Duration</Label>
-            <div className="col-span-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="type" className="text-sm font-medium">Event Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as any }))}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {eventTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type.charAt(0).toUpperCase() + type.slice(1)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="title" className="text-sm font-medium">Title</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+                required
+                className="mt-1"
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="description" className="text-sm font-medium">Description</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                placeholder="Add event description..."
+                className="mt-1"
+                rows={2}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="kitSelection" className="text-sm font-medium">Kit</Label>
+              <Select
+                value={formData.kitSelection}
+                onValueChange={(value: 'home' | 'away' | 'training') => {
+                  setFormData(prev => ({ ...prev, kitSelection: value }));
+                }}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {kitOptions.map((kit) => (
+                    <SelectItem key={kit} value={kit}>
+                      {kit.charAt(0).toUpperCase() + kit.slice(1)} Kit
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="gameFormat" className="text-sm font-medium">Game Format</Label>
+              <Select
+                value={formData.gameFormat}
+                onValueChange={(value) => {
+                  setFormData(prev => ({ ...prev, gameFormat: value as GameFormat }));
+                }}
+              >
+                <SelectTrigger className="w-full mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {gameFormats.map((format) => (
+                    <SelectItem key={format} value={format}>
+                      {format} {format === teamDefaultGameFormat ? '(Team Default)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <Label htmlFor="gameDuration" className="text-sm font-medium">Game Duration</Label>
               <Input
                 id="gameDuration"
                 type="number"
@@ -397,37 +414,63 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                   setFormData(prev => ({ ...prev, gameDuration: newDuration }));
                 }}
                 placeholder={teamDefaultGameDuration.toString()}
+                className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
                 Team default: {teamDefaultGameDuration} minutes
               </p>
             </div>
+            
+            {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
+            {requiresOpponent && (
+              <div>
+                <Label htmlFor="opponent" className="text-sm font-medium">Opponent *</Label>
+                <Input
+                  id="opponent"
+                  value={formData.opponent}
+                  onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
+                  placeholder="Enter opponent name"
+                  required
+                  className="mt-1"
+                />
+              </div>
+            )}
+            
+            {/* Number of Teams selection */}
+            {requiresOpponent && (
+              <div>
+                <Label htmlFor="numberOfTeams" className="text-sm font-medium">Number of Teams</Label>
+                <Select
+                  value={numberOfTeams.toString()}
+                  onValueChange={(value) => handleNumberOfTeamsChange(parseInt(value))}
+                >
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map((num) => (
+                      <SelectItem key={num} value={num.toString()}>
+                        {num} {num === 1 ? 'Team' : 'Teams'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This will create {numberOfTeams} {numberOfTeams === 1 ? 'team' : 'teams'} in the team selection interface
+                </p>
+              </div>
+            )}
           </div>
           
-          {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
-          {requiresOpponent && (
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="opponent" className="text-right">Opponent *</Label>
-              <Input
-                id="opponent"
-                value={formData.opponent}
-                onChange={(e) => setFormData(prev => ({ ...prev, opponent: e.target.value }))}
-                placeholder="Enter opponent name"
-                required
-                className="col-span-2"
-              />
-            </div>
-          )}
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="date" className="text-right">Date</Label>
-            <div className="col-span-2">
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="date" className="text-sm font-medium">Date</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
-                    variant={"outline"}
+                    variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
+                      "w-full mt-1 justify-start text-left font-normal",
                       !date && "text-muted-foreground"
                     )}
                   >
@@ -446,98 +489,76 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                 </PopoverContent>
               </Popover>
             </div>
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="startTime" className="text-right">Start Time</Label>
-            <Input
-              id="startTime"
-              type="time"
-              value={formData.startTime}
-              onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-              className="col-span-2"
-            />
-          </div>
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="endTime" className="text-right">End Time</Label>
-            <Input
-              id="endTime"
-              type="time"
-              value={formData.endTime}
-              onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-              className="col-span-2"
-            />
-          </div>
-          
-          {/* Number of Teams selection */}
-          {requiresOpponent && (
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="numberOfTeams" className="text-right">Number of Teams</Label>
-              <Select
-                value={numberOfTeams.toString()}
-                onValueChange={(value) => handleNumberOfTeamsChange(parseInt(value))}
-              >
-                <SelectTrigger className="col-span-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>
-                      {num} {num === 1 ? 'Team' : 'Teams'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            <div>
+              <Label htmlFor="startTime" className="text-sm font-medium">Start Time</Label>
+              <Input
+                id="startTime"
+                type="time"
+                value={formData.startTime}
+                onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                className="mt-1"
+              />
             </div>
-          )}
-          
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="location" className="text-right">Location *</Label>
-            <LocationInput
-              value={formData.location}
-              onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
-              onLocationSelect={handleLocationSelect}
-              placeholder="Enter location or postcode"
-              required
-              weather={weather}
-              className="col-span-2"
-            />
-          </div>
-          
-          {facilities.length > 0 && (
-            <div className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor="facility" className="text-right">Facility</Label>
-              <Select
-                value={formData.facilityId}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value === 'none' ? '' : value }))}
-              >
-                <SelectTrigger className="col-span-2">
-                  <SelectValue placeholder="Select facility" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No facility</SelectItem>
-                  {facilities.map((facility) => (
-                    <SelectItem key={facility.id} value={facility.id}>
-                      {facility.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            
+            <div>
+              <Label htmlFor="endTime" className="text-sm font-medium">End Time</Label>
+              <Input
+                id="endTime"
+                type="time"
+                value={formData.endTime}
+                onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                className="mt-1"
+              />
             </div>
-          )}
-          
-          {/* Notes Section */}
-          <div className="grid grid-cols-3 items-center gap-4">
-            <Label htmlFor="notes" className="text-right">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Add general notes about this event..."
-              className="col-span-2"
-              rows={2}
-            />
+            
+            <div>
+              <Label htmlFor="location" className="text-sm font-medium">Location *</Label>
+              <LocationInput
+                value={formData.location}
+                onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+                onLocationSelect={handleLocationSelect}
+                placeholder="Enter location or postcode"
+                required
+                weather={weather}
+                className="mt-1"
+              />
+            </div>
+            
+            {facilities.length > 0 && (
+              <div>
+                <Label htmlFor="facility" className="text-sm font-medium">Facility</Label>
+                <Select
+                  value={formData.facilityId}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, facilityId: value === 'none' ? '' : value }))}
+                >
+                  <SelectTrigger className="w-full mt-1">
+                    <SelectValue placeholder="Select facility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No facility</SelectItem>
+                    {facilities.map((facility) => (
+                      <SelectItem key={facility.id} value={facility.id}>
+                        {facility.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {/* Notes Section */}
+            <div>
+              <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Add general notes about this event..."
+                className="mt-1"
+                rows={2}
+              />
+            </div>
           </div>
         </div>
 

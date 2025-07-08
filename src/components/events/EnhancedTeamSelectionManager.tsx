@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -81,19 +82,28 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Initialize first team with main squad
+  // Initialize teams based on event.teams length or default to 1
   useEffect(() => {
     if (mainSquadPlayers.length > 0 && teamSelections.length === 0) {
-      const initialTeam: TeamSelection = {
-        teamNumber: 1,
-        squadPlayers: mainSquadPlayers,
-        periods: [],
-        globalCaptainId: undefined,
-        performanceCategory: 'none'
-      };
-      setTeamSelections([initialTeam]);
+      // Determine number of teams from event.teams if available
+      const teamCount = event.teams?.length || 1;
+      
+      // Create initial team selections
+      const initialTeamSelections: TeamSelection[] = [];
+      
+      for (let i = 0; i < teamCount; i++) {
+        initialTeamSelections.push({
+          teamNumber: i + 1,
+          squadPlayers: i === 0 ? mainSquadPlayers : [], // Only first team gets the main squad
+          periods: [],
+          globalCaptainId: undefined,
+          performanceCategory: 'none'
+        });
+      }
+      
+      setTeamSelections(initialTeamSelections);
     }
-  }, [mainSquadPlayers]);
+  }, [mainSquadPlayers, event.teams]);
 
   // Load existing team selections
   useEffect(() => {
