@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +27,6 @@ interface EventData {
   player_of_match_id?: string;
   coach_notes?: string;
   staff_notes?: string;
-  team_id: string;
 }
 
 interface Player {
@@ -60,7 +60,6 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     if (eventId && isOpen) {
       loadEventData();
       loadPlayers();
-      loadPerformanceCategories();
     }
   }, [eventId, isOpen]);
 
@@ -68,7 +67,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     try {
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select('id, title, date, start_time, opponent, scores, player_of_match_id, coach_notes, staff_notes, team_id')
+        .select('id, title, date, start_time, opponent, scores, player_of_match_id, coach_notes, staff_notes')
         .eq('id', eventId)
         .single();
 
@@ -92,41 +91,36 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
   const loadPlayers = async () => {
     try {
-      if (!event?.team_id) return;
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('team_id')
+        .eq('id', eventId)
+        .single();
+
+      if (eventError) throw eventError;
 
       const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('id, name')
-        .eq('team_id', event.team_id)
+        .eq('team_id', eventData.team_id)
         .eq('status', 'active');
 
       if (playersError) throw playersError;
 
       setPlayers(playersData || []);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to load players',
-        variant: 'destructive',
-      });
-    }
-  };
 
-  const loadPerformanceCategories = async () => {
-    try {
-      if (!event?.team_id) return;
-
+      // Load performance categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('performance_categories')
         .select('*')
-        .eq('team_id', event.team_id);
+        .eq('team_id', eventData.team_id);
 
       if (categoriesError) throw categoriesError;
       setPerformanceCategories(categoriesData || []);
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to load performance categories',
+        description: error.message || 'Failed to load players',
         variant: 'destructive',
       });
     }
@@ -167,11 +161,6 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       setSaving(false);
     }
   };
-
-  // Don't render anything if not open
-  if (!isOpen || !event) {
-    return null;
-  }
 
   return (
     <div className="space-y-6">
@@ -216,7 +205,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
             {performanceCategories.map((category, index) => (
               <div key={category.id} className="border rounded-lg p-4">
                 <h4 className="font-medium mb-3">{category.name}</h4>
-                <div className="grid grid-cols-3 gap-4 items-end">
+                <div className="grid grid-cols-3 gap-4 items-center">
                   <div className="text-center">
                     <Label className="text-sm text-gray-600">Our Score</Label>
                     <Input
@@ -227,7 +216,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                       className="text-center text-lg font-bold h-12 mt-1"
                     />
                   </div>
-                  <div className="text-center text-gray-400 text-lg font-bold self-end pb-3">
+                  <div className="text-center text-gray-400 text-lg font-bold">
                     vs
                   </div>
                   <div className="text-center">
@@ -243,8 +232,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                 </div>
                 
                 {/* Outcome indicator */}
-                {scores[`team_${index + 1}`] !== undefined && scores[`opponent_${index + 1}`] !== undefined && 
-                 scores[`team_${index + 1}`] !== '' && scores[`opponent_${index + 1}`] !== '' && (
+                {scores[`team_${index + 1}`] !== undefined && scores[`opponent_${index + 1}`] !== undefined && (
                   <div className="text-center mt-3">
                     <Badge 
                       variant={
@@ -270,7 +258,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         ) : (
           // Single team
           <div className="mt-3">
-            <div className="grid grid-cols-3 gap-4 items-end">
+            <div className="grid grid-cols-3 gap-4 items-center">
               <div className="text-center">
                 <Label className="text-sm text-gray-600">Our Score</Label>
                 <Input
@@ -281,7 +269,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                   className="text-center text-lg font-bold h-12 mt-1"
                 />
               </div>
-              <div className="text-center text-gray-400 text-lg font-bold self-end pb-3">
+              <div className="text-center text-gray-400 text-lg font-bold">
                 vs
               </div>
               <div className="text-center">
@@ -297,8 +285,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
             </div>
             
             {/* Outcome indicator */}
-            {scores.home !== undefined && scores.away !== undefined && 
-             scores.home !== '' && scores.away !== '' && (
+            {scores.home !== undefined && scores.away !== undefined && (
               <div className="text-center mt-3">
                 <Badge 
                   variant={
@@ -359,3 +346,4 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     </div>
   );
 };
+

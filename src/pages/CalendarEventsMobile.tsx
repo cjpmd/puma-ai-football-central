@@ -111,41 +111,32 @@ export default function CalendarEventsMobile() {
     return false;
   };
 
-  const getAllTeamResults = (event: DatabaseEvent) => {
-    if (!event.scores || !isMatchType(event.event_type)) return [];
+  const getMatchResult = (event: DatabaseEvent) => {
+    if (!event.scores || !isMatchType(event.event_type)) return null;
     
-    const results = [];
-    const scoresData = event.scores as any;
+    const scores = event.scores as any;
     
-    // Check for team_1, team_2, etc. (performance category teams)
-    let teamNumber = 1;
-    while (scoresData[`team_${teamNumber}`] !== undefined) {
-      const ourScore = scoresData[`team_${teamNumber}`];
-      const opponentScore = scoresData[`opponent_${teamNumber}`];
+    // Check for team scores (performance category teams)
+    if (scores.team_1 !== undefined && scores.opponent_1 !== undefined) {
+      const ourScore = scores.team_1;
+      const opponentScore = scores.opponent_1;
       
-      let resultIcon = '';
-      if (ourScore > opponentScore) resultIcon = '🏆';
-      else if (ourScore < opponentScore) resultIcon = '❌';
-      else resultIcon = '🤝';
-      
-      results.push({ resultIcon, teamNumber });
-      teamNumber++;
+      if (ourScore > opponentScore) return { icon: '🏆', result: 'win' };
+      if (ourScore < opponentScore) return { icon: '❌', result: 'loss' };
+      return { icon: '🤝', result: 'draw' };
     }
     
-    // Fallback to home/away scores if no team scores found
-    if (results.length === 0 && scoresData.home !== undefined && scoresData.away !== undefined) {
-      const ourScore = event.is_home ? scoresData.home : scoresData.away;
-      const opponentScore = event.is_home ? scoresData.away : scoresData.home;
+    // Fallback to home/away scores
+    if (scores.home !== undefined && scores.away !== undefined) {
+      const ourScore = event.is_home ? scores.home : scores.away;
+      const opponentScore = event.is_home ? scores.away : scores.home;
       
-      let resultIcon = '';
-      if (ourScore > opponentScore) resultIcon = '🏆';
-      else if (ourScore < opponentScore) resultIcon = '❌';
-      else resultIcon = '🤝';
-      
-      results.push({ resultIcon, teamNumber: 1 });
+      if (ourScore > opponentScore) return { icon: '🏆', result: 'win' };
+      if (ourScore < opponentScore) return { icon: '❌', result: 'loss' };
+      return { icon: '🤝', result: 'draw' };
     }
     
-    return results;
+    return null;
   };
 
   const getAllTeamScores = (event: DatabaseEvent) => {
@@ -314,7 +305,7 @@ export default function CalendarEventsMobile() {
                   const isEventToday = isToday(eventDate);
                   const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
                   const eventNeedsSetup = needsSetup(event);
-                  const teamResults = getAllTeamResults(event);
+                  const matchResult = getMatchResult(event);
                   
                   return (
                     <Card 
@@ -336,13 +327,9 @@ export default function CalendarEventsMobile() {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                              {/* Result icons for completed matches - show all team results */}
-                              {completed && teamResults.length > 0 && (
-                                <div className="flex gap-1">
-                                  {teamResults.map((result, index) => (
-                                    <span key={index} className="text-lg">{result.resultIcon}</span>
-                                  ))}
-                                </div>
+                              {/* Result icon for completed matches */}
+                              {completed && matchResult && (
+                                <span className="text-lg">{matchResult.icon}</span>
                               )}
                               
                               {/* Kit avatar */}
@@ -449,6 +436,11 @@ export default function CalendarEventsMobile() {
                 <Badge className={`text-white ${getEventTypeBadgeColor(selectedEvent.event_type)}`}>
                   {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}
                 </Badge>
+                {selectedEvent.scores && (
+                  <Badge variant="outline">
+                    Score: {selectedEvent.scores.home || 0} - {selectedEvent.scores.away || 0}
+                  </Badge>
+                )}
               </div>
               
               <div>
@@ -565,7 +557,7 @@ export default function CalendarEventsMobile() {
                     </Button>
                   </>
                 )}
-                {isEventCompleted(selectedEvent) && isMatchType(selectedEvent.event_type) && (
+                {isEventCompleted(selectedEvent) && (
                   <Button
                     variant="outline"
                     size="sm"
