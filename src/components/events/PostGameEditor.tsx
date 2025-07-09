@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -73,7 +74,9 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       if (eventError) throw eventError;
       
       setEvent(eventData);
-      setScores(eventData?.scores || {});
+      // Properly handle the scores data from the database
+      const scoresData = eventData?.scores as Scores | null;
+      setScores(scoresData || {});
       setPlayerOfMatchId(eventData?.player_of_match_id || null);
       setCoachNotes(eventData?.coach_notes || '');
       setStaffNotes(eventData?.staff_notes || '');
@@ -343,3 +346,4 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     </div>
   );
 };
+
