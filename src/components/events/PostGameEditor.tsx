@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -81,6 +80,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       setCoachNotes(eventData?.coach_notes || '');
       setStaffNotes(eventData?.staff_notes || '');
     } catch (error: any) {
+      console.error('Error loading event data:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load event data',
@@ -118,6 +118,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       if (categoriesError) throw categoriesError;
       setPerformanceCategories(categoriesData || []);
     } catch (error: any) {
+      console.error('Error loading players:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load players',
@@ -152,6 +153,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       });
       onClose();
     } catch (error: any) {
+      console.error('Error saving post-game report:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save post-game report',
@@ -162,15 +164,23 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     }
   };
 
+  if (!event) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Event Info */}
       <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="font-semibold">{event?.title}</h3>
+        <h3 className="font-semibold">{event.title}</h3>
         <p className="text-sm text-gray-600">
-          {event?.date && format(new Date(event.date), 'PPP')} • {event?.start_time}
+          {event.date && format(new Date(event.date), 'PPP')} • {event.start_time}
         </p>
-        {event?.opponent && (
+        {event.opponent && (
           <p className="text-sm text-gray-600">vs {event.opponent}</p>
         )}
       </div>
@@ -200,7 +210,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         <Label className="text-base font-semibold">Match Scores</Label>
         
         {performanceCategories.length > 1 ? (
-          // Multiple teams/categories
+          // Multiple teams/categories - show performance category names
           <div className="space-y-4 mt-3">
             {performanceCategories.map((category, index) => (
               <div key={category.id} className="border rounded-lg p-4">
@@ -346,4 +356,3 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     </div>
   );
 };
-

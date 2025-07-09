@@ -38,6 +38,7 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
   const [loading, setLoading] = useState(true);
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,6 +86,20 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
         .order('date', { ascending: true });
 
       if (eventsError) throw eventsError;
+
+      // Load performance categories for all teams
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .in('team_id', teamIds);
+
+      if (categoriesError) throw categoriesError;
+      
+      const categoryMap: {[key: string]: string} = {};
+      categoriesData?.forEach(cat => {
+        categoryMap[cat.id] = cat.name;
+      });
+      setPerformanceCategories(categoryMap);
 
       // Transform data to include team information
       const eventsWithTeams = eventsData?.map(event => {
@@ -168,6 +183,33 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
     }
   };
 
+  const getTeamScores = (event: Event) => {
+    if (!event.scores) return [];
+    
+    const scores = [];
+    const scoresData = event.scores as any;
+    
+    // Check for team_1, team_2, etc. (performance category teams)
+    let teamNumber = 1;
+    while (scoresData[`team_${teamNumber}`] !== undefined) {
+      const ourScore = scoresData[`team_${teamNumber}`];
+      const opponentScore = scoresData[`opponent_${teamNumber}`];
+      const categoryId = scoresData[`team_${teamNumber}_category_id`];
+      const teamName = performanceCategories[categoryId] || `Team ${teamNumber}`;
+      
+      scores.push({
+        teamNumber,
+        teamName,
+        ourScore,
+        opponentScore
+      });
+      
+      teamNumber++;
+    }
+    
+    return scores;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -234,61 +276,66 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {filteredEvents.map((event) => (
-                <Card key={event.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <Badge className={`text-white ${getEventTypeColor(event.eventType)}`}>
-                            {event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1)}
-                          </Badge>
-                          <h4 className="font-semibold">{event.title}</h4>
-                          {event.opponent && (
-                            <span className="text-sm text-muted-foreground">
-                              vs {event.opponent} {event.isHome ? '(H)' : '(A)'}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
-                          <div className="flex items-center gap-2">
-                            <Users className="h-4 w-4" />
-                            <span>{event.teamName} ({event.ageGroup})</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            <span>{formatDate(event.date)}</span>
-                          </div>
-                          {event.startTime && (
-                            <div className="flex items-center gap-2">
-                              <Clock className="h-4 w-4" />
-                              <span>
-                                {formatTime(event.startTime)}
-                                {event.endTime && ` - ${formatTime(event.endTime)}`}
-                              </span>
-                            </div>
-                          )}
-                          {event.location && (
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4" />
-                              <span>{event.location}</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {event.scores && (
-                          <div className="mt-2">
-                            <Badge variant="outline">
-                              Score: {event.scores.home || 0} - {event.scores.away || 0}
+              {filteredEvents.map((event) => {
+                const teamScores = getTeamScores(event);
+                return (
+                  <Card key={event.id} className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <Badge className={`text-white ${getEventTypeColor(event.eventType)}`}>
+                              {event.eventType.charAt(0).toUpperCase() + event.eventType.slice(1)}
                             </Badge>
+                            <h4 className="font-semibold">{event.title}</h4>
+                            {event.opponent && (
+                              <span className="text-sm text-muted-foreground">
+                                vs {event.opponent} {event.isHome ? '(H)' : '(A)'}
+                              </span>
+                            )}
                           </div>
-                        )}
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                              <Users className="h-4 w-4" />
+                              <span>{event.teamName} ({event.ageGroup})</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{formatDate(event.date)}</span>
+                            </div>
+                            {event.startTime && (
+                              <div className="flex items-center gap-2">
+                                <Clock className="h-4 w-4" />
+                                <span>
+                                  {formatTime(event.startTime)}
+                                  {event.endTime && ` - ${formatTime(event.endTime)}`}
+                                </span>
+                              </div>
+                            )}
+                            {event.location && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="h-4 w-4" />
+                                <span>{event.location}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {teamScores.length > 0 && (
+                            <div className="mt-2 space-y-1">
+                              {teamScores.map((score) => (
+                                <Badge key={score.teamNumber} variant="outline" className="mr-2">
+                                  {score.teamName}: {score.ourScore} - {score.opponentScore}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>

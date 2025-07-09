@@ -9,6 +9,7 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSam
 import { WeatherService } from '@/services/weatherService';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -33,6 +34,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
+  const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const { teams } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
@@ -41,7 +43,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
 
   useEffect(() => {
     loadEventWeather();
-  }, [events]);
+    loadPerformanceCategories();
+  }, [events, teams]);
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
@@ -69,6 +72,27 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     }
     
     setEventWeather(weatherData);
+  };
+
+  const loadPerformanceCategories = async () => {
+    if (!teams || teams.length === 0) return;
+
+    try {
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .eq('team_id', teams[0].id);
+
+      if (categoriesError) throw categoriesError;
+      
+      const categoryMap: {[key: string]: string} = {};
+      categoriesData?.forEach(cat => {
+        categoryMap[cat.id] = cat.name;
+      });
+      setPerformanceCategories(categoryMap);
+    } catch (error) {
+      console.log('Failed to load performance categories:', error);
+    }
   };
 
   const getEventsForDay = (day: Date) => {
@@ -107,7 +131,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
       const outcome = scoresData[`outcome_${teamNumber}`];
-      const teamName = scoresData[`team_${teamNumber}_name`] || `T${teamNumber}`;
+      const categoryId = scoresData[`team_${teamNumber}_category_id`];
+      const teamName = performanceCategories[categoryId] || `T${teamNumber}`;
       
       let outcomeIcon = '';
       if (outcome === 'win') outcomeIcon = '🏆';
