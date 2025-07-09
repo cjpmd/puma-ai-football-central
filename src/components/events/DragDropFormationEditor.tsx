@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PositionSlot } from './PositionSlot';
 import { SquadPlayer } from '@/types/teamSelection';
 import { GameFormat } from '@/types';
 import { getPositionsForFormation, getFormationsByFormat } from '@/utils/formationUtils';
 import { NameDisplayOption } from '@/types/team';
 import { X, Plus } from 'lucide-react';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface FormationPosition {
   id: string;
@@ -150,51 +150,88 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     };
 
     return (
-      <div className="relative bg-gradient-to-b from-green-100 to-green-200 rounded-lg p-6 h-96 border-2 border-green-300 overflow-hidden">
-        {/* Football pitch markings */}
-        <div className="absolute inset-0 opacity-30">
-          {/* Center circle */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full" />
-          {/* Center dot */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full" />
-          {/* Halfway line */}
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white" />
-          {/* Goal areas */}
-          <div className="absolute top-4 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white" />
-          <div className="absolute bottom-4 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white" />
-          {/* Penalty areas */}
-          <div className="absolute top-2 left-1/4 right-1/4 h-16 border-l-2 border-r-2 border-white" />
-          <div className="absolute bottom-2 left-1/4 right-1/4 h-16 border-l-2 border-r-2 border-white" />
-        </div>
+      <div className="flex-1">
+        <div className="relative bg-gradient-to-b from-green-100 to-green-200 rounded-lg p-6 h-96 border-2 border-green-300 overflow-hidden">
+          {/* Football pitch markings */}
+          <div className="absolute inset-0 opacity-30">
+            {/* Center circle */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full" />
+            {/* Center dot */}
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full" />
+            {/* Halfway line */}
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white" />
+            {/* Goal areas */}
+            <div className="absolute top-4 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white" />
+            <div className="absolute bottom-4 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white" />
+            {/* Penalty areas */}
+            <div className="absolute top-2 left-1/4 right-1/4 h-16 border-l-2 border-r-2 border-white" />
+            <div className="absolute bottom-2 left-1/4 right-1/4 h-16 border-l-2 border-r-2 border-white" />
+          </div>
 
-        {/* Player positions */}
-        {period.positions.map((position) => {
-          const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
-          const isCaptain = globalCaptainId === position.playerId;
-          
-          return (
-            <div
-              key={position.id}
-              className="absolute"
-              style={{
-                left: `${position.x}%`,
-                top: `${position.y}%`,
-                transform: 'translate(-50%, -50%)',
-              }}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, position.id)}
-            >
-              <PositionSlot
-                id={position.id}
-                position={position}
-                player={player}
-                isCaptain={isCaptain}
-                nameDisplayOption={nameDisplayOption}
-                isLarger={true}
-              />
-            </div>
-          );
-        })}
+          {/* Player positions */}
+          {period.positions.map((position) => {
+            const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
+            const isCaptain = globalCaptainId === position.playerId;
+            
+            return (
+              <div
+                key={position.id}
+                className="absolute"
+                style={{
+                  left: `${position.x}%`,
+                  top: `${position.y}%`,
+                  transform: 'translate(-50%, -50%)',
+                }}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, position.id)}
+              >
+                <div className={`
+                  flex flex-col items-center justify-center
+                  w-16 h-16 rounded-full border-2 border-dashed
+                  ${player ? 'border-solid bg-white/90' : 'border-white/60 bg-white/20'}
+                  hover:border-white/80 hover:bg-white/30
+                  transition-all duration-300 ease-out backdrop-blur-sm
+                  text-center relative
+                `}>
+                  {player ? (
+                    <>
+                      {/* Captain indicator */}
+                      {isCaptain && (
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-bold text-black">C</span>
+                        </div>
+                      )}
+                      
+                      {/* Position abbreviation */}
+                      <div className="text-xs font-bold text-gray-700 mb-0.5">
+                        {position.abbreviation}
+                      </div>
+                      
+                      {/* Player name */}
+                      <div className="text-xs font-medium text-center leading-tight">
+                        {formatPlayerName(player.name, nameDisplayOption)}
+                      </div>
+                      
+                      {/* Squad number */}
+                      <div className="text-xs font-bold text-gray-600 mt-0.5">
+                        #{player.squadNumber}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-xs font-bold text-gray-600 mb-1">
+                        {position.abbreviation}
+                      </div>
+                      <div className="text-xs text-gray-500 text-center px-1">
+                        {position.positionName}
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -251,7 +288,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
   return (
     <div className="space-y-6">
-      {/* Period Controls */}
+      {/* Formation Periods */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -263,69 +300,74 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </div>
         </CardHeader>
         <CardContent>
-          {/* Period Tabs */}
-          <Tabs value={currentPeriodIndex.toString()} onValueChange={(value) => setCurrentPeriodIndex(parseInt(value))}>
-            <TabsList className="grid grid-cols-auto w-full mb-4">
-              {periods.map((period, index) => (
-                <TabsTrigger key={period.id} value={index.toString()} className="relative">
-                  Period {period.periodNumber} ({period.duration}min)
-                  {periods.length > 1 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute -top-2 -right-2 h-5 w-5 p-0 bg-destructive text-destructive-foreground rounded-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePeriod(index);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-
-            {/* Period Configuration */}
-            {currentPeriod && (
-              <div className="space-y-4 mb-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Formation</Label>
-                    <Select value={currentPeriod.formation} onValueChange={updateFormation}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableFormations.map((formation) => (
-                          <SelectItem key={formation.id} value={formation.id}>
-                            {formation.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <Label>Duration (minutes)</Label>
-                    <Input
-                      type="number"
-                      value={currentPeriod.duration}
-                      onChange={(e) => updateDuration(parseInt(e.target.value) || 0)}
-                      min={1}
-                    />
-                  </div>
-                </div>
+          <div className="flex gap-6">
+            {/* Left side - Formation Controls */}
+            <div className="w-64 space-y-4">
+              <div>
+                <Label>Formation</Label>
+                <Select 
+                  value={currentPeriod?.formation || ''} 
+                  onValueChange={updateFormation}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableFormations.map((formation) => (
+                      <SelectItem key={formation.id} value={formation.id}>
+                        {formation.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+              
+              <div>
+                <Label>Duration (minutes)</Label>
+                <Input
+                  type="number"
+                  value={currentPeriod?.duration || 0}
+                  onChange={(e) => updateDuration(parseInt(e.target.value) || 0)}
+                  min={1}
+                />
+              </div>
+            </div>
 
-            {/* Formation Field Display */}
-            {periods.map((period, index) => (
-              <TabsContent key={period.id} value={index.toString()} className="mt-0">
-                {renderFormationField(period)}
-              </TabsContent>
-            ))}
-          </Tabs>
+            {/* Right side - Period Tabs and Formation Display */}
+            <div className="flex-1 flex flex-col">
+              {/* Period Tabs */}
+              <div className="flex gap-2 mb-4 flex-wrap">
+                {periods.map((period, index) => (
+                  <div key={period.id} className="relative">
+                    <Button
+                      variant={index === currentPeriodIndex ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCurrentPeriodIndex(index)}
+                      className="pr-8"
+                    >
+                      Period {period.periodNumber} ({period.duration}min)
+                    </Button>
+                    {periods.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute -top-2 -right-2 h-5 w-5 p-0 bg-red-500 text-white rounded-full hover:bg-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removePeriod(index);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Formation Display */}
+              {currentPeriod && renderFormationField(currentPeriod)}
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
