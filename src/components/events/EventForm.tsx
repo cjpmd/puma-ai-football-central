@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,7 +84,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     longitude: event?.longitude,
   });
 
-  // Get current team data
   const currentTeam = teams?.find(t => t.id === teamId);
 
   useEffect(() => {
@@ -95,7 +93,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   }, [teamId]);
 
   useEffect(() => {
-    // Update form data when team defaults are loaded or when editing an existing event
     if (event) {
       console.log('Editing existing event, using event-specific values');
       const eventTeams = event.teams || [teamId];
@@ -135,7 +132,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       }
     } else {
       console.log('Creating new event, using team defaults - gameFormat:', teamDefaultGameFormat, 'gameDuration:', teamDefaultGameDuration);
-      // For new events, use team defaults
       setFormData(prev => ({
         ...prev,
         gameFormat: teamDefaultGameFormat,
@@ -144,10 +140,8 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     }
   }, [event, teamId, teamDefaultGameFormat, teamDefaultGameDuration]);
 
-  // Handle home/away toggle
   useEffect(() => {
     if (formData.isHome && currentTeam?.homeLocation && !event) {
-      // Auto-populate home location for new events
       setFormData(prev => ({
         ...prev,
         location: currentTeam.homeLocation || '',
@@ -159,7 +153,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         setCoordinates({ lat: currentTeam.homeLatitude, lng: currentTeam.homeLongitude });
       }
     } else if (!formData.isHome && !event) {
-      // Clear location for away games on new events
       setFormData(prev => ({
         ...prev,
         location: '',
@@ -238,7 +231,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     setCoordinates({ lat: location.lat, lng: location.lng });
     setFormData(prev => ({ ...prev, location: location.address, latitude: location.lat, longitude: location.lng }));
     
-    // Fetch weather data for the location
     try {
       const weatherData = await WeatherService.getWeatherForecast(
         location.lat, 
@@ -254,9 +246,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
   const handleNumberOfTeamsChange = (newNumber: number) => {
     setNumberOfTeams(newNumber);
     
-    // Create an array of team IDs
-    // For the first team, use the actual teamId
-    // For additional teams, we'll use teamId as a base identifier
     const teams: string[] = [teamId];
     for (let i = 1; i < newNumber; i++) {
       teams.push(teamId);
@@ -328,7 +317,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       startTime: primaryTimeSlot.startTime || formData.startTime,
       endTime: primaryTimeSlot.endTime || formData.endTime,
       opponent: requiresOpponent ? formData.opponent : undefined,
-      type: formData.type as any, // Make sure type is explicitly set
+      type: formData.type as any,
     };
 
     if (formData.latitude && formData.longitude) {
@@ -453,7 +442,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               </p>
             </div>
             
-            {/* Opponent field for fixtures, friendlies, tournaments, and festivals */}
             {requiresOpponent && (
               <div>
                 <Label htmlFor="opponent" className="text-sm font-medium">Opponent *</Label>
@@ -468,7 +456,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               </div>
             )}
 
-            {/* Home/Away Toggle for match types */}
             {requiresOpponent && (
               <>
                 <div className="flex items-center space-x-2">
@@ -490,7 +477,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               </>
             )}
             
-            {/* Number of Teams selection */}
             {requiresOpponent && (
               <div>
                 <Label htmlFor="numberOfTeams" className="text-sm font-medium">Number of Teams</Label>
@@ -606,7 +592,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
               </div>
             )}
             
-            {/* Notes Section */}
             <div>
               <Label htmlFor="notes" className="text-sm font-medium">Notes</Label>
               <Textarea
@@ -621,7 +606,6 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
           </div>
         </div>
 
-        {/* Form Actions */}
         <div className="flex flex-row-reverse justify-start gap-2 pt-4">
           <Button type="submit">
             {event ? 'Update Event' : 'Create Event'}

@@ -1616,6 +1616,9 @@ export type Database = {
           created_at: string | null
           game_duration: number | null
           game_format: string
+          home_latitude: number | null
+          home_location: string | null
+          home_longitude: number | null
           id: string
           kit_designs: Json | null
           kit_icons: Json | null
@@ -1637,6 +1640,9 @@ export type Database = {
           created_at?: string | null
           game_duration?: number | null
           game_format: string
+          home_latitude?: number | null
+          home_location?: string | null
+          home_longitude?: number | null
           id?: string
           kit_designs?: Json | null
           kit_icons?: Json | null
@@ -1658,6 +1664,9 @@ export type Database = {
           created_at?: string | null
           game_duration?: number | null
           game_format?: string
+          home_latitude?: number | null
+          home_location?: string | null
+          home_longitude?: number | null
           id?: string
           kit_designs?: Json | null
           kit_icons?: Json | null
