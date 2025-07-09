@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -12,6 +13,8 @@ import { MatchDayPackView } from './MatchDayPackView';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
 import { DatabaseEvent } from '@/types/event';
+import { GameFormat } from '@/types';
+import { NameDisplayOption } from '@/types/team';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -476,7 +479,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <DragDropFormationEditor
                     squadPlayers={currentTeam.squadPlayers}
                     periods={currentTeam.periods}
-                    gameFormat={event.game_format as GameFormat || '11-a-side'}
+                    gameFormat={(event.game_format as GameFormat) || '11-a-side'}
                     globalCaptainId={currentTeam.globalCaptainId}
                     nameDisplayOption={nameDisplayOption as NameDisplayOption}
                     onPeriodsChange={handlePeriodsChange}
