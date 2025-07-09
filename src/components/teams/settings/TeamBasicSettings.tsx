@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LocationInput } from '@/components/ui/location-input';
-import { Team } from '@/types';
+import { Team } from '@/types/team';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface TeamBasicSettingsProps {

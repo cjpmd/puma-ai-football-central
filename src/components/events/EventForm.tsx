@@ -10,6 +10,7 @@ import { WeatherService } from '@/services/weatherService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Event, GameFormat } from '@/types';
+import { Team } from '@/types/team';
 import { CalendarIcon } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -84,7 +85,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     longitude: event?.longitude,
   });
 
-  const currentTeam = teams?.find(t => t.id === teamId);
+  const currentTeam = teams?.find(t => t.id === teamId) as Team | undefined;
 
   useEffect(() => {
     loadFacilities();
