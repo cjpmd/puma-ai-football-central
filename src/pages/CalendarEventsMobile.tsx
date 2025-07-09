@@ -137,8 +137,12 @@ export default function CalendarEventsMobile() {
     while (scoresData[`team_${teamNumber}`] !== undefined) {
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
-      const categoryId = scoresData[`team_${teamNumber}_category_id`];
-      const teamName = performanceCategories[categoryId] || performanceCategories[Object.keys(performanceCategories)[teamNumber - 1]] || `Team ${teamNumber}`;
+      
+      // Get the performance category name for this team number
+      // Look for the category that corresponds to this team number in the order they were created
+      const categoryKeys = Object.keys(performanceCategories);
+      const categoryId = categoryKeys[teamNumber - 1]; // Use array index to match team number
+      const teamName = performanceCategories[categoryId] || `Team ${teamNumber}`;
       
       let outcome = 'draw';
       let outcomeIcon = '🤝';
