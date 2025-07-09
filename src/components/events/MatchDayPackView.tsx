@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -170,6 +169,30 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
     return acc;
   }, {} as Record<number, EventSelection[]>);
 
+  // Calculate game timing for periods
+  const calculateGameTiming = (teamSelections: EventSelection[]) => {
+    const sortedPeriods = [...teamSelections].sort((a, b) => a.period_number - b.period_number);
+    let currentTime = 0;
+    
+    return sortedPeriods.map(period => {
+      const startTime = currentTime;
+      const endTime = currentTime + period.duration_minutes;
+      currentTime = endTime;
+      
+      const halfDuration = (event.game_duration || 50) / 2;
+      const isFirstHalf = startTime < halfDuration;
+      const isSecondHalf = startTime >= halfDuration;
+      
+      return {
+        ...period,
+        startTime,
+        endTime,
+        gameTimeDisplay: `${startTime}-${endTime}m`,
+        halfDisplay: isFirstHalf ? 'First Half' : isSecondHalf ? 'Second Half' : 'Extra Time'
+      };
+    });
+  };
+
   // Calculate playing time summary for each team
   const getPlayingTimeSummary = (teamNumber: number) => {
     const selections = teamSelections[teamNumber] || [];
@@ -220,6 +243,86 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
     
     const category = performanceCategories.find(cat => cat.id === selection.performance_category_id);
     return category?.name || 'No Category';
+  };
+
+  // Render formation visualization
+  const renderFormation = (selection: EventSelection & { gameTimeDisplay: string; halfDisplay: string }) => {
+    const positions = selection.player_positions || [];
+    
+    return (
+      <div className="mb-6 page-break-inside-avoid">
+        <div className="flex justify-between items-center mb-3">
+          <h4 className="text-lg font-bold">
+            Period {selection.period_number} - {selection.formation}
+          </h4>
+          <div className="text-sm text-gray-600">
+            <span className="font-medium">{selection.halfDisplay}</span> • 
+            <span className="ml-1">{selection.gameTimeDisplay}</span> • 
+            <span className="ml-1">{selection.duration_minutes} mins</span>
+          </div>
+        </div>
+        
+        <div className="flex gap-6">
+          {/* Formation Pitch */}
+          <div className="flex-1">
+            <div className="relative bg-green-100 rounded-lg p-4 h-64 border">
+              {/* Football pitch markings */}
+              <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
+              
+              {/* Center circle and halfway line */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 border-2 border-white rounded-full opacity-50" />
+              <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
+              
+              {/* Penalty boxes */}
+              <div className="absolute top-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
+              <div className="absolute bottom-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
+              
+              {/* Player positions */}
+              {positions.map((pos: any, index: number) => {
+                const player = squadPlayers.find(p => p.id === (pos.playerId || pos.player_id));
+                const isCaptain = (pos.playerId || pos.player_id) === selection.captain_id;
+                
+                return (
+                  <div
+                    key={index}
+                    className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                    style={{
+                      left: `${pos.x || 50}%`,
+                      top: `${pos.y || 50}%`
+                    }}
+                  >
+                    <div className="flex flex-col items-center">
+                      <div className={`w-12 h-12 rounded-full border-2 border-white flex flex-col items-center justify-center text-xs font-bold relative ${
+                        player?.type === 'goalkeeper' ? 'bg-yellow-400' : 'bg-blue-500'
+                      } text-white shadow-lg`}>
+                        {isCaptain && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-black">C</span>
+                          </div>
+                        )}
+                        <div className="text-xs font-bold">{pos.abbreviation || pos.position?.substring(0, 2)}</div>
+                        <div className="text-xs">#{player?.squad_number}</div>
+                      </div>
+                      <div className="mt-1 px-2 py-0.5 bg-white/90 rounded text-xs font-medium text-center leading-tight max-w-20 truncate">
+                        {player?.name || 'Unknown'}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Notes space */}
+          <div className="w-48">
+            <h5 className="font-medium mb-2 text-sm">Period Notes:</h5>
+            <div className="border rounded p-3 h-52 bg-gray-50">
+              <div className="text-xs text-gray-500">Space for tactical notes and changes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -329,6 +432,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
         const playingTime = getPlayingTimeSummary(teamNumber);
         const performanceCategory = getPerformanceCategory(teamNumber);
         const teamSelectionsForTeam = teamSelections[teamNumber];
+        const periodsWithTiming = calculateGameTiming(teamSelectionsForTeam);
 
         return (
           <React.Fragment key={teamNumber}>
@@ -371,69 +475,27 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
               </div>
             </div>
 
-            {/* Page 3: Formation & Selection */}
+            {/* Page 3: Formation & Selection - All Periods on One Page */}
             <div className="page page-break">
               <h2 className="text-3xl font-bold mb-6">
                 Team {teamNumber} Formation & Selection
               </h2>
 
-              {teamSelectionsForTeam.map((selection, periodIndex) => (
-                <div key={selection.id} className="mb-8">
-                  <h3 className="text-xl font-bold mb-4">
-                    Period {selection.period_number} - {selection.formation} ({selection.duration_minutes} mins)
-                  </h3>
-                  
-                  <div className="flex gap-8">
-                    {/* Formation Grid */}
-                    <div className="flex-1">
-                      <div className="bg-green-100 p-6 rounded-lg min-h-80 relative">
-                        <div className="grid grid-cols-3 gap-4 h-full">
-                          {selection.player_positions.map((pos: any, index: number) => {
-                            const player = squadPlayers.find(p => p.id === (pos.playerId || pos.player_id));
-                            return (
-                              <div
-                                key={index}
-                                className="bg-white rounded p-2 text-center border shadow-sm"
-                                style={{
-                                  gridColumn: Math.floor(index % 3) + 1,
-                                  gridRow: Math.floor(index / 3) + 1
-                                }}
-                              >
-                                <div className="font-bold text-sm">{pos.abbreviation || pos.position}</div>
-                                {player && (
-                                  <>
-                                    <div className="text-xs">#{player.squad_number}</div>
-                                    <div className="text-xs truncate">{player.name}</div>
-                                  </>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    {/* Notes space */}
-                    <div className="w-64">
-                      <h4 className="font-bold mb-2">Period Notes:</h4>
-                      <div className="border rounded p-4 min-h-32 bg-gray-50">
-                        <div className="text-xs text-gray-500">Space for handwritten changes</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {/* All Periods */}
+              <div className="space-y-6">
+                {periodsWithTiming.map((period) => renderFormation(period))}
+              </div>
 
-              {/* Playing Time Summary */}
-              <div className="mt-8">
-                <h3 className="text-xl font-bold mb-4">Playing Time Summary</h3>
-                <div className="grid grid-cols-3 gap-4">
+              {/* Compact Playing Time Summary */}
+              <div className="mt-6 page-break-inside-avoid">
+                <h3 className="text-lg font-bold mb-3">Playing Time Summary</h3>
+                <div className="grid grid-cols-4 gap-2 text-sm">
                   {Object.entries(playingTime).map(([playerId, minutes]) => {
                     const player = squadPlayers.find(p => p.id === playerId);
                     return player ? (
-                      <div key={playerId} className="flex justify-between p-2 border rounded">
-                        <span>#{player.squad_number} {player.name}</span>
-                        <span className="font-bold">{minutes} mins</span>
+                      <div key={playerId} className="flex justify-between p-2 border rounded text-xs">
+                        <span className="truncate">#{player.squad_number} {player.name}</span>
+                        <span className="font-bold ml-2">{minutes}m</span>
                       </div>
                     ) : null;
                   })}
