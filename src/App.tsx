@@ -1,155 +1,216 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "next-themes";
-import { AuthProvider } from "./contexts/AuthContext";
-import { AuthorizationProvider } from "./contexts/AuthorizationContext";
-import { ResponsiveRoute } from "./components/routing/ResponsiveRoute";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ResponsiveRoute } from "@/components/routing/ResponsiveRoute";
 
 // Import all pages
 import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import DashboardMobile from "./pages/DashboardMobile";
+import Home from "./pages/Home";
 import Auth from "./pages/Auth";
 import AuthMobile from "./pages/AuthMobile";
-import PlayerManagement from "./pages/PlayerManagement";
-import PlayerManagementMobile from "./pages/PlayerManagementMobile";
-import TeamManagement from "./pages/TeamManagement";
-import TeamManagementMobile from "./pages/TeamManagementMobile";
-import StaffManagement from "./pages/StaffManagement";
-import StaffManagementMobile from "./pages/StaffManagementMobile";
+import Dashboard from "./pages/Dashboard";
+import DashboardMobile from "./pages/DashboardMobile";
+import Clubs from "./pages/Clubs";
+import ClubDetails from "./pages/ClubDetails";
+import Teams from "./pages/Teams";
+import TeamDetails from "./pages/TeamDetails";
+import Players from "./pages/Players";
+import PlayerDetails from "./pages/PlayerDetails";
+import Facilities from "./pages/Facilities";
+import FacilityDetails from "./pages/FacilityDetails";
 import CalendarEvents from "./pages/CalendarEvents";
 import CalendarEventsMobile from "./pages/CalendarEventsMobile";
-import Analytics from "./pages/Analytics";
-import AnalyticsMobile from "./pages/AnalyticsMobile";
-import ClubManagement from "./pages/ClubManagement";
-import ClubManagementMobile from "./pages/ClubManagementMobile";
-import UserManagement from "./pages/UserManagement";
-import UserManagementMobile from "./pages/UserManagementMobile";
-import SubscriptionManagement from "./pages/SubscriptionManagement";
-import SubscriptionManagementMobile from "./pages/SubscriptionManagementMobile";
-import EmailTestPage from "./pages/EmailTestPage";
-import PlayerManagementTab from "./pages/PlayerManagementTab";
-import DataRecovery from "./pages/DataRecovery";
+import AccountSettings from "./pages/AccountSettings";
+import AuthorizationSettings from "./pages/AuthorizationSettings";
+import NotificationsSettings from "./pages/NotificationsSettings";
+import IntegrationsSettings from "./pages/IntegrationsSettings";
+import BillingSettings from "./pages/BillingSettings";
+import SupportSettings from "./pages/SupportSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <AuthorizationProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route 
-                  path="/dashboard" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<Dashboard />} 
-                      mobileComponent={<DashboardMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/auth" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<Auth />} 
-                      mobileComponent={<AuthMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/players" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<PlayerManagement />} 
-                      mobileComponent={<PlayerManagementMobile />} 
-                    />
-                  } 
-                />
-                <Route path="/player-management" element={<PlayerManagementTab />} />
-                <Route 
-                  path="/teams" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<TeamManagement />} 
-                      mobileComponent={<TeamManagementMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/staff" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<StaffManagement />} 
-                      mobileComponent={<StaffManagementMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/calendar" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<CalendarEvents />} 
-                      mobileComponent={<CalendarEventsMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/analytics" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<Analytics />} 
-                      mobileComponent={<AnalyticsMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/clubs" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<ClubManagement />} 
-                      mobileComponent={<ClubManagementMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/users" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<UserManagement />} 
-                      mobileComponent={<UserManagementMobile />} 
-                    />
-                  } 
-                />
-                <Route 
-                  path="/subscriptions" 
-                  element={
-                    <ResponsiveRoute 
-                      desktopComponent={<SubscriptionManagement />} 
-                      mobileComponent={<SubscriptionManagementMobile />} 
-                    />
-                  } 
-                />
-                <Route path="/email-test" element={<EmailTestPage />} />
-                <Route path="/data-recovery" element={<DataRecovery />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AuthorizationProvider>
-          </AuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClient>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <AuthorizationProvider>
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/landing" element={<Index />} />
+                  
+                  {/* Auth routes */}
+                  <Route 
+                    path="/auth" 
+                    element={
+                      <ResponsiveRoute 
+                        desktopComponent={Auth} 
+                        mobileComponent={AuthMobile} 
+                      />
+                    } 
+                  />
+
+                  {/* Protected routes */}
+                  <Route 
+                    path="/dashboard" 
+                    element={
+                      <ProtectedRoute>
+                        <ResponsiveRoute 
+                          desktopComponent={Dashboard} 
+                          mobileComponent={DashboardMobile} 
+                        />
+                      </ProtectedRoute>
+                    } 
+                  />
+
+                  <Route
+                    path="/clubs"
+                    element={
+                      <ProtectedRoute>
+                        <Clubs />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/clubs/:clubId"
+                    element={
+                      <ProtectedRoute>
+                        <ClubDetails />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teams"
+                    element={
+                      <ProtectedRoute>
+                        <Teams />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/teams/:teamId"
+                    element={
+                      <ProtectedRoute>
+                        <TeamDetails />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/players"
+                    element={
+                      <ProtectedRoute>
+                        <Players />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/players/:playerId"
+                    element={
+                      <ProtectedRoute>
+                        <PlayerDetails />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/facilities"
+                    element={
+                      <ProtectedRoute>
+                        <Facilities />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/facilities/:facilityId"
+                    element={
+                      <ProtectedRoute>
+                        <FacilityDetails />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/calendar"
+                    element={
+                      <ProtectedRoute>
+                        <ResponsiveRoute
+                          desktopComponent={CalendarEvents}
+                          mobileComponent={CalendarEventsMobile}
+                        />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/account-settings"
+                    element={
+                      <ProtectedRoute>
+                        <AccountSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/authorization-settings"
+                    element={
+                      <ProtectedRoute>
+                        <AuthorizationSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/notifications-settings"
+                    element={
+                      <ProtectedRoute>
+                        <NotificationsSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/integrations-settings"
+                    element={
+                      <ProtectedRoute>
+                        <IntegrationsSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/billing-settings"
+                    element={
+                      <ProtectedRoute>
+                        <BillingSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/support-settings"
+                    element={
+                      <ProtectedRoute>
+                        <SupportSettings />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Not found route */}
+                  <Route path="/404" element={<NotFound />} />
+
+                  {/* Catch all route */}
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AuthorizationProvider>
+            </AuthProvider>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </QueryClient>
+  );
+}
 
 export default App;
