@@ -2,15 +2,13 @@
 import { useDroppable } from '@dnd-kit/core';
 import { PlayerIcon } from './PlayerIcon';
 import { SquadPlayer, PositionSlot as PositionSlotType } from '@/types/teamSelection';
-import { formatPlayerName } from '@/utils/nameUtils';
-import { NameDisplayOption } from '@/types/team';
 
 interface PositionSlotProps {
   id: string;
   position: PositionSlotType;
   player?: SquadPlayer;
   isCaptain?: boolean;
-  nameDisplayOption?: NameDisplayOption;
+  nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
   isLarger?: boolean;
 }
 
@@ -79,9 +77,9 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
             {position.abbreviation || position.positionName?.substring(0, 2) || ''}
           </div>
           
-          {/* Player name - using formatPlayerName with nameDisplayOption */}
+          {/* Player name */}
           <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium text-center leading-tight`}>
-            {formatPlayerName(player.name, nameDisplayOption)}
+            {player.name}
           </div>
           
           {/* Squad number below */}
