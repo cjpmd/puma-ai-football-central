@@ -249,6 +249,23 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
   const renderFormation = (selection: EventSelection & { gameTimeDisplay: string; halfDisplay: string }) => {
     const positions = selection.player_positions || [];
     
+    // Get substitute players for this period
+    const substitutePlayersList = selection.substitute_players || [];
+    const substitutePlayersDisplay = substitutePlayersList
+      .map((sub: any) => {
+        if (typeof sub === 'string') {
+          const player = squadPlayers.find(p => p.id === sub);
+          return player ? `#${player.squad_number} ${player.name}` : '';
+        } else if (sub.playerId || sub.player_id) {
+          const playerId = sub.playerId || sub.player_id;
+          const player = squadPlayers.find(p => p.id === playerId);
+          return player ? `#${player.squad_number} ${player.name}` : '';
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join(', ');
+    
     return (
       <div className="mb-6 page-break-inside-avoid">
         <div className="flex justify-between items-center mb-3">
@@ -317,7 +334,23 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
           <div className="w-48">
             <h5 className="font-medium mb-2 text-sm">Period Notes:</h5>
             <div className="border rounded p-3 h-52 bg-gray-50">
-              <div className="text-xs text-gray-500">Space for tactical notes and changes</div>
+              {/* Substitute players list */}
+              {substitutePlayersDisplay && (
+                <div className="mb-3">
+                  <div className="text-xs font-medium text-gray-700 mb-1">Substitutes:</div>
+                  <div className="text-xs text-gray-600 mb-2 leading-tight">
+                    {substitutePlayersDisplay}
+                  </div>
+                </div>
+              )}
+              
+              {/* Space for written notes */}
+              <div className="text-xs text-gray-500">
+                {substitutePlayersDisplay ? 'Tactical notes and changes:' : 'Space for tactical notes and changes'}
+              </div>
+              <div className="mt-2 min-h-[100px] border-t pt-2">
+                {/* Empty space for handwritten notes */}
+              </div>
             </div>
           </div>
         </div>
