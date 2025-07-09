@@ -53,6 +53,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const [coachNotes, setCoachNotes] = useState('');
   const [staffNotes, setStaffNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -64,17 +65,26 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
   const loadEventData = async () => {
     try {
+      setLoading(true);
+      console.log('Loading event data for:', eventId);
+      
       const { data: eventData, error: eventError } = await supabase
         .from('events')
         .select('id, title, date, start_time, opponent, scores, player_of_match_id, coach_notes, staff_notes')
         .eq('id', eventId)
         .single();
 
-      if (eventError) throw eventError;
+      if (eventError) {
+        console.error('Error loading event:', eventError);
+        throw eventError;
+      }
       
+      console.log('Event data loaded:', eventData);
       setEvent(eventData);
-      // Properly handle the scores data from the database
+      
+      // Safely handle the scores data from the database
       const scoresData = eventData?.scores as Scores | null;
+      console.log('Scores data:', scoresData);
       setScores(scoresData || {});
       setPlayerOfMatchId(eventData?.player_of_match_id || null);
       setCoachNotes(eventData?.coach_notes || '');
@@ -86,18 +96,25 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         description: error.message || 'Failed to load event data',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
   };
 
   const loadPlayers = async () => {
     try {
+      console.log('Loading players for event:', eventId);
+      
       const { data: eventData, error: eventError } = await supabase
         .from('events')
         .select('team_id')
         .eq('id', eventId)
         .single();
 
-      if (eventError) throw eventError;
+      if (eventError) {
+        console.error('Error loading event for team_id:', eventError);
+        throw eventError;
+      }
 
       const { data: playersData, error: playersError } = await supabase
         .from('players')
@@ -105,8 +122,12 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         .eq('team_id', eventData.team_id)
         .eq('status', 'active');
 
-      if (playersError) throw playersError;
+      if (playersError) {
+        console.error('Error loading players:', playersError);
+        throw playersError;
+      }
 
+      console.log('Players loaded:', playersData);
       setPlayers(playersData || []);
 
       // Load performance categories
@@ -115,7 +136,12 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         .select('*')
         .eq('team_id', eventData.team_id);
 
-      if (categoriesError) throw categoriesError;
+      if (categoriesError) {
+        console.error('Error loading performance categories:', categoriesError);
+        throw categoriesError;
+      }
+      
+      console.log('Performance categories loaded:', categoriesData);
       setPerformanceCategories(categoriesData || []);
     } catch (error: any) {
       console.error('Error loading players:', error);
@@ -134,6 +160,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const handleSave = async () => {
     try {
       setSaving(true);
+      console.log('Saving scores:', scores);
 
       const { error } = await supabase
         .from('events')
@@ -145,7 +172,10 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         })
         .eq('id', eventId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving:', error);
+        throw error;
+      }
 
       toast({
         title: 'Success',
@@ -164,10 +194,23 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     }
   };
 
-  if (!event) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  if (!event) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <p className="text-gray-600">Event not found</p>
+          <Button variant="outline" onClick={onClose} className="mt-4">
+            Close
+          </Button>
+        </div>
       </div>
     );
   }

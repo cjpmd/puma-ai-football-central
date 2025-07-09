@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -137,7 +138,7 @@ export default function CalendarEventsMobile() {
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
       const categoryId = scoresData[`team_${teamNumber}_category_id`];
-      const teamName = performanceCategories[categoryId] || `Team ${teamNumber}`;
+      const teamName = performanceCategories[categoryId] || performanceCategories[Object.keys(performanceCategories)[teamNumber - 1]] || `Team ${teamNumber}`;
       
       let outcome = 'draw';
       let outcomeIcon = '🤝';
