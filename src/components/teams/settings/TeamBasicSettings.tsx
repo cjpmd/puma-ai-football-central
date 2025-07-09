@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LocationInput } from '@/components/ui/location-input';
 import { Team } from '@/types/team';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface TeamBasicSettingsProps {
   team: Team;
@@ -53,6 +54,44 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     };
     setFormData(updatedData);
     onUpdate(updatedData);
+  };
+
+  const handleSave = async () => {
+    try {
+      console.log('Saving team data:', formData);
+      
+      const { error } = await supabase
+        .from('teams')
+        .update({
+          name: formData.name,
+          age_group: formData.ageGroup,
+          game_format: formData.gameFormat,
+          game_duration: formData.gameDuration,
+          season_start: formData.seasonStart,
+          season_end: formData.seasonEnd,
+          manager_name: formData.managerName,
+          manager_email: formData.managerEmail,
+          manager_phone: formData.managerPhone,
+          home_location: formData.homeLocation,
+          home_latitude: formData.homeLatitude,
+          home_longitude: formData.homeLongitude,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', team.id);
+
+      if (error) {
+        console.error('Error saving team:', error);
+        toast.error('Failed to save team settings');
+        return;
+      }
+
+      console.log('Team saved successfully');
+      toast.success('Team settings saved successfully');
+      onSave();
+    } catch (error) {
+      console.error('Error saving team:', error);
+      toast.error('Failed to save team settings');
+    }
   };
 
   const gameFormats = ['3-a-side', '4-a-side', '5-a-side', '7-a-side', '9-a-side', '11-a-side'];
@@ -150,6 +189,11 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             <p className="text-xs text-muted-foreground mt-1">
               This will be used as the default location for home games
             </p>
+            {formData.homeLatitude && formData.homeLongitude && (
+              <p className="text-xs text-green-600 mt-1">
+                ✓ Location coordinates saved: {formData.homeLatitude.toFixed(6)}, {formData.homeLongitude.toFixed(6)}
+              </p>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -196,7 +240,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       </Card>
 
       <div className="flex justify-end">
-        <Button onClick={onSave} disabled={isSaving}>
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>

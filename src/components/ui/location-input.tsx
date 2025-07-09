@@ -134,7 +134,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
               onLocationSelect({ lat, lng, address });
             }
           } else {
-            console.warn('[LocationInput] Place selected but no formatted_address available');
+            console.warn('[LocationInput] Place selected but no formatted_address available:', place);
           }
         };
 
@@ -164,6 +164,13 @@ export const LocationInput: React.FC<LocationInputProps> = ({
     onChange(e.target.value);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Prevent form submission when pressing Enter in autocomplete
+    if (e.key === 'Enter') {
+      e.preventDefault();
+    }
+  };
+
   return (
     <div className={cn("space-y-2", className)}>
       <Label htmlFor="location" className="flex items-center gap-2">
@@ -178,6 +185,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           id="location"
           value={value}
           onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           required={required}
           className="pr-10"
