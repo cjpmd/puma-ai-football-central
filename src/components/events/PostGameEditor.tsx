@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +22,10 @@ interface EventData {
   date: string;
   start_time: string;
   opponent?: string;
+  scores?: any;
+  player_of_match_id?: string;
+  coach_notes?: string;
+  staff_notes?: string;
 }
 
 interface Player {
@@ -61,30 +66,17 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     try {
       const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select('id, title, date, start_time, opponent')
+        .select('id, title, date, start_time, opponent, scores, player_of_match_id, coach_notes, staff_notes')
         .eq('id', eventId)
         .single();
 
       if (eventError) throw eventError;
+      
       setEvent(eventData);
-
-      const { data: scoresData, error: scoresError } = await supabase
-        .from('event_scores')
-        .select('*')
-        .eq('event_id', eventId)
-        .single();
-
-      if (scoresError && scoresError.message.includes('No rows found')) {
-        setScores({});
-      } else if (scoresError) {
-        throw scoresError;
-      } else {
-        setScores(scoresData?.scores || {});
-        setPlayerOfMatchId(scoresData?.player_of_match_id || null);
-        setCoachNotes(scoresData?.coach_notes || '');
-        setStaffNotes(scoresData?.staff_notes || '');
-        setPerformanceCategories(scoresData?.performance_categories || []);
-      }
+      setScores(eventData?.scores || {});
+      setPlayerOfMatchId(eventData?.player_of_match_id || null);
+      setCoachNotes(eventData?.coach_notes || '');
+      setStaffNotes(eventData?.staff_notes || '');
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -96,34 +88,29 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
   const loadPlayers = async () => {
     try {
-      const { data: teamData, error: teamError } = await supabase
+      const { data: eventData, error: eventError } = await supabase
         .from('events')
         .select('team_id')
         .eq('id', eventId)
         .single();
 
-      if (teamError) throw teamError;
+      if (eventError) throw eventError;
 
       const { data: playersData, error: playersError } = await supabase
-        .from('team_players')
-        .select('player_id, players(id, name)')
-        .eq('team_id', teamData.team_id)
-        .not('players.name', 'is', null);
+        .from('players')
+        .select('id, name')
+        .eq('team_id', eventData.team_id)
+        .eq('status', 'active');
 
       if (playersError) throw playersError;
 
-      const playerList = playersData.map(tp => ({
-        id: tp.player_id,
-        name: tp.players?.name || 'Unknown Player',
-      }));
-
-      setPlayers(playerList);
+      setPlayers(playersData || []);
 
       // Load performance categories
       const { data: categoriesData, error: categoriesError } = await supabase
         .from('performance_categories')
         .select('*')
-        .eq('team_id', teamData.team_id);
+        .eq('team_id', eventData.team_id);
 
       if (categoriesError) throw categoriesError;
       setPerformanceCategories(categoriesData || []);
@@ -144,24 +131,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     try {
       setSaving(true);
 
-      const scoresData = {
-        scores: scores,
-        player_of_match_id: playerOfMatchId,
-        coach_notes: coachNotes,
-        staff_notes: staffNotes,
-        performance_categories: performanceCategories
-      };
-
-      const { data, error } = await supabase
-        .from('event_scores')
-        .upsert({
-          event_id: eventId,
-          scores: scoresData.scores,
-          player_of_match_id: scoresData.player_of_match_id,
-          coach_notes: scoresData.coach_notes,
-          staff_notes: scoresData.staff_notes,
-          performance_categories: performanceCategories
-        }, { onConflict: 'event_id' });
+      const { error } = await supabase
+        .from('events')
+        .update({
+          scores: scores,
+          player_of_match_id: playerOfMatchId,
+          coach_notes: coachNotes,
+          staff_notes: staffNotes,
+        })
+        .eq('id', eventId);
 
       if (error) throw error;
 
