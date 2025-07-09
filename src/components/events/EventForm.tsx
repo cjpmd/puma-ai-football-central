@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -76,7 +77,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
     gameDuration: event?.gameDuration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
-    isHome: event?.isHome !== undefined ? event.isHome : true,
+    isHome: event?.isHome !== undefined ? event.isHome : true, // Default to true (Home)
     facilityId: event?.facilityId || '',
     trainingNotes: event?.trainingNotes || '',
     notes: event?.notes || '',
@@ -136,13 +137,16 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       setFormData(prev => ({
         ...prev,
         gameFormat: teamDefaultGameFormat,
-        gameDuration: teamDefaultGameDuration
+        gameDuration: teamDefaultGameDuration,
+        isHome: true // Ensure new events default to home
       }));
     }
   }, [event, teamId, teamDefaultGameFormat, teamDefaultGameDuration]);
 
   useEffect(() => {
-    if (formData.isHome && currentTeam?.homeLocation && !event) {
+    // Auto-populate home location when isHome is true and we have team home location
+    if (formData.isHome && currentTeam?.homeLocation) {
+      console.log('Setting home location:', currentTeam.homeLocation);
       setFormData(prev => ({
         ...prev,
         location: currentTeam.homeLocation || '',
@@ -154,6 +158,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         setCoordinates({ lat: currentTeam.homeLatitude, lng: currentTeam.homeLongitude });
       }
     } else if (!formData.isHome && !event) {
+      // Clear location when switching to away for new events
       setFormData(prev => ({
         ...prev,
         location: '',
@@ -463,7 +468,10 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                   <Switch
                     id="isHome"
                     checked={formData.isHome}
-                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+                    onCheckedChange={(checked) => {
+                      console.log('Toggle changed to:', checked ? 'Home' : 'Away');
+                      setFormData(prev => ({ ...prev, isHome: checked }));
+                    }}
                   />
                   <Label htmlFor="isHome" className="text-sm font-medium">
                     {formData.isHome ? 'Home Game' : 'Away Game'}
