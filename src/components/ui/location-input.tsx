@@ -37,6 +37,12 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [inputValue, setInputValue] = useState(value);
+  const [isSelectingFromAutocomplete, setIsSelectingFromAutocomplete] = useState(false);
+
+  useEffect(() => {
+    setInputValue(value);
+  }, [value]);
 
   useEffect(() => {
     const loadGoogleMaps = async () => {
@@ -115,8 +121,9 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         // Set up the place changed listener
         const handlePlaceChanged = () => {
           console.log('[LocationInput] Place changed event triggered');
-          const place = autocomplete.getPlace();
+          setIsSelectingFromAutocomplete(true);
           
+          const place = autocomplete.getPlace();
           console.log('[LocationInput] Selected place:', place);
           
           if (place && place.geometry && place.geometry.location) {
@@ -125,15 +132,23 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             const address = place.formatted_address || '';
             
             console.log('[LocationInput] Location selected:', { lat, lng, address });
+            
+            // Update both local state and parent
+            setInputValue(address);
             onChange(address);
             onLocationSelect?.({ lat, lng, address });
           } else if (place && place.formatted_address) {
-            // Handle case where geometry might not be available but we have an address
             console.log('[LocationInput] Place selected without geometry:', place.formatted_address);
+            setInputValue(place.formatted_address);
             onChange(place.formatted_address);
           } else {
             console.warn('[LocationInput] Place selected but no usable data available');
           }
+          
+          // Reset flag after a short delay to allow for proper event handling
+          setTimeout(() => {
+            setIsSelectingFromAutocomplete(false);
+          }, 100);
         };
 
         // Add the event listener using Google Maps API
@@ -151,11 +166,20 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   useEffect(() => {
     return () => {
       if (autocompleteRef.current) {
-        // Simply set the reference to null for cleanup
         autocompleteRef.current = null;
       }
     };
   }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    
+    // Only update parent if not selecting from autocomplete
+    if (!isSelectingFromAutocomplete) {
+      onChange(newValue);
+    }
+  };
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -169,8 +193,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         <Input
           ref={inputRef}
           id="location"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
+          value={inputValue}
+          onChange={handleInputChange}
           placeholder={placeholder}
           required={required}
           className="pr-10"
