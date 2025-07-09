@@ -179,15 +179,17 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
           <div>
             <Label htmlFor="homeLocation">Home Location</Label>
-            <LocationInput
-              value={formData.homeLocation}
-              onChange={(value) => handleInputChange('homeLocation', value)}
-              onLocationSelect={handleHomeLocationSelect}
-              placeholder="Enter home ground address"
-              className="mt-1"
-            />
+            <form onSubmit={(e) => e.preventDefault()}>
+              <LocationInput
+                value={formData.homeLocation}
+                onChange={(value) => handleInputChange('homeLocation', value)}
+                onLocationSelect={handleHomeLocationSelect}
+                placeholder="Enter home ground address or nearby street"
+                className="mt-1"
+              />
+            </form>
             <p className="text-xs text-muted-foreground mt-1">
-              This will be used as the default location for home games
+              This will be used as the default location for home games. If you can't find your exact location, try typing a nearby street or postcode.
             </p>
             {formData.homeLatitude && formData.homeLongitude && (
               <p className="text-xs text-green-600 mt-1">

@@ -112,7 +112,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
 
         const autocomplete = autocompleteRef.current;
 
-        // Add place_changed listener
+        // Add place_changed listener with enhanced handling
         const handlePlaceChanged = () => {
           console.log('[LocationInput] Place changed event triggered');
           
@@ -123,18 +123,25 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             const address = place.formatted_address;
             console.log('[LocationInput] Setting address:', address);
             
-            // Update the input value and call onChange
-            onChange(address);
-            
-            // If geometry is available, call onLocationSelect
-            if (place.geometry && place.geometry.location && onLocationSelect) {
-              const lat = place.geometry.location.lat();
-              const lng = place.geometry.location.lng();
-              console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
-              onLocationSelect({ lat, lng, address });
-            } else {
-              console.warn('[LocationInput] Place selected but no geometry available');
+            // Clear the input first to ensure proper update
+            if (inputRef.current) {
+              inputRef.current.value = '';
             }
+            
+            // Set the address with a small delay to ensure proper rendering
+            setTimeout(() => {
+              onChange(address);
+              
+              // If geometry is available, call onLocationSelect
+              if (place.geometry && place.geometry.location && onLocationSelect) {
+                const lat = place.geometry.location.lat();
+                const lng = place.geometry.location.lng();
+                console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
+                onLocationSelect({ lat, lng, address });
+              } else {
+                console.warn('[LocationInput] Place selected but no geometry available');
+              }
+            }, 10);
           } else {
             console.warn('[LocationInput] Place selected but no formatted_address available:', place);
           }
@@ -168,12 +175,9 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Don't prevent default behavior for autocomplete
-    // Let Google handle arrow keys and enter for selection
-    if (e.key === 'Enter' && !autocompleteRef.current) {
-      // Only prevent form submission if autocomplete isn't active
-      e.preventDefault();
-    }
+    // Let Google handle all key events for proper autocomplete behavior
+    // Don't interfere with their selection process
+    console.log('[LocationInput] Key pressed:', e.key);
   };
 
   const handleInputFocus = () => {
