@@ -15,6 +15,7 @@ import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
+import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -30,6 +31,7 @@ export default function CalendarEventsMobile() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [showTeamSelection, setShowTeamSelection] = useState(false);
   const [showPostGameEdit, setShowPostGameEdit] = useState(false);
+  const [showEventDetails, setShowEventDetails] = useState(false);
   const { toast } = useToast();
   const { teams } = useAuth();
 
@@ -109,6 +111,11 @@ export default function CalendarEventsMobile() {
     return false;
   };
 
+  const handleEventClick = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
+    setShowEventDetails(true);
+  };
+
   const handleEventAction = (event: DatabaseEvent, action: 'setup' | 'squad' | 'report') => {
     setSelectedEvent(event);
     
@@ -159,6 +166,27 @@ export default function CalendarEventsMobile() {
     };
   };
 
+  const getEventTypeBadgeColor = (eventType: string) => {
+    switch (eventType) {
+      case 'fixture':
+      case 'match':
+        return 'bg-blue-500';
+      case 'friendly':
+        return 'bg-green-500';
+      case 'training':
+        return 'bg-purple-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const needsSetup = (event: DatabaseEvent) => {
+    const eventDate = new Date(event.date);
+    const today = new Date();
+    const daysDiff = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+    return daysDiff <= 7 && daysDiff >= 0; // Event is within 7 days
+  };
+
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
@@ -189,15 +217,16 @@ export default function CalendarEventsMobile() {
               
               <div className="space-y-3">
                 {monthEvents.map((event) => {
-                  const team = teams.find(t => t.id === event.team_id);
+                  const team = teams?.find(t => t.id === event.team_id);
                   const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
                   const completed = isEventCompleted(event);
                   const eventDate = new Date(event.date);
                   const isEventToday = isToday(eventDate);
                   const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
+                  const eventNeedsSetup = needsSetup(event);
                   
                   return (
-                    <Card key={event.id} className="bg-white shadow-sm">
+                    <Card key={event.id} className="bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEventClick(event)}>
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           {/* Date and Time */}
@@ -207,7 +236,7 @@ export default function CalendarEventsMobile() {
                                 {format(eventDate, 'EEE dd MMM')}
                               </div>
                               <div className="text-lg font-bold text-gray-900">
-                                {event.start_time || '19:00'}
+                                {event.start_time || '--:--'}
                               </div>
                             </div>
                             
@@ -254,18 +283,21 @@ export default function CalendarEventsMobile() {
                             </div>
                           )}
 
-                          {/* Action Buttons */}
-                          {!isEventPast && (
-                            <div className="bg-yellow-50 p-3 rounded-lg">
+                          {/* Action Buttons - Only show if event needs setup */}
+                          {eventNeedsSetup && !isEventPast && (
+                            <div className="bg-yellow-50 p-3 rounded-lg" onClick={(e) => e.stopPropagation()}>
                               <div className="text-xs text-yellow-800 text-center mb-2">
-                                Your match needs setting up, it is 1 day away
+                                Your {event.event_type} needs setting up
                               </div>
                               <div className="flex gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                  onClick={() => handleEventAction(event, 'setup')}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEventAction(event, 'setup');
+                                  }}
                                 >
                                   SETUP
                                 </Button>
@@ -273,7 +305,10 @@ export default function CalendarEventsMobile() {
                                   variant="outline"
                                   size="sm"
                                   className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                  onClick={() => handleEventAction(event, 'squad')}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEventAction(event, 'squad');
+                                  }}
                                 >
                                   SQUAD
                                 </Button>
@@ -282,7 +317,10 @@ export default function CalendarEventsMobile() {
                                     variant="outline"
                                     size="sm"
                                     className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                    onClick={() => handleEventAction(event, 'report')}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEventAction(event, 'report');
+                                    }}
                                   >
                                     REPORT
                                   </Button>
@@ -300,6 +338,141 @@ export default function CalendarEventsMobile() {
           ))
         )}
       </div>
+
+      {/* Event Details Modal */}
+      <Dialog open={showEventDetails} onOpenChange={setShowEventDetails}>
+        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Event Details</DialogTitle>
+          </DialogHeader>
+          {selectedEvent && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Badge className={`text-white ${getEventTypeBadgeColor(selectedEvent.event_type)}`}>
+                  {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}
+                </Badge>
+                {selectedEvent.scores && (
+                  <Badge variant="outline">
+                    Score: {selectedEvent.scores.home || 0} - {selectedEvent.scores.away || 0}
+                  </Badge>
+                )}
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-lg">
+                  {isMatchType(selectedEvent.event_type) && selectedEvent.opponent 
+                    ? `${teams?.[0]?.name} vs ${selectedEvent.opponent}`
+                    : selectedEvent.title
+                  }
+                </h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm">
+                  <Calendar className="h-4 w-4 text-gray-500" />
+                  <span>{format(new Date(selectedEvent.date), 'EEEE, MMMM do, yyyy')}</span>
+                </div>
+                
+                {selectedEvent.start_time && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <span>
+                      {selectedEvent.start_time}
+                      {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                    </span>
+                  </div>
+                )}
+                
+                {selectedEvent.location && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <MapPin className="h-4 w-4 text-gray-500" />
+                    <span>{selectedEvent.location}</span>
+                  </div>
+                )}
+                
+                {isMatchType(selectedEvent.event_type) && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-gray-500" />
+                    <span>
+                      {selectedEvent.game_format || 'Match'} • {selectedEvent.is_home ? 'Home' : 'Away'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              {selectedEvent.description && (
+                <div>
+                  <h4 className="font-medium mb-2">Description</h4>
+                  <p className="text-sm text-gray-600">{selectedEvent.description}</p>
+                </div>
+              )}
+              
+              {selectedEvent.notes && (
+                <div>
+                  <h4 className="font-medium mb-2">Notes</h4>
+                  <p className="text-sm text-gray-600">{selectedEvent.notes}</p>
+                </div>
+              )}
+              
+              {selectedEvent.coach_notes && (
+                <div>
+                  <h4 className="font-medium mb-2">Coach Notes</h4>
+                  <p className="text-sm text-gray-600">{selectedEvent.coach_notes}</p>
+                </div>
+              )}
+              
+              {selectedEvent.training_notes && (
+                <div>
+                  <h4 className="font-medium mb-2">Training Notes</h4>
+                  <p className="text-sm text-gray-600">{selectedEvent.training_notes}</p>
+                </div>
+              )}
+              
+              <div className="flex gap-2 mt-6">
+                {needsSetup(selectedEvent) && !isEventCompleted(selectedEvent) && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowEventDetails(false);
+                        handleEventAction(selectedEvent, 'setup');
+                      }}
+                    >
+                      SETUP
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowEventDetails(false);
+                        handleEventAction(selectedEvent, 'squad');
+                      }}
+                    >
+                      SQUAD
+                    </Button>
+                  </>
+                )}
+                {isEventCompleted(selectedEvent) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowEventDetails(false);
+                      handleEventAction(selectedEvent, 'report');
+                    }}
+                  >
+                    REPORT
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Event Form Modal */}
       <Dialog open={showEventForm} onOpenChange={setShowEventForm}>

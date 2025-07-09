@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -5,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface Event {
   id: string;
@@ -132,31 +134,37 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    try {
+      return format(new Date(dateStr), 'EEE, MMM d, yyyy');
+    } catch (error) {
+      return dateStr;
+    }
   };
 
   const formatTime = (timeStr?: string) => {
     if (!timeStr) return '';
-    return new Date(`2000-01-01T${timeStr}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+    try {
+      return format(new Date(`2000-01-01T${timeStr}`), 'h:mm a');
+    } catch (error) {
+      return timeStr;
+    }
   };
 
   const getEventTypeColor = (eventType: string) => {
     switch (eventType) {
-      case 'fixture': return 'bg-blue-500';
-      case 'friendly': return 'bg-green-500';
-      case 'training': return 'bg-purple-500';
-      case 'tournament': return 'bg-orange-500';
-      case 'festival': return 'bg-pink-500';
-      default: return 'bg-gray-500';
+      case 'fixture':
+      case 'match':
+        return 'bg-blue-500';
+      case 'friendly':
+        return 'bg-green-500';
+      case 'training':
+        return 'bg-purple-500';
+      case 'tournament':
+        return 'bg-orange-500';
+      case 'festival':
+        return 'bg-pink-500';
+      default:
+        return 'bg-gray-500';
     }
   };
 
