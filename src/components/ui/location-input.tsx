@@ -112,8 +112,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
 
         const autocomplete = autocompleteRef.current;
 
-        // Use the newer addEventListener method instead of addListener
-        const placeChangedListener = () => {
+        // Set up the place changed listener
+        const handlePlaceChanged = () => {
           console.log('[LocationInput] Place changed event triggered');
           const place = autocomplete.getPlace();
           
@@ -136,8 +136,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           }
         };
 
-        // Add the event listener
-        autocomplete.addListener('place_changed', placeChangedListener);
+        // Add the event listener using Google Maps API
+        autocomplete.addListener('place_changed', handlePlaceChanged);
         
         console.log('[LocationInput] Autocomplete initialized successfully');
       } catch (error) {
@@ -175,6 +175,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           required={required}
           className="pr-10"
           disabled={isLoading}
+          autoComplete="off"
         />
         {weather && (
           <div className="absolute right-2 top-1/2 -translate-y-1/2">
