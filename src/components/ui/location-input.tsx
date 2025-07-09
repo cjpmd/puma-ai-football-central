@@ -112,7 +112,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
 
         const autocomplete = autocompleteRef.current;
 
-        // Add place_changed listener with proper event handling
+        // Add place_changed listener
         const handlePlaceChanged = () => {
           console.log('[LocationInput] Place changed event triggered');
           
@@ -132,6 +132,8 @@ export const LocationInput: React.FC<LocationInputProps> = ({
               const lng = place.geometry.location.lng();
               console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
               onLocationSelect({ lat, lng, address });
+            } else {
+              console.warn('[LocationInput] Place selected but no geometry available');
             }
           } else {
             console.warn('[LocationInput] Place selected but no formatted_address available:', place);
@@ -160,14 +162,24 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Allow manual typing while autocomplete is available
-    onChange(e.target.value);
+    // Only update state, don't interfere with autocomplete
+    const newValue = e.target.value;
+    onChange(newValue);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent form submission when pressing Enter in autocomplete
-    if (e.key === 'Enter') {
+    // Don't prevent default behavior for autocomplete
+    // Let Google handle arrow keys and enter for selection
+    if (e.key === 'Enter' && !autocompleteRef.current) {
+      // Only prevent form submission if autocomplete isn't active
       e.preventDefault();
+    }
+  };
+
+  const handleInputFocus = () => {
+    // Ensure autocomplete is ready when input is focused
+    if (autocompleteRef.current && inputRef.current) {
+      console.log('[LocationInput] Input focused, autocomplete ready');
     }
   };
 
@@ -186,6 +198,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           value={value}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
+          onFocus={handleInputFocus}
           placeholder={placeholder}
           required={required}
           className="pr-10"
