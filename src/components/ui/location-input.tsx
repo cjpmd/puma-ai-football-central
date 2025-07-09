@@ -112,28 +112,33 @@ export const LocationInput: React.FC<LocationInputProps> = ({
 
         const autocomplete = autocompleteRef.current;
 
-        // Set up the place changed listener - simplified approach
-        autocomplete.addListener('place_changed', () => {
+        // Add place_changed listener with proper event handling
+        const handlePlaceChanged = () => {
           console.log('[LocationInput] Place changed event triggered');
           
           const place = autocomplete.getPlace();
           console.log('[LocationInput] Selected place:', place);
           
-          if (place && place.geometry && place.geometry.location) {
-            const lat = place.geometry.location.lat();
-            const lng = place.geometry.location.lng();
-            const address = place.formatted_address || '';
+          if (place && place.formatted_address) {
+            const address = place.formatted_address;
+            console.log('[LocationInput] Setting address:', address);
             
-            console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
+            // Update the input value and call onChange
             onChange(address);
-            onLocationSelect?.({ lat, lng, address });
-          } else if (place && place.formatted_address) {
-            console.log('[LocationInput] Place selected without geometry:', place.formatted_address);
-            onChange(place.formatted_address);
+            
+            // If geometry is available, call onLocationSelect
+            if (place.geometry && place.geometry.location && onLocationSelect) {
+              const lat = place.geometry.location.lat();
+              const lng = place.geometry.location.lng();
+              console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
+              onLocationSelect({ lat, lng, address });
+            }
           } else {
-            console.warn('[LocationInput] Place selected but no usable data available');
+            console.warn('[LocationInput] Place selected but no formatted_address available');
           }
-        });
+        };
+
+        autocomplete.addListener('place_changed', handlePlaceChanged);
         
         console.log('[LocationInput] Autocomplete initialized successfully');
       } catch (error) {
@@ -147,10 +152,17 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   useEffect(() => {
     return () => {
       if (autocompleteRef.current) {
+        // Clear listeners
+        window.google?.maps?.event?.clearInstanceListeners(autocompleteRef.current);
         autocompleteRef.current = null;
       }
     };
   }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Allow manual typing while autocomplete is available
+    onChange(e.target.value);
+  };
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -165,7 +177,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           ref={inputRef}
           id="location"
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={handleInputChange}
           placeholder={placeholder}
           required={required}
           className="pr-10"
