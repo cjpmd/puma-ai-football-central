@@ -29,5 +29,9 @@ declare namespace google {
         };
       }
     }
+    
+    namespace event {
+      function clearInstanceListeners(instance: any): void;
+    }
   }
 }
