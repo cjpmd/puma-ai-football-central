@@ -6,16 +6,18 @@ interface EntityHeaderProps {
   entityName: string;
   entityType: 'team' | 'club';
   textColor?: string;
+  className?: string;
 }
 
 export const EntityHeader: React.FC<EntityHeaderProps> = ({ 
   logoUrl, 
   entityName, 
   entityType,
-  textColor = "text-gray-900"
+  textColor = "text-gray-900",
+  className = ""
 }) => {
   return (
-    <div className="flex items-center gap-3">
+    <div className={`flex items-center gap-3 ${className}`}>
       {logoUrl ? (
         <img 
           src={logoUrl} 
