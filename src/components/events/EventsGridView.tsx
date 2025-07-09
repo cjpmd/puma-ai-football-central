@@ -236,9 +236,9 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                 <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
               ) : (
                 <div className="flex items-center gap-2">
-                  {team?.logo_url && (
+                  {team?.logoUrl && (
                     <img 
-                      src={team.logo_url} 
+                      src={team.logoUrl} 
                       alt={team.name}
                       className="w-6 h-6 rounded-full"
                     />

@@ -151,9 +151,9 @@ export function UpcomingEvents() {
                 <div className="flex items-center gap-2">
                   {(() => {
                     const team = teams.find(t => t.name === nextEvent.team_name);
-                    return team?.logo_url && (
+                    return team?.logoUrl && (
                       <img 
-                        src={team.logo_url} 
+                        src={team.logoUrl} 
                         alt={team.name}
                         className="w-6 h-6 rounded-full"
                       />
@@ -214,9 +214,9 @@ export function UpcomingEvents() {
                       <h3 className="font-medium">{event.title}</h3>
                     ) : (
                       <div className="flex items-center gap-2">
-                        {team?.logo_url && (
+                        {team?.logoUrl && (
                           <img 
-                            src={team.logo_url} 
+                            src={team.logoUrl} 
                             alt={team.name}
                             className="w-4 h-4 rounded-full"
                           />

@@ -229,9 +229,9 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             </div>
                           ) : (
                             <div className="flex items-center gap-1 text-xs">
-                              {team?.logo_url && (
+                              {team?.logoUrl && (
                                 <img 
-                                  src={team.logo_url} 
+                                  src={team.logoUrl} 
                                   alt={team.name}
                                   className="w-3 h-3 rounded-full"
                                 />
