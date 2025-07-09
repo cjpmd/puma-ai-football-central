@@ -116,6 +116,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         throw eventError;
       }
 
+      if (!eventData?.team_id) {
+        console.error('No team_id found for event');
+        return;
+      }
+
       const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('id, name')

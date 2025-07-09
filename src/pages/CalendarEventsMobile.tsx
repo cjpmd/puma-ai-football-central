@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -32,7 +31,7 @@ export default function CalendarEventsMobile() {
   const [showTeamSelection, setShowTeamSelection] = useState(false);
   const [showPostGameEdit, setShowPostGameEdit] = useState(false);
   const [showEventDetails, setShowEventDetails] = useState(false);
-  const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
+  const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
   const { toast } = useToast();
   const { teams } = useAuth();
 
@@ -53,19 +52,28 @@ export default function CalendarEventsMobile() {
       if (error) throw error;
       setEvents((data || []) as DatabaseEvent[]);
       
-      // Load performance categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('performance_categories')
-        .select('*')
+      // Load event selections to get proper performance category mappings
+      const { data: selectionsData, error: selectionsError } = await supabase
+        .from('event_selections')
+        .select(`
+          event_id,
+          team_number,
+          performance_category_id,
+          performance_categories!inner(name)
+        `)
         .eq('team_id', teams[0].id);
 
-      if (categoriesError) throw categoriesError;
+      if (selectionsError) throw selectionsError;
       
-      const categoryMap: {[key: string]: string} = {};
-      categoriesData?.forEach(cat => {
-        categoryMap[cat.id] = cat.name;
+      // Group selections by event_id for easy lookup
+      const selectionsByEvent: {[key: string]: any[]} = {};
+      selectionsData?.forEach(selection => {
+        if (!selectionsByEvent[selection.event_id]) {
+          selectionsByEvent[selection.event_id] = [];
+        }
+        selectionsByEvent[selection.event_id].push(selection);
       });
-      setPerformanceCategories(categoryMap);
+      setEventSelections(selectionsByEvent);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -131,6 +139,7 @@ export default function CalendarEventsMobile() {
     
     const scores = [];
     const scoresData = event.scores as any;
+    const selections = eventSelections[event.id] || [];
     
     // Check for team_1, team_2, etc. (performance category teams)
     let teamNumber = 1;
@@ -138,11 +147,9 @@ export default function CalendarEventsMobile() {
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
       
-      // Get the performance category name for this team number
-      // Look for the category that corresponds to this team number in the order they were created
-      const categoryKeys = Object.keys(performanceCategories);
-      const categoryId = categoryKeys[teamNumber - 1]; // Use array index to match team number
-      const teamName = performanceCategories[categoryId] || `Team ${teamNumber}`;
+      // Find the correct performance category for this team number
+      const selection = selections.find(s => s.team_number === teamNumber);
+      const teamName = selection?.performance_categories?.name || `Team ${teamNumber}`;
       
       let outcome = 'draw';
       let outcomeIcon = '🤝';
