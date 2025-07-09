@@ -245,6 +245,26 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
     return category?.name || 'No Category';
   };
 
+  // Helper function to get position group color
+  const getPositionGroupColor = (position: string) => {
+    const pos = position?.toLowerCase() || '';
+    
+    if (pos.includes('gk') || pos.includes('goalkeeper')) {
+      return 'border-yellow-400 bg-yellow-50';
+    } else if (pos.includes('cb') || pos.includes('lb') || pos.includes('rb') || 
+               pos.includes('wb') || pos.includes('def') || pos.includes('dl') || 
+               pos.includes('dr') || pos.includes('dc')) {
+      return 'border-blue-400 bg-blue-50';
+    } else if (pos.includes('cm') || pos.includes('dm') || pos.includes('am') || 
+               pos.includes('mid') || pos.includes('ml') || pos.includes('mr') || 
+               pos.includes('mc') || pos.includes('cdm') || pos.includes('cam')) {
+      return 'border-green-400 bg-green-50';
+    } else {
+      // Forwards/Attackers
+      return 'border-red-400 bg-red-50';
+    }
+  };
+
   // Render formation visualization
   const renderFormation = (selection: EventSelection & { gameTimeDisplay: string; halfDisplay: string }) => {
     const positions = selection.player_positions || [];
@@ -298,6 +318,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
               {positions.map((pos: any, index: number) => {
                 const player = squadPlayers.find(p => p.id === (pos.playerId || pos.player_id));
                 const isCaptain = (pos.playerId || pos.player_id) === selection.captain_id;
+                const positionGroupColor = getPositionGroupColor(pos.position || pos.abbreviation || '');
                 
                 return (
                   <div
@@ -309,19 +330,27 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
                     }}
                   >
                     <div className="flex flex-col items-center">
-                      <div className={`w-12 h-12 rounded-full border-2 border-white flex flex-col items-center justify-center text-xs font-bold relative ${
-                        player?.type === 'goalkeeper' ? 'bg-yellow-400' : 'bg-blue-500'
-                      } text-white shadow-lg`}>
+                      <div className={`w-14 h-14 rounded-full border-2 border-dashed ${positionGroupColor} flex flex-col items-center justify-center text-xs font-bold relative shadow-lg`}>
                         {isCaptain && (
                           <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
                             <span className="text-xs font-bold text-black">C</span>
                           </div>
                         )}
-                        <div className="text-xs font-bold">{pos.abbreviation || pos.position?.substring(0, 2)}</div>
-                        <div className="text-xs">#{player?.squad_number}</div>
-                      </div>
-                      <div className="mt-1 px-2 py-0.5 bg-white/90 rounded text-xs font-medium text-center leading-tight max-w-20 truncate">
-                        {player?.name || 'Unknown'}
+                        
+                        {/* Position abbreviation above player name */}
+                        <div className="text-xs font-bold text-gray-700 mb-0.5">
+                          {pos.abbreviation || pos.position?.substring(0, 2) || ''}
+                        </div>
+                        
+                        {/* Player name */}
+                        <div className="text-xs font-medium text-center leading-tight">
+                          {player?.name || 'Unknown'}
+                        </div>
+                        
+                        {/* Squad number below */}
+                        <div className="text-xs font-bold text-gray-600">
+                          #{player?.squad_number}
+                        </div>
                       </div>
                     </div>
                   </div>
