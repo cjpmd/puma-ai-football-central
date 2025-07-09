@@ -5,11 +5,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PositionSlot } from './PositionSlot';
 import { SquadPlayer } from '@/types/teamSelection';
 import { GameFormat } from '@/types';
 import { getPositionsForFormation, getFormationsByFormat } from '@/utils/formationUtils';
 import { NameDisplayOption } from '@/types/team';
+import { X, Plus } from 'lucide-react';
 
 interface FormationPosition {
   id: string;
@@ -53,64 +55,23 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   gameDuration
 }) => {
   const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
-  const [formationName, setFormationName] = useState(periods[currentPeriodIndex]?.formation || getFormationsByFormat(gameFormat)[0]?.id || '4-3-3');
-  const [periodDuration, setPeriodDuration] = useState(periods[currentPeriodIndex]?.duration || gameDuration);
-
-  const currentPeriod = periods[currentPeriodIndex] || {
-    id: `period-${periods.length + 1}`,
-    periodNumber: periods.length + 1,
-    formation: formationName,
-    duration: periodDuration,
-    positions: getPositionsForFormation(formationName, gameFormat).map((pos, index) => ({
-      id: `position-${index}`,
-      positionName: pos.position,
-      abbreviation: pos.abbreviation,
-      positionGroup: pos.positionGroup,
-      x: pos.x,
-      y: pos.y,
-    })),
-    substitutes: [],
-    captainId: globalCaptainId
-  };
-
-  const handleFormationChange = (newFormation: string) => {
-    setFormationName(newFormation);
-    
-    const newPositions = getPositionsForFormation(newFormation, gameFormat).map((pos, index) => ({
-      id: `position-${index}`,
-      positionName: pos.position,
-      abbreviation: pos.abbreviation,
-      positionGroup: pos.positionGroup,
-      x: pos.x,
-      y: pos.y,
-    }));
-
-    const updatedPeriods = periods.map((period, index) =>
-      index === currentPeriodIndex ? { ...period, formation: newFormation, positions: newPositions } : period
-    );
-
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const handleDurationChange = (newDuration: number) => {
-    setPeriodDuration(newDuration);
-
-    const updatedPeriods = periods.map((period, index) =>
-      index === currentPeriodIndex ? { ...period, duration: newDuration } : period
-    );
-
-    onPeriodsChange(updatedPeriods);
-  };
+  const availableFormations = getFormationsByFormat(gameFormat);
+  
+  const currentPeriod = periods[currentPeriodIndex];
+  const [newFormation, setNewFormation] = useState(currentPeriod?.formation || availableFormations[0]?.id || '1-2-3-1');
+  const [newDuration, setNewDuration] = useState(currentPeriod?.duration || Math.floor(gameDuration / Math.max(1, periods.length)));
 
   const addPeriod = () => {
     const newPeriodNumber = periods.length + 1;
+    const positions = getPositionsForFormation(newFormation, gameFormat);
+    
     const newPeriod: FormationPeriod = {
       id: `period-${newPeriodNumber}`,
       periodNumber: newPeriodNumber,
-      formation: formationName,
-      duration: periodDuration,
-      positions: getPositionsForFormation(formationName, gameFormat).map((pos, index) => ({
-        id: `position-${index}`,
+      formation: newFormation,
+      duration: newDuration,
+      positions: positions.map((pos, index) => ({
+        id: `position-${newPeriodNumber}-${index}`,
         positionName: pos.position,
         abbreviation: pos.abbreviation,
         positionGroup: pos.positionGroup,
@@ -125,132 +86,242 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     setCurrentPeriodIndex(periods.length);
   };
 
-  const updatePosition = (positionId: string, updates: Partial<FormationPosition>) => {
-    const updatedPositions = currentPeriod.positions.map(pos =>
-      pos.id === positionId ? { ...pos, ...updates } : pos
-    );
-
-    const updatedPeriod = { ...currentPeriod, positions: updatedPositions };
+  const updatePeriod = (periodIndex: number, updates: Partial<FormationPeriod>) => {
     const updatedPeriods = periods.map((period, index) =>
-      index === currentPeriodIndex ? updatedPeriod : period
+      index === periodIndex ? { ...period, ...updates } : period
     );
-
     onPeriodsChange(updatedPeriods);
   };
 
-  const handlePlayerDrop = useCallback(
-    (positionId: string, playerId: string | null) => {
-      updatePosition(positionId, { playerId });
-    },
-    [currentPeriod, periods, currentPeriodIndex, onPeriodsChange]
-  );
+  const removePeriod = (periodIndex: number) => {
+    if (periods.length > 1) {
+      const updatedPeriods = periods.filter((_, index) => index !== periodIndex);
+      onPeriodsChange(updatedPeriods);
+      if (currentPeriodIndex >= updatedPeriods.length) {
+        setCurrentPeriodIndex(Math.max(0, updatedPeriods.length - 1));
+      }
+    }
+  };
 
-  const renderFormationField = (currentPeriod: FormationPeriod) => {
-    const handleDragOver = (e: any) => {
+  const updateFormation = (formationId: string) => {
+    if (!currentPeriod) return;
+    
+    const positions = getPositionsForFormation(formationId, gameFormat);
+    const updatedPeriod = {
+      ...currentPeriod,
+      formation: formationId,
+      positions: positions.map((pos, index) => ({
+        id: `position-${currentPeriod.periodNumber}-${index}`,
+        positionName: pos.position,
+        abbreviation: pos.abbreviation,
+        positionGroup: pos.positionGroup,
+        x: pos.x,
+        y: pos.y,
+      }))
+    };
+    
+    updatePeriod(currentPeriodIndex, updatedPeriod);
+  };
+
+  const updateDuration = (duration: number) => {
+    if (!currentPeriod) return;
+    updatePeriod(currentPeriodIndex, { duration });
+  };
+
+  const handlePlayerDrop = useCallback((positionId: string, playerId: string | null) => {
+    if (!currentPeriod) return;
+    
+    const updatedPositions = currentPeriod.positions.map(pos =>
+      pos.id === positionId ? { ...pos, playerId } : pos
+    );
+    
+    updatePeriod(currentPeriodIndex, { positions: updatedPositions });
+  }, [currentPeriod, currentPeriodIndex]);
+
+  const renderFormationField = (period: FormationPeriod) => {
+    const handleDragOver = (e: React.DragEvent) => {
       e.preventDefault();
     };
 
-    const handleDrop = (e: any, positionId: string) => {
+    const handleDrop = (e: React.DragEvent, positionId: string) => {
       e.preventDefault();
       const playerId = e.dataTransfer.getData('playerId');
       handlePlayerDrop(positionId, playerId);
     };
 
     return (
-      <div className="relative bg-green-100 rounded-lg p-4 h-80 border overflow-hidden">
+      <div className="relative bg-gradient-to-b from-green-100 to-green-200 rounded-lg p-6 h-96 border-2 border-green-300 overflow-hidden">
         {/* Football pitch markings */}
-        <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-        
-        {/* Center circle and halfway line */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 border-2 border-white rounded-full opacity-50" />
-        <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-        
-        {/* Penalty boxes */}
-        <div className="absolute top-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
-        <div className="absolute bottom-2 left-1/4 right-1/4 h-8 border-l-2 border-r-2 border-white opacity-50" />
+        <div className="absolute inset-0 opacity-30">
+          {/* Center circle */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full" />
+          {/* Center dot */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white rounded-full" />
+          {/* Halfway line */}
+          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white" />
+          {/* Goal areas */}
+          <div className="absolute top-4 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white" />
+          <div className="absolute bottom-4 left-1/3 right-1/3 h-12 border-l-2 border-r-2 border-white" />
+          {/* Penalty areas */}
+          <div className="absolute top-2 left-1/4 right-1/4 h-16 border-l-2 border-r-2 border-white" />
+          <div className="absolute bottom-2 left-1/4 right-1/4 h-16 border-l-2 border-r-2 border-white" />
+        </div>
 
         {/* Player positions */}
-        {currentPeriod.positions.map((position) => {
+        {period.positions.map((position) => {
           const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
           const isCaptain = globalCaptainId === position.playerId;
           
           return (
-            <PositionSlot
-              key={position.id}
-              id={position.id}
-              position={position}
-              player={player}
-              isCaptain={isCaptain}
-              nameDisplayOption={nameDisplayOption}
-              isLarger={false}
-            />
-          );
-        })}
-
-        {/* Draggable players overlay */}
-        <div
-          className="absolute inset-0 z-10"
-          onDragOver={handleDragOver}
-        >
-          {currentPeriod.positions.map((position) => (
             <div
               key={position.id}
-              className="absolute w-14 h-14 rounded-full"
+              className="absolute"
               style={{
                 left: `${position.x}%`,
                 top: `${position.y}%`,
                 transform: 'translate(-50%, -50%)',
               }}
-              onDrop={(e) => handleDrop(e, position.id)}
               onDragOver={handleDragOver}
-            />
-          ))}
-        </div>
+              onDrop={(e) => handleDrop(e, position.id)}
+            >
+              <PositionSlot
+                id={position.id}
+                position={position}
+                player={player}
+                isCaptain={isCaptain}
+                nameDisplayOption={nameDisplayOption}
+                isLarger={true}
+              />
+            </div>
+          );
+        })}
       </div>
     );
   };
 
+  if (periods.length === 0) {
+    return (
+      <Card>
+        <CardContent className="py-8 text-center">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold mb-2">No Periods Created</h3>
+            <p className="text-muted-foreground mb-4">
+              Create your first period to start building formations.
+            </p>
+          </div>
+          
+          <div className="space-y-4 max-w-md mx-auto">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="formation">Formation</Label>
+                <Select value={newFormation} onValueChange={setNewFormation}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableFormations.map((formation) => (
+                      <SelectItem key={formation.id} value={formation.id}>
+                        {formation.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="duration">Duration (mins)</Label>
+                <Input
+                  type="number"
+                  value={newDuration}
+                  onChange={(e) => setNewDuration(parseInt(e.target.value) || 0)}
+                  min={1}
+                />
+              </div>
+            </div>
+            
+            <Button onClick={addPeriod} className="w-full">
+              <Plus className="h-4 w-4 mr-2" />
+              Create First Period
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Period Controls */}
       <Card>
         <CardHeader>
-          <CardTitle>Formation & Periods</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Formation Periods</CardTitle>
+            <Button onClick={addPeriod} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Period
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center space-x-4 mb-4">
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="formation">Formation:</Label>
-              <Input
-                type="text"
-                id="formation"
-                value={formationName}
-                onChange={(e) => setFormationName(e.target.value)}
-              />
-              <Button onClick={() => handleFormationChange(formationName)}>Update Formation</Button>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Label htmlFor="duration">Period Duration:</Label>
-              <Input
-                type="number"
-                id="duration"
-                value={periodDuration}
-                onChange={(e) => setPeriodDuration(parseInt(e.target.value))}
-              />
-              <Button onClick={() => handleDurationChange(periodDuration)}>Update Duration</Button>
-            </div>
-          </div>
-
-          <Tabs defaultValue={currentPeriodIndex.toString()} className="space-y-4">
-            <TabsList>
+          {/* Period Tabs */}
+          <Tabs value={currentPeriodIndex.toString()} onValueChange={(value) => setCurrentPeriodIndex(parseInt(value))}>
+            <TabsList className="grid grid-cols-auto w-full mb-4">
               {periods.map((period, index) => (
-                <TabsTrigger key={period.id} value={index.toString()}>
-                  Period {period.periodNumber}
+                <TabsTrigger key={period.id} value={index.toString()} className="relative">
+                  Period {period.periodNumber} ({period.duration}min)
+                  {periods.length > 1 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute -top-2 -right-2 h-5 w-5 p-0 bg-destructive text-destructive-foreground rounded-full"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removePeriod(index);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
                 </TabsTrigger>
               ))}
-              <Button onClick={addPeriod}>Add Period</Button>
             </TabsList>
+
+            {/* Period Configuration */}
+            {currentPeriod && (
+              <div className="space-y-4 mb-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Formation</Label>
+                    <Select value={currentPeriod.formation} onValueChange={updateFormation}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableFormations.map((formation) => (
+                          <SelectItem key={formation.id} value={formation.id}>
+                            {formation.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label>Duration (minutes)</Label>
+                    <Input
+                      type="number"
+                      value={currentPeriod.duration}
+                      onChange={(e) => updateDuration(parseInt(e.target.value) || 0)}
+                      min={1}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Formation Field Display */}
             {periods.map((period, index) => (
-              <TabsContent key={period.id} value={index.toString()}>
+              <TabsContent key={period.id} value={index.toString()} className="mt-0">
                 {renderFormationField(period)}
               </TabsContent>
             ))}
