@@ -1,36 +1,35 @@
 
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users, Trophy, Plus, TrendingUp } from 'lucide-react';
+import { Calendar, Users, Plus, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function DashboardMobile() {
-  const { teams } = useAuth();
+  const { teams, profile } = useAuth();
   const currentTeam = teams?.[0];
 
   return (
     <MobileLayout>
       <div className="space-y-6">
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="touch-manipulation">
-            <CardContent className="p-4 text-center">
-              <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-2xl font-bold">24</div>
-              <div className="text-sm text-muted-foreground">Players</div>
-            </CardContent>
-          </Card>
-          <Card className="touch-manipulation">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <div className="text-2xl font-bold">5</div>
-              <div className="text-sm text-muted-foreground">Events</div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Welcome Section */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Welcome back{profile?.name ? `, ${profile.name}` : ''}!</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {currentTeam ? (
+              <p className="text-sm text-muted-foreground">
+                Managing {currentTeam.name}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Get started by creating your first team
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Quick Actions */}
         <Card>
@@ -53,59 +52,54 @@ export default function DashboardMobile() {
           </CardContent>
         </Card>
 
-        {/* Upcoming Events */}
+        {/* Team Overview */}
+        {currentTeam && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Team Overview
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Age Group</span>
+                  <span className="text-sm font-medium">{currentTeam.ageGroup}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Game Format</span>
+                  <span className="text-sm font-medium">{currentTeam.gameFormat}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Season</span>
+                  <span className="text-sm font-medium">
+                    {currentTeam.seasonStart} - {currentTeam.seasonEnd}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Recent Activity */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <Calendar className="h-5 w-5 mr-2" />
-              Upcoming Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-              <div>
-                <div className="font-medium">Training Session</div>
-                <div className="text-sm text-muted-foreground">Tomorrow, 6:00 PM</div>
-              </div>
-              <Badge variant="outline">Training</Badge>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-              <div>
-                <div className="font-medium">vs City United</div>
-                <div className="text-sm text-muted-foreground">Sat, 2:00 PM</div>
-              </div>
-              <Badge variant="outline">Match</Badge>
-            </div>
-            <Link to="/calendar">
-              <Button variant="ghost" className="w-full h-10">
-                View All Events
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Recent Performance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2" />
-              Recent Performance
+              Recent Activity
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Wins</span>
-                <Badge className="bg-green-500">8</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Draws</span>
-                <Badge variant="secondary">2</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Losses</span>
-                <Badge variant="destructive">1</Badge>
-              </div>
+            <div className="text-center py-8">
+              <p className="text-sm text-muted-foreground mb-4">
+                No recent activity yet
+              </p>
+              <Link to="/calendar">
+                <Button variant="outline" size="sm">
+                  View Calendar
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
