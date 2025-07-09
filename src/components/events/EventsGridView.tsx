@@ -1,12 +1,13 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Trophy, Trash2, Cloud } from 'lucide-react';
+import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
-import { KitAvatar } from '@/components/shared/KitAvatar';
+import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { WeatherService } from '@/services/weatherService';
 
@@ -183,13 +184,8 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     return scores;
   };
 
-  const getKitBadgeColor = (kitSelection: string) => {
-    switch (kitSelection) {
-      case 'home': return 'bg-blue-500';
-      case 'away': return 'bg-red-500';
-      case 'training': return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
+  const shouldShowTitle = (event: DatabaseEvent) => {
+    return !isMatchType(event.event_type) || !event.opponent;
   };
 
   const sortedEvents = [...events].sort((a, b) => 
@@ -203,10 +199,13 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         const matchType = isMatchType(event.event_type);
         const teamScores = getTeamScores(event);
         const weather = eventWeather[event.id];
+        const team = teams.find(t => t.id === event.team_id);
+        const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
         
         return (
           <Card key={event.id} className="flex flex-col">
             <CardHeader className="pb-3">
+              {/* Top line: Event type and Kit */}
               <div className="flex items-center justify-between mb-2">
                 <div className="flex gap-2">
                   <Badge 
@@ -215,38 +214,10 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   >
                     {event.event_type}
                   </Badge>
-                  {(event as any).kit_selection && (() => {
-                    const team = teams.find(t => t.id === event.team_id);
-                    const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
-                    
-                    return (
-                      <div className="flex items-center gap-1">
-                        {kitDesign && (
-                          <KitAvatar design={kitDesign} size="xs" />
-                        )}
-                        <Badge 
-                          className={`text-xs text-white ${getKitBadgeColor((event as any).kit_selection)}`}
-                          variant="secondary"
-                        >
-                          {(event as any).kit_selection} kit
-                        </Badge>
-                      </div>
-                    );
-                  })()}
                 </div>
-                <div className="flex items-center gap-1">
-                  {weather && (
-                    <div className="flex items-center gap-1">
-                      <img 
-                        src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
-                        alt={weather.description}
-                        className="w-6 h-6"
-                        title={`${Math.round(weather.temp)}°C - ${weather.description}`}
-                      />
-                      <span className="text-xs text-muted-foreground">
-                        {Math.round(weather.temp)}°C
-                      </span>
-                    </div>
+                <div className="flex items-center gap-2">
+                  {kitDesign && (
+                    <EnhancedKitAvatar design={kitDesign} size="sm" />
                   )}
                   {completed && matchType && teamScores.length > 0 && (
                     <div className="flex gap-1">
@@ -259,7 +230,23 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   )}
                 </div>
               </div>
-              <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
+              
+              {/* Club badge vs opponent OR title */}
+              {shouldShowTitle(event) ? (
+                <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {team?.logo_url && (
+                    <img 
+                      src={team.logo_url} 
+                      alt={team.name}
+                      className="w-6 h-6 rounded-full"
+                    />
+                  )}
+                  <span className="text-muted-foreground">vs</span>
+                  <span className="font-semibold">{event.opponent}</span>
+                </div>
+              )}
             </CardHeader>
             
             <CardContent className="pt-0 flex-1 flex flex-col">
@@ -276,9 +263,24 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                 )}
                 
                 {event.location && (
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    📍 {event.location}
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground line-clamp-1">
+                      📍 {event.location}
+                    </p>
+                    {weather && (
+                      <div className="flex items-center gap-1">
+                        <img 
+                          src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
+                          alt={weather.description}
+                          className="w-6 h-6"
+                          title={`${Math.round(weather.temp)}°C - ${weather.description}`}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(weather.temp)}°C
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 )}
                 
                 {teamScores.length > 0 && matchType && (
@@ -290,12 +292,6 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                       </p>
                     ))}
                   </div>
-                )}
-                
-                {event.opponent && matchType && (
-                  <p className="text-sm text-muted-foreground line-clamp-1">
-                    vs {event.opponent}
-                  </p>
                 )}
                 
                 {event.description && (

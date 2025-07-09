@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -6,6 +7,8 @@ import { ChevronLeft, ChevronRight, Edit, Users, Trophy, Trash2 } from 'lucide-r
 import { DatabaseEvent } from '@/types/event';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
 import { WeatherService } from '@/services/weatherService';
+import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -30,6 +33,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
+  const { teams } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -149,6 +153,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     setCurrentDate(prev => direction === 'next' ? addMonths(prev, 1) : subMonths(prev, 1));
   };
 
+  const shouldShowTitle = (event: DatabaseEvent) => {
+    return !isMatchType(event.event_type) || !event.opponent;
+  };
+
   return (
     <div className="space-y-4">
       {/* Month Navigation */}
@@ -196,9 +204,12 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                       const matchType = isMatchType(event.event_type);
                       const teamScores = getTeamScores(event);
                       const weather = eventWeather[event.id];
+                      const team = teams.find(t => t.id === event.team_id);
+                      const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
                       
                       return (
                         <div key={event.id} className="space-y-1">
+                          {/* Top line: Event type and Kit */}
                           <div className="flex items-center justify-between">
                             <Badge 
                               className={`text-xs ${matchType ? 'bg-red-500' : 'bg-blue-500'}`}
@@ -206,30 +217,29 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             >
                               {event.event_type}
                             </Badge>
-                            <div className="flex items-center gap-1">
-                              {weather && (
-                                <img 
-                                  src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
-                                  alt={weather.description}
-                                  className="w-4 h-4"
-                                  title={`${Math.round(weather.temp)}°C`}
-                                />
-                              )}
-                              {completed && matchType && teamScores.length > 0 && (
-                                <div className="flex gap-1">
-                                  {teamScores.map((score) => (
-                                    <span key={score.teamNumber} className="text-sm">
-                                      {score.outcomeIcon}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                            {kitDesign && (
+                              <EnhancedKitAvatar design={kitDesign} size="xs" />
+                            )}
                           </div>
                           
-                          <div className="text-xs font-medium truncate" title={event.title}>
-                            {event.title}
-                          </div>
+                          {/* Club badge vs opponent OR title */}
+                          {shouldShowTitle(event) ? (
+                            <div className="text-xs font-medium truncate" title={event.title}>
+                              {event.title}
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 text-xs">
+                              {team?.logo_url && (
+                                <img 
+                                  src={team.logo_url} 
+                                  alt={team.name}
+                                  className="w-3 h-3 rounded-full"
+                                />
+                              )}
+                              <span className="text-muted-foreground">vs</span>
+                              <span className="font-medium truncate">{event.opponent}</span>
+                            </div>
+                          )}
                           
                           {event.start_time && (
                             <div className="text-xs text-muted-foreground">
@@ -246,6 +256,29 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                               ))}
                             </div>
                           )}
+                          
+                          {/* Location and outcome/weather icons */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex gap-1">
+                              {completed && matchType && teamScores.length > 0 && (
+                                <div className="flex gap-1">
+                                  {teamScores.map((score) => (
+                                    <span key={score.teamNumber} className="text-sm">
+                                      {score.outcomeIcon}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {weather && (
+                              <img 
+                                src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
+                                alt={weather.description}
+                                className="w-4 h-4"
+                                title={`${Math.round(weather.temp)}°C`}
+                              />
+                            )}
+                          </div>
                           
                           <div className="flex gap-1">
                             <Button

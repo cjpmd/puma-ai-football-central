@@ -10,7 +10,7 @@ import { format, isSameDay } from 'date-fns';
 import { Calendar, Users, Trophy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
-import { KitAvatar } from '@/components/shared/KitAvatar';
+import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 
 interface Event {
   id: string;
@@ -90,6 +90,14 @@ export function UpcomingEvents() {
     setIsTeamSelectionOpen(true);
   };
 
+  const isMatchType = (eventType: string) => {
+    return ['match', 'fixture', 'friendly'].includes(eventType);
+  };
+
+  const shouldShowTitle = (event: Event) => {
+    return !isMatchType(event.event_type) || !event.opponent;
+  };
+
   const getNextEvent = () => {
     return events.length > 0 ? events[0] : null;
   };
@@ -125,12 +133,36 @@ export function UpcomingEvents() {
                 <CardTitle className="text-lg">Next Event</CardTitle>
                 <CardDescription>{nextEvent.team_name}</CardDescription>
               </div>
-              <Badge variant="secondary">{nextEvent.event_type}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary">{nextEvent.event_type}</Badge>
+                {(() => {
+                  const team = teams.find(t => t.name === nextEvent.team_name);
+                  const kitDesign = team?.kitDesigns?.[(nextEvent as any).kit_selection as 'home' | 'away' | 'training'];
+                  return kitDesign && <EnhancedKitAvatar design={kitDesign} size="sm" />;
+                })()}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <h3 className="font-semibold">{nextEvent.title}</h3>
+              {shouldShowTitle(nextEvent) ? (
+                <h3 className="font-semibold">{nextEvent.title}</h3>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const team = teams.find(t => t.name === nextEvent.team_name);
+                    return team?.logo_url && (
+                      <img 
+                        src={team.logo_url} 
+                        alt={team.name}
+                        className="w-6 h-6 rounded-full"
+                      />
+                    );
+                  })()}
+                  <span className="text-muted-foreground">vs</span>
+                  <span className="font-semibold">{nextEvent.opponent}</span>
+                </div>
+              )}
               <p className="text-sm text-muted-foreground">
                 {format(new Date(nextEvent.date), 'EEEE, MMMM d, yyyy')}
                 {nextEvent.start_time && ` at ${nextEvent.start_time}`}
@@ -138,22 +170,6 @@ export function UpcomingEvents() {
               {nextEvent.location && (
                 <p className="text-sm text-muted-foreground">📍 {nextEvent.location}</p>
               )}
-              {nextEvent.opponent && (
-                <p className="text-sm text-muted-foreground">vs {nextEvent.opponent}</p>
-              )}
-              {(nextEvent as any).kit_selection && (() => {
-                const team = teams.find(t => t.name === nextEvent.team_name);
-                const kitDesign = team?.kitDesigns?.[(nextEvent as any).kit_selection as 'home' | 'away' | 'training'];
-                
-                return (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    {kitDesign && (
-                      <KitAvatar design={kitDesign} size="sm" />
-                    )}
-                    <span>Kit: {(nextEvent as any).kit_selection}</span>
-                  </div>
-                );
-              })()}
             </div>
             <div className="flex gap-2 mt-4">
               <Button 
@@ -177,65 +193,71 @@ export function UpcomingEvents() {
       )}
 
       <div className="grid gap-3">
-        {events.slice(nextEvent ? 1 : 0).map((event) => (
-          <Card key={event.id} className="hover:shadow-md transition-shadow">
-            <CardContent className="pt-4">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-xs">
-                      {event.event_type}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{event.team_name}</span>
-                  </div>
-                  <h3 className="font-medium">{event.title}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(event.date), 'MMM d')}
-                    {event.start_time && ` at ${event.start_time}`}
-                  </p>
-                  {event.location && (
-                    <p className="text-xs text-muted-foreground">📍 {event.location}</p>
-                  )}
-                  {event.opponent && (
-                    <p className="text-xs text-muted-foreground">vs {event.opponent}</p>
-                  )}
-                  {(event as any).kit_selection && (() => {
-                    const team = teams.find(t => t.name === event.team_name);
-                    const kitDesign = team?.kitDesigns?.[(event as any).kit_selection as 'home' | 'away' | 'training'];
+        {events.slice(nextEvent ? 1 : 0).map((event) => {
+          const team = teams.find(t => t.name === event.team_name);
+          const kitDesign = team?.kitDesigns?.[(event as any).kit_selection as 'home' | 'away' | 'training'];
+          
+          return (
+            <Card key={event.id} className="hover:shadow-md transition-shadow">
+              <CardContent className="pt-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="outline" className="text-xs">
+                        {event.event_type}
+                      </Badge>
+                      {kitDesign && <EnhancedKitAvatar design={kitDesign} size="xs" />}
+                      <span className="text-xs text-muted-foreground">{event.team_name}</span>
+                    </div>
                     
-                    return (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        {kitDesign && (
-                          <KitAvatar design={kitDesign} size="xs" />
+                    {shouldShowTitle(event) ? (
+                      <h3 className="font-medium">{event.title}</h3>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {team?.logo_url && (
+                          <img 
+                            src={team.logo_url} 
+                            alt={team.name}
+                            className="w-4 h-4 rounded-full"
+                          />
                         )}
-                        <span>Kit: {(event as any).kit_selection}</span>
+                        <span className="text-xs text-muted-foreground">vs</span>
+                        <span className="font-medium">{event.opponent}</span>
                       </div>
-                    );
-                  })()}
+                    )}
+                    
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(event.date), 'MMM d')}
+                      {event.start_time && ` at ${event.start_time}`}
+                    </p>
+                    {event.location && (
+                      <p className="text-xs text-muted-foreground">📍 {event.location}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleEventDetails(event)}
+                      className="h-8 px-2"
+                    >
+                      View Details
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleManageSquad(event)}
+                      className="h-8 px-2"
+                    >
+                      <Users className="h-3 w-3 mr-1" />
+                      Manage Squad
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleEventDetails(event)}
-                    className="h-8 px-2"
-                  >
-                    View Details
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
-                    onClick={() => handleManageSquad(event)}
-                    className="h-8 px-2"
-                  >
-                    <Users className="h-3 w-3 mr-1" />
-                    Manage Squad
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {events.length === 0 && (
