@@ -476,9 +476,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <DragDropFormationEditor
                     squadPlayers={currentTeam.squadPlayers}
                     periods={currentTeam.periods}
-                    gameFormat={event.game_format || '11-a-side'}
+                    gameFormat={event.game_format as GameFormat || '11-a-side'}
                     globalCaptainId={currentTeam.globalCaptainId}
-                    nameDisplayOption={nameDisplayOption as any}
+                    nameDisplayOption={nameDisplayOption as NameDisplayOption}
                     onPeriodsChange={handlePeriodsChange}
                     onCaptainChange={handleCaptainChange}
                     gameDuration={event.game_duration || 50}

@@ -1,5 +1,5 @@
+
 import React, { useState, useCallback } from 'react';
-import { useDrag } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ interface FormationPosition {
   id: string;
   positionName: string;
   abbreviation: string;
-  positionGroup: string;
+  positionGroup: 'goalkeeper' | 'defender' | 'midfielder' | 'forward';
   x: number;
   y: number;
   playerId?: string;
@@ -64,10 +64,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     positions: getPositionsForFormation(formationName, gameFormat).map((pos, index) => ({
       id: `position-${index}`,
       positionName: pos.position,
-      abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
-      positionGroup: pos.positionGroup || 'midfielder',
-      x: pos.x || 50,
-      y: pos.y || 50,
+      abbreviation: pos.abbreviation,
+      positionGroup: pos.positionGroup,
+      x: pos.x,
+      y: pos.y,
     })),
     substitutes: [],
     captainId: globalCaptainId
@@ -79,10 +79,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const newPositions = getPositionsForFormation(newFormation, gameFormat).map((pos, index) => ({
       id: `position-${index}`,
       positionName: pos.position,
-      abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
-      positionGroup: pos.positionGroup || 'midfielder',
-      x: pos.x || 50,
-      y: pos.y || 50,
+      abbreviation: pos.abbreviation,
+      positionGroup: pos.positionGroup,
+      x: pos.x,
+      y: pos.y,
     }));
 
     const updatedPeriods = periods.map((period, index) =>
@@ -112,10 +112,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       positions: getPositionsForFormation(formationName, gameFormat).map((pos, index) => ({
         id: `position-${index}`,
         positionName: pos.position,
-        abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
-        positionGroup: pos.positionGroup || 'midfielder',
-        x: pos.x || 50,
-        y: pos.y || 50,
+        abbreviation: pos.abbreviation,
+        positionGroup: pos.positionGroup,
+        x: pos.x,
+        y: pos.y,
       })),
       substitutes: [],
       captainId: globalCaptainId
@@ -144,13 +144,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     },
     [currentPeriod, periods, currentPeriodIndex, onPeriodsChange]
   );
-
-  const { attributes, listeners } = useDrag({
-    id: 'draggable',
-    data: {
-      player: 'test'
-    }
-  });
 
   const renderFormationField = (currentPeriod: FormationPeriod) => {
     const handleDragOver = (e: any) => {
