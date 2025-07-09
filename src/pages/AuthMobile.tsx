@@ -4,7 +4,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
@@ -220,28 +219,6 @@ export default function AuthMobile() {
                 </Link>
               </div>
             )}
-          </CardContent>
-        </Card>
-
-        {/* Features */}
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <h3 className="font-semibold text-sm mb-3 text-blue-900">
-              What you get with Team Manager:
-            </h3>
-            <div className="space-y-2">
-              {[
-                'Player management & statistics',
-                'Event scheduling & calendar',
-                'Team performance analytics',
-                'Mobile-optimized experience'
-              ].map((feature, index) => (
-                <div key={index} className="flex items-center text-sm text-blue-800">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2 flex-shrink-0" />
-                  {feature}
-                </div>
-              ))}
-            </div>
           </CardContent>
         </Card>
       </div>

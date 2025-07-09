@@ -111,6 +111,76 @@ export default function CalendarEventsMobile() {
     return false;
   };
 
+  const getMatchResult = (event: DatabaseEvent) => {
+    if (!event.scores || !isMatchType(event.event_type)) return null;
+    
+    const scores = event.scores as any;
+    
+    // Check for team scores (performance category teams)
+    if (scores.team_1 !== undefined && scores.opponent_1 !== undefined) {
+      const ourScore = scores.team_1;
+      const opponentScore = scores.opponent_1;
+      
+      if (ourScore > opponentScore) return { icon: '🏆', result: 'win' };
+      if (ourScore < opponentScore) return { icon: '❌', result: 'loss' };
+      return { icon: '🤝', result: 'draw' };
+    }
+    
+    // Fallback to home/away scores
+    if (scores.home !== undefined && scores.away !== undefined) {
+      const ourScore = event.is_home ? scores.home : scores.away;
+      const opponentScore = event.is_home ? scores.away : scores.home;
+      
+      if (ourScore > opponentScore) return { icon: '🏆', result: 'win' };
+      if (ourScore < opponentScore) return { icon: '❌', result: 'loss' };
+      return { icon: '🤝', result: 'draw' };
+    }
+    
+    return null;
+  };
+
+  const getAllTeamScores = (event: DatabaseEvent) => {
+    if (!event.scores || !isMatchType(event.event_type)) return [];
+    
+    const scores = [];
+    const scoresData = event.scores as any;
+    
+    // Check for team_1, team_2, etc. (performance category teams)
+    let teamNumber = 1;
+    while (scoresData[`team_${teamNumber}`] !== undefined) {
+      const ourScore = scoresData[`team_${teamNumber}`];
+      const opponentScore = scoresData[`opponent_${teamNumber}`];
+      const outcome = scoresData[`outcome_${teamNumber}`];
+      const teamName = scoresData[`team_${teamNumber}_name`] || `Team ${teamNumber}`;
+      
+      scores.push({
+        teamNumber,
+        teamName,
+        ourScore,
+        opponentScore,
+        outcome
+      });
+      
+      teamNumber++;
+    }
+    
+    // Fallback to home/away scores if no team scores found
+    if (scores.length === 0 && scoresData.home !== undefined && scoresData.away !== undefined) {
+      const ourScore = event.is_home ? scoresData.home : scoresData.away;
+      const opponentScore = event.is_home ? scoresData.away : scoresData.home;
+      
+      scores.push({
+        teamNumber: 1,
+        teamName: teams?.[0]?.name || 'Team',
+        ourScore,
+        opponentScore,
+        outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw'
+      });
+    }
+    
+    return scores;
+  };
+
   const handleEventClick = (event: DatabaseEvent, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation();
@@ -235,6 +305,7 @@ export default function CalendarEventsMobile() {
                   const isEventToday = isToday(eventDate);
                   const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
                   const eventNeedsSetup = needsSetup(event);
+                  const matchResult = getMatchResult(event);
                   
                   return (
                     <Card 
@@ -255,9 +326,17 @@ export default function CalendarEventsMobile() {
                               </div>
                             </div>
                             
-                            {kitDesign && (
-                              <EnhancedKitAvatar design={kitDesign} size="sm" />
-                            )}
+                            <div className="flex items-center gap-2">
+                              {/* Result icon for completed matches */}
+                              {completed && matchResult && (
+                                <span className="text-lg">{matchResult.icon}</span>
+                              )}
+                              
+                              {/* Kit avatar */}
+                              {kitDesign && (
+                                <EnhancedKitAvatar design={kitDesign} size="sm" />
+                              )}
+                            </div>
                           </div>
 
                           {/* Teams/Title */}
@@ -405,6 +484,29 @@ export default function CalendarEventsMobile() {
                   </div>
                 )}
               </div>
+
+              {/* Show scores for all teams */}
+              {getAllTeamScores(selectedEvent).length > 0 && (
+                <div>
+                  <h4 className="font-medium mb-2">Scores</h4>
+                  <div className="space-y-2">
+                    {getAllTeamScores(selectedEvent).map((score, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                        <span className="text-sm font-medium">{score.teamName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{score.ourScore} - {score.opponentScore}</span>
+                          <Badge 
+                            variant={score.outcome === 'win' ? 'default' : score.outcome === 'loss' ? 'destructive' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {score.outcome?.toUpperCase()}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {selectedEvent.description && (
                 <div>

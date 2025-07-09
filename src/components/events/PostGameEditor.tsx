@@ -1,18 +1,13 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React, { useState, useEffect } from 'react';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { DatabaseEvent } from '@/types/event';
-import { ScoreInput } from './ScoreInput';
-import { eventsService } from '@/services/eventsService';
-import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { playerStatsService } from '@/services/playerStatsService';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 
 interface PostGameEditorProps {
   eventId: string;
@@ -20,128 +15,165 @@ interface PostGameEditorProps {
   onClose: () => void;
 }
 
-export const PostGameEditor: React.FC<PostGameEditorProps> = ({
-  eventId,
-  isOpen,
-  onClose
-}) => {
-  const [event, setEvent] = useState<DatabaseEvent | null>(null);
-  const [loading, setLoading] = useState(true);
+interface EventData {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  opponent?: string;
+}
+
+interface Player {
+  id: string;
+  name: string;
+}
+
+interface PerformanceCategory {
+  id: string;
+  name: string;
+}
+
+interface Scores {
+  [key: string]: string;
+  home?: string;
+  away?: string;
+}
+
+export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen, onClose }) => {
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
+  const [playerOfMatchId, setPlayerOfMatchId] = useState<string | null>(null);
+  const [scores, setScores] = useState<Scores>({});
   const [coachNotes, setCoachNotes] = useState('');
   const [staffNotes, setStaffNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (isOpen && eventId) {
-      loadEvent();
+    if (eventId && isOpen) {
+      loadEventData();
+      loadPlayers();
     }
-  }, [isOpen, eventId]);
+  }, [eventId, isOpen]);
 
-  const loadEvent = async () => {
+  const loadEventData = async () => {
     try {
-      setLoading(true);
-      const eventData = await eventsService.getEventById(eventId);
-      
-      // Load unique teams based on performance categories from event selections
-      const { data: eventSelections } = await supabase
-        .from('event_selections')
-        .select(`
-          team_number,
-          performance_category_id,
-          performance_categories (
-            id,
-            name
-          )
-        `)
+      const { data: eventData, error: eventError } = await supabase
+        .from('events')
+        .select('id, title, date, start_time, opponent')
+        .eq('id', eventId)
+        .single();
+
+      if (eventError) throw eventError;
+      setEvent(eventData);
+
+      const { data: scoresData, error: scoresError } = await supabase
+        .from('event_scores')
+        .select('*')
         .eq('event_id', eventId)
-        .eq('team_id', eventData.team_id);
+        .single();
 
-      // Create unique teams array based on performance categories only (not periods)
-      const uniqueTeams = new Map();
-      eventSelections?.forEach(selection => {
-        if (selection.performance_category_id) {
-          const teamKey = selection.performance_category_id;
-          if (!uniqueTeams.has(teamKey)) {
-            const performanceCategory = selection.performance_categories as any;
-            uniqueTeams.set(teamKey, {
-              teamNumber: selection.team_number,
-              name: performanceCategory?.name || `Team ${selection.team_number}`,
-              performanceCategoryId: selection.performance_category_id
-            });
-          }
-        }
-      });
-
-      // Update event with unique teams and properly handle all types
-      const teamsArray = Array.from(uniqueTeams.values());
-      const updatedEventData: DatabaseEvent = {
-        ...eventData,
-        event_type: eventData.event_type as DatabaseEvent['event_type'],
-        scores: eventData.scores as DatabaseEvent['scores'],
-        kit_selection: eventData.kit_selection as DatabaseEvent['kit_selection'],
-        teams: teamsArray
-      };
-
-      setEvent(updatedEventData);
-      setCoachNotes(eventData.coach_notes || '');
-      setStaffNotes(eventData.staff_notes || '');
-    } catch (error) {
-      console.error('Error loading event:', error);
+      if (scoresError && scoresError.message.includes('No rows found')) {
+        setScores({});
+      } else if (scoresError) {
+        throw scoresError;
+      } else {
+        setScores(scoresData?.scores || {});
+        setPlayerOfMatchId(scoresData?.player_of_match_id || null);
+        setCoachNotes(scoresData?.coach_notes || '');
+        setStaffNotes(scoresData?.staff_notes || '');
+        setPerformanceCategories(scoresData?.performance_categories || []);
+      }
+    } catch (error: any) {
       toast({
         title: 'Error',
-        description: 'Failed to load event data',
+        description: error.message || 'Failed to load event data',
         variant: 'destructive',
       });
-    } finally {
-      setLoading(false);
     }
   };
 
-  const handleEventUpdate = (updatedEvent: DatabaseEvent) => {
-    setEvent(updatedEvent);
-    // Invalidate queries to refresh the events list
-    queryClient.invalidateQueries({ queryKey: ['events'] });
+  const loadPlayers = async () => {
+    try {
+      const { data: teamData, error: teamError } = await supabase
+        .from('events')
+        .select('team_id')
+        .eq('id', eventId)
+        .single();
+
+      if (teamError) throw teamError;
+
+      const { data: playersData, error: playersError } = await supabase
+        .from('team_players')
+        .select('player_id, players(id, name)')
+        .eq('team_id', teamData.team_id)
+        .not('players.name', 'is', null);
+
+      if (playersError) throw playersError;
+
+      const playerList = playersData.map(tp => ({
+        id: tp.player_id,
+        name: tp.players?.name || 'Unknown Player',
+      }));
+
+      setPlayers(playerList);
+
+      // Load performance categories
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('performance_categories')
+        .select('*')
+        .eq('team_id', teamData.team_id);
+
+      if (categoriesError) throw categoriesError;
+      setPerformanceCategories(categoriesData || []);
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to load players',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleSaveNotes = async () => {
-    if (!event) return;
+  const handleScoreChange = (field: string, value: string) => {
+    setScores(prev => ({ ...prev, [field]: value }));
+  };
 
+  const handleSave = async () => {
     try {
       setSaving(true);
-      
-      // Update the event in the database
-      const { data: updatedEventData, error } = await supabase
-        .from('events')
-        .update({
-          coach_notes: coachNotes,
-          staff_notes: staffNotes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', event.id)
-        .select()
-        .single();
+
+      const scoresData = {
+        scores: scores,
+        player_of_match_id: playerOfMatchId,
+        coach_notes: coachNotes,
+        staff_notes: staffNotes,
+        performance_categories: performanceCategories
+      };
+
+      const { data, error } = await supabase
+        .from('event_scores')
+        .upsert({
+          event_id: eventId,
+          scores: scoresData.scores,
+          player_of_match_id: scoresData.player_of_match_id,
+          coach_notes: scoresData.coach_notes,
+          staff_notes: scoresData.staff_notes,
+          performance_categories: performanceCategories
+        }, { onConflict: 'event_id' });
 
       if (error) throw error;
 
-      const updatedEvent = {
-        ...event,
-        coach_notes: coachNotes,
-        staff_notes: staffNotes
-      };
-
-      handleEventUpdate(updatedEvent);
-      
       toast({
         title: 'Success',
-        description: 'Notes updated successfully',
+        description: 'Post-game report saved successfully!',
       });
+      onClose();
     } catch (error: any) {
-      console.error('Error updating notes:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to update notes',
+        description: error.message || 'Failed to save post-game report',
         variant: 'destructive',
       });
     } finally {
@@ -149,153 +181,187 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({
     }
   };
 
-  const handleScoreUpdate = async (eventId: string, scores: any) => {
-    if (!event) return;
-
-    try {
-      console.log('Saving scores to database:', scores);
-      
-      // Update the event in the database with the new scores
-      const { data: updatedEventData, error } = await supabase
-        .from('events')
-        .update({
-          scores,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', eventId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Update the local event state with the new scores
-      const updatedEvent = {
-        ...event,
-        scores
-      };
-      
-      console.log('Updated event with scores:', updatedEvent);
-      handleEventUpdate(updatedEvent);
-      
-      // Update player stats with performance category support
-      await playerStatsService.updateEventPlayerStats(eventId);
-      
-      // Force a reload to ensure we have the latest data
-      await loadEvent();
-      
-    } catch (error: any) {
-      console.error('Error saving scores:', error);
-      throw error; // Re-throw to let ScoreInput handle the error toast
-    }
-  };
-
-  const handlePOTMUpdate = async (eventId: string, potmData: any) => {
-    if (!event) return;
-
-    try {
-      console.log('Saving POTM to database:', potmData);
-      
-      // Update the event in the database
-      const { data: updatedEventData, error } = await supabase
-        .from('events')
-        .update({
-          player_of_match_id: potmData.player_of_match_id,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', eventId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      const updatedEvent = {
-        ...event,
-        player_of_match_id: potmData.player_of_match_id
-      };
-      
-      handleEventUpdate(updatedEvent);
-      
-      // Update player stats with performance category support
-      await playerStatsService.updateEventPlayerStats(eventId);
-      
-      // Force a reload to ensure we have the latest data
-      await loadEvent();
-      
-    } catch (error: any) {
-      console.error('Error saving POTM:', error);
-      throw error; // Re-throw to let ScoreInput handle the error toast
-    }
-  };
-
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[900px] h-[85vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Post-Game Editor - {event?.title}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="space-y-6 p-1 pb-6">
-              {loading ? (
-                <div className="text-center py-4">Loading event data...</div>
-              ) : !event ? (
-                <div className="text-center py-4">Event not found</div>
-              ) : (
-                <Tabs defaultValue="results" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="results">Results & POTM</TabsTrigger>
-                    <TabsTrigger value="notes">Notes</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="results" className="space-y-4">
-                    <ScoreInput 
-                      key={`${event.id}-${JSON.stringify(event.scores)}`}
-                      event={event} 
-                      onScoreUpdate={handleScoreUpdate}
-                      onPOTMUpdate={handlePOTMUpdate}
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="notes" className="space-y-4">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="coachNotes">Coach Notes</Label>
-                        <Textarea
-                          id="coachNotes"
-                          placeholder="Add your coaching observations and feedback..."
-                          value={coachNotes}
-                          onChange={(e) => setCoachNotes(e.target.value)}
-                          className="min-h-[120px]"
-                        />
-                      </div>
+    <div className="space-y-6">
+      {/* Event Info */}
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h3 className="font-semibold">{event?.title}</h3>
+        <p className="text-sm text-gray-600">
+          {event?.date && format(new Date(event.date), 'PPP')} • {event?.start_time}
+        </p>
+        {event?.opponent && (
+          <p className="text-sm text-gray-600">vs {event.opponent}</p>
+        )}
+      </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="staffNotes">Staff Notes</Label>
-                        <Textarea
-                          id="staffNotes"
-                          placeholder="Add staff observations and notes..."
-                          value={staffNotes}
-                          onChange={(e) => setStaffNotes(e.target.value)}
-                          className="min-h-[120px]"
-                        />
-                      </div>
-
-                      <Button 
-                        onClick={handleSaveNotes} 
-                        disabled={saving}
-                        className="w-full"
-                      >
-                        {saving ? 'Saving...' : 'Save Notes'}
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              )}
-            </div>
-          </ScrollArea>
+      {/* Player of the Match */}
+      {players.length > 0 && (
+        <div>
+          <Label>Player of the Match</Label>
+          <Select value={playerOfMatchId || ''} onValueChange={setPlayerOfMatchId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select player of the match" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">None</SelectItem>
+              {players.map((player) => (
+                <SelectItem key={player.id} value={player.id}>
+                  {player.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {/* Scores Section */}
+      <div>
+        <Label className="text-base font-semibold">Match Scores</Label>
+        
+        {performanceCategories.length > 1 ? (
+          // Multiple teams/categories
+          <div className="space-y-4 mt-3">
+            {performanceCategories.map((category, index) => (
+              <div key={category.id} className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3">{category.name}</h4>
+                <div className="grid grid-cols-3 gap-4 items-center">
+                  <div className="text-center">
+                    <Label className="text-sm text-gray-600">Our Score</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={scores[`team_${index + 1}`] || ''}
+                      onChange={(e) => handleScoreChange(`team_${index + 1}`, e.target.value)}
+                      className="text-center text-lg font-bold h-12 mt-1"
+                    />
+                  </div>
+                  <div className="text-center text-gray-400 text-lg font-bold">
+                    vs
+                  </div>
+                  <div className="text-center">
+                    <Label className="text-sm text-gray-600">Their Score</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      value={scores[`opponent_${index + 1}`] || ''}
+                      onChange={(e) => handleScoreChange(`opponent_${index + 1}`, e.target.value)}
+                      className="text-center text-lg font-bold h-12 mt-1"
+                    />
+                  </div>
+                </div>
+                
+                {/* Outcome indicator */}
+                {scores[`team_${index + 1}`] !== undefined && scores[`opponent_${index + 1}`] !== undefined && (
+                  <div className="text-center mt-3">
+                    <Badge 
+                      variant={
+                        Number(scores[`team_${index + 1}`]) > Number(scores[`opponent_${index + 1}`]) 
+                          ? 'default' 
+                          : Number(scores[`team_${index + 1}`]) < Number(scores[`opponent_${index + 1}`])
+                          ? 'destructive' 
+                          : 'secondary'
+                      }
+                    >
+                      {Number(scores[`team_${index + 1}`]) > Number(scores[`opponent_${index + 1}`]) 
+                        ? 'WIN' 
+                        : Number(scores[`team_${index + 1}`]) < Number(scores[`opponent_${index + 1}`])
+                        ? 'LOSS' 
+                        : 'DRAW'
+                      }
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          // Single team
+          <div className="mt-3">
+            <div className="grid grid-cols-3 gap-4 items-center">
+              <div className="text-center">
+                <Label className="text-sm text-gray-600">Our Score</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={scores.home || ''}
+                  onChange={(e) => handleScoreChange('home', e.target.value)}
+                  className="text-center text-lg font-bold h-12 mt-1"
+                />
+              </div>
+              <div className="text-center text-gray-400 text-lg font-bold">
+                vs
+              </div>
+              <div className="text-center">
+                <Label className="text-sm text-gray-600">Their Score</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={scores.away || ''}
+                  onChange={(e) => handleScoreChange('away', e.target.value)}
+                  className="text-center text-lg font-bold h-12 mt-1"
+                />
+              </div>
+            </div>
+            
+            {/* Outcome indicator */}
+            {scores.home !== undefined && scores.away !== undefined && (
+              <div className="text-center mt-3">
+                <Badge 
+                  variant={
+                    Number(scores.home) > Number(scores.away) 
+                      ? 'default' 
+                      : Number(scores.home) < Number(scores.away)
+                      ? 'destructive' 
+                      : 'secondary'
+                  }
+                >
+                  {Number(scores.home) > Number(scores.away) 
+                    ? 'WIN' 
+                    : Number(scores.home) < Number(scores.away)
+                    ? 'LOSS' 
+                    : 'DRAW'
+                  }
+                </Badge>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Notes */}
+      <div>
+        <Label htmlFor="coachNotes">Coach Notes</Label>
+        <Textarea
+          id="coachNotes"
+          value={coachNotes}
+          onChange={(e) => setCoachNotes(e.target.value)}
+          placeholder="Add any notes about the match performance..."
+          className="mt-1"
+          rows={3}
+        />
+      </div>
+
+      <div>
+        <Label htmlFor="staffNotes">Staff Notes</Label>
+        <Textarea
+          id="staffNotes"
+          value={staffNotes}
+          onChange={(e) => setStaffNotes(e.target.value)}
+          placeholder="Add any staff observations..."
+          className="mt-1"
+          rows={3}
+        />
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 pt-4">
+        <Button variant="outline" onClick={onClose} className="flex-1">
+          Cancel
+        </Button>
+        <Button onClick={handleSave} disabled={saving} className="flex-1">
+          {saving ? 'Saving...' : 'Save Report'}
+        </Button>
+      </div>
+    </div>
   );
 };

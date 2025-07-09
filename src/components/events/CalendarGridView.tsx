@@ -204,7 +204,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                       const matchType = isMatchType(event.event_type);
                       const teamScores = getTeamScores(event);
                       const weather = eventWeather[event.id];
-                      const team = teams.find(t => t.id === event.team_id);
+                      const team = teams?.find(t => t.id === event.team_id);
                       const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
                       
                       return (
