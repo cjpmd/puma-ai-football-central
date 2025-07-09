@@ -1,4 +1,3 @@
-
 export interface KitDesign {
   shirtColor: string;
   sleeveColor: string;
@@ -47,6 +46,9 @@ export interface Team {
   managerName?: string;
   managerEmail?: string;
   managerPhone?: string;
+  homeLocation?: string; // Added home location
+  homeLatitude?: number; // Added home coordinates
+  homeLongitude?: number; // Added home coordinates
   privacySettings?: {
     showScoresToParents: boolean;
     showScoresToPlayers: boolean;

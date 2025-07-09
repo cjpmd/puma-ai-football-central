@@ -17,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { TeamSelector } from './TeamSelector';
+import { Switch } from '@/components/ui/switch';
 
 interface EventFormProps {
   event?: Event | null;
@@ -75,6 +76,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     gameFormat: event?.gameFormat || teamDefaultGameFormat,
     gameDuration: event?.gameDuration || teamDefaultGameDuration,
     opponent: event?.opponent || '',
+    isHome: event?.isHome !== undefined ? event.isHome : true,
     facilityId: event?.facilityId || '',
     trainingNotes: event?.trainingNotes || '',
     notes: event?.notes || '',
@@ -82,6 +84,9 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
     latitude: event?.latitude,
     longitude: event?.longitude,
   });
+
+  // Get current team data
+  const currentTeam = teams?.find(t => t.id === teamId);
 
   useEffect(() => {
     loadFacilities();
@@ -116,6 +121,7 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
         gameFormat: event.gameFormat || teamDefaultGameFormat,
         gameDuration: event.gameDuration || teamDefaultGameDuration,
         opponent: event.opponent || '',
+        isHome: event.isHome !== undefined ? event.isHome : true,
         facilityId: event.facilityId || '',
         trainingNotes: event.trainingNotes || '',
         notes: event.notes || '',
@@ -137,6 +143,32 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
       }));
     }
   }, [event, teamId, teamDefaultGameFormat, teamDefaultGameDuration]);
+
+  // Handle home/away toggle
+  useEffect(() => {
+    if (formData.isHome && currentTeam?.homeLocation && !event) {
+      // Auto-populate home location for new events
+      setFormData(prev => ({
+        ...prev,
+        location: currentTeam.homeLocation || '',
+        latitude: currentTeam.homeLatitude,
+        longitude: currentTeam.homeLongitude
+      }));
+      
+      if (currentTeam.homeLatitude && currentTeam.homeLongitude) {
+        setCoordinates({ lat: currentTeam.homeLatitude, lng: currentTeam.homeLongitude });
+      }
+    } else if (!formData.isHome && !event) {
+      // Clear location for away games on new events
+      setFormData(prev => ({
+        ...prev,
+        location: '',
+        latitude: undefined,
+        longitude: undefined
+      }));
+      setCoordinates(null);
+    }
+  }, [formData.isHome, currentTeam, event]);
 
   const loadTeamDefaults = async () => {
     try {
@@ -435,6 +467,28 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                 />
               </div>
             )}
+
+            {/* Home/Away Toggle for match types */}
+            {requiresOpponent && (
+              <>
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="isHome"
+                    checked={formData.isHome}
+                    onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isHome: checked }))}
+                  />
+                  <Label htmlFor="isHome" className="text-sm font-medium">
+                    {formData.isHome ? 'Home Game' : 'Away Game'}
+                  </Label>
+                </div>
+                
+                {formData.isHome && currentTeam?.homeLocation && (
+                  <div className="text-xs text-muted-foreground">
+                    Using team's home location: {currentTeam.homeLocation}
+                  </div>
+                )}
+              </>
+            )}
             
             {/* Number of Teams selection */}
             {requiresOpponent && (
@@ -518,11 +572,16 @@ export const EventForm: React.FC<EventFormProps> = ({ event, teamId, onSubmit, o
                 value={formData.location}
                 onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
                 onLocationSelect={handleLocationSelect}
-                placeholder="Enter location or postcode"
+                placeholder={formData.isHome && currentTeam?.homeLocation ? currentTeam.homeLocation : "Enter location or postcode"}
                 required
                 weather={weather}
                 className="mt-1"
               />
+              {formData.isHome && currentTeam?.homeLocation && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Home location will be automatically filled
+                </p>
+              )}
             </div>
             
             {facilities.length > 0 && (

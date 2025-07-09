@@ -111,22 +111,31 @@ export default function CalendarEventsMobile() {
     return false;
   };
 
-  const handleEventClick = (event: DatabaseEvent) => {
+  const handleEventClick = (event: DatabaseEvent, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     setSelectedEvent(event);
     setShowEventDetails(true);
   };
 
-  const handleEventAction = (event: DatabaseEvent, action: 'setup' | 'squad' | 'report') => {
+  const handleEventAction = (event: DatabaseEvent, action: 'setup' | 'squad' | 'report', e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     setSelectedEvent(event);
     
     switch (action) {
       case 'setup':
+        setShowEventDetails(false);
         setShowEventForm(true);
         break;
       case 'squad':
+        setShowEventDetails(false);
         setShowTeamSelection(true);
         break;
       case 'report':
+        setShowEventDetails(false);
         setShowPostGameEdit(true);
         break;
     }
@@ -161,6 +170,8 @@ export default function CalendarEventsMobile() {
       totalMinutes: dbEvent.total_minutes,
       teams: dbEvent.teams,
       kitSelection: dbEvent.kit_selection as 'home' | 'away' | 'training',
+      latitude: dbEvent.latitude,
+      longitude: dbEvent.longitude,
       createdAt: dbEvent.created_at,
       updatedAt: dbEvent.updated_at
     };
@@ -226,7 +237,11 @@ export default function CalendarEventsMobile() {
                   const eventNeedsSetup = needsSetup(event);
                   
                   return (
-                    <Card key={event.id} className="bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow" onClick={() => handleEventClick(event)}>
+                    <Card 
+                      key={event.id} 
+                      className="bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow" 
+                      onClick={(e) => handleEventClick(event, e)}
+                    >
                       <CardContent className="p-4">
                         <div className="space-y-3">
                           {/* Date and Time */}
@@ -285,7 +300,7 @@ export default function CalendarEventsMobile() {
 
                           {/* Action Buttons - Only show if event needs setup */}
                           {eventNeedsSetup && !isEventPast && (
-                            <div className="bg-yellow-50 p-3 rounded-lg" onClick={(e) => e.stopPropagation()}>
+                            <div className="bg-yellow-50 p-3 rounded-lg">
                               <div className="text-xs text-yellow-800 text-center mb-2">
                                 Your {event.event_type} needs setting up
                               </div>
@@ -294,10 +309,7 @@ export default function CalendarEventsMobile() {
                                   variant="outline"
                                   size="sm"
                                   className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEventAction(event, 'setup');
-                                  }}
+                                  onClick={(e) => handleEventAction(event, 'setup', e)}
                                 >
                                   SETUP
                                 </Button>
@@ -305,10 +317,7 @@ export default function CalendarEventsMobile() {
                                   variant="outline"
                                   size="sm"
                                   className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEventAction(event, 'squad');
-                                  }}
+                                  onClick={(e) => handleEventAction(event, 'squad', e)}
                                 >
                                   SQUAD
                                 </Button>
@@ -317,10 +326,7 @@ export default function CalendarEventsMobile() {
                                     variant="outline"
                                     size="sm"
                                     className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleEventAction(event, 'report');
-                                    }}
+                                    onClick={(e) => handleEventAction(event, 'report', e)}
                                   >
                                     REPORT
                                   </Button>
@@ -435,10 +441,7 @@ export default function CalendarEventsMobile() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        setShowEventDetails(false);
-                        handleEventAction(selectedEvent, 'setup');
-                      }}
+                      onClick={() => handleEventAction(selectedEvent, 'setup')}
                     >
                       SETUP
                     </Button>
@@ -446,10 +449,7 @@ export default function CalendarEventsMobile() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
-                        setShowEventDetails(false);
-                        handleEventAction(selectedEvent, 'squad');
-                      }}
+                      onClick={() => handleEventAction(selectedEvent, 'squad')}
                     >
                       SQUAD
                     </Button>
@@ -460,10 +460,7 @@ export default function CalendarEventsMobile() {
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => {
-                      setShowEventDetails(false);
-                      handleEventAction(selectedEvent, 'report');
-                    }}
+                    onClick={() => handleEventAction(selectedEvent, 'report')}
                   >
                     REPORT
                   </Button>
