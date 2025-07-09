@@ -44,6 +44,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   };
 
   const handleHomeLocationSelect = (location: { lat: number; lng: number; address: string }) => {
+    console.log('Location selected:', location);
     const updatedData = {
       ...formData,
       homeLocation: location.address,
