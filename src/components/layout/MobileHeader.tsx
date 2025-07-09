@@ -14,7 +14,11 @@ const moreNavItems = [
   { name: 'Subscriptions', href: '/subscriptions' },
 ];
 
-export function MobileHeader() {
+interface MobileHeaderProps {
+  title?: string;
+}
+
+export function MobileHeader({ title }: MobileHeaderProps) {
   const { user, signOut, teams, clubs } = useAuth();
   const navigate = useNavigate();
 
@@ -27,32 +31,37 @@ export function MobileHeader() {
   const currentClub = clubs?.[0];
 
   return (
-    <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
+    <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-cyan-400 text-white">
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex-1">
-          {currentClub ? (
+          {title ? (
+            <h1 className="text-lg font-semibold text-white">{title}</h1>
+          ) : currentClub ? (
             <EntityHeader 
               logoUrl={currentClub.logoUrl}
               entityName={currentClub.name}
               entityType="club"
+              textColor="text-white"
             />
           ) : currentTeam ? (
             <EntityHeader 
               logoUrl={currentTeam.logoUrl}
               entityName={currentTeam.name}
               entityType="team"
+              textColor="text-white"
             />
           ) : (
             <EntityHeader 
               entityName="Team Manager"
               entityType="team"
+              textColor="text-white"
             />
           )}
         </div>
         
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-10 w-10 p-0">
+            <Button variant="ghost" size="sm" className="h-10 w-10 p-0 text-white hover:bg-white/20">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>

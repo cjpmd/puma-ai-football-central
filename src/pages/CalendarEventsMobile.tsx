@@ -1,12 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, Clock, MapPin, Plus, ChevronLeft, ChevronRight, Edit, Users, Trophy } from 'lucide-react';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay } from 'date-fns';
+import { format, isSameDay, isToday, isPast, parseISO, startOfDay } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -15,11 +14,17 @@ import { EventForm } from '@/components/events/EventForm';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
+import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
+
+const tabs = [
+  { id: 'fixtures', label: 'FIXTURES' },
+  { id: 'training', label: 'TRAINING' },
+  { id: 'friendlies', label: 'FRIENDLIES' },
+];
 
 export default function CalendarEventsMobile() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [activeTab, setActiveTab] = useState('fixtures');
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
@@ -30,21 +35,16 @@ export default function CalendarEventsMobile() {
 
   useEffect(() => {
     loadEvents();
-  }, [teams, currentDate]);
+  }, [teams]);
 
   const loadEvents = async () => {
     try {
       if (!teams || teams.length === 0) return;
 
-      const monthStart = startOfMonth(currentDate);
-      const monthEnd = endOfMonth(currentDate);
-
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('team_id', teams[0].id)
-        .gte('date', monthStart.toISOString().split('T')[0])
-        .lte('date', monthEnd.toISOString().split('T')[0])
         .order('date', { ascending: true });
 
       if (error) throw error;
@@ -60,28 +60,37 @@ export default function CalendarEventsMobile() {
     }
   };
 
-  const monthStart = startOfMonth(currentDate);
-  const monthEnd = endOfMonth(currentDate);
-  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-  const getEventsForDay = (day: Date) => {
-    return events.filter(event => isSameDay(new Date(event.date), day));
+  const getFilteredEvents = () => {
+    return events.filter(event => {
+      switch (activeTab) {
+        case 'fixtures':
+          return ['match', 'fixture'].includes(event.event_type);
+        case 'training':
+          return event.event_type === 'training';
+        case 'friendlies':
+          return event.event_type === 'friendly';
+        default:
+          return true;
+      }
+    });
   };
 
-  const getEventTypeColor = (eventType: string) => {
-    switch (eventType) {
-      case 'match':
-      case 'fixture':
-        return 'bg-red-500';
-      case 'training':
-        return 'bg-blue-500';
-      case 'friendly':
-        return 'bg-green-500';
-      case 'tournament':
-        return 'bg-purple-500';
-      default:
-        return 'bg-gray-500';
-    }
+  const groupEventsByMonth = (events: DatabaseEvent[]) => {
+    const grouped: { [key: string]: DatabaseEvent[] } = {};
+    
+    events.forEach(event => {
+      const monthKey = format(new Date(event.date), 'MMMM yyyy');
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = [];
+      }
+      grouped[monthKey].push(event);
+    });
+    
+    return grouped;
+  };
+
+  const isMatchType = (eventType: string) => {
+    return ['match', 'fixture', 'friendly'].includes(eventType);
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
@@ -100,50 +109,22 @@ export default function CalendarEventsMobile() {
     return false;
   };
 
-  const isMatchType = (eventType: string) => {
-    return ['match', 'fixture', 'friendly'].includes(eventType);
-  };
-
-  const handleEditEvent = (event: DatabaseEvent) => {
+  const handleEventAction = (event: DatabaseEvent, action: 'setup' | 'squad' | 'report') => {
     setSelectedEvent(event);
-    setShowEventForm(true);
-  };
-
-  const handleTeamSelection = (event: DatabaseEvent) => {
-    setSelectedEvent(event);
-    setShowTeamSelection(true);
-  };
-
-  const handlePostGameEdit = (event: DatabaseEvent) => {
-    setSelectedEvent(event);
-    setShowPostGameEdit(true);
-  };
-
-  const handleDeleteEvent = async (eventId: string) => {
-    try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Event deleted successfully',
-      });
-      
-      loadEvents();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to delete event',
-        variant: 'destructive',
-      });
+    
+    switch (action) {
+      case 'setup':
+        setShowEventForm(true);
+        break;
+      case 'squad':
+        setShowTeamSelection(true);
+        break;
+      case 'report':
+        setShowPostGameEdit(true);
+        break;
     }
   };
 
-  // Convert DatabaseEvent to Event format for EventForm
   const convertToEventFormat = (dbEvent: DatabaseEvent | null) => {
     if (!dbEvent) return null;
     
@@ -178,232 +159,146 @@ export default function CalendarEventsMobile() {
     };
   };
 
-  const dayEvents = selectedDate ? getEventsForDay(selectedDate) : [];
+  const filteredEvents = getFilteredEvents();
+  const groupedEvents = groupEventsByMonth(filteredEvents);
 
   return (
-    <MobileLayout>
-      <div className="space-y-4">
-        {/* Header Actions */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(subMonths(currentDate, 1))}
-            className="h-10 w-10 p-0"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
-          <h2 className="text-xl font-semibold">
-            {format(currentDate, 'MMMM yyyy')}
-          </h2>
-          
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentDate(addMonths(currentDate, 1))}
-            className="h-10 w-10 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Add Event Button */}
-        <Button 
-          className="w-full h-12"
-          onClick={() => setShowEventForm(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Event
-        </Button>
-
-        {/* Mini Calendar */}
-        <Card>
-          <CardContent className="p-4">
-            <div className="grid grid-cols-7 gap-1 mb-4">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <div key={day} className="text-center text-xs font-medium text-muted-foreground p-2">
-                  {day}
-                </div>
-              ))}
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map(day => {
-                const dayEventsCount = getEventsForDay(day);
-                const isCurrentMonth = isSameMonth(day, currentDate);
-                const isToday = isSameDay(day, new Date());
-                const isSelected = selectedDate && isSameDay(day, selectedDate);
-
-                return (
-                  <Button
-                    key={day.toISOString()}
-                    variant={isSelected ? "default" : "ghost"}
-                    size="sm"
-                    className={`
-                      h-10 w-full p-1 relative
-                      ${!isCurrentMonth ? 'opacity-30' : ''}
-                      ${isToday ? 'ring-2 ring-primary' : ''}
-                    `}
-                    onClick={() => setSelectedDate(day)}
-                  >
-                    <div className="text-center">
-                      <div className="text-sm">{format(day, 'd')}</div>
-                      {dayEventsCount.length > 0 && (
-                        <div className="flex justify-center mt-1">
-                          <div className="w-1 h-1 bg-primary rounded-full" />
-                        </div>
-                      )}
-                    </div>
-                  </Button>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Selected Day Events */}
-        {selectedDate && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">
-                {format(selectedDate, 'EEEE, MMMM d')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {dayEvents.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  No events scheduled
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {dayEvents.map((event) => {
-                    const completed = isEventCompleted(event);
-                    const matchType = isMatchType(event.event_type);
-                    
-                    return (
-                      <div key={event.id} className="border rounded-lg p-3 space-y-2">
-                        <div className="flex items-start justify-between">
-                          <h4 className="font-medium">{event.title}</h4>
-                          <Badge className={`text-white text-xs ${getEventTypeColor(event.event_type)}`}>
-                            {event.event_type}
-                          </Badge>
-                        </div>
-                        
-                        {event.start_time && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <Clock className="h-4 w-4 mr-2" />
-                            {event.start_time}
-                            {event.end_time && ` - ${event.end_time}`}
+    <MobileLayout 
+      headerTitle={teams?.[0]?.name || 'Team Manager'}
+      showTabs={true}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      tabs={tabs}
+    >
+      <div className="space-y-6">
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
+            <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
+          </div>
+        ) : Object.keys(groupedEvents).length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">No {activeTab} scheduled</p>
+          </div>
+        ) : (
+          Object.entries(groupedEvents).map(([month, monthEvents]) => (
+            <div key={month} className="space-y-3">
+              <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wider px-1">
+                {month}
+              </h2>
+              
+              <div className="space-y-3">
+                {monthEvents.map((event) => {
+                  const team = teams.find(t => t.id === event.team_id);
+                  const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+                  const completed = isEventCompleted(event);
+                  const eventDate = new Date(event.date);
+                  const isEventToday = isToday(eventDate);
+                  const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
+                  
+                  return (
+                    <Card key={event.id} className="bg-white shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          {/* Date and Time */}
+                          <div className="flex items-center justify-between">
+                            <div className="text-center">
+                              <div className="text-xs text-gray-500 uppercase">
+                                {format(eventDate, 'EEE dd MMM')}
+                              </div>
+                              <div className="text-lg font-bold text-gray-900">
+                                {event.start_time || '19:00'}
+                              </div>
+                            </div>
+                            
+                            {kitDesign && (
+                              <EnhancedKitAvatar design={kitDesign} size="sm" />
+                            )}
                           </div>
-                        )}
-                        
-                        {event.location && (
-                          <div className="flex items-center text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4 mr-2" />
-                            {event.location}
-                          </div>
-                        )}
-                        
-                        {event.opponent && (
-                          <div className="text-sm text-muted-foreground">
-                            vs {event.opponent}
-                          </div>
-                        )}
 
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditEvent(event)}
-                          >
-                            <Edit className="h-3 w-3 mr-1" />
-                            Edit
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleTeamSelection(event)}
-                          >
-                            <Users className="h-3 w-3 mr-1" />
-                            Team
-                          </Button>
-                          
-                          {completed && matchType && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handlePostGameEdit(event)}
-                            >
-                              <Trophy className="h-3 w-3 mr-1" />
-                              Result
-                            </Button>
+                          {/* Teams/Title */}
+                          <div className="text-center">
+                            {isMatchType(event.event_type) && event.opponent ? (
+                              <div className="flex items-center justify-center gap-3">
+                                <div className="flex items-center gap-2">
+                                  {team?.logoUrl && (
+                                    <img 
+                                      src={team.logoUrl} 
+                                      alt={team.name}
+                                      className="w-8 h-8 rounded-full"
+                                    />
+                                  )}
+                                  <span className="font-medium text-sm">{team?.name}</span>
+                                </div>
+                                <span className="text-gray-400">vs</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium text-sm">{event.opponent}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <h3 className="font-medium text-gray-900">{event.title}</h3>
+                            )}
+                          </div>
+
+                          {/* Location and Details */}
+                          {event.location && (
+                            <div className="text-xs text-gray-500 text-center">
+                              {event.location}
+                            </div>
+                          )}
+
+                          {/* Match Info */}
+                          {isMatchType(event.event_type) && (
+                            <div className="text-xs text-gray-500 text-center">
+                              {event.game_format || 'Match'} • {event.is_home ? 'Home' : 'Away'}
+                            </div>
+                          )}
+
+                          {/* Action Buttons */}
+                          {!isEventPast && (
+                            <div className="bg-yellow-50 p-3 rounded-lg">
+                              <div className="text-xs text-yellow-800 text-center mb-2">
+                                Your match needs setting up, it is 1 day away
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
+                                  onClick={() => handleEventAction(event, 'setup')}
+                                >
+                                  SETUP
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
+                                  onClick={() => handleEventAction(event, 'squad')}
+                                >
+                                  SQUAD
+                                </Button>
+                                {completed && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
+                                    onClick={() => handleEventAction(event, 'report')}
+                                  >
+                                    REPORT
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          ))
         )}
-
-        {/* Upcoming Events */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Upcoming Events</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
-              </div>
-            ) : events.length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">
-                No upcoming events
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {events.slice(0, 3).map((event) => (
-                  <div key={event.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <div className="font-medium">{event.title}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {format(new Date(event.date), 'MMM d')}
-                        {event.start_time && ` at ${event.start_time}`}
-                      </div>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEditEvent(event)}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleTeamSelection(event)}
-                      >
-                        <Users className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-                {events.length > 3 && (
-                  <Button variant="ghost" className="w-full">
-                    View All Events
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Event Form Modal */}
