@@ -48,6 +48,13 @@ export default function CalendarEventsMobile() {
     loadEvents();
   }, [teams]);
 
+  // Separate effect for loading availability after events are loaded
+  useEffect(() => {
+    if (events.length > 0 && user?.id) {
+      loadUserAvailability();
+    }
+  }, [events, user?.id]);
+
   const loadUserAvailability = async () => {
     try {
       if (!user?.id) {
@@ -67,7 +74,7 @@ export default function CalendarEventsMobile() {
         return;
       }
 
-      console.log('Raw availability data:', availabilityData);
+      console.log('Raw availability data from database:', availabilityData);
 
       const availability = (availabilityData || []).map(item => ({
         eventId: item.event_id,
@@ -83,21 +90,27 @@ export default function CalendarEventsMobile() {
 
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
-    console.log(`Availability for event ${eventId}:`, availability?.status || 'none');
-    return availability?.status || null;
+    const status = availability?.status || null;
+    console.log(`Availability status for event ${eventId}:`, status, 'from availability array:', userAvailability);
+    return status;
   };
 
   const getEventBorderClass = (eventId: string): string => {
     const status = getAvailabilityStatus(eventId);
-    console.log(`Border class for event ${eventId}, status: ${status}`);
+    console.log(`Getting border class for event ${eventId}, status: ${status}`);
+    
     switch (status) {
       case 'available':
+        console.log('Applying green border');
         return 'border-l-green-500 border-l-4';
       case 'unavailable':
+        console.log('Applying red border');
         return 'border-l-red-500 border-l-4';
       case 'pending':
+        console.log('Applying amber border');
         return 'border-l-amber-500 border-l-4';
       default:
+        console.log('Applying gray border (no status)');
         return 'border-l-gray-300 border-l-4';
     }
   };
@@ -113,6 +126,7 @@ export default function CalendarEventsMobile() {
         .order('date', { ascending: true });
 
       if (error) throw error;
+      console.log('Loaded events:', data?.length);
       setEvents((data || []) as DatabaseEvent[]);
       
       // Load event selections to get proper performance category mappings
@@ -138,8 +152,6 @@ export default function CalendarEventsMobile() {
       });
       setEventSelections(selectionsByEvent);
 
-      // Load user availability after events are loaded
-      await loadUserAvailability();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -359,6 +371,11 @@ export default function CalendarEventsMobile() {
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
+  const handleRefreshAvailability = () => {
+    console.log('Manually refreshing availability...');
+    loadUserAvailability();
+  };
+
   if (showExpandedTeamSelection && selectedEvent) {
     return (
       <MobileLayout>
@@ -390,6 +407,20 @@ export default function CalendarEventsMobile() {
       tabs={tabs}
     >
       <div className="space-y-6">
+        {/* Debug info - remove this after testing */}
+        <div className="p-2 bg-gray-100 text-xs rounded">
+          <div>User: {user?.id}</div>
+          <div>Availability entries: {userAvailability.length}</div>
+          <Button size="sm" onClick={handleRefreshAvailability} className="mt-2">
+            Refresh Availability
+          </Button>
+          {userAvailability.map(avail => (
+            <div key={avail.eventId} className="text-xs">
+              Event {avail.eventId.slice(-6)}: {avail.status}
+            </div>
+          ))}
+        </div>
+
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
@@ -418,6 +449,8 @@ export default function CalendarEventsMobile() {
                   const teamScores = getAllTeamScores(event);
                   const borderClass = getEventBorderClass(event.id);
                   const availabilityStatus = getAvailabilityStatus(event.id);
+                  
+                  console.log(`Rendering event ${event.id} with border class: ${borderClass}`);
                   
                   return (
                     <Card 
