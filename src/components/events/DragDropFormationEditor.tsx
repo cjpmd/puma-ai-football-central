@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { 
   DndContext, 
@@ -50,6 +49,22 @@ const mapNameDisplayOption = (option: 'surname' | 'firstName' | 'fullName' | 'in
       return 'initials';
     default:
       return 'surname';
+  }
+};
+
+// Helper function to get position group color
+const getPositionGroupColor = (position: string) => {
+  const pos = position?.toLowerCase() || '';
+  
+  if (pos.includes('goalkeeper') || pos === 'gk') {
+    return 'border-yellow-400 bg-yellow-50';
+  } else if (pos.includes('defender') || pos.startsWith('d')) {
+    return 'border-blue-400 bg-blue-50';
+  } else if (pos.includes('midfielder') || pos.startsWith('m') || pos.includes('mid')) {
+    return 'border-green-400 bg-green-50';
+  } else {
+    // Forwards/Attackers/Strikers
+    return 'border-red-400 bg-red-50';
   }
 };
 
@@ -503,7 +518,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const getUnusedPlayers = () => {
-    const allUsedPlayerIds = new Set();
+    const allUsedPlayerIds = new Set<string>();
     
     periods.forEach(period => {
       period.positions.forEach(pos => {
@@ -624,17 +639,35 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             {period.positions.map((position, index) => {
               const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
               const isCaptain = position.playerId === globalCaptainId;
+              const positionGroupColor = getPositionGroupColor(position.positionName);
               
               return (
                 <div key={`${period.id}-position-${index}`}>
-                  <PositionSlot
-                    id={`${period.id}-position-${index}`}
-                    position={position}
-                    player={player}
-                    isCaptain={isCaptain}
-                    nameDisplayOption={mappedNameDisplayOption}
-                    isLarger={false}
-                  />
+                  <div
+                    className={`
+                      absolute flex flex-col items-center justify-center
+                      w-20 h-20
+                      rounded-full border-2 border-dashed
+                      ${player ? positionGroupColor : 'border-white/60 bg-white/20 hover:border-white/80 hover:bg-white/30'}
+                      transition-all duration-300 ease-out backdrop-blur-sm
+                    `}
+                    style={{
+                      left: `${position.x}%`,
+                      top: `${position.y}%`,
+                      transform: 'translate(-50%, -50%)',
+                    }}
+                  >
+                    {!player && (
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="text-xs font-bold text-white/80 mb-1">
+                          {position.abbreviation}
+                        </div>
+                        <div className="text-xs text-white/60">
+                          {position.positionName}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   
                   {/* Render draggable player icon on top of position slot */}
                   {player && (
@@ -648,13 +681,47 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                       }}
                     >
                       <div className="pointer-events-auto">
-                        <PlayerIcon
-                          player={player}
-                          isCaptain={isCaptain}
-                          nameDisplayOption={mappedNameDisplayOption}
-                          isCircular={true}
-                          dragId={`${period.id}|position|${player.id}`}
-                        />
+                        <div className={`
+                          relative flex flex-col items-center justify-center text-center
+                          w-20 h-20 rounded-full border-2
+                          ${positionGroupColor}
+                          shadow-sm hover:scale-105 hover:shadow-md active:scale-110
+                          transition-all duration-200 ease-in-out cursor-grab print:cursor-default
+                          touch-none select-none
+                        `}>
+                          {/* Captain indicator */}
+                          {isCaptain && (
+                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-bold text-black">C</span>
+                            </div>
+                          )}
+                          
+                          {/* Position abbreviation above player name */}
+                          <div className="text-xs font-bold text-gray-700 mb-0.5">
+                            {position.abbreviation}
+                          </div>
+                          
+                          {/* Player name */}
+                          <div className="text-xs font-medium text-center leading-tight">
+                            {player.name}
+                          </div>
+                          
+                          {/* Squad number below */}
+                          <div className="text-xs font-bold text-gray-600 mt-0.5">
+                            #{player.squadNumber}
+                          </div>
+                        </div>
+                        
+                        {/* Hidden draggable PlayerIcon for drag functionality */}
+                        <div className="absolute inset-0 opacity-0">
+                          <PlayerIcon
+                            player={player}
+                            isCaptain={isCaptain}
+                            nameDisplayOption={mappedNameDisplayOption}
+                            isCircular={true}
+                            dragId={`${period.id}|position|${player.id}`}
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
