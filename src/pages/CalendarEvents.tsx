@@ -46,6 +46,8 @@ export default function CalendarEvents() {
     try {
       if (!teams || teams.length === 0) return;
 
+      console.log('Loading events for teams:', teams.map(t => ({ id: t.id, name: t.name })));
+
       const teamIds = teams.map(team => team.id);
       const { data, error } = await supabase
         .from('events')
@@ -54,8 +56,29 @@ export default function CalendarEvents() {
         .order('date', { ascending: true });
 
       if (error) throw error;
-      setEvents((data || []) as DatabaseEvent[]);
+      
+      const eventData = (data || []) as DatabaseEvent[];
+      console.log('Loaded events:', eventData.length);
+      
+      // Log current user info for debugging
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user ID:', user?.id);
+      console.log('Current user email:', user?.email);
+      
+      // Check availability for debugging
+      if (user?.id && eventData.length > 0) {
+        const { data: availabilityData, error: availError } = await supabase
+          .from('event_availability')
+          .select('event_id, status')
+          .eq('user_id', user.id);
+          
+        console.log('User availability records:', availabilityData);
+        if (availError) console.error('Availability error:', availError);
+      }
+      
+      setEvents(eventData);
     } catch (error: any) {
+      console.error('Error loading events:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load events',
@@ -119,7 +142,6 @@ export default function CalendarEvents() {
     setShowPostGameEdit(true);
   };
 
-  // Convert DatabaseEvent to Event format for EventForm
   const convertToEventFormat = (dbEvent: DatabaseEvent | null) => {
     if (!dbEvent) return null;
     
