@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { SquadPlayer } from '@/types/teamSelection';
 import { toast } from 'sonner';
+import { useMobileDetection } from '@/hooks/useMobileDetection';
 
 interface SquadManagementProps {
   teamId: string;
@@ -26,6 +26,7 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   onSquadChange,
   onCaptainChange
 }) => {
+  const isMobile = useMobileDetection();
   const {
     squadPlayers,
     loading: squadLoading,
@@ -120,9 +121,9 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   if (squadLoading || playersLoading) {
     return (
       <Card>
-        <CardContent className="py-8 text-center">
+        <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <p>Loading squad...</p>
+          <p className={isMobile ? 'text-sm' : ''}>Loading squad...</p>
         </CardContent>
       </Card>
     );
@@ -131,26 +132,26 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
   if (playersError) {
     return (
       <Card>
-        <CardContent className="py-8 text-center">
-          <p className="text-red-600">Error loading players: {playersError.message}</p>
+        <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
+          <p className={`text-red-600 ${isMobile ? 'text-sm' : ''}`}>Error loading players: {playersError.message}</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'space-y-6'}`}>
       {/* Team Captain Selection */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Crown className="h-4 w-4 text-yellow-500" />
+        <CardHeader className={`${isMobile ? 'pb-2 px-3 pt-3' : 'pb-3'}`}>
+          <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-sm' : 'text-base'}`}>
+            <Crown className={`text-yellow-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
             Team Captain
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
+        <CardContent className={`${isMobile ? 'pt-0 px-3 pb-3' : 'pt-0'}`}>
           <Select value={globalCaptainId || ''} onValueChange={handleCaptainChange}>
-            <SelectTrigger className="h-8">
+            <SelectTrigger className={isMobile ? 'h-8 text-sm' : 'h-8'}>
               <SelectValue placeholder="Select captain..." />
             </SelectTrigger>
             <SelectContent>
@@ -168,19 +169,19 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
 
       {/* Squad Management */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
+        <CardHeader className={isMobile ? 'px-3 pt-3 pb-2' : ''}>
+          <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-sm' : ''}`}>
+            <Users className={`${isMobile ? 'h-4 w-4' : 'h-5 w-5'}`} />
             Squad Management
-            <Badge variant="secondary">{squadPlayers.length} players</Badge>
+            <Badge variant="secondary" className={isMobile ? 'text-xs' : ''}>{squadPlayers.length} players</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className={`space-y-3 ${isMobile ? 'px-3 pb-3' : 'space-y-4'}`}>
           {/* Add Player Section */}
           {availableToAdd.length > 0 ? (
-            <div className="flex gap-2">
+            <div className={`flex gap-2 ${isMobile ? 'flex-col space-y-2' : ''}`}>
               <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                <SelectTrigger className="flex-1">
+                <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'flex-1'}`}>
                   <SelectValue placeholder="Select player to add to squad..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -195,13 +196,14 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                 onClick={handleAddPlayer} 
                 disabled={!selectedPlayerId}
                 size="sm"
+                className={isMobile ? 'w-full' : ''}
               >
-                <UserPlus className="h-4 w-4 mr-1" />
+                <UserPlus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} />
                 Add
               </Button>
             </div>
           ) : (
-            <div className="text-center py-4 text-muted-foreground">
+            <div className={`text-center text-muted-foreground ${isMobile ? 'py-3 text-sm' : 'py-4'}`}>
               {allPlayers.length === 0 
                 ? 'No players found in this team'
                 : 'All players are already in the squad'
@@ -210,31 +212,31 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
           )}
 
           {/* Squad Players List */}
-          <div className="space-y-2">
+          <div className={`space-y-2 ${isMobile ? 'space-y-1' : ''}`}>
             {squadPlayers.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className={`text-center text-muted-foreground ${isMobile ? 'py-4 text-sm' : 'py-8'}`}>
                 No players in squad. Add players to get started.
               </div>
             ) : (
               squadPlayers.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline">#{player.squadNumber}</Badge>
-                    <span className="font-medium">{player.name}</span>
+                <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'}`}>
+                  <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
+                    <Badge variant="outline" className={isMobile ? 'text-xs' : ''}>#{player.squadNumber}</Badge>
+                    <span className={`font-medium ${isMobile ? 'text-sm' : ''}`}>{player.name}</span>
                     {player.id === globalCaptainId && (
-                      <Crown className="h-4 w-4 text-yellow-500" />
+                      <Crown className={`text-yellow-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                     )}
                     {player.type === 'goalkeeper' && (
-                      <Badge variant="secondary">GK</Badge>
+                      <Badge variant="secondary" className={isMobile ? 'text-xs' : ''}>GK</Badge>
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
                     <Select
                       value={player.availabilityStatus}
                       onValueChange={(value) => handleAvailabilityChange(player.id, value)}
                     >
-                      <SelectTrigger className="w-32">
+                      <SelectTrigger className={isMobile ? 'w-24 h-7 text-xs' : 'w-32'}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -245,16 +247,17 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                       </SelectContent>
                     </Select>
                     
-                    <Badge className={getAvailabilityColor(player.availabilityStatus)}>
-                      {player.availabilityStatus}
+                    <Badge className={`${getAvailabilityColor(player.availabilityStatus)} ${isMobile ? 'text-xs px-1 py-0' : ''}`}>
+                      {isMobile ? player.availabilityStatus.substring(0, 4) : player.availabilityStatus}
                     </Badge>
                     
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemovePlayer(player.id)}
+                      className={isMobile ? 'h-7 w-7 p-0' : ''}
                     >
-                      <UserMinus className="h-4 w-4" />
+                      <UserMinus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
                     </Button>
                   </div>
                 </div>
