@@ -64,6 +64,23 @@ export default function CalendarEventsMobile() {
 
       console.log('Loading availability for user:', user.id);
       
+      // First, let's check what's in the event_availability table for debugging
+      const { data: allAvailabilityData, error: allError } = await supabase
+        .from('event_availability')
+        .select('*')
+        .limit(10);
+
+      console.log('All availability data (first 10 rows):', allAvailabilityData);
+      
+      // Now check specifically for this user
+      const { data: userSpecificData, error: userError } = await supabase
+        .from('event_availability')
+        .select('*')
+        .eq('user_id', user.id);
+
+      console.log('User-specific availability data:', userSpecificData);
+
+      // Original query for actual use
       const { data: availabilityData, error } = await supabase
         .from('event_availability')
         .select('event_id, status')
@@ -407,18 +424,30 @@ export default function CalendarEventsMobile() {
       tabs={tabs}
     >
       <div className="space-y-6">
-        {/* Debug info - remove this after testing */}
-        <div className="p-2 bg-gray-100 text-xs rounded">
-          <div>User: {user?.id}</div>
-          <div>Availability entries: {userAvailability.length}</div>
-          <Button size="sm" onClick={handleRefreshAvailability} className="mt-2">
-            Refresh Availability
+        {/* Enhanced Debug info - remove this after testing */}
+        <div className="p-3 bg-yellow-50 border border-yellow-200 text-xs rounded">
+          <div className="font-semibold mb-2">Debug Information:</div>
+          <div>User ID: {user?.id}</div>
+          <div>User Email: {user?.email}</div>
+          <div>Availability entries found: {userAvailability.length}</div>
+          <div>Events loaded: {events.length}</div>
+          <Button size="sm" onClick={handleRefreshAvailability} className="mt-2 mb-2">
+            Refresh Availability Data
           </Button>
-          {userAvailability.map(avail => (
-            <div key={avail.eventId} className="text-xs">
-              Event {avail.eventId.slice(-6)}: {avail.status}
+          {userAvailability.length > 0 ? (
+            <div>
+              <div className="font-medium">Current availability records:</div>
+              {userAvailability.map(avail => (
+                <div key={avail.eventId} className="text-xs ml-2">
+                  Event {avail.eventId.slice(-6)}: {avail.status}
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <div className="text-red-600 font-medium">
+              No availability records found for this user in the database.
+            </div>
+          )}
         </div>
 
         {loading ? (
