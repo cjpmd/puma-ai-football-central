@@ -173,7 +173,7 @@ export default function CalendarEventsMobile() {
       const teamIds = teams.map(team => team.id);
       console.log('Loading events for teams:', teamIds);
       
-      // Load all events without date filtering first
+      // Load all events - no date filtering to match desktop behavior
       const { data: eventsData, error } = await supabase
         .from('events')
         .select('*')
@@ -202,19 +202,8 @@ export default function CalendarEventsMobile() {
       
       console.log('Mapped events:', mappedEvents.length, mappedEvents);
       
-      // Filter for upcoming events using proper date comparison
-      const today = new Date();
-      today.setHours(0, 0, 0, 0); // Set to start of day for proper comparison
-      
-      const upcomingEvents = mappedEvents.filter(event => {
-        const eventDate = new Date(event.event_date);
-        return eventDate >= today;
-      });
-      
-      console.log('Today for comparison:', today.toISOString().split('T')[0]);
-      console.log('Upcoming events after filtering:', upcomingEvents.length, upcomingEvents);
-      
-      setEvents(upcomingEvents);
+      // Set all events without filtering - matching desktop behavior
+      setEvents(mappedEvents);
     } catch (error) {
       console.error('Error in loadEvents:', error);
     } finally {
@@ -332,7 +321,7 @@ export default function CalendarEventsMobile() {
         </Card>
 
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">Upcoming Events</h1>
+          <h1 className="text-2xl font-bold tracking-tight">All Events</h1>
           <Badge variant="secondary">{events.length} events</Badge>
         </div>
 
@@ -340,7 +329,7 @@ export default function CalendarEventsMobile() {
           <Card>
             <CardContent className="text-center py-8">
               <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Upcoming Events</h3>
+              <h3 className="font-semibold mb-2">No Events</h3>
               <p className="text-muted-foreground">There are no events scheduled for your teams.</p>
             </CardContent>
           </Card>
