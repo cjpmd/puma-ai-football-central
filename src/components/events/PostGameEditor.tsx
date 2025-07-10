@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -197,6 +198,11 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       setSaving(false);
     }
   };
+
+  // Don't render anything if not open
+  if (!isOpen) {
+    return null;
+  }
 
   if (loading) {
     return (
