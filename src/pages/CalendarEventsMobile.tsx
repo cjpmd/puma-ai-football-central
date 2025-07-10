@@ -15,6 +15,7 @@ import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -528,6 +529,22 @@ export default function CalendarEventsMobile() {
                   </div>
                 </div>
               )}
+
+              {/* Team Selection Section */}
+              <div>
+                <h4 className="font-medium mb-2 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Team Selection
+                </h4>
+                <MobileTeamSelectionView
+                  event={selectedEvent}
+                  teamId={teams?.[0]?.id || ''}
+                  onOpenFullManager={() => {
+                    setShowEventDetails(false);
+                    setShowTeamSelection(true);
+                  }}
+                />
+              </div>
               
               {selectedEvent.description && (
                 <div>
