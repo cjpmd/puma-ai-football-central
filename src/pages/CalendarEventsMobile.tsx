@@ -164,18 +164,20 @@ export default function CalendarEventsMobile() {
 
   const loadEvents = async () => {
     if (!teams || teams.length === 0) {
+      console.log('No teams available, skipping event load');
       setLoading(false);
       return;
     }
 
     try {
       const teamIds = teams.map(team => team.id);
+      console.log('Loading events for teams:', teamIds);
       
+      // Remove date filtering to load all events first
       const { data: eventsData, error } = await supabase
         .from('events')
         .select('*')
         .in('team_id', teamIds)
-        .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
         .order('start_time', { ascending: true });
 
@@ -184,7 +186,7 @@ export default function CalendarEventsMobile() {
         return;
       }
 
-      console.log('Loaded events:', eventsData?.length || 0);
+      console.log('Raw events from database:', eventsData?.length || 0, eventsData);
       
       // Map the database events to match the DatabaseEvent interface
       const mappedEvents = (eventsData || []).map(event => ({
@@ -198,7 +200,15 @@ export default function CalendarEventsMobile() {
         team_id: event.team_id
       }));
       
-      setEvents(mappedEvents);
+      console.log('Mapped events:', mappedEvents.length, mappedEvents);
+      
+      // Filter for upcoming events (today and future)
+      const today = new Date().toISOString().split('T')[0];
+      const upcomingEvents = mappedEvents.filter(event => event.event_date >= today);
+      
+      console.log('Upcoming events after filtering:', upcomingEvents.length, upcomingEvents);
+      
+      setEvents(upcomingEvents);
     } catch (error) {
       console.error('Error in loadEvents:', error);
     } finally {
