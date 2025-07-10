@@ -173,7 +173,7 @@ export default function CalendarEventsMobile() {
       const teamIds = teams.map(team => team.id);
       console.log('Loading events for teams:', teamIds);
       
-      // Remove date filtering to load all events first
+      // Load all events without date filtering first
       const { data: eventsData, error } = await supabase
         .from('events')
         .select('*')
@@ -202,10 +202,16 @@ export default function CalendarEventsMobile() {
       
       console.log('Mapped events:', mappedEvents.length, mappedEvents);
       
-      // Filter for upcoming events (today and future)
-      const today = new Date().toISOString().split('T')[0];
-      const upcomingEvents = mappedEvents.filter(event => event.event_date >= today);
+      // Filter for upcoming events using proper date comparison
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Set to start of day for proper comparison
       
+      const upcomingEvents = mappedEvents.filter(event => {
+        const eventDate = new Date(event.event_date);
+        return eventDate >= today;
+      });
+      
+      console.log('Today for comparison:', today.toISOString().split('T')[0]);
       console.log('Upcoming events after filtering:', upcomingEvents.length, upcomingEvents);
       
       setEvents(upcomingEvents);
