@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Users, Bell, RefreshCw } from 'lucide-react';
+import { Users, Bell, RefreshCw, Plus } from 'lucide-react';
 import { availabilityService } from '@/services/availabilityService';
 import { AvailabilityStatusBadge } from './AvailabilityStatusBadge';
 import { toast } from 'sonner';
 import { DatabaseEvent } from '@/types/event';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface EventAvailabilityDashboardProps {
   event: DatabaseEvent;
@@ -30,6 +31,7 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
   const [availabilities, setAvailabilities] = useState<AvailabilityWithProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [sendingNotifications, setSendingNotifications] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     loadAvailabilities();
@@ -59,6 +61,27 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
       toast.error('Failed to send notifications');
     } finally {
       setSendingNotifications(false);
+    }
+  };
+
+  const handleCreateTestRecord = async () => {
+    if (!user?.id) {
+      toast.error('No user logged in');
+      return;
+    }
+
+    try {
+      await availabilityService.createTestAvailabilityRecord(
+        event.id,
+        user.id,
+        'player',
+        'available'
+      );
+      toast.success('Test availability record created');
+      loadAvailabilities();
+    } catch (error) {
+      console.error('Error creating test record:', error);
+      toast.error('Failed to create test record');
     }
   };
 
@@ -117,12 +140,28 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
+          <Button
+            onClick={handleCreateTestRecord}
+            size="sm"
+            variant="outline"
+            className="text-blue-600 border-blue-600"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Test Record
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
         {availabilities.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
-            No availability requests sent yet. Use the Team Selection to select players and staff, then send notifications.
+            <div className="mb-4">
+              No availability requests sent yet. Use the Team Selection to select players and staff, then send notifications.
+            </div>
+            <div className="text-sm bg-yellow-50 p-3 rounded border border-yellow-200">
+              <strong>Debug:</strong> The event_availability table appears to be empty. 
+              Try clicking "Create Test Record" to manually add an availability record for testing, 
+              or check if the send_availability_notifications database function is working properly.
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
