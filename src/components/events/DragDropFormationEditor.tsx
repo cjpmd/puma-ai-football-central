@@ -778,7 +778,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         {Object.keys(playingTimeSummary).length > 0 && (
           <Card className="print:break-inside-avoid">
             <CardHeader>
-              <CardTitle className="text-lg">Playing Time Summary</CardHeader>
+              <CardTitle className="text-lg">Playing Time Summary</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
