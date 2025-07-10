@@ -139,7 +139,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   }
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full space-y-3">
       {/* Header with close button for expanded view */}
       {isExpanded && onClose && (
         <div className="flex items-center justify-between">
@@ -152,16 +152,16 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         </div>
       )}
 
-      {/* Team Tabs */}
+      {/* Team Tabs - Compact version for mobile */}
       {teamSelections.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-1 overflow-x-auto pb-2">
           {teamSelections.map((team, index) => (
             <Button
               key={team.teamNumber}
               variant={index === currentTeamIndex ? 'default' : 'outline'}
               size="sm"
               onClick={() => setCurrentTeamIndex(index)}
-              className="flex-shrink-0"
+              className="flex-shrink-0 text-xs px-2 py-1"
             >
               Team {team.teamNumber}
             </Button>
@@ -171,16 +171,16 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
 
       {currentTeam && (
         <Card className="w-full">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2 px-3 pt-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Team {currentTeam.teamNumber}</CardTitle>
+              <CardTitle className="text-base">Team {currentTeam.teamNumber}</CardTitle>
               {!isExpanded && (
-                <Button variant="outline" size="sm" onClick={onOpenFullManager}>
+                <Button variant="outline" size="sm" onClick={onOpenFullManager} className="text-xs px-2 py-1">
                   Edit
                 </Button>
               )}
             </div>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-1 flex-wrap">
               <Badge variant="outline" className="text-xs">
                 <Users className="h-3 w-3 mr-1" />
                 {currentTeam.squadPlayers} players
@@ -197,20 +197,20 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 px-3 pb-3">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="periods">Periods</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 h-8">
+                <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                <TabsTrigger value="periods" className="text-xs">Periods</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="space-y-3 mt-4">
+              <TabsContent value="overview" className="space-y-3 mt-3">
                 <div className="text-sm">
-                  <h4 className="font-medium mb-2">Formation Summary</h4>
+                  <h4 className="font-medium mb-2 text-sm">Formation Summary</h4>
                   {currentTeam.periods.length > 0 ? (
                     <div className="space-y-2">
                       {currentTeam.periods.map((period, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded text-sm">
+                        <div key={index} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
                           <span className="font-medium">Period {period.period_number}</span>
                           <div className="flex items-center gap-2 text-xs">
                             <span>{period.formation}</span>
@@ -221,28 +221,28 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                       ))}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground text-sm">No periods configured</p>
+                    <p className="text-muted-foreground text-xs">No periods configured</p>
                   )}
                 </div>
 
                 {currentTeam.periods[0]?.captain_id && (
                   <div className="text-sm">
-                    <h4 className="font-medium mb-2 flex items-center gap-1">
-                      <Star className="h-4 w-4" />
+                    <h4 className="font-medium mb-2 flex items-center gap-1 text-sm">
+                      <Star className="h-3 w-3" />
                       Captain Selected
                     </h4>
-                    <p className="text-muted-foreground">Team captain has been assigned</p>
+                    <p className="text-muted-foreground text-xs">Team captain has been assigned</p>
                   </div>
                 )}
               </TabsContent>
 
-              <TabsContent value="periods" className="space-y-3 mt-4">
-                <div className="space-y-2 max-h-64 overflow-y-auto">
+              <TabsContent value="periods" className="space-y-2 mt-3">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {currentTeam.periods.map((period, index) => (
                     <Card key={index} className="w-full">
-                      <CardContent className="p-3">
+                      <CardContent className="p-2">
                         <div className="flex justify-between items-start mb-2">
-                          <h5 className="font-medium text-sm">Period {period.period_number}</h5>
+                          <h5 className="font-medium text-xs">Period {period.period_number}</h5>
                           <Badge variant="outline" className="text-xs">
                             {period.formation}
                           </Badge>
@@ -273,6 +273,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               onClick={onOpenFullManager} 
               className="w-full"
               variant="outline"
+              size="sm"
             >
               <Gamepad2 className="h-4 w-4 mr-2" />
               Open Team Manager
