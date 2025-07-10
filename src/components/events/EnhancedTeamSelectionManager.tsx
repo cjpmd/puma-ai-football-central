@@ -40,7 +40,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   onClose
 }) => {
   const { user } = useAuth();
-  const { isMobile } = useMobileDetection();
+  const isMobile = useMobileDetection();
   const teamId = propTeamId || event.team_id;
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
