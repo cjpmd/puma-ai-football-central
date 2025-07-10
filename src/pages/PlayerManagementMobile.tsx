@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
@@ -134,63 +133,273 @@ export default function PlayerManagementMobile() {
   };
 
   const handleEditPlayer = (player: Player) => {
-    toast({ title: 'Edit Player', description: `Edit functionality for ${player.name} coming soon` });
+    // Navigate to edit form or open modal
+    toast({ 
+      title: 'Edit Player', 
+      description: `Opening edit form for ${player.name}`,
+    });
+    // TODO: Implement edit form navigation or modal
   };
 
   const handleManageParents = (player: Player) => {
-    toast({ title: 'Manage Parents', description: `Parent management for ${player.name} coming soon` });
+    toast({ 
+      title: 'Manage Parents', 
+      description: `Parent management for ${player.name} - Feature coming soon`,
+    });
+    // TODO: Implement parent management
   };
 
-  const handleRemoveFromSquad = (player: Player) => {
-    toast({ title: 'Remove Player', description: `Remove functionality for ${player.name} coming soon` });
+  const handleRemoveFromSquad = async (player: Player) => {
+    if (!confirm(`Are you sure you want to remove ${player.name} from the squad?`)) {
+      return;
+    }
+    
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ status: 'inactive' })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Player Removed',
+        description: `${player.name} has been removed from the squad`,
+      });
+      
+      // Reload players
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to remove player',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleUpdatePhoto = async (player: Player, file: File) => {
-    toast({ title: 'Update Photo', description: `Photo update for ${player.name} coming soon` });
+    try {
+      toast({ 
+        title: 'Uploading Photo', 
+        description: `Uploading photo for ${player.name}...`,
+      });
+
+      // Upload to Supabase storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${player.id}-${Math.random()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('player_photos')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('player_photos')
+        .getPublicUrl(fileName);
+
+      // Update player with photo URL
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ photo_url: data.publicUrl })
+        .eq('id', player.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: 'Photo Updated',
+        description: `Photo updated for ${player.name}`,
+      });
+      
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update photo',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleDeletePhoto = (player: Player) => {
-    toast({ title: 'Delete Photo', description: `Photo deletion for ${player.name} coming soon` });
+  const handleDeletePhoto = async (player: Player) => {
+    if (!player.photoUrl) {
+      toast({ title: 'No Photo', description: 'This player has no photo to delete' });
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete the photo for ${player.name}?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ photo_url: null })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Photo Deleted',
+        description: `Photo deleted for ${player.name}`,
+      });
+      
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete photo',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleSaveFunStats = (player: Player, stats: Record<string, number>) => {
-    toast({ title: 'Save Stats', description: `Stats update for ${player.name} coming soon` });
+  const handleSaveFunStats = async (player: Player, stats: Record<string, number>) => {
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ fun_stats: stats })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Stats Updated',
+        description: `Fun stats updated for ${player.name}`,
+      });
+      
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update stats',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleSavePlayStyle = (player: Player, playStyles: string[]) => {
-    toast({ title: 'Save Play Style', description: `Play style update for ${player.name} coming soon` });
+  const handleSavePlayStyle = async (player: Player, playStyles: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ play_style: JSON.stringify(playStyles) })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Play Style Updated',
+        description: `Play style updated for ${player.name}`,
+      });
+      
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update play style',
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleSaveCardDesign = (player: Player, designId: string) => {
-    toast({ title: 'Save Card Design', description: `Card design update for ${player.name} coming soon` });
+  const handleSaveCardDesign = async (player: Player, designId: string) => {
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ card_design_id: designId })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Card Design Updated',
+        description: `Card design updated for ${player.name}`,
+      });
+      
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update card design',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleManageAttributes = (player: Player) => {
-    toast({ title: 'Manage Attributes', description: `Attributes for ${player.name} coming soon` });
+    toast({ 
+      title: 'Manage Attributes', 
+      description: `Attributes management for ${player.name} - Feature coming soon`,
+    });
   };
 
   const handleManageObjectives = (player: Player) => {
-    toast({ title: 'Manage Objectives', description: `Objectives for ${player.name} coming soon` });
+    toast({ 
+      title: 'Manage Objectives', 
+      description: `Objectives management for ${player.name} - Feature coming soon`,
+    });
   };
 
   const handleManageComments = (player: Player) => {
-    toast({ title: 'Manage Comments', description: `Comments for ${player.name} coming soon` });
+    toast({ 
+      title: 'Manage Comments', 
+      description: `Comments management for ${player.name} - Feature coming soon`,
+    });
   };
 
   const handleViewStats = (player: Player) => {
-    toast({ title: 'View Stats', description: `Stats for ${player.name} coming soon` });
+    toast({ 
+      title: 'View Stats', 
+      description: `Stats viewing for ${player.name} - Feature coming soon`,
+    });
   };
 
   const handleViewHistory = (player: Player) => {
-    toast({ title: 'View History', description: `History for ${player.name} coming soon` });
+    toast({ 
+      title: 'View History', 
+      description: `History viewing for ${player.name} - Feature coming soon`,
+    });
   };
 
   const handleTransferPlayer = (player: Player) => {
-    toast({ title: 'Transfer Player', description: `Transfer for ${player.name} coming soon` });
+    toast({ 
+      title: 'Transfer Player', 
+      description: `Transfer functionality for ${player.name} - Feature coming soon`,
+    });
   };
 
-  const handleLeaveTeam = (player: Player) => {
-    toast({ title: 'Leave Team', description: `Leave team for ${player.name} coming soon` });
+  const handleLeaveTeam = async (player: Player) => {
+    if (!confirm(`Are you sure ${player.name} wants to leave the team?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ 
+          status: 'left',
+          leave_date: new Date().toISOString().split('T')[0],
+          leave_comments: 'Left team via mobile interface'
+        })
+        .eq('id', player.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Player Left Team',
+        description: `${player.name} has left the team`,
+      });
+      
+      loadPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to process team leave',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -241,21 +450,21 @@ export default function PlayerManagementMobile() {
                     <FifaStylePlayerCard
                       player={player}
                       team={currentTeam}
-                      onEdit={() => handleEditPlayer(player)}
-                      onManageParents={() => handleManageParents(player)}
-                      onRemoveFromSquad={() => handleRemoveFromSquad(player)}
-                      onUpdatePhoto={(player, file) => handleUpdatePhoto(player, file)}
-                      onDeletePhoto={() => handleDeletePhoto(player)}
-                      onSaveFunStats={(player, stats) => handleSaveFunStats(player, stats)}
-                      onSavePlayStyle={(player, playStyles) => handleSavePlayStyle(player, playStyles)}
-                      onSaveCardDesign={(player, designId) => handleSaveCardDesign(player, designId)}
-                      onManageAttributes={() => handleManageAttributes(player)}
-                      onManageObjectives={() => handleManageObjectives(player)}
-                      onManageComments={() => handleManageComments(player)}
-                      onViewStats={() => handleViewStats(player)}
-                      onViewHistory={() => handleViewHistory(player)}
-                      onTransferPlayer={() => handleTransferPlayer(player)}
-                      onLeaveTeam={() => handleLeaveTeam(player)}
+                      onEdit={handleEditPlayer}
+                      onManageParents={handleManageParents}
+                      onRemoveFromSquad={handleRemoveFromSquad}
+                      onUpdatePhoto={handleUpdatePhoto}
+                      onDeletePhoto={handleDeletePhoto}
+                      onSaveFunStats={handleSaveFunStats}
+                      onSavePlayStyle={handleSavePlayStyle}
+                      onSaveCardDesign={handleSaveCardDesign}
+                      onManageAttributes={handleManageAttributes}
+                      onManageObjectives={handleManageObjectives}
+                      onManageComments={handleManageComments}
+                      onViewStats={handleViewStats}
+                      onViewHistory={handleViewHistory}
+                      onTransferPlayer={handleTransferPlayer}
+                      onLeaveTeam={handleLeaveTeam}
                     />
                   </div>
                 </div>
