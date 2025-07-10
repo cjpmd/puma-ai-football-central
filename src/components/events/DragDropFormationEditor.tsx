@@ -664,16 +664,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                         zIndex: 20,
                       }}
                     >
-                      <PlayerIcon
-                        player={player}
-                        isCaptain={isCaptain}
-                        nameDisplayOption={mappedNameDisplayOption}
-                        isCircular={true}
-                        dragId={`${period.id}|position|${player.id}`}
-                        positionAbbreviation={position.abbreviation}
-                        showPositionLabel={true}
-                        isLarger={true}
-                      />
+                      <div className={`rounded-full border-2 ${positionGroupColor} p-1`}>
+                        <PlayerIcon
+                          player={player}
+                          isCaptain={isCaptain}
+                          nameDisplayOption={mappedNameDisplayOption}
+                          isCircular={true}
+                          dragId={`${period.id}|position|${player.id}`}
+                          positionAbbreviation={position.abbreviation}
+                          showPositionLabel={true}
+                          isLarger={true}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
