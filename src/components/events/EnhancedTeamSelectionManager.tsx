@@ -16,6 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
+import { useMobileDetection } from '@/hooks/useMobileDetection';
 
 interface TeamSelection {
   teamNumber: number;
@@ -39,6 +40,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   onClose
 }) => {
   const { user } = useAuth();
+  const { isMobile } = useMobileDetection();
   const teamId = propTeamId || event.team_id;
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
@@ -351,73 +353,85 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg w-full max-w-7xl h-[90vh] flex flex-col">
-        <div className="p-6 border-b">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
+      <div className={`bg-white rounded-lg w-full flex flex-col ${
+        isMobile 
+          ? 'max-w-sm h-[95vh]' 
+          : 'max-w-7xl h-[90vh]'
+      }`}>
+        <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">{event.title}</h2>
-              <p className="text-muted-foreground">
+              <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>{event.title}</h2>
+              <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
                 {event.date} • {event.game_format} • Team Selection
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                {teamSelections.length} team(s)
-              </Badge>
-              <Badge variant="outline">
-                {currentTeam?.squadPlayers.length || 0} in squad
-              </Badge>
-              <Badge variant="outline">
-                {currentTeam?.periods.length || 0} period(s)
-              </Badge>
-              <Button 
-                onClick={() => setShowMatchDayPack(true)}
-                variant="outline"
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                📦 Generate Match Day Pack
+            <div className="flex items-center gap-1">
+              {!isMobile && (
+                <>
+                  <Badge variant="outline" className="text-xs">
+                    {teamSelections.length} team(s)
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {currentTeam?.squadPlayers.length || 0} in squad
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {currentTeam?.periods.length || 0} period(s)
+                  </Badge>
+                  <Button 
+                    onClick={() => setShowMatchDayPack(true)}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1"
+                  >
+                    <FileText className="h-3 w-3" />
+                    📦 Pack
+                  </Button>
+                </>
+              )}
+              <Button onClick={saveSelections} disabled={saving} size={isMobile ? "sm" : "default"}>
+                <Save className="h-3 w-3 mr-1" />
+                {saving ? 'Saving...' : 'Save'}
               </Button>
-              <Button onClick={saveSelections} disabled={saving}>
-                <Save className="h-4 w-4 mr-1" />
-                {saving ? 'Saving...' : 'Save Selection'}
-              </Button>
-              <Button variant="outline" onClick={onClose}>
-                <X className="h-4 w-4 mr-1" />
+              <Button variant="outline" onClick={onClose} size={isMobile ? "sm" : "default"}>
+                <X className="h-3 w-3 mr-1" />
                 Close
               </Button>
             </div>
           </div>
 
           {/* Team Selection */}
-          <div className="mt-4 flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <Label className="text-sm font-medium">Teams:</Label>
-              {teamSelections.map((team, index) => (
-                <Button
-                  key={team.teamNumber}
-                  variant={index === currentTeamIndex ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setCurrentTeamIndex(index)}
-                >
-                  Team {team.teamNumber}
+          <div className={`flex flex-col gap-2 ${isMobile ? 'mt-2' : 'mt-4'}`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Label className="text-xs font-medium">Teams:</Label>
+              <div className="flex gap-1 flex-wrap">
+                {teamSelections.map((team, index) => (
+                  <Button
+                    key={team.teamNumber}
+                    variant={index === currentTeamIndex ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setCurrentTeamIndex(index)}
+                    className="text-xs px-2 py-1"
+                  >
+                    Team {team.teamNumber}
+                  </Button>
+                ))}
+                <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1">
+                  <Plus className="h-3 w-3" />
                 </Button>
-              ))}
-              <Button onClick={addTeam} variant="outline" size="sm">
-                <Plus className="h-4 w-4" />
-              </Button>
+              </div>
             </div>
 
             {/* Performance Category Selection for Current Team */}
             {performanceCategories.length > 0 && currentTeam && (
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Target className="h-4 w-4" />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Label className="text-xs font-medium flex items-center gap-1">
+                  <Target className="h-3 w-3" />
                   Category:
                 </Label>
                 <Select value={currentTeam.performanceCategory} onValueChange={handlePerformanceCategoryChange}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -436,18 +450,18 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
         <div className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-2 mx-6 mt-4">
-              <TabsTrigger value="squad" className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Squad Management
+            <TabsList className={`grid w-full grid-cols-2 ${isMobile ? 'mx-2 mt-2' : 'mx-6 mt-4'}`}>
+              <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                <Users className="h-3 w-3" />
+                Squad
               </TabsTrigger>
-              <TabsTrigger value="formation" className="flex items-center gap-2">
-                <Gamepad2 className="h-4 w-4" />
-                Formation & Selection
+              <TabsTrigger value="formation" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                <Gamepad2 className="h-3 w-3" />
+                Formation
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-auto p-6">
+            <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
                 <SquadManagement
                   teamId={teamId}
@@ -461,13 +475,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               <TabsContent value="formation" className="h-full mt-0">
                 {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
                   <Card>
-                    <CardContent className="py-8 text-center">
-                      <Users className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <h3 className="text-lg font-semibold mb-2">No Squad Selected</h3>
-                      <p className="text-muted-foreground mb-4">
+                    <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
+                      <Users className={`mx-auto text-gray-400 mb-2 ${isMobile ? 'h-8 w-8' : 'h-12 w-12'}`} />
+                      <h3 className={`font-semibold mb-2 ${isMobile ? 'text-sm' : 'text-lg'}`}>No Squad Selected</h3>
+                      <p className={`text-muted-foreground mb-4 ${isMobile ? 'text-xs' : 'text-sm'}`}>
                         Please add players to your squad first before creating formations.
                       </p>
-                      <Button onClick={() => setActiveTab('squad')}>
+                      <Button onClick={() => setActiveTab('squad')} size={isMobile ? "sm" : "default"}>
                         Go to Squad Management
                       </Button>
                     </CardContent>
