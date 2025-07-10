@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,6 +24,11 @@ interface WeatherData {
   icon: string;
 }
 
+interface UserAvailability {
+  eventId: string;
+  status: 'pending' | 'available' | 'unavailable';
+}
+
 export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   events,
   onEditEvent,
@@ -35,6 +39,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
+  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const { teams } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
@@ -44,7 +49,50 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   useEffect(() => {
     loadEventWeather();
     loadPerformanceCategories();
+    loadUserAvailability();
   }, [events, teams]);
+
+  const loadUserAvailability = async () => {
+    try {
+      const { data: availabilityData, error } = await supabase
+        .from('event_availability')
+        .select('event_id, status')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        console.error('Error loading user availability:', error);
+        return;
+      }
+
+      const availability = (availabilityData || []).map(item => ({
+        eventId: item.event_id,
+        status: item.status as 'pending' | 'available' | 'unavailable'
+      }));
+
+      setUserAvailability(availability);
+    } catch (error) {
+      console.error('Error in loadUserAvailability:', error);
+    }
+  };
+
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    return availability?.status || null;
+  };
+
+  const getEventBorderClass = (eventId: string): string => {
+    const status = getAvailabilityStatus(eventId);
+    switch (status) {
+      case 'available':
+        return 'border-l-green-500 border-l-2';
+      case 'unavailable':
+        return 'border-l-red-500 border-l-2';
+      case 'pending':
+        return 'border-l-amber-500 border-l-2';
+      default:
+        return 'border-l-blue-500 border-l-2';
+    }
+  };
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
@@ -231,9 +279,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                       const weather = eventWeather[event.id];
                       const team = teams?.find(t => t.id === event.team_id);
                       const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+                      const borderClass = getEventBorderClass(event.id);
                       
                       return (
-                        <div key={event.id} className="space-y-1">
+                        <div key={event.id} className={`space-y-1 p-1 rounded ${borderClass}`}>
                           {/* Top line: Event type and Kit */}
                           <div className="flex items-center justify-between">
                             <Badge 

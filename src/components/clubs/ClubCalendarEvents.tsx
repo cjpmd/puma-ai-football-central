@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +28,11 @@ interface ClubCalendarEventsProps {
   clubName: string;
 }
 
+interface UserAvailability {
+  eventId: string;
+  status: 'pending' | 'available' | 'unavailable';
+}
+
 export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
   clubId,
   clubName
@@ -39,17 +43,61 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
+  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const { toast } = useToast();
 
   useEffect(() => {
     if (clubId) {
       loadClubEvents();
+      loadUserAvailability();
     }
   }, [clubId]);
 
   useEffect(() => {
     filterEvents();
   }, [events, selectedTeam, selectedEventType]);
+
+  const loadUserAvailability = async () => {
+    try {
+      const { data: availabilityData, error } = await supabase
+        .from('event_availability')
+        .select('event_id, status')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        console.error('Error loading user availability:', error);
+        return;
+      }
+
+      const availability = (availabilityData || []).map(item => ({
+        eventId: item.event_id,
+        status: item.status as 'pending' | 'available' | 'unavailable'
+      }));
+
+      setUserAvailability(availability);
+    } catch (error) {
+      console.error('Error in loadUserAvailability:', error);
+    }
+  };
+
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    return availability?.status || null;
+  };
+
+  const getEventBorderClass = (eventId: string): string => {
+    const status = getAvailabilityStatus(eventId);
+    switch (status) {
+      case 'available':
+        return 'border-l-green-500 border-l-4';
+      case 'unavailable':
+        return 'border-l-red-500 border-l-4';
+      case 'pending':
+        return 'border-l-amber-500 border-l-4';
+      default:
+        return '';
+    }
+  };
 
   const loadClubEvents = async () => {
     try {
@@ -278,8 +326,9 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
             <div className="space-y-4">
               {filteredEvents.map((event) => {
                 const teamScores = getTeamScores(event);
+                const borderClass = getEventBorderClass(event.id);
                 return (
-                  <Card key={event.id} className="hover:shadow-md transition-shadow">
+                  <Card key={event.id} className={`hover:shadow-md transition-shadow ${borderClass}`}>
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

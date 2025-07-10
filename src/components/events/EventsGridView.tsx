@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +25,11 @@ interface WeatherData {
   icon: string;
 }
 
+interface UserAvailability {
+  eventId: string;
+  status: 'pending' | 'available' | 'unavailable';
+}
+
 export const EventsGridView: React.FC<EventsGridViewProps> = ({
   events,
   onEditEvent,
@@ -36,12 +40,56 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
 }) => {
   const [performanceCategoryNames, setPerformanceCategoryNames] = useState<{ [eventId: string]: { [teamNumber: string]: string } }>({});
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
+  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const { teams } = useAuth();
 
   useEffect(() => {
     loadPerformanceCategoryNames();
     loadEventWeather();
+    loadUserAvailability();
   }, [events]);
+
+  const loadUserAvailability = async () => {
+    try {
+      const { data: availabilityData, error } = await supabase
+        .from('event_availability')
+        .select('event_id, status')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        console.error('Error loading user availability:', error);
+        return;
+      }
+
+      const availability = (availabilityData || []).map(item => ({
+        eventId: item.event_id,
+        status: item.status as 'pending' | 'available' | 'unavailable'
+      }));
+
+      setUserAvailability(availability);
+    } catch (error) {
+      console.error('Error in loadUserAvailability:', error);
+    }
+  };
+
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    return availability?.status || null;
+  };
+
+  const getEventOutlineClass = (eventId: string): string => {
+    const status = getAvailabilityStatus(eventId);
+    switch (status) {
+      case 'available':
+        return 'border-l-green-500 border-l-4';
+      case 'unavailable':
+        return 'border-l-red-500 border-l-4';
+      case 'pending':
+        return 'border-l-amber-500 border-l-4';
+      default:
+        return '';
+    }
+  };
 
   const loadPerformanceCategoryNames = async () => {
     try {
@@ -201,9 +249,10 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         const weather = eventWeather[event.id];
         const team = teams.find(t => t.id === event.team_id);
         const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+        const outlineClass = getEventOutlineClass(event.id);
         
         return (
-          <Card key={event.id} className="flex flex-col">
+          <Card key={event.id} className={`flex flex-col ${outlineClass}`}>
             <CardHeader className="pb-3">
               {/* Top line: Event type and Kit */}
               <div className="flex items-center justify-between mb-2">

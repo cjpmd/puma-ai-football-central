@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,19 +24,68 @@ interface Event {
   team_name: string;
 }
 
+interface UserAvailability {
+  eventId: string;
+  status: 'pending' | 'available' | 'unavailable';
+}
+
 export function UpcomingEvents() {
   const { teams } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
+  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     if (teams.length > 0) {
       loadUpcomingEvents();
+      loadUserAvailability();
     }
   }, [teams]);
+
+  const loadUserAvailability = async () => {
+    try {
+      const { data: availabilityData, error } = await supabase
+        .from('event_availability')
+        .select('event_id, status')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+
+      if (error) {
+        console.error('Error loading user availability:', error);
+        return;
+      }
+
+      const availability = (availabilityData || []).map(item => ({
+        eventId: item.event_id,
+        status: item.status as 'pending' | 'available' | 'unavailable'
+      }));
+
+      setUserAvailability(availability);
+    } catch (error) {
+      console.error('Error in loadUserAvailability:', error);
+    }
+  };
+
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    return availability?.status || null;
+  };
+
+  const getEventOutlineClass = (eventId: string): string => {
+    const status = getAvailabilityStatus(eventId);
+    switch (status) {
+      case 'available':
+        return 'border-l-green-500';
+      case 'unavailable':
+        return 'border-l-red-500';
+      case 'pending':
+        return 'border-l-amber-500';
+      default:
+        return 'border-l-blue-500';
+    }
+  };
 
   const loadUpcomingEvents = async () => {
     try {
@@ -126,7 +174,7 @@ export function UpcomingEvents() {
       </div>
 
       {nextEvent && (
-        <Card className="border-l-4 border-l-blue-500">
+        <Card className={`border-l-4 ${getEventOutlineClass(nextEvent.id)}`}>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -198,7 +246,7 @@ export function UpcomingEvents() {
           const kitDesign = team?.kitDesigns?.[(event as any).kit_selection as 'home' | 'away' | 'training'];
           
           return (
-            <Card key={event.id} className="hover:shadow-md transition-shadow">
+            <Card key={event.id} className={`hover:shadow-md transition-shadow border-l-4 ${getEventOutlineClass(event.id)}`}>
               <CardContent className="pt-4">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
