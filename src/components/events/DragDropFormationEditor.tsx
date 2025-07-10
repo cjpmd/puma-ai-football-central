@@ -643,10 +643,13 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               
               return (
                 <div key={`${period.id}-position-${index}`}>
-                  <div
+                  {/* Drop zone for position */}
+                  <PositionSlot
+                    id={`${period.id}-position-${index}`}
+                    position={position}
                     className={`
                       absolute flex flex-col items-center justify-center
-                      w-20 h-20
+                      w-25 h-25
                       rounded-full border-2 border-dashed
                       ${player ? positionGroupColor : 'border-white/60 bg-white/20 hover:border-white/80 hover:bg-white/30'}
                       transition-all duration-300 ease-out backdrop-blur-sm
@@ -655,74 +658,65 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                       left: `${position.x}%`,
                       top: `${position.y}%`,
                       transform: 'translate(-50%, -50%)',
+                      width: '100px', // 25% larger than original 80px
+                      height: '100px', // 25% larger than original 80px
                     }}
-                  >
-                    {!player && (
-                      <div className="flex flex-col items-center justify-center text-center">
-                        <div className="text-xs font-bold text-white/80 mb-1">
-                          {position.abbreviation}
-                        </div>
-                        <div className="text-xs text-white/60">
-                          {position.positionName}
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  />
                   
                   {/* Render draggable player icon on top of position slot */}
                   {player && (
                     <div
-                      className="absolute pointer-events-none"
+                      className="absolute"
                       style={{
                         left: `${position.x}%`,
                         top: `${position.y}%`,
                         transform: 'translate(-50%, -50%)',
-                        zIndex: 20
+                        zIndex: 20,
+                        width: '100px', // 25% larger
+                        height: '100px', // 25% larger
                       }}
                     >
-                      <div className="pointer-events-auto">
-                        <div className={`
+                      <PlayerIcon
+                        player={player}
+                        isCaptain={isCaptain}
+                        nameDisplayOption={mappedNameDisplayOption}
+                        isCircular={true}
+                        dragId={`${period.id}|position|${player.id}`}
+                        className={`
                           relative flex flex-col items-center justify-center text-center
-                          w-20 h-20 rounded-full border-2
+                          w-full h-full rounded-full border-2
                           ${positionGroupColor}
                           shadow-sm hover:scale-105 hover:shadow-md active:scale-110
                           transition-all duration-200 ease-in-out cursor-grab print:cursor-default
                           touch-none select-none
-                        `}>
-                          {/* Captain indicator */}
-                          {isCaptain && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-bold text-black">C</span>
-                            </div>
-                          )}
-                          
-                          {/* Position abbreviation above player name */}
-                          <div className="text-xs font-bold text-gray-700 mb-0.5">
-                            {position.abbreviation}
+                        `}
+                        style={{
+                          width: '100px', // 25% larger
+                          height: '100px', // 25% larger
+                        }}
+                      >
+                        {/* Captain indicator */}
+                        {isCaptain && (
+                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <span className="text-xs font-bold text-black">C</span>
                           </div>
-                          
-                          {/* Player name */}
-                          <div className="text-xs font-medium text-center leading-tight">
-                            {player.name}
-                          </div>
-                          
-                          {/* Squad number below */}
-                          <div className="text-xs font-bold text-gray-600 mt-0.5">
-                            #{player.squadNumber}
-                          </div>
+                        )}
+                        
+                        {/* Position abbreviation above player name */}
+                        <div className="text-xs font-bold text-gray-700 mb-0.5">
+                          {position.abbreviation}
                         </div>
                         
-                        {/* Hidden draggable PlayerIcon for drag functionality */}
-                        <div className="absolute inset-0 opacity-0">
-                          <PlayerIcon
-                            player={player}
-                            isCaptain={isCaptain}
-                            nameDisplayOption={mappedNameDisplayOption}
-                            isCircular={true}
-                            dragId={`${period.id}|position|${player.id}`}
-                          />
+                        {/* Player name */}
+                        <div className="text-xs font-medium text-center leading-tight">
+                          {player.name}
                         </div>
-                      </div>
+                        
+                        {/* Squad number below */}
+                        <div className="text-xs font-bold text-gray-600 mt-0.5">
+                          #{player.squadNumber}
+                        </div>
+                      </PlayerIcon>
                     </div>
                   )}
                 </div>
