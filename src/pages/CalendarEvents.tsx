@@ -254,13 +254,39 @@ export default function CalendarEvents() {
                   Manage your team's schedule and events
                 </CardDescription>
               </div>
-              <Button onClick={() => setShowEventForm(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Event
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open('/account-linking', '_blank')}
+                  size="sm"
+                >
+                  Link Account
+                </Button>
+                <Button onClick={() => setShowEventForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Event
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Add account linking notice */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  <strong>Tip:</strong> Link your account to a player to see availability status colors on events. 
+                  <Button 
+                    variant="link" 
+                    className="h-auto p-0 text-blue-600 underline ml-1"
+                    onClick={() => window.open('/account-linking', '_blank')}
+                  >
+                    Set up linking here
+                  </Button>
+                </span>
+              </div>
+            </div>
+
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               {/* View Mode Selector */}
               <div className="flex items-center gap-2">
