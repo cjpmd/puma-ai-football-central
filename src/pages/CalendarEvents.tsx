@@ -428,18 +428,25 @@ export default function CalendarEvents() {
           />
         )}
 
-        {/* Post Game Edit Modal */}
-        {selectedEvent && (
-          <PostGameEditor
-            eventId={selectedEvent.id}
-            isOpen={showPostGameEdit}
-            onClose={() => {
-              setShowPostGameEdit(false);
-              setSelectedEvent(null);
-              loadEvents();
-            }}
-          />
-        )}
+        {/* Post Game Edit Modal - Made Full Screen */}
+        <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Post-Game Report</DialogTitle>
+            </DialogHeader>
+            {selectedEvent && (
+              <PostGameEditor
+                eventId={selectedEvent.id}
+                isOpen={showPostGameEdit}
+                onClose={() => {
+                  setShowPostGameEdit(false);
+                  setSelectedEvent(null);
+                  loadEvents();
+                }}
+              />
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );
