@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { 
   DndContext, 
@@ -70,12 +71,12 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3, // Slightly higher to prevent accidental drags
+        distance: 3,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 100, // Slightly longer delay for better touch handling
+        delay: 100,
         tolerance: 5,
       },
     })
@@ -625,43 +626,38 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               const isCaptain = position.playerId === globalCaptainId;
               
               return (
-                <PositionSlot
-                  key={`${period.id}-position-${index}`}
-                  id={`${period.id}-position-${index}`}
-                  position={position}
-                  player={player}
-                  isCaptain={isCaptain}
-                  nameDisplayOption={mappedNameDisplayOption}
-                  isLarger={false}
-                />
-              );
-            })}
-            
-            {/* Render draggable players in positions */}
-            {period.positions.map((position, index) => {
-              const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
-              if (!player) return null;
-              
-              const isCaptain = position.playerId === globalCaptainId;
-              
-              return (
-                <div
-                  key={`draggable-${period.id}-position-${index}`}
-                  className="absolute pointer-events-none"
-                  style={{
-                    left: `${position.x}%`,
-                    top: `${position.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 10
-                  }}
-                >
-                  <PlayerIcon
+                <div key={`${period.id}-position-${index}`}>
+                  <PositionSlot
+                    id={`${period.id}-position-${index}`}
+                    position={position}
                     player={player}
                     isCaptain={isCaptain}
                     nameDisplayOption={mappedNameDisplayOption}
-                    isCircular={true}
-                    dragId={`${period.id}|position|${player.id}`}
+                    isLarger={false}
                   />
+                  
+                  {/* Render draggable player icon on top of position slot */}
+                  {player && (
+                    <div
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: `${position.x}%`,
+                        top: `${position.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 20
+                      }}
+                    >
+                      <div className="pointer-events-auto">
+                        <PlayerIcon
+                          player={player}
+                          isCaptain={isCaptain}
+                          nameDisplayOption={mappedNameDisplayOption}
+                          isCircular={true}
+                          dragId={`${period.id}|position|${player.id}`}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}
