@@ -16,12 +16,18 @@ import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
+import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
   { id: 'training', label: 'TRAINING' },
   { id: 'friendlies', label: 'FRIENDLIES' },
 ];
+
+interface UserAvailability {
+  eventId: string;
+  status: 'pending' | 'available' | 'unavailable';
+}
 
 export default function CalendarEventsMobile() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
@@ -34,12 +40,67 @@ export default function CalendarEventsMobile() {
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [showExpandedTeamSelection, setShowExpandedTeamSelection] = useState(false);
   const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
+  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const { toast } = useToast();
-  const { teams } = useAuth();
+  const { teams, user } = useAuth();
 
   useEffect(() => {
     loadEvents();
   }, [teams]);
+
+  const loadUserAvailability = async () => {
+    try {
+      if (!user?.id) {
+        console.log('No user ID available for availability loading');
+        return;
+      }
+
+      console.log('Loading availability for user:', user.id);
+      
+      const { data: availabilityData, error } = await supabase
+        .from('event_availability')
+        .select('event_id, status')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading user availability:', error);
+        return;
+      }
+
+      console.log('Raw availability data:', availabilityData);
+
+      const availability = (availabilityData || []).map(item => ({
+        eventId: item.event_id,
+        status: item.status as 'pending' | 'available' | 'unavailable'
+      }));
+
+      console.log('Processed user availability:', availability);
+      setUserAvailability(availability);
+    } catch (error) {
+      console.error('Error in loadUserAvailability:', error);
+    }
+  };
+
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    console.log(`Availability for event ${eventId}:`, availability?.status || 'none');
+    return availability?.status || null;
+  };
+
+  const getEventBorderClass = (eventId: string): string => {
+    const status = getAvailabilityStatus(eventId);
+    console.log(`Border class for event ${eventId}, status: ${status}`);
+    switch (status) {
+      case 'available':
+        return 'border-l-green-500 border-l-4';
+      case 'unavailable':
+        return 'border-l-red-500 border-l-4';
+      case 'pending':
+        return 'border-l-amber-500 border-l-4';
+      default:
+        return 'border-l-gray-300 border-l-4';
+    }
+  };
 
   const loadEvents = async () => {
     try {
@@ -76,6 +137,9 @@ export default function CalendarEventsMobile() {
         selectionsByEvent[selection.event_id].push(selection);
       });
       setEventSelections(selectionsByEvent);
+
+      // Load user availability after events are loaded
+      await loadUserAvailability();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -352,11 +416,13 @@ export default function CalendarEventsMobile() {
                   const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
                   const eventNeedsSetup = needsSetup(event);
                   const teamScores = getAllTeamScores(event);
+                  const borderClass = getEventBorderClass(event.id);
+                  const availabilityStatus = getAvailabilityStatus(event.id);
                   
                   return (
                     <Card 
                       key={event.id} 
-                      className="bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow" 
+                      className={`bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow ${borderClass}`}
                       onClick={(e) => handleEventClick(event, e)}
                     >
                       <CardContent className="p-4">
@@ -373,6 +439,11 @@ export default function CalendarEventsMobile() {
                             </div>
                             
                             <div className="flex items-center gap-2">
+                              {/* Availability status badge */}
+                              {availabilityStatus && (
+                                <AvailabilityStatusBadge status={availabilityStatus} size="sm" />
+                              )}
+                              
                               {/* Result icons for completed matches - show ALL team results */}
                               {completed && teamScores.length > 0 && (
                                 <div className="flex gap-1">
@@ -486,6 +557,9 @@ export default function CalendarEventsMobile() {
                 <Badge className={`text-white ${getEventTypeBadgeColor(selectedEvent.event_type)}`}>
                   {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}
                 </Badge>
+                {getAvailabilityStatus(selectedEvent.id) && (
+                  <AvailabilityStatusBadge status={getAvailabilityStatus(selectedEvent.id)!} size="md" />
+                )}
               </div>
               
               <div>
