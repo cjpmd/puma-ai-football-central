@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -53,7 +54,8 @@ export default function CalendarEventsMobile() {
           event_id: eventId,
           user_id: user.id,
           status: 'available',
-          response_date: new Date().toISOString()
+          role: 'player',
+          responded_at: new Date().toISOString()
         })
         .select()
         .single();
@@ -173,9 +175,9 @@ export default function CalendarEventsMobile() {
         .from('events')
         .select('*')
         .in('team_id', teamIds)
-        .gte('event_date', new Date().toISOString().split('T')[0])
-        .order('event_date', { ascending: true })
-        .order('event_time', { ascending: true });
+        .gte('date', new Date().toISOString().split('T')[0])
+        .order('date', { ascending: true })
+        .order('start_time', { ascending: true });
 
       if (error) {
         console.error('Error loading events:', error);
@@ -183,7 +185,20 @@ export default function CalendarEventsMobile() {
       }
 
       console.log('Loaded events:', eventsData?.length || 0);
-      setEvents(eventsData || []);
+      
+      // Map the database events to match the DatabaseEvent interface
+      const mappedEvents = (eventsData || []).map(event => ({
+        id: event.id,
+        title: event.title,
+        event_date: event.date,
+        event_time: event.start_time || '00:00',
+        location: event.location || '',
+        type: event.event_type,
+        description: event.description,
+        team_id: event.team_id
+      }));
+      
+      setEvents(mappedEvents);
     } catch (error) {
       console.error('Error in loadEvents:', error);
     } finally {
