@@ -639,10 +639,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             {period.positions.map((position, index) => {
               const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
               const isCaptain = position.playerId === globalCaptainId;
+              const positionGroupColor = getPositionGroupColor(position.positionName);
               
               return (
                 <div key={`${period.id}-position-${index}`}>
-                  {/* Position slot - larger size (25% increase) */}
+                  {/* Drop zone for position */}
                   <PositionSlot
                     id={`${period.id}-position-${index}`}
                     position={position}
@@ -651,6 +652,30 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     nameDisplayOption={mappedNameDisplayOption}
                     isLarger={true}
                   />
+                  
+                  {/* Render draggable player icon on top of position slot */}
+                  {player && (
+                    <div
+                      className="absolute"
+                      style={{
+                        left: `${position.x}%`,
+                        top: `${position.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 20,
+                      }}
+                    >
+                      <PlayerIcon
+                        player={player}
+                        isCaptain={isCaptain}
+                        nameDisplayOption={mappedNameDisplayOption}
+                        isCircular={true}
+                        dragId={`${period.id}|position|${player.id}`}
+                        positionAbbreviation={position.abbreviation}
+                        showPositionLabel={true}
+                        isLarger={true}
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
