@@ -3,6 +3,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Search, Plus, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +45,8 @@ export default function PlayerManagementMobile() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [isPlayerModalOpen, setIsPlayerModalOpen] = useState(false);
   const { toast } = useToast();
   const { teams } = useAuth();
 
@@ -447,25 +450,65 @@ export default function PlayerManagementMobile() {
               {filteredPlayers.map((player) => (
                 <div key={player.id} className="flex justify-center">
                   <div className="w-full max-w-[300px]">
-                    <FifaStylePlayerCard
-                      player={player}
-                      team={currentTeam}
-                      onEdit={handleEditPlayer}
-                      onManageParents={handleManageParents}
-                      onRemoveFromSquad={handleRemoveFromSquad}
-                      onUpdatePhoto={handleUpdatePhoto}
-                      onDeletePhoto={handleDeletePhoto}
-                      onSaveFunStats={handleSaveFunStats}
-                      onSavePlayStyle={handleSavePlayStyle}
-                      onSaveCardDesign={handleSaveCardDesign}
-                      onManageAttributes={handleManageAttributes}
-                      onManageObjectives={handleManageObjectives}
-                      onManageComments={handleManageComments}
-                      onViewStats={handleViewStats}
-                      onViewHistory={handleViewHistory}
-                      onTransferPlayer={handleTransferPlayer}
-                      onLeaveTeam={handleLeaveTeam}
-                    />
+                    <Dialog open={isPlayerModalOpen && selectedPlayer?.id === player.id} onOpenChange={(open) => {
+                      setIsPlayerModalOpen(open);
+                      if (!open) setSelectedPlayer(null);
+                    }}>
+                      <DialogTrigger asChild>
+                        <div onClick={() => {
+                          setSelectedPlayer(player);
+                          setIsPlayerModalOpen(true);
+                        }}>
+                          <FifaStylePlayerCard
+                            player={player}
+                            team={currentTeam}
+                            onEdit={() => {}}
+                            onManageParents={() => {}}
+                            onRemoveFromSquad={() => {}}
+                            onUpdatePhoto={() => {}}
+                            onDeletePhoto={() => {}}
+                            onSaveFunStats={() => {}}
+                            onSavePlayStyle={() => {}}
+                            onSaveCardDesign={() => {}}
+                            onManageAttributes={() => {}}
+                            onManageObjectives={() => {}}
+                            onManageComments={() => {}}
+                            onViewStats={() => {}}
+                            onViewHistory={() => {}}
+                            onTransferPlayer={() => {}}
+                            onLeaveTeam={() => {}}
+                          />
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-sm mx-auto">
+                        <DialogHeader>
+                          <DialogTitle>Player Actions - {player.name}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-3">
+                          {selectedPlayer && (
+                            <FifaStylePlayerCard
+                              player={selectedPlayer}
+                              team={currentTeam}
+                              onEdit={handleEditPlayer}
+                              onManageParents={handleManageParents}
+                              onRemoveFromSquad={handleRemoveFromSquad}
+                              onUpdatePhoto={handleUpdatePhoto}
+                              onDeletePhoto={handleDeletePhoto}
+                              onSaveFunStats={handleSaveFunStats}
+                              onSavePlayStyle={handleSavePlayStyle}
+                              onSaveCardDesign={handleSaveCardDesign}
+                              onManageAttributes={handleManageAttributes}
+                              onManageObjectives={handleManageObjectives}
+                              onManageComments={handleManageComments}
+                              onViewStats={handleViewStats}
+                              onViewHistory={handleViewHistory}
+                              onTransferPlayer={handleTransferPlayer}
+                              onLeaveTeam={handleLeaveTeam}
+                            />
+                          )}
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </div>
                 </div>
               ))}
