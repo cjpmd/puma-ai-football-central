@@ -32,6 +32,7 @@ export default function CalendarEventsMobile() {
   const [showTeamSelection, setShowTeamSelection] = useState(false);
   const [showPostGameEdit, setShowPostGameEdit] = useState(false);
   const [showEventDetails, setShowEventDetails] = useState(false);
+  const [showExpandedTeamSelection, setShowExpandedTeamSelection] = useState(false);
   const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
   const { toast } = useToast();
   const { teams } = useAuth();
@@ -294,6 +295,28 @@ export default function CalendarEventsMobile() {
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
+  if (showExpandedTeamSelection && selectedEvent) {
+    return (
+      <MobileLayout>
+        <div className="p-4">
+          <MobileTeamSelectionView
+            event={selectedEvent}
+            teamId={teams?.[0]?.id || ''}
+            onOpenFullManager={() => {
+              setShowExpandedTeamSelection(false);
+              setShowTeamSelection(true);
+            }}
+            onClose={() => {
+              setShowExpandedTeamSelection(false);
+              setSelectedEvent(null);
+            }}
+            isExpanded={true}
+          />
+        </div>
+      </MobileLayout>
+    );
+  }
+
   return (
     <MobileLayout 
       headerTitle={teams?.[0]?.name || 'Team Manager'}
@@ -532,10 +555,22 @@ export default function CalendarEventsMobile() {
 
               {/* Team Selection Section */}
               <div>
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Team Selection
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Team Selection
+                  </h4>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => {
+                      setShowEventDetails(false);
+                      setShowExpandedTeamSelection(true);
+                    }}
+                  >
+                    View Full
+                  </Button>
+                </div>
                 <MobileTeamSelectionView
                   event={selectedEvent}
                   teamId={teams?.[0]?.id || ''}

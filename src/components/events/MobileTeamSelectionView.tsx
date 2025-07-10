@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Gamepad2, User, Star } from 'lucide-react';
+import { Users, Gamepad2, User, Star, X, ChevronLeft } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -13,6 +13,8 @@ interface MobileTeamSelectionViewProps {
   event: DatabaseEvent;
   teamId: string;
   onOpenFullManager: () => void;
+  onClose?: () => void;
+  isExpanded?: boolean;
 }
 
 interface TeamSelection {
@@ -25,7 +27,9 @@ interface TeamSelection {
 export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = ({
   event,
   teamId,
-  onOpenFullManager
+  onOpenFullManager,
+  onClose,
+  isExpanded = false
 }) => {
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
@@ -109,23 +113,45 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
 
   if (teamSelections.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-6 text-center">
-          <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-          <h3 className="font-medium mb-2">No Team Selection</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            No squad has been selected for this event yet.
-          </p>
-          <Button onClick={onOpenFullManager} size="sm">
-            Set Up Team
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="w-full">
+        {isExpanded && onClose && (
+          <div className="flex items-center justify-between mb-3">
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          </div>
+        )}
+        <Card className="w-full">
+          <CardContent className="py-6 text-center">
+            <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+            <h3 className="font-medium mb-2">No Team Selection</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              No squad has been selected for this event yet.
+            </p>
+            <Button onClick={onOpenFullManager} size="sm" className="w-full">
+              Set Up Team
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
+      {/* Header with close button for expanded view */}
+      {isExpanded && onClose && (
+        <div className="flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back
+          </Button>
+          <h3 className="font-medium">Team Selection</h3>
+          <div className="w-16" /> {/* Spacer for center alignment */}
+        </div>
+      )}
+
       {/* Team Tabs */}
       {teamSelections.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
@@ -144,13 +170,15 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
       )}
 
       {currentTeam && (
-        <Card>
+        <Card className="w-full">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Team {currentTeam.teamNumber}</CardTitle>
-              <Button variant="outline" size="sm" onClick={onOpenFullManager}>
-                Edit
-              </Button>
+              {!isExpanded && (
+                <Button variant="outline" size="sm" onClick={onOpenFullManager}>
+                  Edit
+                </Button>
+              )}
             </div>
             <div className="flex gap-2 flex-wrap">
               <Badge variant="outline" className="text-xs">
@@ -176,13 +204,13 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 <TabsTrigger value="periods">Periods</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview" className="space-y-3">
+              <TabsContent value="overview" className="space-y-3 mt-4">
                 <div className="text-sm">
                   <h4 className="font-medium mb-2">Formation Summary</h4>
                   {currentTeam.periods.length > 0 ? (
                     <div className="space-y-2">
                       {currentTeam.periods.map((period, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded">
+                        <div key={index} className="flex justify-between items-center py-2 px-3 bg-muted/50 rounded text-sm">
                           <span className="font-medium">Period {period.period_number}</span>
                           <div className="flex items-center gap-2 text-xs">
                             <span>{period.formation}</span>
@@ -208,34 +236,36 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 )}
               </TabsContent>
 
-              <TabsContent value="periods" className="space-y-3">
-                {currentTeam.periods.map((period, index) => (
-                  <Card key={index}>
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start mb-2">
-                        <h5 className="font-medium">Period {period.period_number}</h5>
-                        <Badge variant="outline" className="text-xs">
-                          {period.formation}
-                        </Badge>
-                      </div>
-                      
-                      <div className="text-xs text-muted-foreground space-y-1">
-                        <div className="flex justify-between">
-                          <span>Duration:</span>
-                          <span>{period.duration_minutes} minutes</span>
+              <TabsContent value="periods" className="space-y-3 mt-4">
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {currentTeam.periods.map((period, index) => (
+                    <Card key={index} className="w-full">
+                      <CardContent className="p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <h5 className="font-medium text-sm">Period {period.period_number}</h5>
+                          <Badge variant="outline" className="text-xs">
+                            {period.formation}
+                          </Badge>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Starting XI:</span>
-                          <span>{period.player_positions?.length || 0} players</span>
+                        
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div className="flex justify-between">
+                            <span>Duration:</span>
+                            <span>{period.duration_minutes} minutes</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Starting XI:</span>
+                            <span>{period.player_positions?.length || 0} players</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Substitutes:</span>
+                            <span>{period.substitute_players?.length || 0} players</span>
+                          </div>
                         </div>
-                        <div className="flex justify-between">
-                          <span>Substitutes:</span>
-                          <span>{period.substitute_players?.length || 0} players</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </TabsContent>
             </Tabs>
 
