@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -48,7 +47,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const [event, setEvent] = useState<EventData | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
-  const [playerOfMatchId, setPlayerOfMatchId] = useState<string | null>(null);
+  const [playerOfMatchId, setPlayerOfMatchId] = useState<string>('none');
   const [scores, setScores] = useState<Scores>({});
   const [coachNotes, setCoachNotes] = useState('');
   const [staffNotes, setStaffNotes] = useState('');
@@ -86,7 +85,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       const scoresData = eventData?.scores as Scores | null;
       console.log('Scores data:', scoresData);
       setScores(scoresData || {});
-      setPlayerOfMatchId(eventData?.player_of_match_id || null);
+      setPlayerOfMatchId(eventData?.player_of_match_id || 'none');
       setCoachNotes(eventData?.coach_notes || '');
       setStaffNotes(eventData?.staff_notes || '');
     } catch (error: any) {
@@ -171,7 +170,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         .from('events')
         .update({
           scores: scores,
-          player_of_match_id: playerOfMatchId,
+          player_of_match_id: playerOfMatchId === 'none' ? null : playerOfMatchId,
           coach_notes: coachNotes,
           staff_notes: staffNotes,
         })
@@ -237,12 +236,12 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       {players.length > 0 && (
         <div>
           <Label>Player of the Match</Label>
-          <Select value={playerOfMatchId || ''} onValueChange={setPlayerOfMatchId}>
+          <Select value={playerOfMatchId} onValueChange={setPlayerOfMatchId}>
             <SelectTrigger>
               <SelectValue placeholder="Select player of the match" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">None</SelectItem>
+              <SelectItem value="none">None</SelectItem>
               {players.map((player) => (
                 <SelectItem key={player.id} value={player.id}>
                   {player.name}
