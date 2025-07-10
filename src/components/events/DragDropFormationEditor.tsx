@@ -290,7 +290,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     let playerId: string;
     
     if (dragId.includes('|')) {
-      // Format: "period-1|position-0|player123" or "period-1|substitutes|player123"
+      // Format: "period-1|position|player123" or "period-1|substitutes|player123"
       const parts = dragId.split('|');
       playerId = parts[parts.length - 1]; // Always the last part
     } else {
@@ -325,6 +325,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
     console.log('Processing drop for player:', playerId, 'to target:', overId);
 
+    // Extract source period from drag ID
     const getSourcePeriodId = (id: string): string | null => {
       if (id.includes('|')) {
         return id.split('|')[0];
@@ -332,32 +333,33 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       return null;
     };
 
-    const getTargetPeriodId = (id: string): string | null => {
+    // Extract target period and type from drop target ID
+    const getTargetInfo = (id: string): { periodId: string | null, type: 'position' | 'substitutes', positionIndex?: number } => {
       if (id.includes('-position-')) {
-        return id.split('-position-')[0];
+        const parts = id.split('-position-');
+        return {
+          periodId: parts[0],
+          type: 'position',
+          positionIndex: parseInt(parts[1])
+        };
       } else if (id.startsWith('substitutes-')) {
-        return id.replace('substitutes-', '');
+        return {
+          periodId: id.replace('substitutes-', ''),
+          type: 'substitutes'
+        };
       }
-      return null;
+      return { periodId: null, type: 'position' };
     };
 
     const sourcePeriodId = getSourcePeriodId(activeId);
-    const targetPeriodId = getTargetPeriodId(overId);
+    const targetInfo = getTargetInfo(overId);
 
-    console.log('Period IDs:', { sourcePeriodId, targetPeriodId });
+    console.log('Drag info:', { sourcePeriodId, targetInfo });
 
-    if (overId.includes('-position-')) {
-      const parts = overId.split('-position-');
-      const periodId = parts[0];
-      const positionIndex = parseInt(parts[1]);
-      console.log('Dropping on position:', { periodId, positionIndex });
-      movePlayerToPosition(playerId, periodId, positionIndex, sourcePeriodId);
-    } else if (overId.startsWith('substitutes-')) {
-      const periodId = overId.replace('substitutes-', '');
-      console.log('Dropping on substitutes for period:', periodId);
-      movePlayerToSubstitutes(playerId, periodId, sourcePeriodId);
-    } else {
-      console.log('Unknown drop target:', overId);
+    if (targetInfo.type === 'position' && targetInfo.positionIndex !== undefined) {
+      movePlayerToPosition(playerId, targetInfo.periodId!, targetInfo.positionIndex, sourcePeriodId);
+    } else if (targetInfo.type === 'substitutes') {
+      movePlayerToSubstitutes(playerId, targetInfo.periodId!, sourcePeriodId);
     }
   };
 
@@ -369,6 +371,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
+        // Handle displaced player (if any)
         const displacedPlayerId = newPositions[positionIndex]?.playerId;
         if (displacedPlayerId && displacedPlayerId !== playerId) {
           console.log('Displacing player:', displacedPlayerId);
@@ -377,21 +380,25 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           }
         }
         
+        // Remove player from current position/substitutes in same period
         if (sourcePeriodId === targetPeriodId) {
+          // Remove from substitutes
           const subIndex = newSubstitutes.indexOf(playerId);
           if (subIndex > -1) {
             newSubstitutes.splice(subIndex, 1);
-            console.log('Removed from substitutes');
+            console.log('Removed from substitutes in same period');
           }
           
+          // Remove from any other position
           newPositions.forEach(pos => {
             if (pos.playerId === playerId) {
               pos.playerId = undefined;
-              console.log('Removed from previous position');
+              console.log('Removed from previous position in same period');
             }
           });
         }
         
+        // Assign player to new position
         if (newPositions[positionIndex]) {
           newPositions[positionIndex].playerId = playerId;
           console.log('Assigned to new position');
@@ -403,18 +410,23 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       } else if (period.id === sourcePeriodId) {
+        // Remove player from source period (different period)
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
+        // Remove from positions
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
+            console.log('Removed from source period position');
           }
         });
         
+        // Remove from substitutes
         const subIndex = newSubstitutes.indexOf(playerId);
         if (subIndex > -1) {
           newSubstitutes.splice(subIndex, 1);
+          console.log('Removed from source period substitutes');
         }
         
         return {
@@ -438,15 +450,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
-        let wasInPosition = false;
+        // Remove from positions in target period
         newPositions.forEach(pos => {
           if (pos.playerId === playerId) {
             pos.playerId = undefined;
-            wasInPosition = true;
-            console.log('Removed player from position slot when moving to substitutes');
+            console.log('Removed player from position when moving to substitutes');
           }
         });
         
+        // Remove from existing substitutes and add back (to avoid duplicates)
         const existingSubIndex = newSubstitutes.indexOf(playerId);
         if (existingSubIndex > -1) {
           newSubstitutes.splice(existingSubIndex, 1);
@@ -461,6 +473,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           substitutes: newSubstitutes
         };
       } else if (period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
+        // Remove from source period (different period)
         const newPositions = [...period.positions];
         const newSubstitutes = [...period.substitutes];
         
@@ -607,20 +620,54 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
           
           <div className="relative h-full">
-            {period.positions.map((position, posIndex) => (
-              <PositionSlot
-                key={`${period.id}-position-${posIndex}`}
-                id={`${period.id}-position-${posIndex}`}
-                position={position}
-                player={position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined}
-                isCaptain={position.playerId === globalCaptainId}
-                nameDisplayOption={mappedNameDisplayOption}
-                isLarger={true}
-              />
-            ))}
+            {period.positions.map((position, index) => {
+              const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
+              const isCaptain = position.playerId === globalCaptainId;
+              
+              return (
+                <PositionSlot
+                  key={`${period.id}-position-${index}`}
+                  id={`${period.id}-position-${index}`}
+                  position={position}
+                  player={player}
+                  isCaptain={isCaptain}
+                  nameDisplayOption={mappedNameDisplayOption}
+                  isLarger={false}
+                />
+              );
+            })}
+            
+            {/* Render draggable players in positions */}
+            {period.positions.map((position, index) => {
+              const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
+              if (!player) return null;
+              
+              const isCaptain = position.playerId === globalCaptainId;
+              
+              return (
+                <div
+                  key={`draggable-${period.id}-position-${index}`}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${position.x}%`,
+                    top: `${position.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 10
+                  }}
+                >
+                  <PlayerIcon
+                    player={player}
+                    isCaptain={isCaptain}
+                    nameDisplayOption={mappedNameDisplayOption}
+                    isCircular={true}
+                    dragId={`${period.id}|position|${player.id}`}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
-
+        
         <SubstituteBench
           id={`substitutes-${period.id}`}
           substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
@@ -632,155 +679,137 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   );
 
   return (
-    <div className="space-y-4 print:text-sm">
-      <DndContext 
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart} 
-        onDragEnd={handleDragEnd}
-      >
+    <DndContext 
+      sensors={sensors} 
+      collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="space-y-6 print:space-y-4">
+        {/* Time tracking alerts */}
         {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               {timeCheck.totalExceeded && `Total time (${getTotalTime()}min) exceeds game duration (${gameDuration}min). `}
-              {timeCheck.firstHalfExceeded && `First half (${timeCheck.firstHalfTime}min) exceeds half time (${halfDuration}min). `}
-              {timeCheck.secondHalfExceeded && `Second half (${timeCheck.secondHalfTime}min) exceeds half time (${halfDuration}min). `}
+              {timeCheck.firstHalfExceeded && `First half (${timeCheck.firstHalfTime}min) exceeds ${halfDuration}min. `}
+              {timeCheck.secondHalfExceeded && `Second half (${timeCheck.secondHalfTime}min) exceeds ${halfDuration}min.`}
             </AlertDescription>
           </Alert>
         )}
 
+        {/* Available Players */}
         <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
-          <Card className="print:shadow-none print:border">
-            <CollapsibleTrigger asChild>
-              <CardHeader className="pb-2 cursor-pointer hover:bg-gray-50 print:hover:bg-white">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4" />
-                    Available Players ({unusedPlayers.length})
-                  </CardTitle>
-                  <div className="flex items-center gap-2">
-                    {unusedPlayers.length === 0 && (
-                      <Badge variant="secondary" className="text-xs">All assigned</Badge>
-                    )}
-                    {availablePlayersOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between print:hidden">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                <span>Available Players ({unusedPlayers.length})</span>
+              </div>
+              {availablePlayersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="print:block">
+            <Card>
+              <CardContent className="pt-4">
+                {unusedPlayers.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-4">
+                    All available players have been assigned
                   </div>
-                </div>
-              </CardHeader>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg min-h-[60px] print:bg-gray-100">
-                  {unusedPlayers.map((player) => (
-                    <PlayerIcon
-                      key={player.id}
-                      player={player}
-                      isCaptain={player.id === globalCaptainId}
-                      nameDisplayOption={mappedNameDisplayOption}
-                      isCircular={true}
-                      dragId={player.id}
-                    />
-                  ))}
-                  {unusedPlayers.length === 0 && (
-                    <div className="text-sm text-muted-foreground">All available players are assigned</div>
-                  )}
-                </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {unusedPlayers.map((player) => (
+                      <PlayerIcon
+                        key={player.id}
+                        player={player}
+                        isCaptain={player.id === globalCaptainId}
+                        nameDisplayOption={mappedNameDisplayOption}
+                        isCircular={false}
+                        dragId={player.id}
+                      />
+                    ))}
+                  </div>
+                )}
               </CardContent>
-            </CollapsibleContent>
-          </Card>
+            </Card>
+          </CollapsibleContent>
         </Collapsible>
 
+        {/* Periods organized by halves */}
         <div className="space-y-6">
           {firstHalf.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">First Half ({halfDuration} minutes)</h3>
-                <div className="text-sm text-muted-foreground">
-                  Total: {firstHalf.reduce((total, period) => total + period.duration, 0)} minutes
-                </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">First Half ({timeCheck.firstHalfTime}min)</h3>
+                <Badge variant={timeCheck.firstHalfExceeded ? "destructive" : "secondary"}>
+                  {timeCheck.firstHalfTime}/{halfDuration}min
+                </Badge>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-                {firstHalf.map((period) => renderPeriodCard(period))}
-              </div>
-              
-              <div className="flex justify-center mt-4 print:hidden">
-                <Button onClick={addPeriod} variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Period
-                </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {firstHalf.map(renderPeriodCard)}
               </div>
             </div>
           )}
 
           {secondHalf.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Second Half ({halfDuration} minutes)</h3>
-                <div className="text-sm text-muted-foreground">
-                  Total: {secondHalf.reduce((total, period) => total + period.duration, 0)} minutes
-                </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Second Half ({timeCheck.secondHalfTime}min)</h3>
+                <Badge variant={timeCheck.secondHalfExceeded ? "destructive" : "secondary"}>
+                  {timeCheck.secondHalfTime}/{halfDuration}min
+                </Badge>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-                {secondHalf.map((period) => renderPeriodCard(period))}
-              </div>
-              
-              <div className="flex justify-center mt-4 print:hidden">
-                <Button onClick={addPeriod} variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Period
-                </Button>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {secondHalf.map(renderPeriodCard)}
               </div>
             </div>
           )}
         </div>
 
+        {/* Add Period Button */}
+        <div className="flex justify-center print:hidden">
+          <Button onClick={addPeriod} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Add Period
+          </Button>
+        </div>
+
+        {/* Playing Time Summary */}
         {Object.keys(playingTimeSummary).length > 0 && (
-          <Card className="print:shadow-none print:border print:break-inside-avoid">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Playing Time Summary</CardTitle>
+          <Card className="print:break-inside-avoid">
+            <CardHeader>
+              <CardTitle className="text-lg">Playing Time Summary</CardHeader>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-x-4 gap-y-1 text-sm">
-                {Object.entries(playingTimeSummary)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([playerId, minutes]) => {
-                    const player = squadPlayers.find(p => p.id === playerId);
-                    if (!player) return null;
-                    
-                    return (
-                      <div key={playerId} className="flex items-center justify-between py-1 border-b border-gray-100 last:border-b-0">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <Badge variant="outline" className="text-xs px-1 py-0">#{player.squadNumber}</Badge>
-                          <span className="font-medium text-xs truncate">{player.name}</span>
-                          {player.id === globalCaptainId && (
-                            <Badge variant="secondary" className="text-xs px-1 py-0">C</Badge>
-                          )}
-                        </div>
-                        <Badge variant="secondary" className="text-xs ml-2">{minutes}m</Badge>
-                      </div>
-                    );
-                  })}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                {Object.entries(playingTimeSummary).map(([playerId, minutes]) => {
+                  const player = squadPlayers.find(p => p.id === playerId);
+                  if (!player) return null;
+                  
+                  return (
+                    <div key={playerId} className="flex items-center justify-between p-2 bg-muted rounded">
+                      <span className="text-sm font-medium">{player.name}</span>
+                      <Badge variant="outline">{minutes}min</Badge>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
         )}
+      </div>
 
-        <DragOverlay>
-          {draggedPlayer && (
-            <PlayerIcon 
-              player={draggedPlayer} 
-              isCaptain={draggedPlayer.id === globalCaptainId}
-              nameDisplayOption={mappedNameDisplayOption}
-              isCircular={true}
-              isDragging={true}
-            />
-          )}
-        </DragOverlay>
-      </DndContext>
-    </div>
+      <DragOverlay>
+        {draggedPlayer && (
+          <PlayerIcon
+            player={draggedPlayer}
+            isCaptain={draggedPlayer.id === globalCaptainId}
+            nameDisplayOption={mappedNameDisplayOption}
+            isCircular={true}
+            isDragging={true}
+          />
+        )}
+      </DragOverlay>
+    </DndContext>
   );
 };
