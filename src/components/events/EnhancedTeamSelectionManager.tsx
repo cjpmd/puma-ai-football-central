@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -503,7 +502,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           <DialogHeader className="sr-only">
             <DialogTitle>Match Day Pack</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="h-[95vh]">
+          <ScrollArea className="h-[95vh] match-day-pack-scroll">
             <MatchDayPackView 
               event={event} 
               onClose={() => setShowMatchDayPack(false)} 

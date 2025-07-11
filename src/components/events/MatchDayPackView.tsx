@@ -154,26 +154,52 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
   }, [event.latitude, event.longitude, event.date, event.start_time]);
 
   const handlePrint = () => {
-    // Use window.print() which should handle all pages correctly
-    window.print();
+    // Remove scroll constraints temporarily for printing
+    const scrollArea = document.querySelector('.match-day-pack-scroll');
+    if (scrollArea) {
+      scrollArea.classList.add('print-mode');
+    }
+    
+    // Add print-specific styles
+    const printStyles = document.createElement('style');
+    printStyles.id = 'print-styles';
+    printStyles.textContent = `
+      @media print {
+        .print-mode {
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+        .print-mode > div {
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+        }
+      }
+    `;
+    document.head.appendChild(printStyles);
+    
+    // Use setTimeout to ensure styles are applied
+    setTimeout(() => {
+      window.print();
+      
+      // Clean up after printing
+      setTimeout(() => {
+        if (scrollArea) {
+          scrollArea.classList.remove('print-mode');
+        }
+        const printStylesElement = document.getElementById('print-styles');
+        if (printStylesElement) {
+          printStylesElement.remove();
+        }
+      }, 1000);
+    }, 100);
   };
 
   const handleDownloadPDF = async () => {
-    // For better PDF generation, we'll use the browser's built-in print to PDF
-    // This ensures all pages are included
+    // Same approach for PDF generation
     try {
-      // Trigger print dialog with save as PDF option
-      if (window.print) {
-        window.print();
-      } else {
-        // Fallback for environments where print is not available
-        console.warn('Print functionality not available');
-        toast({
-          title: "Error",
-          description: "PDF download not available in this environment",
-          variant: "destructive"
-        });
-      }
+      handlePrint(); // This will trigger the print dialog with "Save as PDF" option
     } catch (error) {
       console.error('PDF generation failed:', error);
       toast({
