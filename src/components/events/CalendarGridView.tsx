@@ -44,13 +44,43 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const monthEnd = endOfMonth(currentDate);
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
+  // Load availability when user or events change
+  useEffect(() => {
+    const loadAvailability = async () => {
+      if (!user?.id || events.length === 0) {
+        return;
+      }
+
+      try {
+        console.log('=== CALENDAR GRID VIEW DEBUG ===');
+        console.log('Loading availability for user:', user.id);
+
+        const eventIds = events.map(event => event.id);
+        console.log('Event IDs to check:', eventIds.map(id => `${id.slice(-6)} (${id})`));
+        
+        const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
+        console.log('Received availability in calendar:', availability);
+        
+        setUserAvailability(availability);
+        setAvailabilityLoaded(true);
+        console.log('=== END CALENDAR GRID VIEW DEBUG ===');
+      } catch (error) {
+        console.error('Error in loadUserAvailability:', error);
+      }
+    };
+
+    setAvailabilityLoaded(false);
+    setUserAvailability([]);
+    loadAvailability();
+  }, [user?.id, events.length]);
+
   const loadUserAvailability = useCallback(async () => {
     if (!user?.id || events.length === 0) {
       return;
     }
 
     try {
-      console.log('=== CALENDAR GRID VIEW DEBUG ===');
+      console.log('=== CALENDAR GRID VIEW MANUAL RELOAD ===');
       console.log('Loading availability for user:', user.id);
 
       const eventIds = events.map(event => event.id);
@@ -60,20 +90,11 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       console.log('Received availability in calendar:', availability);
       
       setUserAvailability(availability);
-      setAvailabilityLoaded(true);
-      console.log('=== END CALENDAR GRID VIEW DEBUG ===');
+      console.log('=== END CALENDAR GRID VIEW MANUAL RELOAD ===');
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
     }
   }, [user?.id, events.length]);
-
-  // Reset availability loaded state and load availability when user or events change
-  useEffect(() => {
-    setAvailabilityLoaded(false);
-    if (user?.id && events.length > 0) {
-      loadUserAvailability();
-    }
-  }, [user?.id, events.length, loadUserAvailability]);
 
   useEffect(() => {
     loadEventWeather();
