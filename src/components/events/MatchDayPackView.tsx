@@ -168,11 +168,19 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
       } else {
         // Fallback for environments where print is not available
         console.warn('Print functionality not available');
-        toast.error('PDF download not available in this environment');
+        toast({
+          title: "Error",
+          description: "PDF download not available in this environment",
+          variant: "destructive"
+        });
       }
     } catch (error) {
       console.error('PDF generation failed:', error);
-      toast.error('Failed to generate PDF');
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF",
+        variant: "destructive"
+      });
     }
   };
 
