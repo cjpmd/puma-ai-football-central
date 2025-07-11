@@ -114,13 +114,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       const initialTeamSelections: TeamSelection[] = [];
       
       for (let i = 0; i < teamCount; i++) {
-        // Convert AvailablePlayer[] to SquadPlayer[] by ensuring squadRole is always present
+        // Only Team 1 gets the main squad players, all other teams start empty
         const convertedSquadPlayers: SquadPlayer[] = i === 0 
           ? mainSquadPlayers.map(player => ({
               ...player,
               squadRole: player.squadRole || 'player' // Provide default value for required property
             }))
-          : [];
+          : []; // All other teams start with empty squads
 
         initialTeamSelections.push({
           teamNumber: i + 1,
@@ -191,6 +191,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 captainId: selection.captain_id || undefined
               }));
 
+              // Keep existing squad for this team, only update periods and other data
               loadedTeamSelections[teamIndex] = {
                 ...loadedTeamSelections[teamIndex],
                 periods,
@@ -216,7 +217,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     const newTeamNumber = teamSelections.length + 1;
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
-      squadPlayers: [], // Start with empty squad for additional teams
+      squadPlayers: [], // Always start with empty squad for additional teams
       periods: [],
       globalCaptainId: undefined,
       performanceCategory: 'none'
@@ -257,6 +258,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
+    console.log('Squad changed for team', currentTeamIndex + 1, ':', newSquadPlayers);
     updateCurrentTeam({ squadPlayers: newSquadPlayers });
   };
 
@@ -272,6 +274,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       return;
     }
 
+    // Check if any team has periods (not just the current team)
     const hasAnyPeriods = teamSelections.some(team => team.periods.length > 0);
     if (!hasAnyPeriods) {
       toast.error('Please create at least one period for any team before saving');
@@ -280,7 +283,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
     setSaving(true);
     try {
-      console.log('Saving selections:', teamSelections);
+      console.log('Saving all team selections:', teamSelections);
       
       // Delete existing selections for this event
       const { error: deleteError } = await supabase
@@ -298,6 +301,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       const selectionsToInsert = [];
       
       for (const team of teamSelections) {
+        console.log(`Processing team ${team.teamNumber} with ${team.periods.length} periods and ${team.squadPlayers.length} squad players`);
+        
         for (const period of team.periods) {
           // Convert positions to correct format for database
           const playerPositions = period.positions
@@ -314,7 +319,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               minutes: period.duration
             }));
 
-          console.log('Converting positions for period:', period.id, playerPositions);
+          console.log(`Converting positions for team ${team.teamNumber} period ${period.periodNumber}:`, playerPositions);
 
           selectionsToInsert.push({
             event_id: event.id,
@@ -418,10 +423,19 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     key={team.teamNumber}
                     variant={index === currentTeamIndex ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setCurrentTeamIndex(index)}
+                    onClick={() => {
+                      console.log('Switching to team', index + 1);
+                      setCurrentTeamIndex(index);
+                      setActiveTab('squad'); // Always go to squad tab when switching teams
+                    }}
                     className="text-xs px-2 py-1"
                   >
                     Team {team.teamNumber}
+                    {team.squadPlayers.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 text-xs">
+                        {team.squadPlayers.length}
+                      </Badge>
+                    )}
                   </Button>
                 ))}
                 <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1">
