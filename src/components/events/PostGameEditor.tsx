@@ -283,6 +283,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     );
   }
 
+  const opponentName = event.opponent || 'Opponent';
+
   return (
     <div className="space-y-6">
       {/* Event Info */}
@@ -304,12 +306,12 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
           <div className="space-y-4 mt-3">
             {teamSelections.map((team) => (
               <div key={team.teamNumber} className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">{team.performanceCategoryName}</h4>
+                <h4 className="font-medium mb-3">{team.performanceCategoryName} vs {opponentName}</h4>
                 
                 {/* Score Input */}
                 <div className="grid grid-cols-3 gap-4 items-center mb-4">
                   <div className="text-center">
-                    <Label className="text-sm text-gray-600">Our Score</Label>
+                    <Label className="text-sm text-gray-600">{team.performanceCategoryName}</Label>
                     <Input
                       type="number"
                       min="0"
@@ -322,7 +324,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                     vs
                   </div>
                   <div className="text-center">
-                    <Label className="text-sm text-gray-600">Their Score</Label>
+                    <Label className="text-sm text-gray-600">{opponentName}</Label>
                     <Input
                       type="number"
                       min="0"
