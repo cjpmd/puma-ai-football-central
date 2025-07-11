@@ -45,7 +45,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const loadUserAvailability = useCallback(async () => {
-    if (!user?.id || events.length === 0 || availabilityLoaded) {
+    if (!user?.id || events.length === 0) {
       return;
     }
 
@@ -65,23 +65,20 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
     }
-  }, [user?.id, events.length, availabilityLoaded]);
+  }, [user?.id, events.length]);
 
-  // Reset availability loaded state when user or events change
+  // Reset availability loaded state and load availability when user or events change
   useEffect(() => {
     setAvailabilityLoaded(false);
-  }, [user?.id, events.length]);
+    if (user?.id && events.length > 0) {
+      loadUserAvailability();
+    }
+  }, [user?.id, events.length, loadUserAvailability]);
 
   useEffect(() => {
     loadEventWeather();
     loadPerformanceCategories();
   }, [events, teams]);
-
-  useEffect(() => {
-    if (user?.id && events.length > 0 && !availabilityLoaded) {
-      loadUserAvailability();
-    }
-  }, [user?.id, events.length, availabilityLoaded, loadUserAvailability]);
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
