@@ -49,6 +49,91 @@ export const availabilityService = {
     return (data || []) as EventAvailability[];
   },
 
+  async getPlayerAvailabilityFromParents(eventId: string, teamId: string): Promise<any[]> {
+    console.log('Getting player availability from parent responses for event:', eventId, 'team:', teamId);
+    
+    // Get all players in the team
+    const { data: players, error: playersError } = await supabase
+      .from('players')
+      .select('id, name, squad_number, type')
+      .eq('team_id', teamId);
+
+    if (playersError) {
+      console.error('Error fetching players:', playersError);
+      throw playersError;
+    }
+
+    if (!players || players.length === 0) {
+      console.log('No players found for team:', teamId);
+      return [];
+    }
+
+    const playerIds = players.map(p => p.id);
+    
+    // Get user-player relationships for these players
+    const { data: userPlayers, error: userPlayersError } = await supabase
+      .from('user_players')
+      .select('user_id, player_id, relationship')
+      .in('player_id', playerIds);
+
+    if (userPlayersError) {
+      console.error('Error fetching user-player relationships:', userPlayersError);
+      throw userPlayersError;
+    }
+
+    if (!userPlayers || userPlayers.length === 0) {
+      console.log('No user-player relationships found');
+      return [];
+    }
+
+    // Get availability for users who have relationships with these players
+    const userIds = userPlayers.map(up => up.user_id);
+    const { data: availability, error: availabilityError } = await supabase
+      .from('event_availability')
+      .select('user_id, status, role')
+      .eq('event_id', eventId)
+      .in('user_id', userIds);
+
+    if (availabilityError) {
+      console.error('Error fetching availability:', availabilityError);
+      throw availabilityError;
+    }
+
+    // Map availability to players
+    const playersWithAvailability = players.map(player => {
+      // Find user relationships for this player
+      const userRelationships = userPlayers.filter(up => up.player_id === player.id);
+      
+      // Check availability for each relationship
+      let playerAvailability = 'pending';
+      for (const relationship of userRelationships) {
+        const userAvailability = availability?.find(a => a.user_id === relationship.user_id);
+        if (userAvailability) {
+          // If any parent/user has responded, use that status
+          if (userAvailability.status === 'available') {
+            playerAvailability = 'available';
+            break;
+          } else if (userAvailability.status === 'unavailable') {
+            playerAvailability = 'unavailable';
+          }
+        }
+      }
+
+      return {
+        id: player.id,
+        name: player.name,
+        squadNumber: player.squad_number,
+        type: player.type as 'goalkeeper' | 'outfield',
+        availabilityStatus: playerAvailability as 'available' | 'unavailable' | 'pending',
+        isAssignedToSquad: false,
+        squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
+      };
+    });
+
+    console.log('Players with availability:', playersWithAvailability);
+    return playersWithAvailability;
+  },
+
   async updateAvailabilityStatus(
     eventId: string,
     userId: string,
@@ -124,7 +209,6 @@ export const availabilityService = {
     return (data || []) as NotificationLog[];
   },
 
-  // Add a method to manually create availability records for testing
   async createTestAvailabilityRecord(eventId: string, userId: string, role: string, status: string): Promise<void> {
     console.log('Creating test availability record:', { eventId, userId, role, status });
     

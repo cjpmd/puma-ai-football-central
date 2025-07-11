@@ -38,6 +38,44 @@ export const eventsService = {
       if (error) throw error;
       
       console.log('Event created successfully:', data);
+      
+      // Auto-create event teams based on the teams array
+      if (eventData.teams && Array.isArray(eventData.teams) && eventData.teams.length > 0) {
+        console.log('Creating event teams for:', eventData.teams);
+        
+        const eventTeams = eventData.teams.map((team: any, index: number) => ({
+          event_id: data.id,
+          team_id: team.id || eventData.teamId, // Use team.id if available, fallback to main teamId
+          team_number: index + 1
+        }));
+        
+        const { error: eventTeamsError } = await supabase
+          .from('event_teams')
+          .insert(eventTeams);
+          
+        if (eventTeamsError) {
+          console.error('Error creating event teams:', eventTeamsError);
+          // Don't throw here as the event was created successfully
+        } else {
+          console.log('Event teams created successfully');
+        }
+      } else if (eventData.teamId) {
+        // Fallback: create a single event team entry
+        const { error: eventTeamError } = await supabase
+          .from('event_teams')
+          .insert({
+            event_id: data.id,
+            team_id: eventData.teamId,
+            team_number: 1
+          });
+          
+        if (eventTeamError) {
+          console.error('Error creating default event team:', eventTeamError);
+        } else {
+          console.log('Default event team created successfully');
+        }
+      }
+      
       return data;
     } catch (error) {
       console.error('Error creating event:', error);

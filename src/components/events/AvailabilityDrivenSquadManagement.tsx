@@ -52,7 +52,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       await assignPlayerToSquad(playerId);
       toast.success('Player added to squad');
-      // Reload to get fresh data
       await reload();
     } catch (error: any) {
       console.error('Error assigning player:', error);
@@ -64,7 +63,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       await removePlayerFromSquad(playerId);
       toast.success('Player removed from squad');
-      // Reload to get fresh data
       await reload();
     } catch (error: any) {
       console.error('Error removing player:', error);
@@ -79,7 +77,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       if (role === 'captain') {
         onCaptainChange?.(playerId);
       }
-      // Reload to get fresh data
       await reload();
     } catch (error: any) {
       console.error('Error updating role:', error);
@@ -183,7 +180,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               </div>
             ) : (
               filteredAvailablePlayers.map((player) => (
-                <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'}`}>
+                <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'} ${player.availabilityStatus === 'available' ? 'bg-green-50 border-green-200' : player.availabilityStatus === 'unavailable' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
                     <Badge variant="outline" className={isMobile ? 'text-xs' : ''}>#{player.squadNumber}</Badge>
                     <span className={`font-medium ${isMobile ? 'text-sm' : ''}`}>{player.name}</span>
