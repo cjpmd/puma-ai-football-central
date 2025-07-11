@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -89,7 +90,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   // Initialize teams based on event data when main squad is loaded
   useEffect(() => {
-    if (mainSquadPlayers.length > 0) {
+    if (mainSquadPlayers.length > 0 && teamSelections.length === 0) {
       // Determine number of teams from event data
       let teamCount = 1;
       
@@ -134,7 +135,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       console.log('Setting initial team selections:', initialTeamSelections);
       setTeamSelections(initialTeamSelections);
     }
-  }, [mainSquadPlayers, event.teams, event.id]);
+  }, [mainSquadPlayers, event.teams, event.id, teamSelections.length]);
 
   // Load existing team selections
   useEffect(() => {
@@ -232,10 +233,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const updateCurrentTeam = (updates: Partial<TeamSelection>) => {
-    const updatedSelections = teamSelections.map((team, index) => 
-      index === currentTeamIndex ? { ...team, ...updates } : team
-    );
-    setTeamSelections(updatedSelections);
+    setTeamSelections(prevSelections => {
+      const updatedSelections = prevSelections.map((team, index) => 
+        index === currentTeamIndex ? { ...team, ...updates } : team
+      );
+      console.log('Updated current team:', updatedSelections[currentTeamIndex]);
+      return updatedSelections;
+    });
   };
 
   const handlePeriodsChange = (periods: FormationPeriod[]) => {
@@ -274,12 +278,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       return;
     }
 
-    // Check if any team has periods (not just the current team)
-    const hasAnyPeriods = teamSelections.some(team => team.periods.length > 0);
-    if (!hasAnyPeriods) {
-      toast.error('Please create at least one period for any team before saving');
-      return;
-    }
+    console.log('Current team selections before save:', teamSelections);
 
     setSaving(true);
     try {
@@ -297,43 +296,57 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         throw deleteError;
       }
 
-      // Create new selections for each team and period
+      // Create new selections for each team that has squad players
       const selectionsToInsert = [];
       
       for (const team of teamSelections) {
         console.log(`Processing team ${team.teamNumber} with ${team.periods.length} periods and ${team.squadPlayers.length} squad players`);
         
-        for (const period of team.periods) {
-          // Convert positions to correct format for database
-          const playerPositions = period.positions
-            .filter(pos => pos.playerId) // Only include positions with players
-            .map(pos => ({
-              playerId: pos.playerId,
-              player_id: pos.playerId, // Include both formats for compatibility
-              position: pos.positionName,
-              abbreviation: pos.abbreviation,
-              positionGroup: pos.positionGroup,
-              x: pos.x,
-              y: pos.y,
-              isSubstitute: false,
-              minutes: period.duration
-            }));
+        // Always save team data, even if no periods yet (to preserve squad selections)
+        if (team.squadPlayers.length > 0 || team.periods.length > 0) {
+          // If no periods, create a default period to preserve squad data
+          const periodsToSave = team.periods.length > 0 ? team.periods : [{
+            id: `period-1`,
+            periodNumber: 1,
+            formation: '4-3-3',
+            duration: event.game_duration || 90,
+            positions: [],
+            substitutes: [],
+            captainId: team.globalCaptainId
+          }];
 
-          console.log(`Converting positions for team ${team.teamNumber} period ${period.periodNumber}:`, playerPositions);
+          for (const period of periodsToSave) {
+            // Convert positions to correct format for database
+            const playerPositions = period.positions
+              .filter(pos => pos.playerId) // Only include positions with players
+              .map(pos => ({
+                playerId: pos.playerId,
+                player_id: pos.playerId, // Include both formats for compatibility
+                position: pos.positionName,
+                abbreviation: pos.abbreviation,
+                positionGroup: pos.positionGroup,
+                x: pos.x,
+                y: pos.y,
+                isSubstitute: false,
+                minutes: period.duration
+              }));
 
-          selectionsToInsert.push({
-            event_id: event.id,
-            team_id: teamId,
-            team_number: team.teamNumber,
-            period_number: period.periodNumber,
-            formation: period.formation,
-            duration_minutes: period.duration,
-            captain_id: team.globalCaptainId || null,
-            performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
-            player_positions: playerPositions,
-            substitute_players: period.substitutes,
-            staff_selection: []
-          });
+            console.log(`Converting positions for team ${team.teamNumber} period ${period.periodNumber}:`, playerPositions);
+
+            selectionsToInsert.push({
+              event_id: event.id,
+              team_id: teamId,
+              team_number: team.teamNumber,
+              period_number: period.periodNumber,
+              formation: period.formation,
+              duration_minutes: period.duration,
+              captain_id: team.globalCaptainId || null,
+              performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
+              player_positions: playerPositions,
+              substitute_players: period.substitutes,
+              staff_selection: []
+            });
+          }
         }
       }
 

@@ -10,6 +10,7 @@ interface Player {
   id: string;
   name: string;
   squad_number: number;
+  availabilityStatus?: string; // Add availability status
 }
 
 interface FormationPosition {
@@ -70,6 +71,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
   };
 
   const getPositionedPlayers = () => {
+    // Include ALL squad players in the formation view (available, pending, unavailable)
     return allPlayers.filter(player => selectedPlayers.includes(player.id));
   };
 
@@ -86,6 +88,32 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
       selectedPlayers.includes(player.id) && 
       !positionedPlayerIds.includes(player.id)
     );
+  };
+
+  const getAvailabilityColor = (availabilityStatus?: string) => {
+    switch (availabilityStatus) {
+      case 'available':
+        return 'border-green-200 bg-green-50';
+      case 'pending':
+        return 'border-yellow-200 bg-yellow-50';
+      case 'unavailable':
+        return 'border-red-200 bg-red-50 opacity-70';
+      default:
+        return 'border-gray-200 bg-gray-50';
+    }
+  };
+
+  const getAvailabilityBadge = (availabilityStatus?: string) => {
+    switch (availabilityStatus) {
+      case 'available':
+        return <Badge variant="outline" className="text-xs bg-green-100 text-green-800">Available</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'unavailable':
+        return <Badge variant="outline" className="text-xs bg-red-100 text-red-800">Unavailable</Badge>;
+      default:
+        return null;
+    }
   };
 
   const positionedPlayers = getPositionedPlayers();
@@ -136,10 +164,13 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {positionedPlayers.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg">
+                <div key={player.id} className={`flex items-center justify-between p-3 border rounded-lg ${getAvailabilityColor(player.availabilityStatus)}`}>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">#{player.squad_number}</Badge>
-                    <span className="font-medium">{player.name}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{player.name}</span>
+                      {getAvailabilityBadge(player.availabilityStatus)}
+                    </div>
                     {captainId === player.id && (
                       <Star className="h-4 w-4 text-yellow-500 fill-current" />
                     )}
@@ -183,11 +214,16 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
           <CardContent>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {benchPlayers.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-3 border rounded-lg bg-amber-50">
+                <div key={player.id} className={`flex items-center justify-between p-3 border rounded-lg ${getAvailabilityColor(player.availabilityStatus)}`}>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">#{player.squad_number}</Badge>
-                    <span className="font-medium">{player.name}</span>
-                    <Badge variant="secondary" className="text-xs">SUB</Badge>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{player.name}</span>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="secondary" className="text-xs">SUB</Badge>
+                        {getAvailabilityBadge(player.availabilityStatus)}
+                      </div>
+                    </div>
                   </div>
                   <Button
                     size="sm"
@@ -219,10 +255,13 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {unassignedPlayers.map((player) => (
-                <div key={player.id} className="flex items-center justify-between p-3 border border-orange-200 rounded-lg bg-orange-50">
+                <div key={player.id} className={`flex items-center justify-between p-3 border border-orange-200 rounded-lg bg-orange-50 ${getAvailabilityColor(player.availabilityStatus)}`}>
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">#{player.squad_number}</Badge>
-                    <span className="font-medium">{player.name}</span>
+                    <div className="flex flex-col">
+                      <span className="font-medium">{player.name}</span>
+                      {getAvailabilityBadge(player.availabilityStatus)}
+                    </div>
                   </div>
                   <Button
                     size="sm"
