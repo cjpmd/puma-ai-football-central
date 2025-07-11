@@ -242,13 +242,16 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handleCaptainChange = (captainId: string) => {
+    // Handle the special "no-captain" value
+    const actualCaptainId = captainId === 'no-captain' ? undefined : captainId;
+    
     const updatedPeriods = getCurrentTeam()?.periods.map(period => ({
       ...period,
-      captainId
+      captainId: actualCaptainId
     })) || [];
     
     updateCurrentTeam({ 
-      globalCaptainId: captainId,
+      globalCaptainId: actualCaptainId,
       periods: updatedPeriods
     });
   };
@@ -258,7 +261,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handlePerformanceCategoryChange = (categoryId: string) => {
-    updateCurrentTeam({ performanceCategory: categoryId });
+    // Handle the special "none" value  
+    const actualCategoryId = categoryId === 'none' ? 'none' : categoryId;
+    updateCurrentTeam({ performanceCategory: actualCategoryId });
   };
 
   const saveSelections = async () => {
@@ -470,7 +475,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   eventId={event.id}
                   globalCaptainId={currentTeam?.globalCaptainId}
                   onSquadChange={handleSquadChange}
-                  onCaptainChange={handleCaptainChange}
+                  onCaptainChange={(captainId) => {
+                    // Convert empty string to undefined for the handler
+                    const actualCaptainId = captainId === '' ? undefined : captainId;
+                    handleCaptainChange(actualCaptainId || 'no-captain');
+                  }}
                 />
               </TabsContent>
 

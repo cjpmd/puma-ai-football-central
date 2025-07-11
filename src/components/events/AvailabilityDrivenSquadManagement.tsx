@@ -78,19 +78,22 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   const handleCaptainChange = async (playerId: string) => {
     try {
+      // Handle the special "no-captain" value
+      const actualPlayerId = playerId === 'no-captain' ? '' : playerId;
+      
       // First, remove captain role from current captain
       if (localCaptainId) {
         await updateSquadRole(localCaptainId, 'player');
       }
       
-      // Then assign captain role to new player
-      if (playerId) {
-        await updateSquadRole(playerId, 'captain');
+      // Then assign captain role to new player (if not "no-captain")
+      if (actualPlayerId) {
+        await updateSquadRole(actualPlayerId, 'captain');
       }
       
-      setLocalCaptainId(playerId);
+      setLocalCaptainId(actualPlayerId);
       if (onCaptainChange) {
-        onCaptainChange(playerId);
+        onCaptainChange(actualPlayerId);
       }
       toast.success('Captain updated');
     } catch (error: any) {
@@ -159,12 +162,12 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               {/* Captain Selection */}
               <div className="pb-4 border-b">
                 <label className="text-sm font-medium mb-2 block">Select Captain:</label>
-                <Select value={localCaptainId} onValueChange={handleCaptainChange}>
+                <Select value={localCaptainId || 'no-captain'} onValueChange={handleCaptainChange}>
                   <SelectTrigger className="w-full max-w-xs">
                     <SelectValue placeholder="Choose captain..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">No Captain</SelectItem>
+                    <SelectItem value="no-captain">No Captain</SelectItem>
                     {squadPlayers.map((player) => (
                       <SelectItem key={player.id} value={player.id}>
                         {player.name} (#{player.squadNumber})
