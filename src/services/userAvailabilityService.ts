@@ -57,7 +57,7 @@ export const userAvailabilityService = {
       const playerIds = linkedPlayers.map(lp => lp.player_id);
       console.log('Checking availability for player IDs:', playerIds);
       
-      // Check if any of the linked players have availability records
+      // First, check if the player IDs themselves have availability records
       let playerQuery = supabase
         .from('event_availability')
         .select('event_id, status, user_id')
@@ -75,6 +75,34 @@ export const userAvailabilityService = {
         console.log('Player availability data found:', playerAvailabilityData?.length || 0);
         console.log('Player availability data:', playerAvailabilityData);
         playerAvailability = playerAvailabilityData || [];
+      }
+
+      // If no availability found for player IDs, also check if there are availability records 
+      // that might reference the player in a different way (like through player selection)
+      if (playerAvailability.length === 0) {
+        console.log('No direct player availability found, checking all availability records for these events...');
+        
+        let allAvailabilityQuery = supabase
+          .from('event_availability')
+          .select('event_id, status, user_id, role');
+          
+        if (eventIds && eventIds.length > 0) {
+          allAvailabilityQuery = allAvailabilityQuery.in('event_id', eventIds);
+        }
+        
+        const { data: allAvailabilityData, error: allAvailabilityError } = await allAvailabilityQuery;
+        
+        if (!allAvailabilityError && allAvailabilityData) {
+          console.log('All availability records for these events:', allAvailabilityData);
+          
+          // Check if any of these records might be for our linked players
+          const potentialPlayerRecords = allAvailabilityData.filter(record => 
+            playerIds.includes(record.user_id) || record.role === 'player'
+          );
+          
+          console.log('Potential player records found:', potentialPlayerRecords);
+          playerAvailability = potentialPlayerRecords;
+        }
       }
     }
 
