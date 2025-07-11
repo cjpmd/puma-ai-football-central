@@ -1,15 +1,18 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, UserPlus, UserMinus, Crown } from 'lucide-react';
+import { Users, UserPlus, UserMinus, Crown, AlertTriangle, Filter } from 'lucide-react';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
 import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { SquadPlayer } from '@/types/teamSelection';
 import { toast } from 'sonner';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
+import { userAvailabilityService } from '@/services/userAvailabilityService';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SquadManagementProps {
   teamId: string;
@@ -17,6 +20,11 @@ interface SquadManagementProps {
   globalCaptainId?: string;
   onSquadChange?: (squadPlayers: SquadPlayer[]) => void;
   onCaptainChange?: (captainId: string) => void;
+}
+
+interface PlayerWithAvailability extends SquadPlayer {
+  availabilityForEvent?: 'available' | 'unavailable' | 'pending';
+  isAssignedElsewhere?: boolean;
 }
 
 export const SquadManagement: React.FC<SquadManagementProps> = ({ 
@@ -35,18 +43,111 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
     updatePlayerAvailability
   } = useSquadManagement(teamId, eventId);
 
-  // Notify parent when squadPlayers changes
-  useEffect(() => {
-    onSquadChange?.(squadPlayers);
-  }, [squadPlayers, onSquadChange]);
-
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'name' | 'availability' | 'position'>('availability');
+  const [filterBy, setFilterBy] = useState<'all' | 'available' | 'unavailable' | 'pending'>('all');
+  const [playersWithAvailability, setPlayersWithAvailability] = useState<PlayerWithAvailability[]>([]);
 
   // Get all team players for adding to squad
   const { data: allPlayers = [], isLoading: playersLoading, error: playersError } = useQuery({
     queryKey: ['team-players', teamId],
     queryFn: () => playersService.getActivePlayersByTeamId(teamId),
     enabled: !!teamId,
+  });
+
+  // Load availability data for current event
+  useEffect(() => {
+    if (eventId && squadPlayers.length > 0) {
+      loadPlayerAvailability();
+    } else {
+      setPlayersWithAvailability(squadPlayers.map(p => ({ ...p })));
+    }
+  }, [squadPlayers, eventId]);
+
+  // Notify parent when squadPlayers changes
+  useEffect(() => {
+    onSquadChange?.(squadPlayers);
+  }, [squadPlayers, onSquadChange]);
+
+  const loadPlayerAvailability = async () => {
+    if (!eventId) return;
+
+    try {
+      // Get user accounts linked to players
+      const { data: userPlayers, error } = await supabase
+        .from('user_players')
+        .select('player_id, user_id')
+        .in('player_id', squadPlayers.map(p => p.id));
+
+      if (error) throw error;
+
+      const userIds = userPlayers?.map(up => up.user_id) || [];
+      
+      if (userIds.length > 0) {
+        const availability = await userAvailabilityService.getUserAvailabilityForEvents(
+          userIds[0], // This would need to be improved for multiple users
+          [eventId]
+        );
+
+        // Check for conflicts with other events on the same day
+        const { data: eventData } = await supabase
+          .from('events')
+          .select('date')
+          .eq('id', eventId)
+          .single();
+
+        let conflictingEventIds: string[] = [];
+        if (eventData) {
+          const { data: samedayEvents } = await supabase
+            .from('events')
+            .select('id')
+            .eq('date', eventData.date)
+            .eq('team_id', teamId)
+            .neq('id', eventId);
+
+          conflictingEventIds = sameLayEvents?.map(e => e.id) || [];
+        }
+
+        const enhancedPlayers = squadPlayers.map(player => {
+          const userPlayer = userPlayers?.find(up => up.player_id === player.id);
+          const playerAvailability = availability.find(a => a.eventId === eventId);
+          
+          return {
+            ...player,
+            availabilityForEvent: playerAvailability?.status || 'pending',
+            isAssignedElsewhere: false // Would check against conflictingEventIds
+          };
+        });
+
+        setPlayersWithAvailability(enhancedPlayers);
+      } else {
+        setPlayersWithAvailability(squadPlayers.map(p => ({ ...p })));
+      }
+    } catch (error) {
+      console.error('Error loading player availability:', error);
+      setPlayersWithAvailability(squadPlayers.map(p => ({ ...p })));
+    }
+  };
+
+  // Sort players based on selected criteria
+  const sortedPlayers = [...playersWithAvailability].sort((a, b) => {
+    switch (sortBy) {
+      case 'availability':
+        const availabilityOrder = { available: 0, pending: 1, unavailable: 2 };
+        return availabilityOrder[a.availabilityForEvent || 'pending'] - 
+               availabilityOrder[b.availabilityForEvent || 'pending'];
+      case 'position':
+        return (a.type || '').localeCompare(b.type || '');
+      case 'name':
+      default:
+        return a.name.localeCompare(b.name);
+    }
+  });
+
+  // Filter players based on availability
+  const filteredPlayers = sortedPlayers.filter(player => {
+    if (filterBy === 'all') return true;
+    return player.availabilityForEvent === filterBy;
   });
 
   console.log('SquadManagement render:', {
@@ -98,6 +199,11 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
       console.log('Updating availability:', { playerId, status });
       await updatePlayerAvailability(playerId, status as 'available' | 'unavailable' | 'pending' | 'maybe');
       toast.success('Availability updated');
+      
+      // Refresh availability data
+      if (eventId) {
+        loadPlayerAvailability();
+      }
     } catch (error: any) {
       console.error('Error updating availability:', error);
       toast.error(error.message || 'Failed to update availability');
@@ -115,6 +221,15 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
       case 'unavailable': return 'bg-red-100 text-red-800';
       case 'maybe': return 'bg-yellow-100 text-yellow-800';
       default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getAvailabilityColorForEvent = (status?: string) => {
+    switch (status) {
+      case 'available': return 'text-green-600';
+      case 'unavailable': return 'text-red-600';
+      case 'pending': return 'text-amber-600';
+      default: return 'text-gray-500';
     }
   };
 
@@ -177,6 +292,35 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className={`space-y-3 ${isMobile ? 'px-3 pb-3' : 'space-y-4'}`}>
+          {/* Sort and Filter Controls */}
+          {eventId && (
+            <div className={`flex gap-2 ${isMobile ? 'flex-col space-y-2' : ''}`}>
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'w-40'}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="availability">Sort by Availability</SelectItem>
+                  <SelectItem value="name">Sort by Name</SelectItem>
+                  <SelectItem value="position">Sort by Position</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
+                <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'w-40'}`}>
+                  <Filter className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-2`} />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Players</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="unavailable">Unavailable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Add Player Section */}
           {availableToAdd.length > 0 ? (
             <div className={`flex gap-2 ${isMobile ? 'flex-col space-y-2' : ''}`}>
@@ -213,12 +357,15 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
 
           {/* Squad Players List */}
           <div className={`space-y-2 ${isMobile ? 'space-y-1' : ''}`}>
-            {squadPlayers.length === 0 ? (
+            {filteredPlayers.length === 0 ? (
               <div className={`text-center text-muted-foreground ${isMobile ? 'py-4 text-sm' : 'py-8'}`}>
-                No players in squad. Add players to get started.
+                {squadPlayers.length === 0 
+                  ? 'No players in squad. Add players to get started.'
+                  : 'No players match the current filter.'
+                }
               </div>
             ) : (
-              squadPlayers.map((player) => (
+              filteredPlayers.map((player) => (
                 <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'}`}>
                   <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
                     <Badge variant="outline" className={isMobile ? 'text-xs' : ''}>#{player.squadNumber}</Badge>
@@ -228,6 +375,18 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                     )}
                     {player.type === 'goalkeeper' && (
                       <Badge variant="secondary" className={isMobile ? 'text-xs' : ''}>GK</Badge>
+                    )}
+                    {eventId && (
+                      <div className={`flex items-center gap-1 ${getAvailabilityColorForEvent(player.availabilityForEvent)}`}>
+                        <div className={`w-2 h-2 rounded-full ${
+                          player.availabilityForEvent === 'available' ? 'bg-green-500' :
+                          player.availabilityForEvent === 'unavailable' ? 'bg-red-500' :
+                          'bg-amber-500'
+                        }`} />
+                        {player.isAssignedElsewhere && (
+                          <AlertTriangle className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} text-orange-500`} title="Assigned to multiple events" />
+                        )}
+                      </div>
                     )}
                   </div>
                   
