@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { Calendar, MapPin, Clock, Users, Trophy, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -59,6 +59,29 @@ export const EventForm: React.FC<EventFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [performanceCategories, setPerformanceCategories] = useState<any[]>([]);
   const [facilities, setFacilities] = useState<any[]>([]);
+  const [selectedTeam, setSelectedTeam] = useState<any>(null);
+
+  // Load team settings when team is selected
+  useEffect(() => {
+    const loadTeamSettings = async () => {
+      if (formData.team_id) {
+        const team = teams.find(t => t.id === formData.team_id);
+        if (team) {
+          setSelectedTeam(team);
+          // Set defaults from team settings if not editing existing event
+          if (!eventData) {
+            setFormData(prev => ({
+              ...prev,
+              game_format: team.gameFormat || '11v11',
+              game_duration: team.gameDuration || 90
+            }));
+          }
+        }
+      }
+    };
+
+    loadTeamSettings();
+  }, [formData.team_id, teams, eventData]);
 
   useEffect(() => {
     if (eventData) {
@@ -174,7 +197,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         const newEvent = await eventsService.createEvent({
           ...eventDataToSubmit,
           teamId: eventDataToSubmit.team_id,
-          type: eventDataToSubmit.event_type as 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
+          type: eventDataToSubmit.event_type as 'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
           startTime: eventDataToSubmit.start_time,
           endTime: eventDataToSubmit.end_time,
           isHome: eventDataToSubmit.is_home,
@@ -219,7 +242,6 @@ export const EventForm: React.FC<EventFormProps> = ({
 
   const eventTypes = [
     { value: 'training', label: 'Training', icon: Users },
-    { value: 'match', label: 'Match', icon: Trophy },
     { value: 'fixture', label: 'Fixture', icon: Trophy },
     { value: 'tournament', label: 'Tournament', icon: Trophy },
     { value: 'festival', label: 'Festival', icon: Calendar },
@@ -407,7 +429,7 @@ export const EventForm: React.FC<EventFormProps> = ({
           </div>
 
           {/* Match/Fixture specific fields */}
-          {(formData.event_type === 'match' || formData.event_type === 'fixture' || formData.event_type === 'friendly' || formData.event_type === 'tournament') && (
+          {(formData.event_type === 'fixture' || formData.event_type === 'friendly' || formData.event_type === 'tournament') && (
             <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
               <h3 className="font-medium flex items-center gap-2">
                 <Trophy className="h-4 w-4" />
@@ -435,7 +457,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                 </div>
                 
                 <div>
-                  <Label htmlFor="game_duration">Game Duration</Label>
+                  <Label htmlFor="game_duration">Game Duration (minutes)</Label>
                   <Input
                     id="game_duration"
                     type="number"
@@ -443,7 +465,9 @@ export const EventForm: React.FC<EventFormProps> = ({
                     onChange={(e) => setFormData(prev => ({ ...prev, game_duration: parseInt(e.target.value) || 90 }))}
                     placeholder="90"
                   />
-                  <p className="text-sm text-muted-foreground mt-1">Team default: 90 minutes</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Team default: {selectedTeam?.gameDuration || 90} minutes
+                  </p>
                 </div>
               </div>
 
@@ -458,14 +482,12 @@ export const EventForm: React.FC<EventFormProps> = ({
               </div>
 
               <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="is_home"
+                <Switch
+                  id="is_away"
                   checked={!formData.is_home}
-                  onChange={(e) => setFormData(prev => ({ ...prev, is_home: !e.target.checked }))}
-                  className="rounded border-gray-300"
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_home: !checked }))}
                 />
-                <Label htmlFor="is_home">Away Game</Label>
+                <Label htmlFor="is_away">Away Game</Label>
               </div>
 
               {/* Team Count Selection */}
