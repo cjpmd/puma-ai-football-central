@@ -37,35 +37,9 @@ interface DragDropFormationEditorProps {
 }
 
 // Map team setting values to PlayerIcon expected values
-const mapNameDisplayOption = (option: 'surname' | 'firstName' | 'fullName' | 'initials'): 'surname' | 'initials' | 'first' | 'full' => {
-  switch (option) {
-    case 'firstName':
-      return 'first';
-    case 'fullName':
-      return 'full';
-    case 'surname':
-      return 'surname';
-    case 'initials':
-      return 'initials';
-    default:
-      return 'surname';
-  }
-};
-
-// Helper function to get position group color
-const getPositionGroupColor = (position: string) => {
-  const pos = position?.toLowerCase() || '';
-  
-  if (pos.includes('goalkeeper') || pos === 'gk') {
-    return 'border-yellow-400 bg-yellow-50';
-  } else if (pos.includes('defender') || pos.startsWith('d')) {
-    return 'border-blue-400 bg-blue-50';
-  } else if (pos.includes('midfielder') || pos.startsWith('m') || pos.includes('mid')) {
-    return 'border-green-400 bg-green-50';
-  } else {
-    // Forwards/Attackers/Strikers
-    return 'border-red-400 bg-red-50';
-  }
+const mapNameDisplayOption = (option: 'surname' | 'firstName' | 'fullName' | 'initials'): 'surname' | 'firstName' | 'fullName' | 'initials' => {
+  // Direct mapping since the types now match
+  return option;
 };
 
 export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = ({
@@ -575,6 +549,21 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const playingTimeSummary = calculatePlayingTimeSummary();
   const unusedPlayers = getUnusedPlayers();
   const { firstHalf, secondHalf } = organizeByHalves();
+
+  const getPositionGroupColor = (position: string) => {
+    const pos = position?.toLowerCase() || '';
+    
+    if (pos.includes('goalkeeper') || pos === 'gk') {
+      return 'border-yellow-400 bg-yellow-50';
+    } else if (pos.includes('defender') || pos.startsWith('d')) {
+      return 'border-blue-400 bg-blue-50';
+    } else if (pos.includes('midfielder') || pos.startsWith('m') || pos.includes('mid')) {
+      return 'border-green-400 bg-green-50';
+    } else {
+      // Forwards/Attackers/Strikers
+      return 'border-red-400 bg-red-50';
+    }
+  };
 
   const renderPeriodCard = (period: FormationPeriod) => (
     <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">

@@ -89,7 +89,9 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         
         {/* Multi-team selection indicator */}
         {isSelectedInOtherTeams && (
-          <Users className={`absolute -top-1 -left-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-blue-500`} />
+          <div className={`absolute -top-1 -left-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'}`}>
+            <Users className="h-full w-full text-blue-500" />
+          </div>
         )}
         
         {/* Content inside circle - position abbreviation, name, squad number */}
@@ -135,7 +137,9 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
       
       {/* Multi-team selection indicator */}
       {isSelectedInOtherTeams && (
-        <Users className="absolute -top-1 -left-1 h-4 w-4 text-blue-500" title="Selected in multiple teams" />
+        <div className="absolute -top-1 -left-1 h-4 w-4">
+          <Users className="h-full w-full text-blue-500" />
+        </div>
       )}
       
       {/* Squad number */}

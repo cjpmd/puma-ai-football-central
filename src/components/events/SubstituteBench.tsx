@@ -7,7 +7,7 @@ interface SubstituteBenchProps {
   id: string;
   substitutes: SquadPlayer[];
   globalCaptainId?: string;
-  nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
+  nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
 }
 
 export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
