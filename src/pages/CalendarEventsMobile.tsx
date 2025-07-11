@@ -18,6 +18,7 @@ import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
+import { AvailabilityButtons } from '@/components/events/AvailabilityButtons';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -340,6 +341,16 @@ export default function CalendarEventsMobile() {
     return daysDiff <= 7 && daysDiff >= 0; // Event is within 7 days
   };
 
+  const handleAvailabilityChange = (eventId: string, newStatus: 'available' | 'unavailable') => {
+    setUserAvailability(prev => 
+      prev.map(item => 
+        item.eventId === eventId 
+          ? { ...item, status: newStatus }
+          : item
+      )
+    );
+  };
+
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
@@ -479,6 +490,17 @@ export default function CalendarEventsMobile() {
                           {isMatchType(event.event_type) && (
                             <div className="text-xs text-gray-500 text-center">
                               {event.game_format || 'Match'} • {event.is_home ? 'Home' : 'Away'}
+                            </div>
+                          )}
+
+                          {/* Availability buttons */}
+                          {user?.id && availabilityStatus && (
+                            <div className="bg-gray-50 p-2 rounded-lg">
+                              <AvailabilityButtons
+                                eventId={event.id}
+                                currentStatus={availabilityStatus}
+                                onStatusChange={(newStatus) => handleAvailabilityChange(event.id, newStatus)}
+                              />
                             </div>
                           )}
 

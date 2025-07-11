@@ -10,6 +10,8 @@ import { Calendar, Users, Trophy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
+import { AvailabilityButtons } from '@/components/events/AvailabilityButtons';
+import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 
 interface Event {
   id: string;
@@ -30,12 +32,12 @@ interface UserAvailability {
 }
 
 export function UpcomingEvents() {
-  const { teams } = useAuth();
+  const { teams, user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isTeamSelectionOpen, setIsTeamSelectionOpen] = useState(false);
-  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
+  const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,21 +49,13 @@ export function UpcomingEvents() {
 
   const loadUserAvailability = async () => {
     try {
-      const { data: availabilityData, error } = await supabase
-        .from('event_availability')
-        .select('event_id, status')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
-
-      if (error) {
-        console.error('Error loading user availability:', error);
+      if (!user?.id) {
+        console.log('No user ID available for availability loading');
         return;
       }
 
-      const availability = (availabilityData || []).map(item => ({
-        eventId: item.event_id,
-        status: item.status as 'pending' | 'available' | 'unavailable'
-      }));
-
+      const eventIds = events.map(event => event.id);
+      const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
       setUserAvailability(availability);
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
@@ -71,6 +65,16 @@ export function UpcomingEvents() {
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     return availability?.status || null;
+  };
+
+  const handleAvailabilityChange = (eventId: string, newStatus: 'available' | 'unavailable') => {
+    setUserAvailability(prev => 
+      prev.map(item => 
+        item.eventId === eventId 
+          ? { ...item, status: newStatus }
+          : item
+      )
+    );
   };
 
   const getEventOutlineClass = (eventId: string): string => {
@@ -218,6 +222,14 @@ export function UpcomingEvents() {
               {nextEvent.location && (
                 <p className="text-sm text-muted-foreground">📍 {nextEvent.location}</p>
               )}
+              
+              {user?.id && (
+                <AvailabilityButtons
+                  eventId={nextEvent.id}
+                  currentStatus={getAvailabilityStatus(nextEvent.id)}
+                  onStatusChange={(newStatus) => handleAvailabilityChange(nextEvent.id, newStatus)}
+                />
+              )}
             </div>
             <div className="flex gap-2 mt-4">
               <Button 
@@ -280,6 +292,16 @@ export function UpcomingEvents() {
                     </p>
                     {event.location && (
                       <p className="text-xs text-muted-foreground">📍 {event.location}</p>
+                    )}
+                    
+                    {user?.id && (
+                      <div className="mt-2">
+                        <AvailabilityButtons
+                          eventId={event.id}
+                          currentStatus={getAvailabilityStatus(event.id)}
+                          onStatusChange={(newStatus) => handleAvailabilityChange(event.id, newStatus)}
+                        />
+                      </div>
                     )}
                   </div>
                   <div className="flex flex-col gap-1">
