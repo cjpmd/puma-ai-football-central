@@ -6,6 +6,7 @@ import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Event {
   id: string;
@@ -30,13 +31,14 @@ interface ClubCalendarEventsProps {
 
 interface UserAvailability {
   eventId: string;
-  status: 'pending' | 'available' | 'unavailable';
+  status: 'pending' | 'available' | 'unavailable' | 'maybe';
 }
 
 export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
   clubId,
   clubName
 }) => {
+  const { user } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,18 +53,23 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
       loadClubEvents();
       loadUserAvailability();
     }
-  }, [clubId]);
+  }, [clubId, user?.id]);
 
   useEffect(() => {
     filterEvents();
   }, [events, selectedTeam, selectedEventType]);
 
   const loadUserAvailability = async () => {
+    if (!user?.id) {
+      console.log('No user ID for availability loading');
+      return;
+    }
+
     try {
       const { data: availabilityData, error } = await supabase
         .from('event_availability')
         .select('event_id, status')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error loading user availability:', error);
@@ -71,16 +78,17 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
 
       const availability = (availabilityData || []).map(item => ({
         eventId: item.event_id,
-        status: item.status as 'pending' | 'available' | 'unavailable'
+        status: item.status as 'pending' | 'available' | 'unavailable' | 'maybe'
       }));
 
+      console.log('Club calendar loaded availability:', availability);
       setUserAvailability(availability);
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
     }
   };
 
-  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | 'maybe' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     return availability?.status || null;
   };
@@ -92,8 +100,10 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
         return 'border-l-green-500 border-l-4';
       case 'unavailable':
         return 'border-l-red-500 border-l-4';
-      case 'pending':
+      case 'maybe':
         return 'border-l-amber-500 border-l-4';
+      case 'pending':
+        return 'border-l-blue-500 border-l-4';
       default:
         return '';
     }
