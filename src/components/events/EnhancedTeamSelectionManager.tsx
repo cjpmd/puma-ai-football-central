@@ -114,9 +114,17 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       const initialTeamSelections: TeamSelection[] = [];
       
       for (let i = 0; i < teamCount; i++) {
+        // Convert AvailablePlayer[] to SquadPlayer[] by ensuring squadRole is always present
+        const convertedSquadPlayers: SquadPlayer[] = i === 0 
+          ? mainSquadPlayers.map(player => ({
+              ...player,
+              squadRole: player.squadRole || 'player' // Provide default value for required property
+            }))
+          : [];
+
         initialTeamSelections.push({
           teamNumber: i + 1,
-          squadPlayers: i === 0 ? mainSquadPlayers : [], // Only first team gets the main squad
+          squadPlayers: convertedSquadPlayers,
           periods: [],
           globalCaptainId: undefined,
           performanceCategory: 'none'
