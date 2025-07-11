@@ -250,7 +250,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       if (existing) {
         return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
       } else {
-        return [...prev, { eventId, status, source: 'manual' }];
+        return [...prev, { eventId, status }];
       }
     });
   };

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
@@ -250,7 +250,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       if (existing) {
         return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
       } else {
-        return [...prev, { eventId, status, source: 'manual' }];
+        return [...prev, { eventId, status, source: 'direct' }];
       }
     });
   };
