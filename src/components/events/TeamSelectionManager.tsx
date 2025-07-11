@@ -1,4 +1,5 @@
 
+import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
 import { EnhancedTeamSelectionManager } from './EnhancedTeamSelectionManager';
 import { DatabaseEvent } from '@/types/event';
 
@@ -10,6 +11,6 @@ interface TeamSelectionManagerProps {
 }
 
 export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = (props) => {
-  // For now, route to the enhanced version
+  // Route to the enhanced version which now uses AvailabilityDrivenSquadManagement
   return <EnhancedTeamSelectionManager {...props} />;
 };

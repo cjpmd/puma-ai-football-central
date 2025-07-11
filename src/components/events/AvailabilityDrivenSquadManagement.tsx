@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, UserPlus, Crown, AlertCircle, CheckCircle, Clock, X } from 'lucide-react';
+import { Users, UserPlus, Crown, CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
 import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
 import { toast } from 'sonner';
 
@@ -115,9 +115,20 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       case 'available':
         return 'bg-green-50 border-green-200';
       case 'unavailable':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-50 border-red-200 opacity-60';
       default:
         return 'bg-yellow-50 border-yellow-200';
+    }
+  };
+
+  const getAvailabilityBadgeColor = (status: string) => {
+    switch (status) {
+      case 'available':
+        return 'bg-green-100 text-green-800';
+      case 'unavailable':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-yellow-100 text-yellow-800';
     }
   };
 
@@ -134,19 +145,19 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   return (
     <div className="space-y-6">
-      {/* Squad Members */}
+      {/* Current Squad */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Current Squad ({squadPlayers.length})
+            Selected Squad ({squadPlayers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {squadPlayers.length > 0 ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {/* Captain Selection */}
-              <div className="mb-4">
+              <div className="pb-4 border-b">
                 <label className="text-sm font-medium mb-2 block">Select Captain:</label>
                 <Select value={localCaptainId} onValueChange={handleCaptainChange}>
                   <SelectTrigger className="w-full max-w-xs">
@@ -164,11 +175,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               </div>
 
               {/* Squad Players List */}
-              <div className="grid gap-3">
+              <div className="space-y-3">
                 {squadPlayers.map((player) => (
                   <div 
                     key={player.id} 
-                    className={`flex items-center justify-between p-3 rounded-lg border ${getAvailabilityColor(player.availabilityStatus)}`}
+                    className={`flex items-center justify-between p-4 rounded-lg border ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}
                   >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -180,7 +191,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                           <span className="font-medium">{player.name}</span>
                           <Badge variant="secondary">#{player.squadNumber}</Badge>
                           {player.id === localCaptainId && (
-                            <Badge variant="default" className="bg-yellow-500">
+                            <Badge className="bg-yellow-500 text-white">
                               <Crown className="h-3 w-3 mr-1" />
                               Captain
                             </Badge>
@@ -188,7 +199,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           {getAvailabilityIcon(player.availabilityStatus)}
-                          <span className="capitalize">{player.availabilityStatus}</span>
+                          <Badge variant="outline" className={getAvailabilityBadgeColor(player.availabilityStatus)}>
+                            {player.availabilityStatus}
+                          </Badge>
                         </div>
                       </div>
                     </div>
@@ -196,9 +209,10 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveFromSquad(player.id)}
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-4 w-4 mr-1" />
+                      Remove
                     </Button>
                   </div>
                 ))}
@@ -207,7 +221,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No players in squad yet</p>
+              <p className="text-lg font-medium mb-2">No players in squad yet</p>
               <p className="text-sm">Add players from the available list below</p>
             </div>
           )}
@@ -219,16 +233,16 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Available Players ({availablePlayers.length})
+            Available Players ({availablePlayers.filter(p => p.availabilityStatus === 'available').length} available, {availablePlayers.length} total)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {availablePlayers.length > 0 ? (
-            <div className="grid gap-3">
+            <div className="space-y-3">
               {availablePlayers.map((player) => (
                 <div 
                   key={player.id} 
-                  className={`flex items-center justify-between p-3 rounded-lg border ${getAvailabilityColor(player.availabilityStatus)}`}
+                  className={`flex items-center justify-between p-4 rounded-lg border transition-opacity ${getAvailabilityColor(player.availabilityStatus)}`}
                 >
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
@@ -243,27 +257,37 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         {getAvailabilityIcon(player.availabilityStatus)}
-                        <span className="capitalize">{player.availabilityStatus}</span>
+                        <Badge variant="outline" className={getAvailabilityBadgeColor(player.availabilityStatus)}>
+                          {player.availabilityStatus}
+                        </Badge>
                       </div>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAddToSquad(player.id)}
-                    disabled={player.availabilityStatus === 'unavailable'}
-                  >
-                    <UserPlus className="h-4 w-4 mr-1" />
-                    Add to Squad
-                  </Button>
+                  
+                  {player.availabilityStatus === 'available' ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleAddToSquad(player.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <UserPlus className="h-4 w-4 mr-1" />
+                      Add to Squad
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span className="capitalize">{player.availabilityStatus}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
-              <AlertCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No available players</p>
-              <p className="text-sm">Send availability notifications to collect responses</p>
+              <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">No availability responses yet</p>
+              <p className="text-sm">Send availability notifications to collect player responses</p>
             </div>
           )}
         </CardContent>

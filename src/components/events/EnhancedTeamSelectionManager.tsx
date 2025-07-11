@@ -19,6 +19,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
+import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
 
 interface TeamSelection {
   teamNumber: number;
@@ -66,8 +67,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Load main squad for initial team
-  const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useSquadManagement(teamId, event.id);
+  // Load main squad for initial team - use availability-based loading
+  const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useAvailabilityBasedSquad(teamId, event.id);
 
   // Load team name display option
   const { data: teamData } = useQuery({
@@ -455,9 +456,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
             <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
-                <SquadManagement
+                <AvailabilityDrivenSquadManagement
                   teamId={teamId}
-                  eventId={currentTeam?.teamNumber === 1 ? event.id : null}
+                  eventId={event.id}
                   globalCaptainId={currentTeam?.globalCaptainId}
                   onSquadChange={handleSquadChange}
                   onCaptainChange={handleCaptainChange}
@@ -482,7 +483,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <DragDropFormationEditor
                     squadPlayers={currentTeam.squadPlayers}
                     periods={currentTeam.periods}
-                    gameFormat={event.game_format || '11-a-side'}
+                    gameFormat={event.game_format || '7-a-side'}
                     globalCaptainId={currentTeam.globalCaptainId}
                     nameDisplayOption={nameDisplayOption as any}
                     onPeriodsChange={handlePeriodsChange}
