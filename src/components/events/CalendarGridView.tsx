@@ -49,11 +49,6 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       return;
     }
 
-    // Prevent multiple simultaneous requests
-    if (isLoadingAvailability) {
-      return;
-    }
-
     try {
       setIsLoadingAvailability(true);
       console.log('=== CALENDAR GRID VIEW DEBUG ===');
@@ -72,7 +67,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     } finally {
       setIsLoadingAvailability(false);
     }
-  }, [user?.id, events.length]); // Removed isLoadingAvailability from dependencies
+  }, [user?.id, events]);
 
   useEffect(() => {
     loadEventWeather();
@@ -80,8 +75,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   }, [events, teams]);
 
   useEffect(() => {
-    loadUserAvailability();
-  }, [loadUserAvailability]);
+    if (!isLoadingAvailability) {
+      loadUserAvailability();
+    }
+  }, [loadUserAvailability, isLoadingAvailability]);
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
