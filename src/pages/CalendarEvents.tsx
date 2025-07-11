@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -35,15 +35,7 @@ export default function CalendarEvents() {
   const { toast } = useToast();
   const { teams } = useAuth();
 
-  useEffect(() => {
-    loadEvents();
-  }, [teams]);
-
-  useEffect(() => {
-    filterEvents();
-  }, [events, selectedTeam, selectedEventType]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       if (!teams || teams.length === 0) return;
 
@@ -88,9 +80,13 @@ export default function CalendarEvents() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [teams, toast]);
 
-  const filterEvents = () => {
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  const filterEvents = useCallback(() => {
     let filtered = events;
 
     if (selectedTeam !== 'all') {
@@ -102,7 +98,11 @@ export default function CalendarEvents() {
     }
 
     setFilteredEvents(filtered);
-  };
+  }, [events, selectedTeam, selectedEventType]);
+
+  useEffect(() => {
+    filterEvents();
+  }, [filterEvents]);
 
   const handleEditEvent = (event: DatabaseEvent) => {
     setSelectedEvent(event);
@@ -124,8 +124,7 @@ export default function CalendarEvents() {
       await eventsService.deleteEvent(eventId);
       
       toast({
-        title: 'Success',
-        description: 'Event deleted successfully',
+        title: 'Event deleted successfully',
       });
       
       loadEvents();
@@ -193,8 +192,7 @@ export default function CalendarEvents() {
         });
         
         toast({
-          title: 'Success',
-          description: 'Event updated successfully',
+          title: 'Event updated successfully',
         });
       } else {
         // Create new event
@@ -205,8 +203,7 @@ export default function CalendarEvents() {
         });
         
         toast({
-          title: 'Success',
-          description: 'Event created successfully',
+          title: 'Event created successfully',
         });
       }
       

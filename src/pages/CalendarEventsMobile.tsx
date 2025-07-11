@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +39,7 @@ export default function CalendarEventsMobile() {
   const [showExpandedTeamSelection, setShowExpandedTeamSelection] = useState(false);
   const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
+  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
   const { toast } = useToast();
   const { teams, user } = useAuth();
 
@@ -46,35 +47,42 @@ export default function CalendarEventsMobile() {
     loadEvents();
   }, [teams]);
 
-  useEffect(() => {
-    if (events.length > 0 && user?.id) {
-      loadUserAvailability();
+  const loadUserAvailability = useCallback(async () => {
+    if (!user?.id || events.length === 0 || isLoadingAvailability) {
+      console.log('Skipping availability load:', { 
+        hasUser: !!user?.id, 
+        eventsCount: events.length, 
+        isLoading: isLoadingAvailability 
+      });
+      return;
     }
-  }, [events, user?.id]);
 
-  const loadUserAvailability = async () => {
     try {
-      if (!user?.id) {
-        console.log('No user ID available for availability loading');
-        return;
-      }
+      setIsLoadingAvailability(true);
+      console.log('Loading availability for user:', user.id);
 
       const eventIds = events.map(event => event.id);
       const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
       setUserAvailability(availability);
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
+    } finally {
+      setIsLoadingAvailability(false);
     }
-  };
+  }, [user?.id, events.length, isLoadingAvailability]);
 
-  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+  useEffect(() => {
+    loadUserAvailability();
+  }, [loadUserAvailability]);
+
+  const getAvailabilityStatus = useCallback((eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     const status = availability?.status || null;
     console.log(`Availability status for event ${eventId.slice(-6)}:`, status);
     return status;
-  };
+  }, [userAvailability]);
 
-  const getEventBorderClass = (eventId: string): string => {
+  const getEventBorderClass = useCallback((eventId: string): string => {
     const status = getAvailabilityStatus(eventId);
     
     switch (status) {
@@ -87,7 +95,7 @@ export default function CalendarEventsMobile() {
       default:
         return 'border-l-gray-300 border-l-4';
     }
-  };
+  }, [getAvailabilityStatus]);
 
   const loadEvents = async () => {
     try {
@@ -151,8 +159,7 @@ export default function CalendarEventsMobile() {
         });
         
         toast({
-          title: 'Success',
-          description: 'Event updated successfully',
+          title: 'Event updated successfully',
         });
       } else {
         // Create new event
@@ -163,8 +170,7 @@ export default function CalendarEventsMobile() {
         });
         
         toast({
-          title: 'Success',
-          description: 'Event created successfully',
+          title: 'Event created successfully',
         });
       }
       
@@ -189,17 +195,22 @@ export default function CalendarEventsMobile() {
     return eventDate >= new Date() || isToday(eventDate);
   };
 
-  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
-    // Update local state to reflect the change immediately
+  const handleAvailabilityChange = useCallback((eventId: string, status: 'available' | 'unavailable') => {
+    // Update local state immediately for optimistic UI updates
     setUserAvailability(prev => {
       const existing = prev.find(a => a.eventId === eventId);
+      if (existing && existing.status === status) {
+        // No change needed
+        return prev;
+      }
+      
       if (existing) {
         return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
       } else {
         return [...prev, { eventId, status, source: 'direct' }];
       }
     });
-  };
+  }, []);
 
   const getFilteredEvents = () => {
     return events.filter(event => {
@@ -541,14 +552,14 @@ export default function CalendarEventsMobile() {
                             </div>
                           )}
 
-                          {/* Availability Controls - New Addition */}
+                          {/* Availability Controls */}
                           {showAvailabilityControls && (
                             <div className="flex justify-center pt-2 border-t">
                               <QuickAvailabilityControls
                                 eventId={event.id}
                                 currentStatus={availabilityStatus}
                                 size="sm"
-                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                                onStatusChange={handleAvailabilityChange}
                               />
                             </div>
                           )}
