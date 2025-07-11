@@ -1,18 +1,21 @@
+
 import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
-import { Crown } from 'lucide-react';
+import { Crown, Users } from 'lucide-react';
 import { SquadPlayer } from '@/types/teamSelection';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface PlayerIconProps {
   player: SquadPlayer;
   isDragging?: boolean;
   isCaptain?: boolean;
-  nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
+  nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
   isCircular?: boolean;
   positionAbbreviation?: string;
   showPositionLabel?: boolean;
   isLarger?: boolean;
   dragId?: string; // Custom drag ID for positioned players
+  isSelectedInOtherTeams?: boolean; // New prop to indicate multi-team selection
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
@@ -24,7 +27,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   positionAbbreviation,
   showPositionLabel = false,
   isLarger = false,
-  dragId
+  dragId,
+  isSelectedInOtherTeams = false
 }) => {
   // Only enable dragging for available players
   const shouldEnableDrag = player.availabilityStatus === 'available';
@@ -40,19 +44,7 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   });
 
   const getDisplayName = () => {
-    const nameParts = player.name.split(' ');
-    
-    switch (nameDisplayOption) {
-      case 'first':
-        return nameParts[0] || player.name;
-      case 'full':
-        return player.name;
-      case 'initials':
-        return nameParts.map(part => part.charAt(0).toUpperCase()).join('.');
-      case 'surname':
-      default:
-        return nameParts[nameParts.length - 1] || player.name;
-    }
+    return formatPlayerName(player.name, nameDisplayOption);
   };
 
   const getAvailabilityStyle = () => {
@@ -95,6 +87,11 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
           <Crown className={`absolute -top-1 -right-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-yellow-500`} />
         )}
         
+        {/* Multi-team selection indicator */}
+        {isSelectedInOtherTeams && (
+          <Users className={`absolute -top-1 -left-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-blue-500`} />
+        )}
+        
         {/* Content inside circle - position abbreviation, name, squad number */}
         <div className="flex flex-col items-center justify-center text-center leading-none">
           {/* Position abbreviation above name if provided */}
@@ -134,6 +131,11 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
       {/* Captain indicator */}
       {(isCaptain || player.squadRole === 'captain') && (
         <Crown className="absolute -top-1 -right-1 h-4 w-4 text-yellow-500" />
+      )}
+      
+      {/* Multi-team selection indicator */}
+      {isSelectedInOtherTeams && (
+        <Users className="absolute -top-1 -left-1 h-4 w-4 text-blue-500" title="Selected in multiple teams" />
       )}
       
       {/* Squad number */}

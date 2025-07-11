@@ -22,7 +22,7 @@ export const formatPlayerName = (fullName: string, displayOption: NameDisplayOpt
       }
       const firstInitial = nameParts[0].charAt(0).toUpperCase();
       const lastInitial = nameParts[nameParts.length - 1].charAt(0).toUpperCase();
-      return `${firstInitial}.${lastInitial}.`;
+      return `${firstInitial}${lastInitial}`;
     
     default:
       return nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0];

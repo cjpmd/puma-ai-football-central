@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, UserPlus, Crown, CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
 import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
 import { toast } from 'sonner';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface AvailabilityDrivenSquadManagementProps {
   teamId: string;
@@ -15,6 +16,8 @@ interface AvailabilityDrivenSquadManagementProps {
   globalCaptainId?: string;
   onSquadChange?: (squadPlayers: any[]) => void;
   onCaptainChange?: (captainId: string) => void;
+  allTeamSelections?: any[]; // To check for multi-team selections
+  currentTeamIndex?: number; // To identify current team
 }
 
 export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquadManagementProps> = ({
@@ -23,6 +26,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   globalCaptainId,
   onSquadChange,
   onCaptainChange,
+  allTeamSelections = [],
+  currentTeamIndex = 0,
 }) => {
   const {
     availablePlayers,
@@ -48,6 +53,14 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       onSquadChange(squadPlayers);
     }
   }, [squadPlayers, onSquadChange]);
+
+  // Check if a player is selected in other teams
+  const isPlayerInOtherTeams = (playerId: string) => {
+    return allTeamSelections.some((team, index) => 
+      index !== currentTeamIndex && 
+      team.squadPlayers?.some((p: any) => p.id === playerId)
+    );
+  };
 
   const handleAddToSquad = async (playerId: string) => {
     try {
@@ -191,14 +204,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               {/* Squad Players List */}
               <div className="space-y-3">
                 {squadPlayers.map((player) => (
-                  <div 
-                    key={player.id} 
-                    className={`flex items-center justify-between p-4 rounded-lg border ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}
-                  >
+                  <div key={player.id} className={`flex items-center justify-between p-4 rounded-lg border ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={`/api/placeholder/40/40`} />
-                        <AvatarFallback>{player.name?.substring(0, 2)?.toUpperCase()}</AvatarFallback>
+                        <AvatarFallback>{formatPlayerName(player.name, 'initials')}</AvatarFallback>
                       </Avatar>
                       <div>
                         <div className="flex items-center gap-2">
@@ -208,6 +218,12 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                             <Badge className="bg-yellow-500 text-white">
                               <Crown className="h-3 w-3 mr-1" />
                               Captain
+                            </Badge>
+                          )}
+                          {isPlayerInOtherTeams(player.id) && (
+                            <Badge variant="outline" className="text-blue-600 border-blue-600">
+                              <Users className="h-3 w-3 mr-1" />
+                              Multi-team
                             </Badge>
                           )}
                         </div>
@@ -254,20 +270,23 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           {availablePlayers.length > 0 ? (
             <div className="space-y-3">
               {availablePlayers.map((player) => (
-                <div 
-                  key={player.id} 
-                  className={`flex items-center justify-between p-4 rounded-lg border transition-opacity ${getAvailabilityColor(player.availabilityStatus)}`}
-                >
+                <div key={player.id} className={`flex items-center justify-between p-4 rounded-lg border transition-opacity ${getAvailabilityColor(player.availabilityStatus)}`}>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={`/api/placeholder/40/40`} />
-                      <AvatarFallback>{player.name?.substring(0, 2)?.toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{formatPlayerName(player.name, 'initials')}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{player.name}</span>
                         <Badge variant="secondary">#{player.squadNumber}</Badge>
                         <Badge variant="outline">{player.type}</Badge>
+                        {isPlayerInOtherTeams(player.id) && (
+                          <Badge variant="outline" className="text-blue-600 border-blue-600">
+                            <Users className="h-3 w-3 mr-1" />
+                            Multi-team
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         {getAvailabilityIcon(player.availabilityStatus)}

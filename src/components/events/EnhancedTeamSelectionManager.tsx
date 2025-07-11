@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -507,6 +506,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     const actualCaptainId = captainId === '' ? undefined : captainId;
                     handleCaptainChange(actualCaptainId || 'no-captain');
                   }}
+                  allTeamSelections={teamSelections}
+                  currentTeamIndex={currentTeamIndex}
                 />
               </TabsContent>
 
