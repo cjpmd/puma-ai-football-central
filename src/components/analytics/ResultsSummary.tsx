@@ -171,7 +171,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
           date: event.date,
           title: event.title,
           opponent: event.opponent,
-          eventType: event.event_type,
+          eventType: event.event_type || 'match', // Provide default value
           teams
         };
       }).filter(result => result.teams.length > 0);
@@ -188,9 +188,12 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
     const stats: { [eventType: string]: EventTypeStats } = {};
 
     results.forEach(result => {
-      if (!stats[result.eventType]) {
-        stats[result.eventType] = {
-          eventType: result.eventType,
+      // Ensure eventType is defined and not null
+      const eventType = result.eventType || 'match';
+      
+      if (!stats[eventType]) {
+        stats[eventType] = {
+          eventType: eventType,
           teams: {},
           totalGames: 0,
           totalWins: 0,
@@ -202,8 +205,8 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
       }
 
       result.teams.forEach(team => {
-        if (!stats[result.eventType].teams[team.teamName]) {
-          stats[result.eventType].teams[team.teamName] = {
+        if (!stats[eventType].teams[team.teamName]) {
+          stats[eventType].teams[team.teamName] = {
             teamName: team.teamName,
             wins: 0,
             draws: 0,
@@ -214,25 +217,25 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
           };
         }
 
-        const teamStats = stats[result.eventType].teams[team.teamName];
+        const teamStats = stats[eventType].teams[team.teamName];
         teamStats.totalGames++;
         teamStats.goalsFor += team.ourScore;
         teamStats.goalsAgainst += team.opponentScore;
 
         if (team.outcome === 'win') {
           teamStats.wins++;
-          stats[result.eventType].totalWins++;
+          stats[eventType].totalWins++;
         } else if (team.outcome === 'loss') {
           teamStats.losses++;
-          stats[result.eventType].totalLosses++;
+          stats[eventType].totalLosses++;
         } else if (team.outcome === 'draw') {
           teamStats.draws++;
-          stats[result.eventType].totalDraws++;
+          stats[eventType].totalDraws++;
         }
 
-        stats[result.eventType].totalGames++;
-        stats[result.eventType].totalGoalsFor += team.ourScore;
-        stats[result.eventType].totalGoalsAgainst += team.opponentScore;
+        stats[eventType].totalGames++;
+        stats[eventType].totalGoalsFor += team.ourScore;
+        stats[eventType].totalGoalsAgainst += team.opponentScore;
       });
     });
 
@@ -240,7 +243,10 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   };
 
   const getEventTypeBadgeColor = (eventType: string) => {
-    switch (eventType) {
+    // Add null check for eventType
+    if (!eventType) return 'bg-blue-500';
+    
+    switch (eventType.toLowerCase()) {
       case 'match': 
       case 'fixture': 
       case 'friendly': 
@@ -256,14 +262,15 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
 
   const getFilteredResults = () => {
     return results.filter(result => {
-      const eventTypeMatch = selectedEventType === 'all' || result.eventType === selectedEventType;
+      const eventType = result.eventType || 'match';
+      const eventTypeMatch = selectedEventType === 'all' || eventType === selectedEventType;
       const teamMatch = selectedTeam === 'all' || result.teams.some(team => team.teamName === selectedTeam);
       return eventTypeMatch && teamMatch;
     });
   };
 
   const getUniqueEventTypes = () => {
-    return Array.from(new Set(results.map(result => result.eventType)));
+    return Array.from(new Set(results.map(result => result.eventType || 'match').filter(Boolean)));
   };
 
   const getUniqueTeams = () => {
@@ -336,7 +343,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
                   <SelectItem value="all">All Event Types</SelectItem>
                   {getUniqueEventTypes().map(eventType => (
                     <SelectItem key={eventType} value={eventType}>
-                      {eventType.charAt(0).toUpperCase() + eventType.slice(1)}
+                      {eventType && eventType.charAt(0).toUpperCase() + eventType.slice(1)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -379,7 +386,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
               <div key={eventStat.eventType} className="border rounded-lg p-4">
                 <div className="flex items-center gap-2 mb-4">
                   <Badge className={`text-white text-sm ${getEventTypeBadgeColor(eventStat.eventType)}`}>
-                    {eventStat.eventType.toUpperCase()}
+                    {(eventStat.eventType || 'MATCH').toUpperCase()}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
                     {eventStat.totalGames} games • {eventStat.totalWins}W {eventStat.totalDraws}D {eventStat.totalLosses}L • 
@@ -480,7 +487,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
                           </TableCell>
                           <TableCell rowSpan={selectedTeam === 'all' ? result.teams.length : 1} className="border-r">
                             <Badge className={`text-white text-xs ${getEventTypeBadgeColor(result.eventType)}`}>
-                              {result.eventType}
+                              {(result.eventType || 'match').toLowerCase()}
                             </Badge>
                           </TableCell>
                         </>
