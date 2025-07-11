@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, isToday, isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { WeatherService } from '@/services/weatherService';
+import { QuickAvailabilityControls } from './QuickAvailabilityControls';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -236,6 +237,24 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     return !isMatchType(event.event_type) || !event.opponent;
   };
 
+  const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
+    // Show availability controls for future events only
+    const eventDate = new Date(event.date);
+    return eventDate >= new Date() || isToday(eventDate);
+  };
+
+  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
+    // Update local state to reflect the change immediately
+    setUserAvailability(prev => {
+      const existing = prev.find(a => a.eventId === eventId);
+      if (existing) {
+        return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
+      } else {
+        return [...prev, { eventId, status, source: 'manual' }];
+      }
+    });
+  };
+
   const sortedEvents = [...events].sort((a, b) => 
     new Date(a.date).getTime() - new Date(b.date).getTime()
   );
@@ -250,6 +269,8 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         const team = teams.find(t => t.id === event.team_id);
         const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
         const outlineClass = getEventOutlineClass(event.id);
+        const availabilityStatus = getAvailabilityStatus(event.id);
+        const showAvailabilityControls = shouldShowAvailabilityControls(event);
         
         return (
           <Card key={event.id} className={`flex flex-col ${outlineClass}`}>
@@ -347,6 +368,18 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   <p className="text-sm text-muted-foreground line-clamp-2">
                     {event.description}
                   </p>
+                )}
+
+                {/* Availability Controls - New Addition */}
+                {showAvailabilityControls && (
+                  <div className="pt-2 border-t">
+                    <QuickAvailabilityControls
+                      eventId={event.id}
+                      currentStatus={availabilityStatus}
+                      size="sm"
+                      onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                    />
+                  </div>
                 )}
               </div>
               

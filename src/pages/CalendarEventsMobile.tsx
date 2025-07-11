@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,6 +18,7 @@ import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
+import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -134,6 +134,24 @@ export default function CalendarEventsMobile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
+    // Show availability controls for future events only
+    const eventDate = new Date(event.date);
+    return eventDate >= new Date() || isToday(eventDate);
+  };
+
+  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
+    // Update local state to reflect the change immediately
+    setUserAvailability(prev => {
+      const existing = prev.find(a => a.eventId === eventId);
+      if (existing) {
+        return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
+      } else {
+        return [...prev, { eventId, status, source: 'manual' }];
+      }
+    });
   };
 
   const getFilteredEvents = () => {
@@ -395,6 +413,7 @@ export default function CalendarEventsMobile() {
                   const teamScores = getAllTeamScores(event);
                   const borderClass = getEventBorderClass(event.id);
                   const availabilityStatus = getAvailabilityStatus(event.id);
+                  const showAvailabilityControls = shouldShowAvailabilityControls(event);
                   
                   return (
                     <Card 
@@ -472,6 +491,18 @@ export default function CalendarEventsMobile() {
                           {isMatchType(event.event_type) && (
                             <div className="text-xs text-gray-500 text-center">
                               {event.game_format || 'Match'} • {event.is_home ? 'Home' : 'Away'}
+                            </div>
+                          )}
+
+                          {/* Availability Controls - New Addition */}
+                          {showAvailabilityControls && (
+                            <div className="flex justify-center pt-2 border-t">
+                              <QuickAvailabilityControls
+                                eventId={event.id}
+                                currentStatus={availabilityStatus}
+                                size="sm"
+                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                              />
                             </div>
                           )}
                         </div>

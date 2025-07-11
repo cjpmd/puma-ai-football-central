@@ -4,12 +4,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Edit, Users, Trophy, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isPast } from 'date-fns';
 import { WeatherService } from '@/services/weatherService';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
+import { QuickAvailabilityControls } from './QuickAvailabilityControls';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -236,6 +237,24 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     return !isMatchType(event.event_type) || !event.opponent;
   };
 
+  const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
+    // Show availability controls for future events only
+    const eventDate = new Date(event.date);
+    return eventDate >= new Date() || isToday(eventDate);
+  };
+
+  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
+    // Update local state to reflect the change immediately
+    setUserAvailability(prev => {
+      const existing = prev.find(a => a.eventId === eventId);
+      if (existing) {
+        return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
+      } else {
+        return [...prev, { eventId, status, source: 'manual' }];
+      }
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Month Navigation */}
@@ -264,12 +283,12 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         {calendarDays.map(day => {
           const dayEvents = getEventsForDay(day);
           const isCurrentMonth = isSameMonth(day, currentDate);
-          const isToday = isSameDay(day, new Date());
+          const isEventToday = isSameDay(day, new Date());
 
           return (
             <Card 
               key={day.toISOString()} 
-              className={`min-h-[120px] ${!isCurrentMonth ? 'opacity-50' : ''} ${isToday ? 'ring-2 ring-primary' : ''}`}
+              className={`min-h-[120px] ${!isCurrentMonth ? 'opacity-50' : ''} ${isEventToday ? 'ring-2 ring-primary' : ''}`}
             >
               <CardContent className="p-2 h-full">
                 <div className="flex flex-col h-full">
@@ -286,6 +305,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                       const team = teams?.find(t => t.id === event.team_id);
                       const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
                       const borderClass = getEventBorderClass(event.id);
+                      const availabilityStatus = getAvailabilityStatus(event.id);
+                      const showAvailabilityControls = shouldShowAvailabilityControls(event);
                       
                       return (
                         <div key={event.id} className={`space-y-1 p-1 rounded ${borderClass}`}>
@@ -334,6 +355,18 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                                   {score.teamName}: {score.ourScore} - {score.opponentScore}
                                 </div>
                               ))}
+                            </div>
+                          )}
+
+                          {/* Availability Controls - New Addition */}
+                          {showAvailabilityControls && (
+                            <div className="mt-1">
+                              <QuickAvailabilityControls
+                                eventId={event.id}
+                                currentStatus={availabilityStatus}
+                                size="sm"
+                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                              />
                             </div>
                           )}
                           
