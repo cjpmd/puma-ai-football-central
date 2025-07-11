@@ -40,7 +40,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
-  const { teams } = useAuth();
+  const { teams, user } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -50,25 +50,55 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     loadEventWeather();
     loadPerformanceCategories();
     loadUserAvailability();
-  }, [events, teams]);
+  }, [events, teams, user]);
 
   const loadUserAvailability = async () => {
     try {
+      if (!user?.id) {
+        console.log('No user ID available for availability loading');
+        return;
+      }
+
+      console.log('Loading availability for user:', user.id);
+
+      // Get availability records for this user (could be direct user availability or player-linked availability)
       const { data: availabilityData, error } = await supabase
         .from('event_availability')
         .select('event_id, status')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', user.id);
 
       if (error) {
         console.error('Error loading user availability:', error);
         return;
       }
 
+      console.log('Direct user availability data:', availabilityData);
+
+      // Also check for availability through linked players
+      const { data: linkedPlayerData, error: linkedError } = await supabase
+        .from('user_players')
+        .select(`
+          player_id,
+          players!inner(
+            id,
+            name
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (linkedError) {
+        console.error('Error loading linked players:', linkedError);
+      } else {
+        console.log('Linked players for user:', linkedPlayerData);
+      }
+
+      // For now, use the direct availability data
       const availability = (availabilityData || []).map(item => ({
         eventId: item.event_id,
         status: item.status as 'pending' | 'available' | 'unavailable'
       }));
 
+      console.log('Processed user availability:', availability);
       setUserAvailability(availability);
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);

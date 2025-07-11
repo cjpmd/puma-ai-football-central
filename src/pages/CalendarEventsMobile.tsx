@@ -17,17 +17,13 @@ import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
+import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
   { id: 'training', label: 'TRAINING' },
   { id: 'friendlies', label: 'FRIENDLIES' },
 ];
-
-interface UserAvailability {
-  eventId: string;
-  status: 'pending' | 'available' | 'unavailable';
-}
 
 export default function CalendarEventsMobile() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
@@ -40,7 +36,7 @@ export default function CalendarEventsMobile() {
   const [showEventDetails, setShowEventDetails] = useState(false);
   const [showExpandedTeamSelection, setShowExpandedTeamSelection] = useState(false);
   const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
-  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
+  const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const { toast } = useToast();
   const { teams, user } = useAuth();
 
@@ -48,7 +44,6 @@ export default function CalendarEventsMobile() {
     loadEvents();
   }, [teams]);
 
-  // Separate effect for loading availability after events are loaded
   useEffect(() => {
     if (events.length > 0 && user?.id) {
       loadUserAvailability();
@@ -62,43 +57,8 @@ export default function CalendarEventsMobile() {
         return;
       }
 
-      console.log('Loading availability for user:', user.id);
-      
-      // First, let's check what's in the event_availability table for debugging
-      const { data: allAvailabilityData, error: allError } = await supabase
-        .from('event_availability')
-        .select('*')
-        .limit(10);
-
-      console.log('All availability data (first 10 rows):', allAvailabilityData);
-      
-      // Now check specifically for this user
-      const { data: userSpecificData, error: userError } = await supabase
-        .from('event_availability')
-        .select('*')
-        .eq('user_id', user.id);
-
-      console.log('User-specific availability data:', userSpecificData);
-
-      // Original query for actual use
-      const { data: availabilityData, error } = await supabase
-        .from('event_availability')
-        .select('event_id, status')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error loading user availability:', error);
-        return;
-      }
-
-      console.log('Raw availability data from database:', availabilityData);
-
-      const availability = (availabilityData || []).map(item => ({
-        eventId: item.event_id,
-        status: item.status as 'pending' | 'available' | 'unavailable'
-      }));
-
-      console.log('Processed user availability:', availability);
+      const eventIds = events.map(event => event.id);
+      const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
       setUserAvailability(availability);
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
@@ -108,26 +68,21 @@ export default function CalendarEventsMobile() {
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     const status = availability?.status || null;
-    console.log(`Availability status for event ${eventId}:`, status, 'from availability array:', userAvailability);
+    console.log(`Availability status for event ${eventId.slice(-6)}:`, status);
     return status;
   };
 
   const getEventBorderClass = (eventId: string): string => {
     const status = getAvailabilityStatus(eventId);
-    console.log(`Getting border class for event ${eventId}, status: ${status}`);
     
     switch (status) {
       case 'available':
-        console.log('Applying green border');
         return 'border-l-green-500 border-l-4';
       case 'unavailable':
-        console.log('Applying red border');
         return 'border-l-red-500 border-l-4';
       case 'pending':
-        console.log('Applying amber border');
         return 'border-l-amber-500 border-l-4';
       default:
-        console.log('Applying gray border (no status)');
         return 'border-l-gray-300 border-l-4';
     }
   };
@@ -388,11 +343,6 @@ export default function CalendarEventsMobile() {
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
-  const handleRefreshAvailability = () => {
-    console.log('Manually refreshing availability...');
-    loadUserAvailability();
-  };
-
   if (showExpandedTeamSelection && selectedEvent) {
     return (
       <MobileLayout>
@@ -424,32 +374,6 @@ export default function CalendarEventsMobile() {
       tabs={tabs}
     >
       <div className="space-y-6">
-        {/* Enhanced Debug info - remove this after testing */}
-        <div className="p-3 bg-yellow-50 border border-yellow-200 text-xs rounded">
-          <div className="font-semibold mb-2">Debug Information:</div>
-          <div>User ID: {user?.id}</div>
-          <div>User Email: {user?.email}</div>
-          <div>Availability entries found: {userAvailability.length}</div>
-          <div>Events loaded: {events.length}</div>
-          <Button size="sm" onClick={handleRefreshAvailability} className="mt-2 mb-2">
-            Refresh Availability Data
-          </Button>
-          {userAvailability.length > 0 ? (
-            <div>
-              <div className="font-medium">Current availability records:</div>
-              {userAvailability.map(avail => (
-                <div key={avail.eventId} className="text-xs ml-2">
-                  Event {avail.eventId.slice(-6)}: {avail.status}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-red-600 font-medium">
-              No availability records found for this user in the database.
-            </div>
-          )}
-        </div>
-
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
@@ -478,8 +402,6 @@ export default function CalendarEventsMobile() {
                   const teamScores = getAllTeamScores(event);
                   const borderClass = getEventBorderClass(event.id);
                   const availabilityStatus = getAvailabilityStatus(event.id);
-                  
-                  console.log(`Rendering event ${event.id} with border class: ${borderClass}`);
                   
                   return (
                     <Card 
