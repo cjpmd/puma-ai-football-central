@@ -8,7 +8,7 @@ interface PositionSlotProps {
   position: PositionSlotType;
   player?: SquadPlayer;
   isCaptain?: boolean;
-  nameDisplayOption?: 'surname' | 'first' | 'full' | 'initials';
+  nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
   isLarger?: boolean;
 }
 
