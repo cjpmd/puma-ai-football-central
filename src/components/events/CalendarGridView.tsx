@@ -150,15 +150,16 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     }
   };
 
-  const getAvailabilityStatus = useCallback((eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     const status = availability?.status || null;
     console.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
     return status;
-  }, [userAvailability]);
+  };
 
   const getEventBorderClass = useCallback((eventId: string): string => {
-    const status = getAvailabilityStatus(eventId);
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    const status = availability?.status || null;
     console.log(`Border class for event ${eventId.slice(-6)}:`, status);
     
     switch (status) {
@@ -171,7 +172,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       default:
         return 'border-l-blue-500 border-l-2';
     }
-  }, [getAvailabilityStatus]);
+  }, [userAvailability]);
 
   const getEventsForDay = (day: Date) => {
     return events.filter(event => isSameDay(new Date(event.date), day));
