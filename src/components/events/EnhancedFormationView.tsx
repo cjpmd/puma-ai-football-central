@@ -70,8 +70,8 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
     return positions;
   };
 
-  // Include ALL squad players in the formation view (available, pending, unavailable)
   const getPositionedPlayers = () => {
+    // Include ALL squad players in the formation view (available, pending, unavailable)
     return allPlayers.filter(player => selectedPlayers.includes(player.id));
   };
 
@@ -152,7 +152,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* Selected Players - Show ALL players including pending and unavailable */}
+      {/* Selected Players */}
       {positionedPlayers.length > 0 && (
         <Card>
           <CardHeader>
@@ -202,7 +202,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         </Card>
       )}
 
-      {/* Bench Players - Show ALL players including pending and unavailable */}
+      {/* Bench Players */}
       {benchPlayers.length > 0 && (
         <Card>
           <CardHeader>
@@ -240,7 +240,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         </Card>
       )}
 
-      {/* Unassigned Players (overflow) - Show ALL players including pending and unavailable */}
+      {/* Unassigned Players (overflow) */}
       {unassignedPlayers.length > 0 && (
         <Card className="border-orange-200">
           <CardHeader>
