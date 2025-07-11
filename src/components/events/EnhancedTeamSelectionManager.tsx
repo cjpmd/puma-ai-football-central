@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -47,13 +48,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         setEventTeams(data || []);
         
         // If no teams exist but event has teams > 1, create them
-        if ((!data || data.length === 0) && event.teams > 1) {
+        const numTeams = typeof event.teams === 'number' ? event.teams : (Array.isArray(event.teams) ? event.teams.length : 1);
+        if ((!data || data.length === 0) && numTeams > 1) {
           const teamsToCreate = [];
-          for (let i = 1; i <= event.teams; i++) {
+          for (let i = 1; i <= numTeams; i++) {
             teamsToCreate.push({
               event_id: event.id,
+              team_id: event.team_id,
               team_number: i,
-              team_name: `Team ${i}`,
             });
           }
           
@@ -142,7 +144,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                       size="sm"
                       onClick={() => handleTeamNumberChange(team.team_number)}
                     >
-                      {team.team_name || `Team ${team.team_number}`}
+                      Team {team.team_number}
                     </Button>
                   ))}
                 </div>

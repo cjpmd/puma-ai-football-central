@@ -117,21 +117,28 @@ export const EventForm: React.FC<EventFormProps> = ({
 
         if (error) throw error;
 
-        toast.success('Event updated successfully');
+        toast({
+          title: 'Success',
+          description: 'Event updated successfully',
+        });
         if (onEventCreated) onEventCreated(event.id);
         eventId = event.id;
       } else {
         // Create new event using the service
         const newEvent = await eventsService.createEvent({
           ...eventData,
-          team_id: teamId,
+          teamId: teamId,
+          type: eventData.event_type,
         });
         
         if (!newEvent) {
           throw new Error('Failed to create event');
         }
         
-        toast.success('Event created successfully');
+        toast({
+          title: 'Success',
+          description: 'Event created successfully',
+        });
         if (onEventCreated) onEventCreated(newEvent.id);
         eventId = newEvent.id;
       }
@@ -144,8 +151,8 @@ export const EventForm: React.FC<EventFormProps> = ({
               .from('event_teams')
               .insert({
                 event_id: eventId,
+                team_id: teamId,
                 team_number: i,
-                team_name: `Team ${i}`,
               });
           }
         }
