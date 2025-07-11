@@ -67,7 +67,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     } finally {
       setIsLoadingAvailability(false);
     }
-  }, [user?.id, events]);
+  }, [user?.id, events.length]);
 
   useEffect(() => {
     loadEventWeather();
@@ -75,10 +75,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   }, [events, teams]);
 
   useEffect(() => {
-    if (!isLoadingAvailability) {
+    if (user?.id && events.length > 0 && !isLoadingAvailability) {
       loadUserAvailability();
     }
-  }, [loadUserAvailability, isLoadingAvailability]);
+  }, [user?.id, events.length]);
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
