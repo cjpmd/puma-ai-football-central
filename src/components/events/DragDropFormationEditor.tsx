@@ -501,9 +501,10 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       period.substitutes.forEach(id => allUsedPlayerIds.add(id));
     });
     
+    // Include both available and pending players
     return squadPlayers.filter(player => 
       !allUsedPlayerIds.has(player.id) && 
-      player.availabilityStatus === 'available'
+      (player.availabilityStatus === 'available' || player.availabilityStatus === 'pending')
     );
   };
 
