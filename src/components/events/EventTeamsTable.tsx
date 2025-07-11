@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +33,8 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   const [eventData, setEventData] = useState<any>(null);
   const [isNotificationModalOpen, setIsNotificationModalOpen] = useState(false);
   const [squadPlayers, setSquadPlayers] = useState<any[]>([]);
+  const [selectedPlayers, setSelectedPlayers] = useState<string[]>([]);
+  const [substitutePlayers, setSubstitutePlayers] = useState<string[]>([]);
   const [globalCaptainId, setGlobalCaptainId] = useState<string>('');
   const [availabilityCount, setAvailabilityCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -86,10 +87,23 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
 
   const handleSquadChange = (newSquadPlayers: any[]) => {
     setSquadPlayers(newSquadPlayers);
+    // Convert squad players to selected players format
+    const playerIds = newSquadPlayers.map(p => p.id);
+    setSelectedPlayers(playerIds);
   };
 
   const handleCaptainChange = (captainId: string) => {
     setGlobalCaptainId(captainId);
+  };
+
+  const handlePositionChange = (position: string, playerId: string | null) => {
+    // Handle position changes in formation
+    console.log('Position change:', position, playerId);
+  };
+
+  const handlePlayerRemove = (playerId: string) => {
+    // Handle player removal from formation
+    setSelectedPlayers(prev => prev.filter(id => id !== playerId));
   };
 
   if (loading) {
@@ -194,14 +208,15 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
                 onFormationChange={(formation) => console.log('Formation changed:', formation)}
               />
               <EnhancedFormationView
-                players={squadPlayers}
                 formation="4-3-3"
                 gameFormat={gameFormat as GameFormat}
+                selectedPlayers={selectedPlayers}
+                substitutePlayers={substitutePlayers}
                 captainId={globalCaptainId}
-                onPlayerMove={() => {}}
-                onSubstitution={() => {}}
-                periodNumber={1}
-                readonly={false}
+                allPlayers={squadPlayers}
+                onPositionChange={handlePositionChange}
+                onCaptainChange={handleCaptainChange}
+                onPlayerRemove={handlePlayerRemove}
               />
             </div>
           ) : (
