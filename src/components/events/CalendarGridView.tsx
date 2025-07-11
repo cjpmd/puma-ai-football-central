@@ -37,7 +37,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
-  const [isLoadingAvailability, setIsLoadingAvailability] = useState(false);
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
   const { teams, user } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
@@ -45,12 +45,11 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const loadUserAvailability = useCallback(async () => {
-    if (!user?.id || events.length === 0) {
+    if (!user?.id || events.length === 0 || availabilityLoaded) {
       return;
     }
 
     try {
-      setIsLoadingAvailability(true);
       console.log('=== CALENDAR GRID VIEW DEBUG ===');
       console.log('Loading availability for user:', user.id);
 
@@ -61,12 +60,16 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       console.log('Received availability in calendar:', availability);
       
       setUserAvailability(availability);
+      setAvailabilityLoaded(true);
       console.log('=== END CALENDAR GRID VIEW DEBUG ===');
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
-    } finally {
-      setIsLoadingAvailability(false);
     }
+  }, [user?.id, events.length, availabilityLoaded]);
+
+  // Reset availability loaded state when user or events change
+  useEffect(() => {
+    setAvailabilityLoaded(false);
   }, [user?.id, events.length]);
 
   useEffect(() => {
@@ -75,10 +78,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   }, [events, teams]);
 
   useEffect(() => {
-    if (user?.id && events.length > 0 && !isLoadingAvailability) {
+    if (user?.id && events.length > 0 && !availabilityLoaded) {
       loadUserAvailability();
     }
-  }, [user?.id, events.length]);
+  }, [user?.id, events.length, availabilityLoaded, loadUserAvailability]);
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
