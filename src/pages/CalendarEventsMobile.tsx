@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -333,13 +334,6 @@ export default function CalendarEventsMobile() {
     }
   };
 
-  const needsSetup = (event: DatabaseEvent) => {
-    const eventDate = new Date(event.date);
-    const today = new Date();
-    const daysDiff = Math.ceil((eventDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
-    return daysDiff <= 7 && daysDiff >= 0; // Event is within 7 days
-  };
-
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
@@ -398,7 +392,6 @@ export default function CalendarEventsMobile() {
                   const eventDate = new Date(event.date);
                   const isEventToday = isToday(eventDate);
                   const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
-                  const eventNeedsSetup = needsSetup(event);
                   const teamScores = getAllTeamScores(event);
                   const borderClass = getEventBorderClass(event.id);
                   const availabilityStatus = getAvailabilityStatus(event.id);
@@ -479,43 +472,6 @@ export default function CalendarEventsMobile() {
                           {isMatchType(event.event_type) && (
                             <div className="text-xs text-gray-500 text-center">
                               {event.game_format || 'Match'} • {event.is_home ? 'Home' : 'Away'}
-                            </div>
-                          )}
-
-                          {/* Action Buttons - Only show if event needs setup */}
-                          {eventNeedsSetup && !isEventPast && (
-                            <div className="bg-yellow-50 p-3 rounded-lg">
-                              <div className="text-xs text-yellow-800 text-center mb-2">
-                                Your {event.event_type} needs setting up
-                              </div>
-                              <div className="flex gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                  onClick={(e) => handleEventAction(event, 'setup', e)}
-                                >
-                                  SETUP
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                  onClick={(e) => handleEventAction(event, 'squad', e)}
-                                >
-                                  SQUAD
-                                </Button>
-                                {completed && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="flex-1 text-blue-600 border-blue-600 hover:bg-blue-50"
-                                    onClick={(e) => handleEventAction(event, 'report', e)}
-                                  >
-                                    REPORT
-                                  </Button>
-                                )}
-                              </div>
                             </div>
                           )}
                         </div>
@@ -668,26 +624,22 @@ export default function CalendarEventsMobile() {
               )}
               
               <div className="flex gap-2 mt-6">
-                {needsSetup(selectedEvent) && !isEventCompleted(selectedEvent) && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEventAction(selectedEvent, 'setup')}
-                    >
-                      SETUP
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEventAction(selectedEvent, 'squad')}
-                    >
-                      SQUAD
-                    </Button>
-                  </>
-                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleEventAction(selectedEvent, 'setup')}
+                >
+                  SETUP
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  onClick={() => handleEventAction(selectedEvent, 'squad')}
+                >
+                  SQUAD
+                </Button>
                 {isEventCompleted(selectedEvent) && (
                   <Button
                     variant="outline"
