@@ -71,11 +71,13 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
   };
 
   const getPositionedPlayers = () => {
-    // Include ALL squad players in the formation view (available, pending, unavailable)
+    // Show ALL squad players in the formation view regardless of availability status
+    // This includes available, pending, unavailable, and maybe players
     return allPlayers.filter(player => selectedPlayers.includes(player.id));
   };
 
   const getBenchPlayers = () => {
+    // Show ALL substitute players regardless of availability status
     return allPlayers.filter(player => substitutePlayers.includes(player.id));
   };
 
@@ -84,6 +86,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
       .filter(pos => pos.playerId)
       .map(pos => pos.playerId);
     
+    // Show ALL selected players that aren't positioned, regardless of availability
     return allPlayers.filter(player => 
       selectedPlayers.includes(player.id) && 
       !positionedPlayerIds.includes(player.id)
@@ -98,6 +101,8 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         return 'border-yellow-200 bg-yellow-50';
       case 'unavailable':
         return 'border-red-200 bg-red-50 opacity-70';
+      case 'maybe':
+        return 'border-orange-200 bg-orange-50';
       default:
         return 'border-gray-200 bg-gray-50';
     }
@@ -111,6 +116,8 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         return <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">Pending</Badge>;
       case 'unavailable':
         return <Badge variant="outline" className="text-xs bg-red-100 text-red-800">Unavailable</Badge>;
+      case 'maybe':
+        return <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">Maybe</Badge>;
       default:
         return null;
     }
@@ -152,7 +159,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         </CardContent>
       </Card>
 
-      {/* Selected Players */}
+      {/* Selected Players - Show ALL squad players regardless of availability */}
       {positionedPlayers.length > 0 && (
         <Card>
           <CardHeader>
@@ -202,7 +209,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         </Card>
       )}
 
-      {/* Bench Players */}
+      {/* Bench Players - Show ALL substitute players regardless of availability */}
       {benchPlayers.length > 0 && (
         <Card>
           <CardHeader>
@@ -240,7 +247,7 @@ export const EnhancedFormationView: React.FC<EnhancedFormationViewProps> = ({
         </Card>
       )}
 
-      {/* Unassigned Players (overflow) */}
+      {/* Unassigned Players (overflow) - Show ALL unassigned players */}
       {unassignedPlayers.length > 0 && (
         <Card className="border-orange-200">
           <CardHeader>
