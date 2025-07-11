@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Event } from '@/types';
 
@@ -5,6 +6,15 @@ export const eventsService = {
   async createEvent(eventData: Partial<Event>) {
     try {
       console.log('Creating event with data:', eventData);
+      
+      // Ensure we have required fields
+      if (!eventData.teamId) {
+        throw new Error('Team ID is required');
+      }
+      
+      if (!eventData.type) {
+        throw new Error('Event type is required');
+      }
       
       const formattedData = {
         team_id: eventData.teamId,
@@ -22,12 +32,14 @@ export const eventsService = {
         opponent: eventData.opponent,
         is_home: eventData.isHome,
         kit_selection: eventData.kitSelection,
-        teams: eventData.teams,  // Save the teams array
+        teams: eventData.teams || [],  // Save the teams array
         facility_id: eventData.facilityId || null, // Convert empty string to null
         meeting_time: eventData.meetingTime,
         notes: eventData.notes,
         training_notes: eventData.trainingNotes
       };
+      
+      console.log('Formatted data for database:', formattedData);
       
       const { data, error } = await supabase
         .from('events')
@@ -87,14 +99,19 @@ export const eventsService = {
     try {
       console.log('Updating event with data:', eventData);
       
+      // Ensure we have required fields for updates
+      if (!eventData.teamId && !eventData.team_id) {
+        throw new Error('Team ID is required');
+      }
+      
       const formattedData = {
-        team_id: eventData.teamId,
+        team_id: eventData.teamId || eventData.team_id,
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
         start_time: eventData.startTime,
         end_time: eventData.endTime,
-        event_type: eventData.type,
+        event_type: eventData.type || eventData.event_type,
         location: eventData.location,
         latitude: eventData.latitude,
         longitude: eventData.longitude,
@@ -103,7 +120,7 @@ export const eventsService = {
         opponent: eventData.opponent,
         is_home: eventData.isHome,
         kit_selection: eventData.kitSelection,
-        teams: eventData.teams,  // Save the teams array
+        teams: eventData.teams || [],  // Save the teams array
         facility_id: eventData.facilityId || null, // Convert empty string to null
         meeting_time: eventData.meetingTime,
         notes: eventData.notes,
