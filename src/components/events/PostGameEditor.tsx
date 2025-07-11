@@ -31,11 +31,13 @@ interface EventData {
 interface Player {
   id: string;
   name: string;
+  squadNumber: number;
 }
 
-interface PerformanceCategory {
-  id: string;
-  name: string;
+interface TeamSelection {
+  teamNumber: number;
+  performanceCategoryName: string;
+  players: Player[];
 }
 
 interface Scores {
@@ -46,9 +48,8 @@ interface Scores {
 
 export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen, onClose }) => {
   const [event, setEvent] = useState<EventData | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
-  const [performanceCategories, setPerformanceCategories] = useState<PerformanceCategory[]>([]);
-  const [playerOfMatchId, setPlayerOfMatchId] = useState<string>('none');
+  const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
+  const [playerOfMatchByTeam, setPlayerOfMatchByTeam] = useState<{[teamNumber: number]: string}>({});
   const [scores, setScores] = useState<Scores>({});
   const [coachNotes, setCoachNotes] = useState('');
   const [staffNotes, setStaffNotes] = useState('');
@@ -59,7 +60,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   useEffect(() => {
     if (eventId && isOpen) {
       loadEventData();
-      loadPlayers();
+      loadTeamSelections();
     }
   }, [eventId, isOpen]);
 
@@ -86,7 +87,19 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       const scoresData = eventData?.scores as Scores | null;
       console.log('Scores data:', scoresData);
       setScores(scoresData || {});
-      setPlayerOfMatchId(eventData?.player_of_match_id || 'none');
+      
+      // Handle POTM by team
+      const potmByTeam: {[teamNumber: number]: string} = {};
+      if (scoresData) {
+        Object.keys(scoresData).forEach(key => {
+          if (key.startsWith('potm_team_')) {
+            const teamNumber = parseInt(key.replace('potm_team_', ''));
+            potmByTeam[teamNumber] = scoresData[key];
+          }
+        });
+      }
+      setPlayerOfMatchByTeam(potmByTeam);
+      
       setCoachNotes(eventData?.coach_notes || '');
       setStaffNotes(eventData?.staff_notes || '');
     } catch (error: any) {
@@ -101,60 +114,89 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     }
   };
 
-  const loadPlayers = async () => {
+  const loadTeamSelections = async () => {
     try {
-      console.log('Loading players for event:', eventId);
+      console.log('Loading team selections for event:', eventId);
       
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('team_id')
-        .eq('id', eventId)
-        .single();
+      // Get unique team selections with performance categories
+      const { data: selections, error } = await supabase
+        .from('event_selections')
+        .select(`
+          team_number,
+          performance_category_id,
+          player_positions,
+          performance_categories (
+            id,
+            name
+          )
+        `)
+        .eq('event_id', eventId);
 
-      if (eventError) {
-        console.error('Error loading event for team_id:', eventError);
-        throw eventError;
-      }
+      if (error) throw error;
 
-      if (!eventData?.team_id) {
-        console.error('No team_id found for event');
-        return;
-      }
+      console.log('Raw selections:', selections);
 
-      const { data: playersData, error: playersError } = await supabase
-        .from('players')
-        .select('id, name')
-        .eq('team_id', eventData.team_id)
-        .eq('status', 'active');
-
-      if (playersError) {
-        console.error('Error loading players:', playersError);
-        throw playersError;
-      }
-
-      console.log('Players loaded:', playersData);
-      setPlayers(playersData || []);
-
-      // Load performance categories
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('performance_categories')
-        .select('*')
-        .eq('team_id', eventData.team_id);
-
-      if (categoriesError) {
-        console.error('Error loading performance categories:', categoriesError);
-        throw categoriesError;
-      }
+      // Create unique teams map to avoid duplicates based on performance category
+      const uniqueTeamsMap = new Map();
       
-      console.log('Performance categories loaded:', categoriesData);
-      setPerformanceCategories(categoriesData || []);
-    } catch (error: any) {
-      console.error('Error loading players:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to load players',
-        variant: 'destructive',
-      });
+      for (const selection of selections || []) {
+        // Use performance_category_id as the key for uniqueness
+        const teamKey = selection.performance_category_id || `team_${selection.team_number}`;
+        
+        if (!uniqueTeamsMap.has(teamKey)) {
+          let performanceCategoryName = `Team ${selection.team_number}`;
+
+          // Get performance category name if set
+          if (selection.performance_categories) {
+            const category = selection.performance_categories as any;
+            performanceCategoryName = category.name;
+          }
+
+          // Get all players for this performance category across all periods
+          const allPlayerIds = new Set<string>();
+          selections
+            .filter(s => (s.performance_category_id || `team_${s.team_number}`) === teamKey)
+            .forEach(s => {
+              const playerPositions = (s.player_positions as any[] || []);
+              playerPositions.forEach(pp => {
+                const playerId = pp.playerId || pp.player_id;
+                if (playerId && typeof playerId === 'string') {
+                  allPlayerIds.add(playerId);
+                }
+              });
+            });
+
+          const players: Player[] = [];
+
+          if (allPlayerIds.size > 0) {
+            const { data: playersData } = await supabase
+              .from('players')
+              .select('id, name, squad_number')
+              .in('id', Array.from(allPlayerIds));
+
+            if (playersData) {
+              players.push(...playersData.map(p => ({
+                id: p.id,
+                name: p.name,
+                squadNumber: p.squad_number || 0
+              })));
+            }
+          }
+
+          uniqueTeamsMap.set(teamKey, {
+            teamNumber: selection.team_number,
+            performanceCategoryName,
+            players: players.sort((a, b) => a.squadNumber - b.squadNumber)
+          });
+        }
+      }
+
+      const teamData = Array.from(uniqueTeamsMap.values()).sort((a, b) => a.teamNumber - b.teamNumber);
+      console.log('Processed team selections:', teamData);
+      setTeamSelections(teamData);
+      
+    } catch (error) {
+      console.error('Error loading team selections:', error);
     }
   };
 
@@ -162,16 +204,32 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     setScores(prev => ({ ...prev, [field]: value }));
   };
 
+  const handlePOTMChange = (teamNumber: number, playerId: string) => {
+    setPlayerOfMatchByTeam(prev => ({
+      ...prev,
+      [teamNumber]: playerId === 'none' ? '' : playerId
+    }));
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
       console.log('Saving scores:', scores);
+      console.log('Saving POTM by team:', playerOfMatchByTeam);
+
+      // Prepare scores data with POTM for each team
+      const updatedScores = { ...scores };
+      Object.entries(playerOfMatchByTeam).forEach(([teamNumber, playerId]) => {
+        if (playerId) {
+          updatedScores[`potm_team_${teamNumber}`] = playerId;
+        }
+      });
 
       const { error } = await supabase
         .from('events')
         .update({
-          scores: scores,
-          player_of_match_id: playerOfMatchId === 'none' ? null : playerOfMatchId,
+          scores: updatedScores,
+          player_of_match_id: Object.values(playerOfMatchByTeam).find(id => id) || null, // Use first team's POTM as main POTM for backwards compatibility
           coach_notes: coachNotes,
           staff_notes: staffNotes,
         })
@@ -238,44 +296,25 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         )}
       </div>
 
-      {/* Player of the Match */}
-      {players.length > 0 && (
+      {/* Only show team results if we have actual team selections */}
+      {teamSelections.length > 0 ? (
         <div>
-          <Label>Player of the Match</Label>
-          <Select value={playerOfMatchId} onValueChange={setPlayerOfMatchId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select player of the match" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {players.map((player) => (
-                <SelectItem key={player.id} value={player.id}>
-                  {player.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
-
-      {/* Scores Section */}
-      <div>
-        <Label className="text-base font-semibold">Match Scores</Label>
-        
-        {performanceCategories.length > 1 ? (
-          // Multiple teams/categories - show performance category names
+          <Label className="text-base font-semibold">Match Results</Label>
+          
           <div className="space-y-4 mt-3">
-            {performanceCategories.map((category, index) => (
-              <div key={category.id} className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">{category.name}</h4>
-                <div className="grid grid-cols-3 gap-4 items-center">
+            {teamSelections.map((team) => (
+              <div key={team.teamNumber} className="border rounded-lg p-4">
+                <h4 className="font-medium mb-3">{team.performanceCategoryName}</h4>
+                
+                {/* Score Input */}
+                <div className="grid grid-cols-3 gap-4 items-center mb-4">
                   <div className="text-center">
                     <Label className="text-sm text-gray-600">Our Score</Label>
                     <Input
                       type="number"
                       min="0"
-                      value={scores[`team_${index + 1}`] || ''}
-                      onChange={(e) => handleScoreChange(`team_${index + 1}`, e.target.value)}
+                      value={scores[`team_${team.teamNumber}`] || ''}
+                      onChange={(e) => handleScoreChange(`team_${team.teamNumber}`, e.target.value)}
                       className="text-center text-lg font-bold h-12 mt-1"
                     />
                   </div>
@@ -287,90 +326,66 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
                     <Input
                       type="number"
                       min="0"
-                      value={scores[`opponent_${index + 1}`] || ''}
-                      onChange={(e) => handleScoreChange(`opponent_${index + 1}`, e.target.value)}
+                      value={scores[`opponent_${team.teamNumber}`] || ''}
+                      onChange={(e) => handleScoreChange(`opponent_${team.teamNumber}`, e.target.value)}
                       className="text-center text-lg font-bold h-12 mt-1"
                     />
                   </div>
                 </div>
                 
                 {/* Outcome indicator */}
-                {scores[`team_${index + 1}`] !== undefined && scores[`opponent_${index + 1}`] !== undefined && (
-                  <div className="text-center mt-3">
+                {scores[`team_${team.teamNumber}`] !== undefined && scores[`opponent_${team.teamNumber}`] !== undefined && (
+                  <div className="text-center mb-4">
                     <Badge 
                       variant={
-                        Number(scores[`team_${index + 1}`]) > Number(scores[`opponent_${index + 1}`]) 
+                        Number(scores[`team_${team.teamNumber}`]) > Number(scores[`opponent_${team.teamNumber}`]) 
                           ? 'default' 
-                          : Number(scores[`team_${index + 1}`]) < Number(scores[`opponent_${index + 1}`])
+                          : Number(scores[`team_${team.teamNumber}`]) < Number(scores[`opponent_${team.teamNumber}`])
                           ? 'destructive' 
                           : 'secondary'
                       }
                     >
-                      {Number(scores[`team_${index + 1}`]) > Number(scores[`opponent_${index + 1}`]) 
+                      {Number(scores[`team_${team.teamNumber}`]) > Number(scores[`opponent_${team.teamNumber}`]) 
                         ? 'WIN' 
-                        : Number(scores[`team_${index + 1}`]) < Number(scores[`opponent_${index + 1}`])
+                        : Number(scores[`team_${team.teamNumber}`]) < Number(scores[`opponent_${team.teamNumber}`])
                         ? 'LOSS' 
                         : 'DRAW'
                       }
                     </Badge>
                   </div>
                 )}
+
+                {/* Player of the Match for this team */}
+                {team.players.length > 0 && (
+                  <div>
+                    <Label>Player of the Match - {team.performanceCategoryName}</Label>
+                    <Select 
+                      value={playerOfMatchByTeam[team.teamNumber] || 'none'} 
+                      onValueChange={(value) => handlePOTMChange(team.teamNumber, value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select player of the match" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {team.players.map((player) => (
+                          <SelectItem key={player.id} value={player.id}>
+                            {player.name} (#{player.squadNumber})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-        ) : (
-          // Single team
-          <div className="mt-3">
-            <div className="grid grid-cols-3 gap-4 items-center">
-              <div className="text-center">
-                <Label className="text-sm text-gray-600">Our Score</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={scores.home || ''}
-                  onChange={(e) => handleScoreChange('home', e.target.value)}
-                  className="text-center text-lg font-bold h-12 mt-1"
-                />
-              </div>
-              <div className="text-center text-gray-400 text-lg font-bold">
-                vs
-              </div>
-              <div className="text-center">
-                <Label className="text-sm text-gray-600">Their Score</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={scores.away || ''}
-                  onChange={(e) => handleScoreChange('away', e.target.value)}
-                  className="text-center text-lg font-bold h-12 mt-1"
-                />
-              </div>
-            </div>
-            
-            {/* Outcome indicator */}
-            {scores.home !== undefined && scores.away !== undefined && (
-              <div className="text-center mt-3">
-                <Badge 
-                  variant={
-                    Number(scores.home) > Number(scores.away) 
-                      ? 'default' 
-                      : Number(scores.home) < Number(scores.away)
-                      ? 'destructive' 
-                      : 'secondary'
-                  }
-                >
-                  {Number(scores.home) > Number(scores.away) 
-                    ? 'WIN' 
-                    : Number(scores.home) < Number(scores.away)
-                    ? 'LOSS' 
-                    : 'DRAW'
-                  }
-                </Badge>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <div className="text-center py-4 text-muted-foreground">
+          No team selections found for this event. Please set up team selections to enter match results.
+        </div>
+      )}
 
       {/* Notes */}
       <div>
