@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, Users, Gamepad2, Target, Plus, X, FileText } from 'lucide-react';
 import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
@@ -502,10 +503,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           <DialogHeader className="sr-only">
             <DialogTitle>Match Day Pack</DialogTitle>
           </DialogHeader>
-          <MatchDayPackView 
-            event={event} 
-            onClose={() => setShowMatchDayPack(false)} 
-          />
+          <ScrollArea className="h-[95vh]">
+            <MatchDayPackView 
+              event={event} 
+              onClose={() => setShowMatchDayPack(false)} 
+            />
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
