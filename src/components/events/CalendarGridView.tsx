@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,7 +45,12 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
   const loadUserAvailability = useCallback(async () => {
-    if (!user?.id || events.length === 0 || isLoadingAvailability) {
+    if (!user?.id || events.length === 0) {
+      return;
+    }
+
+    // Prevent multiple simultaneous requests
+    if (isLoadingAvailability) {
       return;
     }
 
@@ -68,7 +72,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     } finally {
       setIsLoadingAvailability(false);
     }
-  }, [user?.id, events.length, isLoadingAvailability]);
+  }, [user?.id, events.length]); // Removed isLoadingAvailability from dependencies
 
   useEffect(() => {
     loadEventWeather();
