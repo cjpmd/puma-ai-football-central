@@ -136,6 +136,52 @@ export default function CalendarEventsMobile() {
     }
   };
 
+  const handleFormSubmit = async (eventData: any) => {
+    try {
+      setLoading(true);
+      
+      if (selectedEvent) {
+        // Update existing event
+        await eventsService.updateEvent({
+          id: selectedEvent.id,
+          ...eventData,
+          team_id: eventData.teamId,
+          event_type: eventData.type,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Event updated successfully',
+        });
+      } else {
+        // Create new event
+        await eventsService.createEvent({
+          ...eventData,
+          team_id: eventData.teamId,
+          event_type: eventData.type,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Event created successfully',
+        });
+      }
+      
+      setShowEventForm(false);
+      setSelectedEvent(null);
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error submitting event:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save event',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
     // Show availability controls for future events only
     const eventDate = new Date(event.date);
@@ -698,7 +744,8 @@ export default function CalendarEventsMobile() {
           <EventForm
             event={convertToEventFormat(selectedEvent)}
             teamId={teams?.[0]?.id || ''}
-            onSubmit={(eventData) => {
+            onSubmit={handleFormSubmit}
+            onEventCreated={(eventId) => {
               setShowEventForm(false);
               setSelectedEvent(null);
               loadEvents();

@@ -433,6 +433,11 @@ export default function CalendarEvents() {
               event={convertToEventFormat(selectedEvent)}
               teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
               onSubmit={handleFormSubmit}
+              onEventCreated={(eventId) => {
+                setShowEventForm(false);
+                setSelectedEvent(null);
+                loadEvents();
+              }}
               onCancel={() => {
                 setShowEventForm(false);
                 setSelectedEvent(null);

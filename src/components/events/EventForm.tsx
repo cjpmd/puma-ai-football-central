@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { eventsService } from '@/services/eventsService';
 
 interface EventFormProps {
-  onEventCreated: (eventId: string) => void;
+  onEventCreated?: (eventId: string) => void;
   initialData?: any;
   isEditing?: boolean;
   // New props for compatibility
@@ -130,22 +130,38 @@ export const EventForm: React.FC<EventFormProps> = ({
         if (error) throw error;
 
         toast.success('Event updated successfully');
-        onEventCreated(eventData.id);
+        if (onEventCreated) onEventCreated(eventData.id);
       } else {
         // Create new event using the service
         const newEvent = await eventsService.createEvent({
           ...eventDataToSubmit,
           teamId: eventDataToSubmit.team_id,
-          type: eventDataToSubmit.event_type,
+          type: eventDataToSubmit.event_type as 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
           startTime: eventDataToSubmit.start_time,
           endTime: eventDataToSubmit.end_time,
           isHome: eventDataToSubmit.is_home,
-          gameFormat: eventDataToSubmit.game_format,
-          kitSelection: eventDataToSubmit.kit_selection,
+          gameFormat: eventDataToSubmit.game_format as any,
+          kitSelection: eventDataToSubmit.kit_selection as 'home' | 'away' | 'training',
         });
         
         toast.success('Event created successfully');
-        onEventCreated(newEvent.id);
+        if (onEventCreated) onEventCreated(newEvent.id);
+      }
+
+      // Create event teams if num_teams > 1
+      if (formData.num_teams > 1) {
+        const eventId = eventData?.id || newEvent?.id;
+        if (eventId) {
+          for (let i = 1; i <= formData.num_teams; i++) {
+            await supabase
+              .from('event_teams')
+              .insert({
+                event_id: eventId,
+                team_id: formData.team_id,
+                team_number: i
+              });
+          }
+        }
       }
     } catch (error: any) {
       console.error('Error saving event:', error);
