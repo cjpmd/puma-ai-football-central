@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -222,6 +223,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       globalCaptainId: undefined,
       performanceCategory: 'none'
     };
+    
+    console.log('Adding new team:', newTeam);
     setTeamSelections([...teamSelections, newTeam]);
     setCurrentTeamIndex(teamSelections.length);
     setActiveTab('squad');
@@ -295,57 +298,54 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         throw deleteError;
       }
 
-      // Create new selections for each team that has squad players
+      // Create new selections for each team - ALWAYS save all teams even if empty
       const selectionsToInsert = [];
       
       for (const team of teamSelections) {
         console.log(`Processing team ${team.teamNumber} with ${team.periods.length} periods and ${team.squadPlayers.length} squad players`);
         
-        // Always save team data, even if no periods yet (to preserve squad selections)
-        if (team.squadPlayers.length > 0 || team.periods.length > 0) {
-          // If no periods, create a default period to preserve squad data
-          const periodsToSave = team.periods.length > 0 ? team.periods : [{
-            id: `period-1`,
-            periodNumber: 1,
-            formation: '4-3-3',
-            duration: event.game_duration || 90,
-            positions: [],
-            substitutes: [],
-            captainId: team.globalCaptainId
-          }];
+        // Always save team data - create a default period if no periods exist
+        const periodsToSave = team.periods.length > 0 ? team.periods : [{
+          id: `period-1`,
+          periodNumber: 1,
+          formation: '4-3-3',
+          duration: event.game_duration || 90,
+          positions: [],
+          substitutes: [],
+          captainId: team.globalCaptainId
+        }];
 
-          for (const period of periodsToSave) {
-            // Convert positions to correct format for database
-            const playerPositions = period.positions
-              .filter(pos => pos.playerId) // Only include positions with players
-              .map(pos => ({
-                playerId: pos.playerId,
-                player_id: pos.playerId, // Include both formats for compatibility
-                position: pos.positionName,
-                abbreviation: pos.abbreviation,
-                positionGroup: pos.positionGroup,
-                x: pos.x,
-                y: pos.y,
-                isSubstitute: false,
-                minutes: period.duration
-              }));
+        for (const period of periodsToSave) {
+          // Convert positions to correct format for database
+          const playerPositions = period.positions
+            .filter(pos => pos.playerId) // Only include positions with players
+            .map(pos => ({
+              playerId: pos.playerId,
+              player_id: pos.playerId, // Include both formats for compatibility
+              position: pos.positionName,
+              abbreviation: pos.abbreviation,
+              positionGroup: pos.positionGroup,
+              x: pos.x,
+              y: pos.y,
+              isSubstitute: false,
+              minutes: period.duration
+            }));
 
-            console.log(`Converting positions for team ${team.teamNumber} period ${period.periodNumber}:`, playerPositions);
+          console.log(`Saving team ${team.teamNumber} period ${period.periodNumber} with ${playerPositions.length} player positions`);
 
-            selectionsToInsert.push({
-              event_id: event.id,
-              team_id: teamId,
-              team_number: team.teamNumber,
-              period_number: period.periodNumber,
-              formation: period.formation,
-              duration_minutes: period.duration,
-              captain_id: team.globalCaptainId || null,
-              performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
-              player_positions: playerPositions,
-              substitute_players: period.substitutes,
-              staff_selection: []
-            });
-          }
+          selectionsToInsert.push({
+            event_id: event.id,
+            team_id: teamId,
+            team_number: team.teamNumber,
+            period_number: period.periodNumber,
+            formation: period.formation,
+            duration_minutes: period.duration,
+            captain_id: team.globalCaptainId || null,
+            performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
+            player_positions: playerPositions,
+            substitute_players: period.substitutes,
+            staff_selection: []
+          });
         }
       }
 
@@ -497,6 +497,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
                 <AvailabilityDrivenSquadManagement
+                  key={`team-${currentTeamIndex}`} // Force re-render when switching teams
                   teamId={teamId}
                   eventId={event.id}
                   globalCaptainId={currentTeam?.globalCaptainId}
