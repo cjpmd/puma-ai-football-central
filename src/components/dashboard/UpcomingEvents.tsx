@@ -22,6 +22,7 @@ interface Event {
   opponent: string | null;
   scores: { home: number; away: number } | null;
   team_name: string;
+  is_home?: boolean;
 }
 
 interface UserAvailability {
@@ -97,7 +98,7 @@ export function UpcomingEvents() {
       
       const { data: eventsData, error } = await supabase
         .from('events')
-        .select('id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id, kit_selection')
+        .select('id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id, kit_selection, is_home')
         .in('team_id', teamIds)
         .gte('date', today)
         .order('date', { ascending: true })
@@ -139,6 +140,17 @@ export function UpcomingEvents() {
   const handleManageSquad = (event: Event) => {
     setSelectedEvent(event);
     setIsTeamSelectionOpen(true);
+  };
+
+  const getEventOutcome = (event: Event) => {
+    if (!event.scores || !isMatchType(event.event_type)) return null;
+    
+    const ourScore = event.is_home ? event.scores.home : event.scores.away;
+    const opponentScore = event.is_home ? event.scores.away : event.scores.home;
+    
+    if (ourScore > opponentScore) return { icon: '🏆', outcome: 'win' };
+    if (ourScore < opponentScore) return { icon: '❌', outcome: 'loss' };
+    return { icon: '🤝', outcome: 'draw' };
   };
 
   const isMatchType = (eventType: string) => {
@@ -191,6 +203,14 @@ export function UpcomingEvents() {
                   const kitDesign = team?.kitDesigns?.[(nextEvent as any).kit_selection as 'home' | 'away' | 'training'];
                   return kitDesign && <EnhancedKitAvatar design={kitDesign} size="sm" />;
                 })()}
+                {(() => {
+                  const outcome = getEventOutcome(nextEvent);
+                  return outcome && (
+                    <span className="text-lg" title={outcome.outcome}>
+                      {outcome.icon}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </CardHeader>
@@ -221,6 +241,11 @@ export function UpcomingEvents() {
               {nextEvent.location && (
                 <p className="text-sm text-muted-foreground">📍 {nextEvent.location}</p>
               )}
+              {nextEvent.scores && (
+                <p className="text-sm font-medium">
+                  Score: {nextEvent.scores.home} - {nextEvent.scores.away}
+                </p>
+              )}
             </div>
             <div className="flex gap-2 mt-4">
               <Button 
@@ -247,6 +272,7 @@ export function UpcomingEvents() {
         {events.slice(nextEvent ? 1 : 0).map((event) => {
           const team = teams.find(t => t.name === event.team_name);
           const kitDesign = team?.kitDesigns?.[(event as any).kit_selection as 'home' | 'away' | 'training'];
+          const outcome = getEventOutcome(event);
           
           return (
             <Card key={event.id} className={`hover:shadow-md transition-shadow border-l-4 ${getEventOutlineClass(event.id)}`}>
@@ -259,6 +285,11 @@ export function UpcomingEvents() {
                       </Badge>
                       {kitDesign && <EnhancedKitAvatar design={kitDesign} size="xs" />}
                       <span className="text-xs text-muted-foreground">{event.team_name}</span>
+                      {outcome && (
+                        <span className="text-sm" title={outcome.outcome}>
+                          {outcome.icon}
+                        </span>
+                      )}
                     </div>
                     
                     {shouldShowTitle(event) ? (
@@ -283,6 +314,11 @@ export function UpcomingEvents() {
                     </p>
                     {event.location && (
                       <p className="text-xs text-muted-foreground">📍 {event.location}</p>
+                    )}
+                    {event.scores && (
+                      <p className="text-xs font-medium text-muted-foreground">
+                        Score: {event.scores.home} - {event.scores.away}
+                      </p>
                     )}
                   </div>
                   <div className="flex flex-col gap-1">

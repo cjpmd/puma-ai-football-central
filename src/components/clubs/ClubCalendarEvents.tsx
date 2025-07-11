@@ -245,17 +245,60 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
       const categoryId = scoresData[`team_${teamNumber}_category_id`];
       const teamName = performanceCategories[categoryId] || `Team ${teamNumber}`;
       
+      let outcome = 'draw';
+      let outcomeIcon = '🤝';
+      
+      if (ourScore > opponentScore) {
+        outcome = 'win';
+        outcomeIcon = '🏆';
+      } else if (ourScore < opponentScore) {
+        outcome = 'loss';
+        outcomeIcon = '❌';
+      }
+      
       scores.push({
         teamNumber,
         teamName,
         ourScore,
-        opponentScore
+        opponentScore,
+        outcome,
+        outcomeIcon
       });
       
       teamNumber++;
     }
     
+    // Fallback to home/away scores if no team scores found
+    if (scores.length === 0 && scoresData.home !== undefined && scoresData.away !== undefined) {
+      const ourScore = event.isHome ? scoresData.home : scoresData.away;
+      const opponentScore = event.isHome ? scoresData.away : scoresData.home;
+      
+      let outcome = 'draw';
+      let outcomeIcon = '🤝';
+      
+      if (ourScore > opponentScore) {
+        outcome = 'win';
+        outcomeIcon = '🏆';
+      } else if (ourScore < opponentScore) {
+        outcome = 'loss';
+        outcomeIcon = '❌';
+      }
+      
+      scores.push({
+        teamNumber: 1,
+        teamName: 'Team',
+        ourScore,
+        opponentScore,
+        outcome,
+        outcomeIcon
+      });
+    }
+    
     return scores;
+  };
+
+  const isMatchType = (eventType: string) => {
+    return ['match', 'fixture', 'friendly'].includes(eventType);
   };
 
   if (loading) {
@@ -341,6 +384,15 @@ export const ClubCalendarEvents: React.FC<ClubCalendarEventsProps> = ({
                               <span className="text-sm text-muted-foreground">
                                 vs {event.opponent} {event.isHome ? '(H)' : '(A)'}
                               </span>
+                            )}
+                            {isMatchType(event.eventType) && teamScores.length > 0 && (
+                              <div className="flex gap-1">
+                                {teamScores.map((score, index) => (
+                                  <span key={index} className="text-lg" title={`${score.teamName}: ${score.outcome}`}>
+                                    {score.outcomeIcon}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
                           
