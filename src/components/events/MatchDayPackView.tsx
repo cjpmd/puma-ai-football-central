@@ -154,52 +154,134 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
   }, [event.latitude, event.longitude, event.date, event.start_time]);
 
   const handlePrint = () => {
-    // Remove scroll constraints temporarily for printing
-    const scrollArea = document.querySelector('.match-day-pack-scroll');
-    if (scrollArea) {
-      scrollArea.classList.add('print-mode');
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      toast({
+        title: "Error",
+        description: "Unable to open print window. Please check your popup blocker.",
+        variant: "destructive"
+      });
+      return;
     }
-    
-    // Add print-specific styles
-    const printStyles = document.createElement('style');
-    printStyles.id = 'print-styles';
-    printStyles.textContent = `
-      @media print {
-        .print-mode {
-          height: auto !important;
-          max-height: none !important;
-          overflow: visible !important;
+
+    // Get the content to print
+    const content = document.querySelector('.match-day-pack');
+    if (!content) {
+      toast({
+        title: "Error", 
+        description: "Content not found for printing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Get the CSS styles
+    const styles = Array.from(document.styleSheets)
+      .map(styleSheet => {
+        try {
+          return Array.from(styleSheet.cssRules)
+            .map(rule => rule.cssText)
+            .join('\n');
+        } catch (e) {
+          return '';
         }
-        .print-mode > div {
-          height: auto !important;
-          max-height: none !important;
-          overflow: visible !important;
-        }
-      }
-    `;
-    document.head.appendChild(printStyles);
+      })
+      .join('\n');
+
+    // Write the content to the new window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Match Day Pack - ${event.title}</title>
+          <style>
+            ${styles}
+            
+            /* Additional print styles */
+            @media print {
+              * {
+                -webkit-print-color-adjust: exact !important;
+                color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
+              
+              body {
+                margin: 0;
+                padding: 0;
+                background: white !important;
+              }
+              
+              .match-day-pack {
+                background: white !important;
+                padding: 0 !important;
+              }
+              
+              .page {
+                width: 210mm !important;
+                min-height: 297mm !important;
+                padding: 15mm !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                page-break-after: always !important;
+                page-break-inside: avoid !important;
+                background: white !important;
+                border: none !important;
+              }
+              
+              .page:last-child {
+                page-break-after: auto !important;
+              }
+              
+              .no-print {
+                display: none !important;
+              }
+              
+              .page-break {
+                page-break-after: always !important;
+              }
+              
+              .page-break-inside-avoid {
+                page-break-inside: avoid !important;
+              }
+            }
+            
+            @page {
+              size: A4;
+              margin: 0;
+            }
+          </style>
+        </head>
+        <body>
+          ${content.outerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
     
-    // Use setTimeout to ensure styles are applied
-    setTimeout(() => {
-      window.print();
-      
-      // Clean up after printing
+    // Wait for content to load then print
+    printWindow.onload = () => {
       setTimeout(() => {
-        if (scrollArea) {
-          scrollArea.classList.remove('print-mode');
-        }
-        const printStylesElement = document.getElementById('print-styles');
-        if (printStylesElement) {
-          printStylesElement.remove();
-        }
-      }, 1000);
-    }, 100);
+        printWindow.print();
+        printWindow.onafterprint = () => {
+          printWindow.close();
+        };
+      }, 500);
+    };
   };
 
   const handleDownloadPDF = async () => {
-    // Same approach for PDF generation
     try {
-      handlePrint(); // This will trigger the print dialog with "Save as PDF" option
+      // Use the same print approach but with a focus on PDF saving
+      handlePrint();
+      
+      // Show user instruction for PDF saving
+      toast({
+        title: "PDF Download",
+        description: "In the print dialog, choose 'Save as PDF' as your destination.",
+        variant: "default"
+      });
     } catch (error) {
       console.error('PDF generation failed:', error);
       toast({
