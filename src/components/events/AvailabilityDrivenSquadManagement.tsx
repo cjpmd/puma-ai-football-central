@@ -44,12 +44,14 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   useEffect(() => {
     if (onSquadChange) {
+      console.log('Notifying parent of squad change:', squadPlayers);
       onSquadChange(squadPlayers);
     }
   }, [squadPlayers, onSquadChange]);
 
   const handleAddToSquad = async (playerId: string) => {
     try {
+      console.log('Adding player to squad:', playerId);
       await assignPlayerToSquad(playerId, 'player');
       toast.success('Player added to squad');
     } catch (error: any) {
@@ -60,6 +62,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   const handleRemoveFromSquad = async (playerId: string) => {
     try {
+      console.log('Removing player from squad:', playerId);
       await removePlayerFromSquad(playerId);
       toast.success('Player removed from squad');
       
@@ -135,6 +138,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }
   };
 
+  // Check if player can be added to squad (available or pending)
+  const canAddToSquad = (status: string) => {
+    return status === 'available' || status === 'pending';
+  };
+
   if (loading) {
     return (
       <Card>
@@ -145,6 +153,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       </Card>
     );
   }
+
+  const availableCount = availablePlayers.filter(p => p.availabilityStatus === 'available').length;
+  const pendingCount = availablePlayers.filter(p => p.availabilityStatus === 'pending').length;
 
   return (
     <div className="space-y-6">
@@ -236,7 +247,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            Available Players ({availablePlayers.filter(p => p.availabilityStatus === 'available').length} available, {availablePlayers.length} total)
+            Players ({availableCount} available, {pendingCount} pending, {availablePlayers.length} total)
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -267,12 +278,15 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                     </div>
                   </div>
                   
-                  {player.availabilityStatus === 'available' ? (
+                  {canAddToSquad(player.availabilityStatus) ? (
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => handleAddToSquad(player.id)}
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className={player.availabilityStatus === 'available' 
+                        ? "bg-green-600 hover:bg-green-700 text-white"
+                        : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                      }
                     >
                       <UserPlus className="h-4 w-4 mr-1" />
                       Add to Squad
