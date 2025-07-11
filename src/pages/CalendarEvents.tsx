@@ -110,8 +110,22 @@ export default function CalendarEvents() {
   };
 
   const handleTeamSelection = (event: DatabaseEvent) => {
+    console.log('=== TEAM SELECTION DEBUG ===');
+    console.log('Attempting to open team selection for event:', event);
+    console.log('Event ID:', event.id);
+    console.log('Event title:', event.title);
+    console.log('Current showTeamSelection:', showTeamSelection);
+    console.log('Current selectedEvent:', selectedEvent);
+    
     setSelectedEvent(event);
     setShowTeamSelection(true);
+    
+    // Add a small delay to check state after update
+    setTimeout(() => {
+      console.log('After state update - showTeamSelection:', showTeamSelection);
+      console.log('After state update - selectedEvent:', selectedEvent);
+      console.log('=== END TEAM SELECTION DEBUG ===');
+    }, 100);
   };
 
   const handlePostGameEdit = (event: DatabaseEvent) => {

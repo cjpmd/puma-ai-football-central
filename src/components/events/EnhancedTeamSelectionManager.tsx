@@ -23,6 +23,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   isOpen,
   onClose,
 }) => {
+  console.log('=== ENHANCED TEAM SELECTION MANAGER RENDER ===');
+  console.log('isOpen:', isOpen);
+  console.log('event:', event);
+  console.log('teamId:', teamId);
+  
   const [selectedView, setSelectedView] = useState<'squad' | 'selection' | 'mobile'>('squad');
   const [selectedTeamNumber, setSelectedTeamNumber] = useState<number>(1);
   const [eventTeams, setEventTeams] = useState<any[]>([]);
