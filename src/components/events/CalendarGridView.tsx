@@ -345,7 +345,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                               <AvailabilityButtons
                                 eventId={event.id}
                                 currentStatus={availabilityStatus}
-                                onStatusChange={handleAvailabilityChange}
+                                onStatusChange={(newStatus) => handleAvailabilityChange(event.id, newStatus)}
                               />
                             </div>
                           )}
