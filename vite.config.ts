@@ -19,4 +19,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: mode === 'development' ? [] : [
+        '@capacitor/core',
+        '@capacitor/push-notifications'
+      ]
+    }
+  },
+  define: {
+    global: 'globalThis',
+  }
 }));
