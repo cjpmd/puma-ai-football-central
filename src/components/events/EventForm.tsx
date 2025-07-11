@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,20 +10,33 @@ import { Calendar, MapPin, Clock, Users, Trophy, FileText } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { createEvent } from '@/services/eventsService';
+import { eventsService } from '@/services/eventsService';
 
 interface EventFormProps {
   onEventCreated: (eventId: string) => void;
   initialData?: any;
   isEditing?: boolean;
+  // New props for compatibility
+  event?: any;
+  teamId?: string;
+  onSubmit?: (eventData: any) => void;
+  onCancel?: () => void;
 }
 
 export const EventForm: React.FC<EventFormProps> = ({ 
   onEventCreated, 
   initialData, 
-  isEditing = false 
+  isEditing = false,
+  event,
+  teamId,
+  onSubmit,
+  onCancel 
 }) => {
   const { teams, user } = useAuth();
+  
+  // Use event prop if provided, otherwise use initialData
+  const eventData = event || initialData;
+  
   const [formData, setFormData] = useState({
     title: '',
     date: '',
@@ -32,29 +44,38 @@ export const EventForm: React.FC<EventFormProps> = ({
     end_time: '',
     location: '',
     event_type: 'training',
-    team_id: '',
+    team_id: teamId || '',
     opponent: '',
     description: '',
     notes: '',
     game_format: '11v11',
     is_home: true,
     kit_selection: 'home',
-    num_teams: 1, // New field for team count
+    num_teams: 1,
   });
   const [loading, setLoading] = useState(false);
   const [performanceCategories, setPerformanceCategories] = useState<any[]>([]);
 
   useEffect(() => {
-    if (initialData) {
+    if (eventData) {
       setFormData({
-        ...initialData,
-        date: initialData.date || '',
-        start_time: initialData.start_time || '',
-        end_time: initialData.end_time || '',
-        num_teams: initialData.num_teams || 1,
+        title: eventData.title || '',
+        date: eventData.date || '',
+        start_time: eventData.startTime || eventData.start_time || '',
+        end_time: eventData.endTime || eventData.end_time || '',
+        location: eventData.location || '',
+        event_type: eventData.type || eventData.event_type || 'training',
+        team_id: eventData.teamId || eventData.team_id || teamId || '',
+        opponent: eventData.opponent || '',
+        description: eventData.description || '',
+        notes: eventData.notes || '',
+        game_format: eventData.gameFormat || eventData.game_format || '11v11',
+        is_home: eventData.isHome !== undefined ? eventData.isHome : eventData.is_home !== undefined ? eventData.is_home : true,
+        kit_selection: eventData.kitSelection || eventData.kit_selection || 'home',
+        num_teams: eventData.num_teams || 1,
       });
     }
-  }, [initialData]);
+  }, [eventData, teamId]);
 
   useEffect(() => {
     if (formData.team_id) {
@@ -87,34 +108,56 @@ export const EventForm: React.FC<EventFormProps> = ({
     setLoading(true);
 
     try {
-      const eventData = {
+      const eventDataToSubmit = {
         ...formData,
         created_by: user?.id,
       };
 
-      if (isEditing && initialData?.id) {
+      // If onSubmit prop is provided, use it (for new EventForm interface)
+      if (onSubmit) {
+        await onSubmit(eventDataToSubmit);
+        return;
+      }
+
+      // Otherwise use the original logic
+      if (isEditing && eventData?.id) {
         // Update existing event
         const { error } = await supabase
           .from('events')
-          .update(eventData)
-          .eq('id', initialData.id);
+          .update(eventDataToSubmit)
+          .eq('id', eventData.id);
 
         if (error) throw error;
 
         toast.success('Event updated successfully');
-        onEventCreated(initialData.id);
+        onEventCreated(eventData.id);
       } else {
-        // Create new event with team creation
-        const eventId = await createEvent(eventData, formData.num_teams);
+        // Create new event using the service
+        const newEvent = await eventsService.createEvent({
+          ...eventDataToSubmit,
+          teamId: eventDataToSubmit.team_id,
+          type: eventDataToSubmit.event_type,
+          startTime: eventDataToSubmit.start_time,
+          endTime: eventDataToSubmit.end_time,
+          isHome: eventDataToSubmit.is_home,
+          gameFormat: eventDataToSubmit.game_format,
+          kitSelection: eventDataToSubmit.kit_selection,
+        });
         
         toast.success('Event created successfully');
-        onEventCreated(eventId);
+        onEventCreated(newEvent.id);
       }
     } catch (error: any) {
       console.error('Error saving event:', error);
       toast.error(error.message || 'Failed to save event');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
     }
   };
 
@@ -361,13 +404,25 @@ export const EventForm: React.FC<EventFormProps> = ({
           </div>
 
           {/* Submit Button */}
-          <Button 
-            type="submit" 
-            className="w-full" 
-            disabled={loading}
-          >
-            {loading ? 'Saving...' : (isEditing ? 'Update Event' : 'Create Event')}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              type="submit" 
+              className="flex-1" 
+              disabled={loading}
+            >
+              {loading ? 'Saving...' : (isEditing ? 'Update Event' : 'Create Event')}
+            </Button>
+            {onCancel && (
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={handleCancel}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
         </form>
       </CardContent>
     </Card>
