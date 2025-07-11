@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Users } from 'lucide-react';
@@ -92,6 +92,15 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const currentTeamId = teamId || event?.team_id;
+
+  // Memoized callbacks to prevent infinite re-renders
+  const handleSquadChange = useCallback((squadPlayers: any[]) => {
+    console.log('Squad updated:', squadPlayers);
+  }, []);
+
+  const handleCaptainChange = useCallback((captainId: string) => {
+    console.log('Captain updated:', captainId);
+  }, []);
 
   if (!isOpen) return null;
 
@@ -187,12 +196,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     <AvailabilityDrivenSquadManagement
                       teamId={currentTeamId}
                       eventId={event?.id}
-                      onSquadChange={(squadPlayers) => {
-                        console.log('Squad updated:', squadPlayers);
-                      }}
-                      onCaptainChange={(captainId) => {
-                        console.log('Captain updated:', captainId);
-                      }}
+                      onSquadChange={handleSquadChange}
+                      onCaptainChange={handleCaptainChange}
                     />
                   </div>
                 )}
