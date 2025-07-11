@@ -177,7 +177,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw profileError;
       }
 
-      // Transform the data to match our Profile type
       const transformedProfile: Profile = {
         id: profileData.id,
         name: profileData.name,
@@ -222,7 +221,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Fetch full team details for each team_id
       const teamDetails = await Promise.all(
         teamsData.map(async (userTeam) => {
           const { data: teamData, error: teamError } = await supabase
@@ -236,7 +234,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return null;
           }
           
-          // Transform database format to TypeScript format
           return {
             id: teamData.id,
             name: teamData.name,
@@ -260,7 +257,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
 
-      // Filter out any null results (failed fetches)
       const validTeams = teamDetails.filter(team => team !== null);
       setTeams(validTeams as Team[]);
       console.log('Teams loaded successfully:', validTeams.length);
@@ -294,7 +290,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      // Fetch full club details for each club_id
       const clubDetails = await Promise.all(
         clubsData.map(async (userClub) => {
           const { data: clubData, error: clubError } = await supabase
@@ -308,13 +303,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return null;
           }
           
-          // Transform database format to TypeScript format
           return {
             id: clubData.id,
             name: clubData.name,
             referenceNumber: clubData.reference_number,
             serialNumber: clubData.serial_number,
-            teams: [], // Will be populated separately if needed
+            teams: [],
             subscriptionType: clubData.subscription_type,
             officials: [],
             facilities: [],
@@ -324,7 +318,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         })
       );
 
-      // Filter out any null results (failed fetches)
       const validClubs = clubDetails.filter(club => club !== null);
       setClubs(validClubs as Club[]);
       console.log('Clubs loaded successfully:', validClubs.length);
@@ -378,7 +371,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('Supabase signOut error:', error);
-        // Don't throw the error, as we've already cleared local state
         toast({
           title: 'Sign out warning',
           description: 'Local session cleared, but there may have been an issue with the server.',
@@ -388,8 +380,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log('Sign out successful');
       }
       
-      // Navigate to home page
-      navigate('/');
+      // Navigate to auth page instead of home
+      navigate('/auth');
     } catch (error: any) {
       console.error('Error during sign out:', error);
       toast({
@@ -398,7 +390,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       
       // Navigate regardless of error
-      navigate('/');
+      navigate('/auth');
     } finally {
       setLoading(false);
     }
@@ -454,10 +446,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     teams,
     clubs,
-    currentTeam: teams && teams.length > 0 ? teams[0] : null, // Use first team as current team
+    currentTeam: teams && teams.length > 0 ? teams[0] : null,
     loading,
     login,
-    logout: signOut, // Use signOut for logout
+    logout: signOut,
     signIn,
     signUp,
     signOut,

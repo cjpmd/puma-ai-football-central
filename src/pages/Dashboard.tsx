@@ -1,5 +1,5 @@
 
-import { MultiRoleDashboard } from '@/components/dashboard/MultiRoleDashboard';
+import { MultiRoleDashboard } from '@/components/dashboard/EnhancedMultiRoleDashboard';
 
 const Dashboard = () => {
   return <MultiRoleDashboard />;

@@ -3,9 +3,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ResponsiveRoute } from "@/components/routing/ResponsiveRoute";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -41,88 +42,107 @@ const App = () => (
         <AuthProvider>
           <AuthorizationProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Navigate to="/auth" replace />} />
               <Route path="/auth" element={<Auth />} />
+              <Route path="/login" element={<Navigate to="/auth" replace />} />
               <Route path="/account-linking" element={<AccountLinking />} />
               <Route 
                 path="/dashboard" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<Dashboard />}
-                    mobileComponent={<DashboardMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<Dashboard />}
+                      mobileComponent={<DashboardMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/players" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<PlayerManagement />}
-                    mobileComponent={<PlayerManagementMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<PlayerManagement />}
+                      mobileComponent={<PlayerManagementMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/calendar" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<CalendarEvents />}
-                    mobileComponent={<CalendarEventsMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<CalendarEvents />}
+                      mobileComponent={<CalendarEventsMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/analytics" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<Analytics />}
-                    mobileComponent={<AnalyticsMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<Analytics />}
+                      mobileComponent={<AnalyticsMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/teams" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<TeamManagement />}
-                    mobileComponent={<TeamManagementMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<TeamManagement />}
+                      mobileComponent={<TeamManagementMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/clubs" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<ClubManagement />}
-                    mobileComponent={<ClubManagementMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<ClubManagement />}
+                      mobileComponent={<ClubManagementMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/staff" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<StaffManagement />}
-                    mobileComponent={<StaffManagementMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<StaffManagement />}
+                      mobileComponent={<StaffManagementMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/users" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<UserManagement />}
-                    mobileComponent={<UserManagementMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<UserManagement />}
+                      mobileComponent={<UserManagementMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route 
                 path="/subscriptions" 
                 element={
-                  <ResponsiveRoute
-                    desktopComponent={<SubscriptionManagement />}
-                    mobileComponent={<SubscriptionManagementMobile />}
-                  />
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<SubscriptionManagement />}
+                      mobileComponent={<SubscriptionManagementMobile />}
+                    />
+                  </ProtectedRoute>
                 }
               />
               <Route path="*" element={<NotFound />} />
