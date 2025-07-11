@@ -100,18 +100,18 @@ export const eventsService = {
       console.log('Updating event with data:', eventData);
       
       // Ensure we have required fields for updates
-      if (!eventData.teamId && !eventData.team_id) {
+      if (!eventData.teamId) {
         throw new Error('Team ID is required');
       }
       
       const formattedData = {
-        team_id: eventData.teamId || eventData.team_id,
+        team_id: eventData.teamId,
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
         start_time: eventData.startTime,
         end_time: eventData.endTime,
-        event_type: eventData.type || eventData.event_type,
+        event_type: eventData.type,
         location: eventData.location,
         latitude: eventData.latitude,
         longitude: eventData.longitude,
