@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { DndContext, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
 import { PlayerSelectionPanel } from './PlayerSelectionPanel';
 import { FormationSelector } from './FormationSelector';
-import { SquadPlayer, FormationPeriod, Position } from '@/types/teamSelection';
+import { SquadPlayer, FormationPeriod, PositionSlot as PositionSlotType } from '@/types/teamSelection';
 import { GameFormat } from '@/types';
 
 interface DragDropFormationEditorProps {
@@ -171,8 +172,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     setCurrentPeriodIndex(Math.max(0, index - 1));
   };
 
-  const getInitialPositionsForFormation = (formation: string, gameFormat: GameFormat): Position[] => {
-    const positions: Position[] = [];
+  const getInitialPositionsForFormation = (formation: string, gameFormat: GameFormat): PositionSlotType[] => {
+    const positions: PositionSlotType[] = [];
     let positionNames: string[] = [];
 
     switch (formation) {
@@ -212,6 +213,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
 
   const currentPeriod = periods[currentPeriodIndex];
   const availablePlayersForSelection = getAvailablePlayersForSelection();
+
+  // Convert name display option to match expected format
+  const convertedNameDisplayOption = nameDisplayOption === 'full_name' ? 'fullName' as const : 
+                                   nameDisplayOption === 'first_name' ? 'firstName' as const : 
+                                   'surname' as const;
 
   return (
     <div className="space-y-6">
@@ -260,9 +266,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <FormationSelector
-                    value={currentPeriod.formation}
-                    gameFormat={gameFormat}
-                    onChange={(formation) => updatePeriod(currentPeriodIndex, { formation })}
+                    formation={currentPeriod.formation}
+                    onFormationChange={(formation) => updatePeriod(currentPeriodIndex, { formation })}
                   />
                   <Select
                     value={currentPeriod.duration.toString()}
@@ -285,24 +290,29 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             <CardContent>
               {/* Formation pitch display */}
               <div className="bg-green-100 rounded-lg p-6 min-h-[400px] relative">
-                {currentPeriod.positions.map((position) => (
-                  <PositionSlot
-                    key={position.id}
-                    position={position}
-                    gameFormat={gameFormat}
-                    onRemovePlayer={removePlayerFromPosition}
-                  />
-                ))}
+                {currentPeriod.positions.map((position) => {
+                  const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
+                  return (
+                    <PositionSlot
+                      key={position.id}
+                      id={position.id}
+                      position={position}
+                      player={player}
+                      isCaptain={player?.id === globalCaptainId}
+                      nameDisplayOption={convertedNameDisplayOption}
+                    />
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
 
           {/* Substitutes Bench */}
           <SubstituteBench
-            substitutes={currentPeriod.substitutes}
-            squadPlayers={squadPlayers}
-            nameDisplayOption={nameDisplayOption}
-            onRemoveFromBench={removeFromBench}
+            id={`substitutes-${currentPeriod.id}`}
+            substitutes={currentPeriod.substitutes.map(id => squadPlayers.find(p => p.id === id)).filter(Boolean) as SquadPlayer[]}
+            globalCaptainId={globalCaptainId}
+            nameDisplayOption={convertedNameDisplayOption}
           />
 
           {/* Available Players Panel - Show ALL squad players */}
@@ -325,7 +335,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                   >
                     <PlayerIcon
                       player={player}
-                      nameDisplayOption={nameDisplayOption}
+                      nameDisplayOption={convertedNameDisplayOption}
                       draggable
                     />
                     <div className="mt-1 flex flex-col items-center gap-1">
@@ -353,7 +363,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             {activePlayer && (
               <PlayerIcon
                 player={activePlayer}
-                nameDisplayOption={nameDisplayOption}
+                nameDisplayOption={convertedNameDisplayOption}
               />
             )}
           </DragOverlay>
