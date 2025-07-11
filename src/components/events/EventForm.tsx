@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -49,8 +48,8 @@ export const EventForm: React.FC<EventFormProps> = ({
     opponent: '',
     description: '',
     notes: '',
-    game_format: '11v11',
-    game_duration: 90,
+    game_format: '7-a-side',
+    game_duration: 50,
     is_home: true,
     kit_selection: 'home',
     facility_id: '',
@@ -72,8 +71,8 @@ export const EventForm: React.FC<EventFormProps> = ({
           if (!eventData) {
             setFormData(prev => ({
               ...prev,
-              game_format: team.gameFormat || '11v11',
-              game_duration: team.gameDuration || 90
+              game_format: team.gameFormat || '7-a-side',
+              game_duration: team.gameDuration || 50
             }));
           }
         }
@@ -96,8 +95,8 @@ export const EventForm: React.FC<EventFormProps> = ({
         opponent: eventData.opponent || '',
         description: eventData.description || '',
         notes: eventData.notes || '',
-        game_format: eventData.gameFormat || eventData.game_format || '11v11',
-        game_duration: eventData.gameDuration || eventData.game_duration || 90,
+        game_format: eventData.gameFormat || eventData.game_format || '7-a-side',
+        game_duration: eventData.gameDuration || eventData.game_duration || 50,
         is_home: eventData.isHome !== undefined ? eventData.isHome : eventData.is_home !== undefined ? eventData.is_home : true,
         kit_selection: eventData.kitSelection || eventData.kit_selection || 'home',
         facility_id: eventData.facilityId || eventData.facility_id || '',
@@ -250,11 +249,11 @@ export const EventForm: React.FC<EventFormProps> = ({
   ];
 
   const gameFormats = [
-    { value: '11v11', label: '11-a-side (Team Default)' },
-    { value: '9v9', label: '9-a-side' },
-    { value: '7v7', label: '7-a-side' },
-    { value: '5v5', label: '5-a-side' },
-    { value: '3v3', label: '3-a-side' },
+    { value: '7-a-side', label: '7-a-side (Team Default)' },
+    { value: '11-a-side', label: '11-a-side' },
+    { value: '9-a-side', label: '9-a-side' },
+    { value: '5-a-side', label: '5-a-side' },
+    { value: '3-a-side', label: '3-a-side' },
   ];
 
   const kitOptions = [
@@ -462,11 +461,11 @@ export const EventForm: React.FC<EventFormProps> = ({
                     id="game_duration"
                     type="number"
                     value={formData.game_duration}
-                    onChange={(e) => setFormData(prev => ({ ...prev, game_duration: parseInt(e.target.value) || 90 }))}
-                    placeholder="90"
+                    onChange={(e) => setFormData(prev => ({ ...prev, game_duration: parseInt(e.target.value) || 50 }))}
+                    placeholder="50"
                   />
                   <p className="text-sm text-muted-foreground mt-1">
-                    Team default: {selectedTeam?.gameDuration || 90} minutes
+                    Team default: {selectedTeam?.gameDuration || 50} minutes
                   </p>
                 </div>
               </div>
