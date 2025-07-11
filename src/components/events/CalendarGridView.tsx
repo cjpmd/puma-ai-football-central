@@ -26,7 +26,7 @@ interface WeatherData {
 
 interface UserAvailability {
   eventId: string;
-  status: 'pending' | 'available' | 'unavailable' | 'maybe';
+  status: 'pending' | 'available' | 'unavailable';
 }
 
 export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
@@ -40,7 +40,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
-  const { teams, user } = useAuth();
+  const { teams } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -50,21 +50,14 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     loadEventWeather();
     loadPerformanceCategories();
     loadUserAvailability();
-  }, [events, teams, user?.id]);
+  }, [events, teams]);
 
   const loadUserAvailability = async () => {
-    if (!user?.id) {
-      console.log('No user ID for availability loading');
-      return;
-    }
-
     try {
-      console.log('Loading availability for user:', user.id);
-
       const { data: availabilityData, error } = await supabase
         .from('event_availability')
         .select('event_id, status')
-        .eq('user_id', user.id);
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) {
         console.error('Error loading user availability:', error);
@@ -73,17 +66,16 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
 
       const availability = (availabilityData || []).map(item => ({
         eventId: item.event_id,
-        status: item.status as 'pending' | 'available' | 'unavailable' | 'maybe'
+        status: item.status as 'pending' | 'available' | 'unavailable'
       }));
 
-      console.log('Loaded availability for calendar:', availability);
       setUserAvailability(availability);
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
     }
   };
 
-  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | 'maybe' | null => {
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     return availability?.status || null;
   };
@@ -95,12 +87,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         return 'border-l-green-500 border-l-2';
       case 'unavailable':
         return 'border-l-red-500 border-l-2';
-      case 'maybe':
-        return 'border-l-amber-500 border-l-2';
       case 'pending':
-        return 'border-l-blue-500 border-l-2';
+        return 'border-l-amber-500 border-l-2';
       default:
-        return 'border-l-gray-300 border-l-2';
+        return 'border-l-blue-500 border-l-2';
     }
   };
 
