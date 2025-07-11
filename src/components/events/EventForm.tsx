@@ -118,8 +118,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         if (error) throw error;
 
         toast({
-          title: 'Success',
-          description: 'Event updated successfully',
+          title: 'Event updated successfully',
         });
         if (onEventCreated) onEventCreated(event.id);
         eventId = event.id;
@@ -129,8 +128,8 @@ export const EventForm: React.FC<EventFormProps> = ({
           ...eventData,
           teamId: teamId,
           type: eventData.event_type,
-          // Convert number to array format for the service
-          teams: Array.from({ length: formData.num_teams }, (_, i) => ({ id: teamId, number: i + 1 })),
+          // Convert number to string array format for the service
+          teams: Array.from({ length: formData.num_teams }, (_, i) => `${teamId}_${i + 1}`),
         });
         
         if (!newEvent) {
@@ -138,8 +137,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         }
         
         toast({
-          title: 'Success',
-          description: 'Event created successfully',
+          title: 'Event created successfully',
         });
         if (onEventCreated) onEventCreated(newEvent.id);
         eventId = newEvent.id;
