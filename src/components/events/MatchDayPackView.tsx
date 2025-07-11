@@ -153,12 +153,26 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
   }, [event.latitude, event.longitude, event.date, event.start_time]);
 
   const handlePrint = () => {
+    // Use window.print() which should handle all pages correctly
     window.print();
   };
 
-  const handleDownloadPDF = () => {
-    // Trigger browser's print dialog with save as PDF option
-    window.print();
+  const handleDownloadPDF = async () => {
+    // For better PDF generation, we'll use the browser's built-in print to PDF
+    // This ensures all pages are included
+    try {
+      // Trigger print dialog with save as PDF option
+      if (window.print) {
+        window.print();
+      } else {
+        // Fallback for environments where print is not available
+        console.warn('Print functionality not available');
+        toast.error('PDF download not available in this environment');
+      }
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      toast.error('Failed to generate PDF');
+    }
   };
 
   // Group selections by team
@@ -397,7 +411,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
         </Button>
         <Button onClick={handleDownloadPDF} className="flex items-center gap-2">
           <Download className="h-4 w-4" />
-          Download PDF
+          Save as PDF
         </Button>
         <Button variant="outline" onClick={onClose}>
           <X className="h-4 w-4" />

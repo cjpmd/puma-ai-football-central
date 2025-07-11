@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -5,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Save, Users, Gamepad2, Target, Plus, X, FileText } from 'lucide-react';
 import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
@@ -339,16 +341,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   if (!isOpen) return null;
 
-  // Show Match Day Pack view if requested
-  if (showMatchDayPack) {
-    return (
-      <MatchDayPackView 
-        event={event} 
-        onClose={() => setShowMatchDayPack(false)} 
-      />
-    );
-  }
-
   const currentTeam = getCurrentTeam();
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
@@ -503,6 +495,19 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           </Tabs>
         </div>
       </div>
+
+      {/* Match Day Pack Modal */}
+      <Dialog open={showMatchDayPack} onOpenChange={setShowMatchDayPack}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Match Day Pack</DialogTitle>
+          </DialogHeader>
+          <MatchDayPackView 
+            event={event} 
+            onClose={() => setShowMatchDayPack(false)} 
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
