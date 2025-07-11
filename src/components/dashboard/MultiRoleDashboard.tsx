@@ -1,29 +1,42 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 
 interface MultiRoleDashboardProps {
-  onNavigate: (route: string) => void;
+  onNavigate?: (route: string) => void;
 }
 
 export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNavigate }) => {
-  const { user, teams, isLoading: authLoading } = useAuth();
-  const router = useRouter();
+  const { user, teams } = useAuth();
+  const navigate = useNavigate();
   const isMobile = useMobileDetection();
   const [isTeamsLoaded, setIsTeamsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && teams) {
+    if (teams) {
       setIsTeamsLoaded(true);
     }
-  }, [teams, authLoading]);
+  }, [teams]);
 
   const handleTeamNavigation = (teamId: string) => {
-    router.push(`/team/${teamId}`);
+    if (onNavigate) {
+      onNavigate(`/team/${teamId}`);
+    } else {
+      navigate(`/team/${teamId}`);
+    }
+  };
+
+  const handleCreateTeam = () => {
+    if (onNavigate) {
+      onNavigate('/new-team');
+    } else {
+      navigate('/new-team');
+    }
   };
 
   return (
@@ -67,7 +80,7 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
           </CardHeader>
           <CardContent>
             <p>You are not assigned to any team.</p>
-            <Button onClick={() => router.push('/new-team')}>Create a New Team</Button>
+            <Button onClick={handleCreateTeam}>Create a New Team</Button>
           </CardContent>
         </Card>
       )}
