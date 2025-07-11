@@ -9,6 +9,7 @@ import { WeatherService } from '@/services/weatherService';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -24,11 +25,6 @@ interface WeatherData {
   icon: string;
 }
 
-interface UserAvailability {
-  eventId: string;
-  status: 'pending' | 'available' | 'unavailable';
-}
-
 export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   events,
   onEditEvent,
@@ -39,7 +35,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
-  const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
+  const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const { teams, user } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
@@ -49,8 +45,13 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   useEffect(() => {
     loadEventWeather();
     loadPerformanceCategories();
-    loadUserAvailability();
-  }, [events, teams, user]);
+  }, [events, teams]);
+
+  useEffect(() => {
+    if (events.length > 0 && user?.id) {
+      loadUserAvailability();
+    }
+  }, [events, user?.id]);
 
   const loadUserAvailability = async () => {
     try {
@@ -59,47 +60,18 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         return;
       }
 
+      console.log('=== CALENDAR GRID VIEW DEBUG ===');
       console.log('Loading availability for user:', user.id);
+      console.log('User object:', user);
 
-      // Get availability records for this user (could be direct user availability or player-linked availability)
-      const { data: availabilityData, error } = await supabase
-        .from('event_availability')
-        .select('event_id, status')
-        .eq('user_id', user.id);
-
-      if (error) {
-        console.error('Error loading user availability:', error);
-        return;
-      }
-
-      console.log('Direct user availability data:', availabilityData);
-
-      // Also check for availability through linked players
-      const { data: linkedPlayerData, error: linkedError } = await supabase
-        .from('user_players')
-        .select(`
-          player_id,
-          players!inner(
-            id,
-            name
-          )
-        `)
-        .eq('user_id', user.id);
-
-      if (linkedError) {
-        console.error('Error loading linked players:', linkedError);
-      } else {
-        console.log('Linked players for user:', linkedPlayerData);
-      }
-
-      // For now, use the direct availability data
-      const availability = (availabilityData || []).map(item => ({
-        eventId: item.event_id,
-        status: item.status as 'pending' | 'available' | 'unavailable'
-      }));
-
-      console.log('Processed user availability:', availability);
+      const eventIds = events.map(event => event.id);
+      console.log('Event IDs to check:', eventIds);
+      
+      const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
+      console.log('Received availability in calendar:', availability);
+      
       setUserAvailability(availability);
+      console.log('=== END CALENDAR GRID VIEW DEBUG ===');
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
     }
@@ -107,11 +79,15 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
 
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
-    return availability?.status || null;
+    const status = availability?.status || null;
+    console.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
+    return status;
   };
 
   const getEventBorderClass = (eventId: string): string => {
     const status = getAvailabilityStatus(eventId);
+    console.log(`Border class for event ${eventId.slice(-6)}:`, status);
+    
     switch (status) {
       case 'available':
         return 'border-l-green-500 border-l-2';
