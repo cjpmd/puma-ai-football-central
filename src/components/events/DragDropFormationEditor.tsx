@@ -1,46 +1,28 @@
-import { useState, useEffect } from 'react';
-import { 
-  DndContext, 
-  DragEndEvent, 
-  DragOverlay, 
-  DragStartEvent,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  closestCenter
-} from '@dnd-kit/core';
+import React, { useState, useEffect } from 'react';
+import { DndContext, DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Clock, X, ChevronDown, ChevronUp, Users, AlertTriangle } from 'lucide-react';
+import { Plus, Users, Clock, Target } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
-import { usePositionAbbreviations } from '@/hooks/usePositionAbbreviations';
-import { SquadPlayer, FormationPeriod, PositionSlot as PositionSlotType } from '@/types/teamSelection';
-import { getFormationsByFormat } from '@/utils/formationUtils';
+import { PlayerSelectionPanel } from './PlayerSelectionPanel';
+import { FormationSelector } from './FormationSelector';
+import { SquadPlayer, FormationPeriod, Position } from '@/types/teamSelection';
+import { GameFormat } from '@/types';
 
 interface DragDropFormationEditorProps {
   squadPlayers: SquadPlayer[];
   periods: FormationPeriod[];
-  gameFormat: string;
+  gameFormat: GameFormat;
   globalCaptainId?: string;
-  nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
+  nameDisplayOption?: 'full_name' | 'surname' | 'first_name';
   onPeriodsChange: (periods: FormationPeriod[]) => void;
   onCaptainChange: (captainId: string) => void;
-  gameDuration?: number;
+  gameDuration: number;
 }
-
-// Map team setting values to PlayerIcon expected values
-const mapNameDisplayOption = (option: 'surname' | 'firstName' | 'fullName' | 'initials'): 'surname' | 'firstName' | 'fullName' | 'initials' => {
-  // Direct mapping since the types now match
-  return option;
-};
 
 export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = ({
   squadPlayers,
@@ -50,771 +32,362 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   nameDisplayOption = 'surname',
   onPeriodsChange,
   onCaptainChange,
-  gameDuration = 50
+  gameDuration
 }) => {
-  const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
-  const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
-  const { positions } = usePositionAbbreviations(gameFormat);
+  const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
+  const [activePlayer, setActivePlayer] = useState<SquadPlayer | null>(null);
+  const [showPlayerPanel, setShowPlayerPanel] = useState(false);
 
-  // Improved sensors with better activation constraints and proper coordinate handling
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 3,
-      },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: {
-        delay: 100,
-        tolerance: 5,
-      },
-    })
-  );
-  
-  const gameFormatFormations = getFormationsByFormat(gameFormat as any);
-  const mappedNameDisplayOption = mapNameDisplayOption(nameDisplayOption);
-
-  console.log('DragDropFormationEditor render:', {
-    squadPlayers: squadPlayers.length,
-    periods: periods.length,
-    gameFormat,
-    formations: gameFormatFormations.length
-  });
-
-  const halfDuration = gameDuration / 2;
-
-  const calculateGameTime = (periodIndex: number) => {
-    let startTime = 0;
-    for (let i = 0; i < periodIndex; i++) {
-      startTime += periods[i]?.duration || 0;
+  useEffect(() => {
+    if (periods.length === 0) {
+      addPeriod();
     }
-    const endTime = startTime + (periods[periodIndex]?.duration || 0);
-    return `${startTime}-${endTime}m`;
-  };
+  }, [periods.length]);
 
-  const organizeByHalves = () => {
-    const firstHalf: FormationPeriod[] = [];
-    const secondHalf: FormationPeriod[] = [];
-    
-    let currentTime = 0;
-    
-    for (const period of periods) {
-      if (currentTime < halfDuration) {
-        firstHalf.push(period);
-      } else {
-        secondHalf.push(period);
-      }
-      currentTime += period.duration;
-    }
-    
-    return { firstHalf, secondHalf };
-  };
-
-  const getTotalTime = () => {
-    return periods.reduce((total, period) => total + period.duration, 0);
-  };
-
-  const checkHalfTimeExceeded = () => {
-    const { firstHalf, secondHalf } = organizeByHalves();
-    
-    const firstHalfTime = firstHalf.reduce((total, period) => total + period.duration, 0);
-    const secondHalfTime = secondHalf.reduce((total, period) => total + period.duration, 0);
-    
-    return {
-      firstHalfExceeded: firstHalfTime > halfDuration,
-      secondHalfExceeded: secondHalfTime > halfDuration,
-      totalExceeded: getTotalTime() > gameDuration,
-      firstHalfTime,
-      secondHalfTime
-    };
-  };
-
-  const timeCheck = checkHalfTimeExceeded();
-
-  const addPeriod = () => {
-    const newPeriodNumber = periods.length + 1;
-    const lastPeriod = periods[periods.length - 1];
-    
-    const newPeriod: FormationPeriod = {
-      id: `period-${newPeriodNumber}`,
-      periodNumber: newPeriodNumber,
-      formation: lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1',
-      duration: 8,
-      positions: lastPeriod ? [...lastPeriod.positions] : [],
-      substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
-      captainId: globalCaptainId
-    };
-
-    console.log('Adding new period:', newPeriod);
-    onPeriodsChange([...periods, newPeriod]);
-  };
-
-  const deletePeriod = (periodId: string) => {
-    const updatedPeriods = periods.filter(period => period.id !== periodId);
+  const updatePeriod = (index: number, updates: Partial<FormationPeriod>) => {
+    const updatedPeriods = [...periods];
+    updatedPeriods[index] = { ...updatedPeriods[index], ...updates };
     onPeriodsChange(updatedPeriods);
-  };
-
-  const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
-    if (positionName.toLowerCase().includes('goalkeeper')) return 'goalkeeper';
-    if (positionName.toLowerCase().includes('defender')) return 'defender';
-    if (positionName.toLowerCase().includes('midfielder')) return 'midfielder';
-    if (positionName.toLowerCase().includes('striker') || positionName.toLowerCase().includes('attacking')) return 'forward';
-    return 'midfielder';
-  };
-
-  const preservePlayerAssignments = (oldPositions: PositionSlotType[], newPositions: PositionSlotType[]): PositionSlotType[] => {
-    const updatedPositions = [...newPositions];
-    
-    oldPositions.forEach(oldPos => {
-      if (!oldPos.playerId) return;
-      
-      let matchIndex = updatedPositions.findIndex(newPos => 
-        newPos.positionName === oldPos.positionName && !newPos.playerId
-      );
-      
-      if (matchIndex === -1) {
-        const oldPosGroup = getPositionGroup(oldPos.positionName);
-        matchIndex = updatedPositions.findIndex(newPos => 
-          getPositionGroup(newPos.positionName) === oldPosGroup && !newPos.playerId
-        );
-      }
-      
-      if (matchIndex !== -1) {
-        updatedPositions[matchIndex] = {
-          ...updatedPositions[matchIndex],
-          playerId: oldPos.playerId
-        };
-      }
-    });
-    
-    return updatedPositions;
-  };
-
-  const updatePeriodFormation = (periodId: string, formation: string) => {
-    console.log('Updating formation for period:', periodId, 'to:', formation);
-    
-    const updatedPeriods = periods.map(period => {
-      if (period.id === periodId) {
-        const newPositions = createPositionSlots(formation);
-        const preservedPositions = preservePlayerAssignments(period.positions, newPositions);
-        
-        console.log('Created new positions for formation:', formation, preservedPositions);
-        return {
-          ...period,
-          formation,
-          positions: preservedPositions
-        };
-      }
-      return period;
-    });
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const updatePeriodDuration = (periodId: string, duration: number) => {
-    console.log('Updating duration for period:', periodId, 'to:', duration);
-    
-    const updatedPeriods = periods.map(period => {
-      if (period.id === periodId) {
-        return { ...period, duration };
-      }
-      return period;
-    });
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const createPositionSlots = (formationId: string): PositionSlotType[] => {
-    const formationConfig = gameFormatFormations.find(f => f.id === formationId);
-    if (!formationConfig) {
-      console.warn('No formation config found for:', formationId);
-      return [];
-    }
-
-    console.log('Creating position slots for formation:', formationId, formationConfig);
-
-    return formationConfig.positions.map((pos, index) => {
-      const positionData = positions.find(p => p.positionName === pos.position);
-      
-      return {
-        id: `position-${index}`,
-        positionName: pos.position,
-        abbreviation: positionData?.abbreviation || getDefaultAbbreviation(pos.position),
-        positionGroup: positionData?.positionGroup || getPositionGroup(pos.position),
-        x: pos.x,
-        y: pos.y,
-        playerId: undefined
-      };
-    });
-  };
-
-  const getDefaultAbbreviation = (positionName: string): string => {
-    const positionMap: Record<string, string> = {
-      'Goalkeeper': 'GK',
-      'Defender Left': 'DL',
-      'Defender Right': 'DR', 
-      'Defender Centre': 'DC',
-      'Defender Centre Left': 'DCL',
-      'Defender Centre Right': 'DCR',
-      'Midfielder Left': 'ML',
-      'Midfielder Right': 'MR',
-      'Midfielder Centre': 'MC',
-      'Midfielder Centre Left': 'MCL',
-      'Midfielder Centre Right': 'MCR',
-      'Attacking Midfielder Centre': 'AMC',
-      'Attacking Midfielder Left': 'AML',
-      'Attacking Midfielder Right': 'AMR',
-      'Striker Centre': 'STC',
-      'Striker Left': 'STL',
-      'Striker Right': 'STR',
-      'Striker Centre Left': 'SCL',
-      'Striker Centre Right': 'SCR'
-    };
-    
-    return positionMap[positionName] || positionName.slice(0, 2).toUpperCase();
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const dragId = event.active.id as string;
-    console.log('Drag started with ID:', dragId);
-    
-    // Extract player ID from drag ID
-    let playerId: string;
-    
-    if (dragId.includes('|')) {
-      // Format: "period-1|position|player123" or "period-1|substitutes|player123"
-      const parts = dragId.split('|');
-      playerId = parts[parts.length - 1]; // Always the last part
-    } else {
-      // Direct player ID from available players pool
-      playerId = dragId;
-    }
-    
-    const player = squadPlayers.find(p => p.id === playerId);
-    console.log('Drag started for player:', player?.name, 'with playerId:', playerId);
-    setDraggedPlayer(player || null);
+    const playerId = event.active.id.toString();
+    const player = squadPlayers.find((p) => p.id === playerId);
+    setActivePlayer(player || null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    
-    console.log('Drag ended:', { 
-      activeId: active.id, 
-      overId: over?.id,
-      draggedPlayer: draggedPlayer?.name
-    });
-    
-    setDraggedPlayer(null);
-    
-    if (!over || !draggedPlayer) {
-      console.log('No drop target or dragged player - cancelling drag');
-      return;
-    }
+    setActivePlayer(null);
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const playerId = draggedPlayer.id;
+    if (event.over) {
+      const positionId = event.over.id.toString();
+      const playerId = event.active.id.toString();
 
-    console.log('Processing drop for player:', playerId, 'to target:', overId);
-
-    // Extract source period from drag ID
-    const getSourcePeriodId = (id: string): string | null => {
-      if (id.includes('|')) {
-        return id.split('|')[0];
+      if (positionId.startsWith('position-')) {
+        addPlayerToPosition(positionId, playerId);
+      } else if (positionId.startsWith('substitute-')) {
+        addPlayerToBench(playerId);
       }
-      return null;
+    }
+  };
+
+  const addPlayerToPosition = (positionId: string, playerId: string) => {
+    const updatedPositions = currentPeriod.positions.map((pos) => {
+      if (pos.id === positionId) {
+        return { ...pos, playerId: playerId };
+      }
+      return pos;
+    });
+
+    updatePeriod(currentPeriodIndex, { positions: updatedPositions });
+  };
+
+  const removePlayerFromPosition = (positionId: string) => {
+    const updatedPositions = currentPeriod.positions.map((pos) => {
+      if (pos.id === positionId) {
+        return { ...pos, playerId: undefined };
+      }
+      return pos;
+    });
+
+    updatePeriod(currentPeriodIndex, { positions: updatedPositions });
+  };
+
+  const addPlayerToBench = (playerId: string) => {
+    if (!currentPeriod.substitutes.includes(playerId)) {
+      const updatedSubstitutes = [...currentPeriod.substitutes, playerId];
+      updatePeriod(currentPeriodIndex, { substitutes: updatedSubstitutes });
+    }
+  };
+
+  const removeFromBench = (playerId: string) => {
+    const updatedSubstitutes = currentPeriod.substitutes.filter((id) => id !== playerId);
+    updatePeriod(currentPeriodIndex, { substitutes: updatedSubstitutes });
+  };
+
+  const getAvailablePlayersForSelection = () => {
+    // Show ALL squad players regardless of availability status
+    // This includes available, pending, unavailable, and maybe players
+    const currentPeriod = periods[currentPeriodIndex];
+    if (!currentPeriod) return squadPlayers;
+
+    const assignedPlayerIds = new Set([
+      ...currentPeriod.positions.map(pos => pos.playerId).filter(Boolean),
+      ...currentPeriod.substitutes
+    ]);
+
+    return squadPlayers.filter(player => !assignedPlayerIds.has(player.id));
+  };
+
+  const getPlayerAvailabilityBadge = (player: SquadPlayer) => {
+    switch (player.availabilityStatus) {
+      case 'available':
+        return <Badge variant="outline" className="text-xs bg-green-100 text-green-800">Available</Badge>;
+      case 'pending':
+        return <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">Pending</Badge>;
+      case 'unavailable':
+        return <Badge variant="outline" className="text-xs bg-red-100 text-red-800">Unavailable</Badge>;
+      case 'maybe':
+        return <Badge variant="outline" className="text-xs bg-orange-100 text-orange-800">Maybe</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const getPlayerBorderStyle = (player: SquadPlayer) => {
+    switch (player.availabilityStatus) {
+      case 'available':
+        return 'border-green-200 bg-green-50';
+      case 'pending':
+        return 'border-yellow-200 bg-yellow-50';
+      case 'unavailable':
+        return 'border-red-200 bg-red-50 opacity-70';
+      case 'maybe':
+        return 'border-orange-200 bg-orange-50';
+      default:
+        return 'border-gray-200 bg-gray-50';
+    }
+  };
+
+  const addPeriod = () => {
+    const newPeriodNumber = periods.length > 0 ? Math.max(...periods.map(p => p.periodNumber)) + 1 : 1;
+    const newPeriod: FormationPeriod = {
+      id: `period-${newPeriodNumber}`,
+      periodNumber: newPeriodNumber,
+      formation: '4-3-3',
+      duration: gameDuration || 50,
+      positions: getInitialPositionsForFormation('4-3-3', gameFormat),
+      substitutes: [],
+      captainId: globalCaptainId
     };
 
-    // Extract target period and type from drop target ID
-    const getTargetInfo = (id: string): { periodId: string | null, type: 'position' | 'substitutes', positionIndex?: number } => {
-      if (id.includes('-position-')) {
-        const parts = id.split('-position-');
-        return {
-          periodId: parts[0],
-          type: 'position',
-          positionIndex: parseInt(parts[1])
-        };
-      } else if (id.startsWith('substitutes-')) {
-        return {
-          periodId: id.replace('substitutes-', ''),
-          type: 'substitutes'
-        };
-      }
-      return { periodId: null, type: 'position' };
-    };
+    onPeriodsChange([...periods, newPeriod]);
+    setCurrentPeriodIndex(periods.length);
+  };
 
-    const sourcePeriodId = getSourcePeriodId(activeId);
-    const targetInfo = getTargetInfo(overId);
+  const deletePeriod = (index: number) => {
+    const updatedPeriods = periods.filter((_, i) => i !== index);
+    onPeriodsChange(updatedPeriods);
+    setCurrentPeriodIndex(Math.max(0, index - 1));
+  };
 
-    console.log('Drag info:', { sourcePeriodId, targetInfo });
+  const getInitialPositionsForFormation = (formation: string, gameFormat: GameFormat): Position[] => {
+    const positions: Position[] = [];
+    let positionNames: string[] = [];
 
-    if (targetInfo.type === 'position' && targetInfo.positionIndex !== undefined) {
-      movePlayerToPosition(playerId, targetInfo.periodId!, targetInfo.positionIndex, sourcePeriodId);
-    } else if (targetInfo.type === 'substitutes') {
-      movePlayerToSubstitutes(playerId, targetInfo.periodId!, sourcePeriodId);
+    switch (formation) {
+      case '4-3-3':
+        positionNames = ['GK', 'RB', 'CB', 'CB', 'LB', 'CM', 'CM', 'CM', 'RW', 'ST', 'LW'];
+        break;
+      case '4-4-2':
+        positionNames = ['GK', 'RB', 'CB', 'CB', 'LB', 'RM', 'CM', 'CM', 'LM', 'ST', 'ST'];
+        break;
+      case '3-5-2':
+        positionNames = ['GK', 'CB', 'CB', 'CB', 'RWB', 'CM', 'CM', 'CM', 'LWB', 'ST', 'ST'];
+        break;
+      case '4-2-3-1':
+        positionNames = ['GK', 'RB', 'CB', 'CB', 'LB', 'CDM', 'CDM', 'CAM', 'RW', 'LW', 'ST'];
+        break;
+      case '3-4-3':
+        positionNames = ['GK', 'CB', 'CB', 'CB', 'RM', 'CM', 'CM', 'LM', 'RW', 'ST', 'LW'];
+        break;
+      default:
+        positionNames = ['GK', 'RB', 'CB', 'CB', 'LB', 'CM', 'CM', 'CM', 'RW', 'ST', 'LW'];
     }
-  };
 
-  const movePlayerToPosition = (playerId: string, targetPeriodId: string, positionIndex: number, sourcePeriodId: string | null) => {
-    console.log('Moving player to position:', { playerId, targetPeriodId, positionIndex, sourcePeriodId });
-    
-    const updatedPeriods = periods.map(period => {
-      if (period.id === targetPeriodId) {
-        const newPositions = [...period.positions];
-        const newSubstitutes = [...period.substitutes];
-        
-        // Handle displaced player (if any)
-        const displacedPlayerId = newPositions[positionIndex]?.playerId;
-        if (displacedPlayerId && displacedPlayerId !== playerId) {
-          console.log('Displacing player:', displacedPlayerId);
-          if (!newSubstitutes.includes(displacedPlayerId)) {
-            newSubstitutes.push(displacedPlayerId);
-          }
-        }
-        
-        // Remove player from current position/substitutes in same period
-        if (sourcePeriodId === targetPeriodId) {
-          // Remove from substitutes
-          const subIndex = newSubstitutes.indexOf(playerId);
-          if (subIndex > -1) {
-            newSubstitutes.splice(subIndex, 1);
-            console.log('Removed from substitutes in same period');
-          }
-          
-          // Remove from any other position
-          newPositions.forEach(pos => {
-            if (pos.playerId === playerId) {
-              pos.playerId = undefined;
-              console.log('Removed from previous position in same period');
-            }
-          });
-        }
-        
-        // Assign player to new position
-        if (newPositions[positionIndex]) {
-          newPositions[positionIndex].playerId = playerId;
-          console.log('Assigned to new position');
-        }
-        
-        return {
-          ...period,
-          positions: newPositions,
-          substitutes: newSubstitutes
-        };
-      } else if (period.id === sourcePeriodId) {
-        // Remove player from source period (different period)
-        const newPositions = [...period.positions];
-        const newSubstitutes = [...period.substitutes];
-        
-        // Remove from positions
-        newPositions.forEach(pos => {
-          if (pos.playerId === playerId) {
-            pos.playerId = undefined;
-            console.log('Removed from source period position');
-          }
-        });
-        
-        // Remove from substitutes
-        const subIndex = newSubstitutes.indexOf(playerId);
-        if (subIndex > -1) {
-          newSubstitutes.splice(subIndex, 1);
-          console.log('Removed from source period substitutes');
-        }
-        
-        return {
-          ...period,
-          positions: newPositions,
-          substitutes: newSubstitutes
-        };
-      }
-      
-      return period;
-    });
-    
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const movePlayerToSubstitutes = (playerId: string, targetPeriodId: string, sourcePeriodId: string | null) => {
-    console.log('Moving player to substitutes:', { playerId, targetPeriodId, sourcePeriodId });
-    
-    const updatedPeriods = periods.map(period => {
-      if (period.id === targetPeriodId) {
-        const newPositions = [...period.positions];
-        const newSubstitutes = [...period.substitutes];
-        
-        // Remove from positions in target period
-        newPositions.forEach(pos => {
-          if (pos.playerId === playerId) {
-            pos.playerId = undefined;
-            console.log('Removed player from position when moving to substitutes');
-          }
-        });
-        
-        // Remove from existing substitutes and add back (to avoid duplicates)
-        const existingSubIndex = newSubstitutes.indexOf(playerId);
-        if (existingSubIndex > -1) {
-          newSubstitutes.splice(existingSubIndex, 1);
-        }
-        
-        newSubstitutes.push(playerId);
-        console.log('Added to substitutes:', playerId);
-        
-        return {
-          ...period,
-          positions: newPositions,
-          substitutes: newSubstitutes
-        };
-      } else if (period.id === sourcePeriodId && sourcePeriodId !== targetPeriodId) {
-        // Remove from source period (different period)
-        const newPositions = [...period.positions];
-        const newSubstitutes = [...period.substitutes];
-        
-        newPositions.forEach(pos => {
-          if (pos.playerId === playerId) {
-            pos.playerId = undefined;
-          }
-        });
-        
-        const subIndex = newSubstitutes.indexOf(playerId);
-        if (subIndex > -1) {
-          newSubstitutes.splice(subIndex, 1);
-        }
-        
-        return {
-          ...period,
-          positions: newPositions,
-          substitutes: newSubstitutes
-        };
-      }
-      
-      return period;
-    });
-    
-    onPeriodsChange(updatedPeriods);
-  };
-
-  const getUnusedPlayers = () => {
-    const allUsedPlayerIds = new Set<string>();
-    
-    periods.forEach(period => {
-      period.positions.forEach(pos => {
-        if (pos.playerId) allUsedPlayerIds.add(pos.playerId);
-      });
-      period.substitutes.forEach(id => allUsedPlayerIds.add(id));
-    });
-    
-    return squadPlayers.filter(player => 
-      !allUsedPlayerIds.has(player.id) && 
-      player.availabilityStatus === 'available'
-    );
-  };
-
-  const calculatePlayingTimeSummary = () => {
-    const playerTimes: Record<string, number> = {};
-    
-    periods.forEach(period => {
-      period.positions.forEach(pos => {
-        if (pos.playerId) {
-          playerTimes[pos.playerId] = (playerTimes[pos.playerId] || 0) + period.duration;
-        }
+    positionNames.forEach((name, index) => {
+      positions.push({
+        id: `position-${index}`,
+        positionName: name,
+        abbreviation: name.substring(0, 2),
+        positionGroup: 'midfielder',
+        x: 50,
+        y: 50,
+        playerId: undefined
       });
     });
-    
-    return playerTimes;
+
+    return positions;
   };
 
-  useEffect(() => {
-    if (periods.length === 0 && gameFormatFormations.length > 0) {
-      console.log('Auto-creating first period');
-      addPeriod();
-    }
-  }, [gameFormatFormations]);
+  const currentPeriod = periods[currentPeriodIndex];
+  const availablePlayersForSelection = getAvailablePlayersForSelection();
 
-  useEffect(() => {
-    periods.forEach(period => {
-      if (period.positions.length === 0 && period.formation) {
-        console.log('Auto-creating positions for period:', period.id, 'formation:', period.formation);
-        updatePeriodFormation(period.id, period.formation);
-      }
-    });
-  }, [periods]);
-
-  useEffect(() => {
-    const unusedPlayers = getUnusedPlayers();
-    if (unusedPlayers.length === 0 && availablePlayersOpen) {
-      setAvailablePlayersOpen(false);
-    } else if (unusedPlayers.length > 0 && !availablePlayersOpen) {
-      setAvailablePlayersOpen(true);
-    }
-  }, [squadPlayers, periods]);
-
-  const playingTimeSummary = calculatePlayingTimeSummary();
-  const unusedPlayers = getUnusedPlayers();
-  const { firstHalf, secondHalf } = organizeByHalves();
-
-  const getPositionGroupColor = (position: string) => {
-    const pos = position?.toLowerCase() || '';
-    
-    if (pos.includes('goalkeeper') || pos === 'gk') {
-      return 'border-yellow-400 bg-yellow-50';
-    } else if (pos.includes('defender') || pos.startsWith('d')) {
-      return 'border-blue-400 bg-blue-50';
-    } else if (pos.includes('midfielder') || pos.startsWith('m') || pos.includes('mid')) {
-      return 'border-green-400 bg-green-50';
-    } else {
-      // Forwards/Attackers/Strikers
-      return 'border-red-400 bg-red-50';
-    }
-  };
-
-  const renderPeriodCard = (period: FormationPeriod) => (
-    <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
-      <CardHeader className="pb-3">
-        <div className="space-y-3">
+  return (
+    <div className="space-y-6">
+      {/* Period Management */}
+      <Card>
+        <CardHeader>
           <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
-              <CardTitle className="text-lg mb-2">Period {period.periodNumber}</CardTitle>
-              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <Input
-                    type="number"
-                    value={period.duration}
-                    onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                    className="w-20 h-7 text-xs text-center"
-                    min="1"
-                    max="90"
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Formation Periods
+            </CardTitle>
+            <Button onClick={addPeriod} size="sm">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Period
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2 flex-wrap">
+            {periods.map((period, index) => (
+              <Button
+                key={period.id}
+                variant={index === currentPeriodIndex ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setCurrentPeriodIndex(index)}
+                className="flex items-center gap-1"
+              >
+                Period {period.periodNumber}
+                <Badge variant="secondary" className="text-xs">
+                  {period.duration}min
+                </Badge>
+              </Button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {currentPeriod && (
+        <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          {/* Formation Display */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>
+                  Period {currentPeriod.periodNumber} - {currentPeriod.formation}
+                </CardTitle>
+                <div className="flex items-center gap-2">
+                  <FormationSelector
+                    value={currentPeriod.formation}
+                    gameFormat={gameFormat}
+                    onChange={(formation) => updatePeriod(currentPeriodIndex, { formation })}
                   />
-                  <span className="text-xs">min</span>
+                  <Select
+                    value={currentPeriod.duration.toString()}
+                    onValueChange={(value) => updatePeriod(currentPeriodIndex, { duration: parseInt(value) })}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 8, 10, 15, 20, 25, 30, 35, 40, 45, 50, 60, 70, 80, 90].map(duration => (
+                        <SelectItem key={duration} value={duration.toString()}>
+                          {duration}min
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
-            </div>
-            {periods.length > 1 && (
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => deletePeriod(period.id)}
-                className="h-6 w-6 p-0 print:hidden"
-              >
-                <X className="h-3 w-3" />
-              </Button>
+            </CardHeader>
+            <CardContent>
+              {/* Formation pitch display */}
+              <div className="bg-green-100 rounded-lg p-6 min-h-[400px] relative">
+                {currentPeriod.positions.map((position) => (
+                  <PositionSlot
+                    key={position.id}
+                    position={position}
+                    gameFormat={gameFormat}
+                    onRemovePlayer={removePlayerFromPosition}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Substitutes Bench */}
+          <SubstituteBench
+            substitutes={currentPeriod.substitutes}
+            squadPlayers={squadPlayers}
+            nameDisplayOption={nameDisplayOption}
+            onRemoveFromBench={removeFromBench}
+          />
+
+          {/* Available Players Panel - Show ALL squad players */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Available Players ({availablePlayersForSelection.length})
+                <Badge variant="outline" className="text-xs">
+                  All squad players shown regardless of availability
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {availablePlayersForSelection.map((player) => (
+                  <div
+                    key={player.id}
+                    className={`p-3 border rounded-lg cursor-grab active:cursor-grabbing ${getPlayerBorderStyle(player)}`}
+                  >
+                    <PlayerIcon
+                      player={player}
+                      nameDisplayOption={nameDisplayOption}
+                      draggable
+                    />
+                    <div className="mt-1 flex flex-col items-center gap-1">
+                      {getPlayerAvailabilityBadge(player)}
+                      {globalCaptainId === player.id && (
+                        <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-800">
+                          Captain
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {availablePlayersForSelection.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>All squad players have been assigned to positions or bench</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <DragOverlay>
+            {activePlayer && (
+              <PlayerIcon
+                player={activePlayer}
+                nameDisplayOption={nameDisplayOption}
+              />
             )}
-          </div>
-          
-          <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-            <SelectTrigger className="h-7 text-sm">
-              <SelectValue />
+          </DragOverlay>
+        </DndContext>
+      )}
+
+      {/* Captain Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Team Captain Selection
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Select value={globalCaptainId || 'no-captain'} onValueChange={onCaptainChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select team captain" />
             </SelectTrigger>
             <SelectContent>
-              {gameFormatFormations.map((formation) => (
-                <SelectItem key={formation.id} value={formation.id}>
-                  {formation.name}
+              <SelectItem value="no-captain">No Captain Selected</SelectItem>
+              {squadPlayers.map((player) => (
+                <SelectItem key={player.id} value={player.id}>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline">#{player.squadNumber}</Badge>
+                    {player.name}
+                    {getPlayerAvailabilityBadge(player)}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
-          <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-          
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-          <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-          <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-          
-          <div className="relative h-full">
-            {period.positions.map((position, index) => {
-              const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
-              const isCaptain = position.playerId === globalCaptainId;
-              const positionGroupColor = getPositionGroupColor(position.positionName);
-              
-              return (
-                <div key={`${period.id}-position-${index}`}>
-                  {/* Drop zone for position */}
-                  <PositionSlot
-                    id={`${period.id}-position-${index}`}
-                    position={position}
-                    player={player}
-                    isCaptain={isCaptain}
-                    nameDisplayOption={mappedNameDisplayOption}
-                    isLarger={true}
-                  />
-                  
-                  {/* Render draggable player icon on top of position slot */}
-                  {player && (
-                    <div
-                      className="absolute"
-                      style={{
-                        left: `${position.x}%`,
-                        top: `${position.y}%`,
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 20,
-                      }}
-                    >
-                      <div className={`rounded-full border-2 ${positionGroupColor} p-1`}>
-                        <PlayerIcon
-                          player={player}
-                          isCaptain={isCaptain}
-                          nameDisplayOption={mappedNameDisplayOption}
-                          isCircular={true}
-                          dragId={`${period.id}|position|${player.id}`}
-                          positionAbbreviation={position.abbreviation}
-                          showPositionLabel={true}
-                          isLarger={true}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        
-        <SubstituteBench
-          id={`substitutes-${period.id}`}
-          substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-          globalCaptainId={globalCaptainId}
-          nameDisplayOption={mappedNameDisplayOption}
-        />
-      </CardContent>
-    </Card>
-  );
-
-  return (
-    <DndContext 
-      sensors={sensors} 
-      collisionDetection={closestCenter}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
-    >
-      <div className="space-y-6 print:space-y-4">
-        {/* Time tracking alerts */}
-        {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
-          <Alert variant="destructive">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              {timeCheck.totalExceeded && `Total time (${getTotalTime()}min) exceeds game duration (${gameDuration}min). `}
-              {timeCheck.firstHalfExceeded && `First half (${timeCheck.firstHalfTime}min) exceeds ${halfDuration}min. `}
-              {timeCheck.secondHalfExceeded && `Second half (${timeCheck.secondHalfTime}min) exceeds ${halfDuration}min.`}
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Available Players */}
-        <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between print:hidden">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span>Available Players ({unusedPlayers.length})</span>
-              </div>
-              {availablePlayersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="print:block">
-            <Card>
-              <CardContent className="pt-4">
-                {unusedPlayers.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">
-                    All available players have been assigned
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {unusedPlayers.map((player) => (
-                      <PlayerIcon
-                        key={player.id}
-                        player={player}
-                        isCaptain={player.id === globalCaptainId}
-                        nameDisplayOption={mappedNameDisplayOption}
-                        isCircular={false}
-                        dragId={player.id}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
-
-        {/* Periods organized by halves */}
-        <div className="space-y-6">
-          {firstHalf.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">First Half ({timeCheck.firstHalfTime}min)</h3>
-                <Badge variant={timeCheck.firstHalfExceeded ? "destructive" : "secondary"}>
-                  {timeCheck.firstHalfTime}/{halfDuration}min
-                </Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {firstHalf.map(renderPeriodCard)}
-              </div>
-            </div>
-          )}
-
-          {secondHalf.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold">Second Half ({timeCheck.secondHalfTime}min)</h3>
-                <Badge variant={timeCheck.secondHalfExceeded ? "destructive" : "secondary"}>
-                  {timeCheck.secondHalfTime}/{halfDuration}min
-                </Badge>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {secondHalf.map(renderPeriodCard)}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Add Period Button */}
-        <div className="flex justify-center print:hidden">
-          <Button onClick={addPeriod} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Period
-          </Button>
-        </div>
-
-        {/* Playing Time Summary */}
-        {Object.keys(playingTimeSummary).length > 0 && (
-          <Card className="print:break-inside-avoid">
-            <CardHeader>
-              <CardTitle className="text-lg">Playing Time Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                {Object.entries(playingTimeSummary).map(([playerId, minutes]) => {
-                  const player = squadPlayers.find(p => p.id === playerId);
-                  if (!player) return null;
-                  
-                  return (
-                    <div key={playerId} className="flex items-center justify-between p-2 bg-muted rounded">
-                      <span className="text-sm font-medium">{player.name}</span>
-                      <Badge variant="outline">{minutes}min</Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <DragOverlay>
-        {draggedPlayer && (
-          <PlayerIcon
-            player={draggedPlayer}
-            isCaptain={draggedPlayer.id === globalCaptainId}
-            nameDisplayOption={mappedNameDisplayOption}
-            isCircular={true}
-            isDragging={true}
-          />
-        )}
-      </DragOverlay>
-    </DndContext>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
