@@ -47,10 +47,13 @@ export function UpcomingEvents() {
 
   const loadUserAvailability = async () => {
     try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return;
+
       const { data: availabilityData, error } = await supabase
         .from('event_availability')
         .select('event_id, status')
-        .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
+        .eq('user_id', user.user.id);
 
       if (error) {
         console.error('Error loading user availability:', error);
