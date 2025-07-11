@@ -124,11 +124,13 @@ export const EventForm: React.FC<EventFormProps> = ({
         if (onEventCreated) onEventCreated(event.id);
         eventId = event.id;
       } else {
-        // Create new event using the service
+        // Create new event using the service - fix the teams type
         const newEvent = await eventsService.createEvent({
           ...eventData,
           teamId: teamId,
           type: eventData.event_type,
+          // Convert number to array format for the service
+          teams: Array.from({ length: formData.num_teams }, (_, i) => ({ id: teamId, number: i + 1 })),
         });
         
         if (!newEvent) {
