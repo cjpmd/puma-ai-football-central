@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -31,10 +31,16 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     assignPlayerToSquad,
     removePlayerFromSquad,
-    updateSquadRole
+    updateSquadRole,
+    reload
   } = useAvailabilityBasedSquad(teamId, eventId);
 
   const [filterBy, setFilterBy] = useState<'all' | 'available' | 'unavailable' | 'pending'>('all');
+
+  // Notify parent when squad changes
+  useEffect(() => {
+    onSquadChange?.(squadPlayers);
+  }, [squadPlayers, onSquadChange]);
 
   // Filter available players based on availability status
   const filteredAvailablePlayers = availablePlayers.filter(player => {
@@ -46,7 +52,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       await assignPlayerToSquad(playerId);
       toast.success('Player added to squad');
-      onSquadChange?.(squadPlayers);
+      // Reload to get fresh data
+      await reload();
     } catch (error: any) {
       console.error('Error assigning player:', error);
       toast.error(error.message || 'Failed to add player to squad');
@@ -57,7 +64,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       await removePlayerFromSquad(playerId);
       toast.success('Player removed from squad');
-      onSquadChange?.(squadPlayers);
+      // Reload to get fresh data
+      await reload();
     } catch (error: any) {
       console.error('Error removing player:', error);
       toast.error(error.message || 'Failed to remove player from squad');
@@ -71,6 +79,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       if (role === 'captain') {
         onCaptainChange?.(playerId);
       }
+      // Reload to get fresh data
+      await reload();
     } catch (error: any) {
       console.error('Error updating role:', error);
       toast.error(error.message || 'Failed to update player role');
@@ -90,9 +100,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   const getAvailabilityColor = (status: string) => {
     switch (status) {
-      case 'available': return 'bg-green-100 text-green-800';
-      case 'unavailable': return 'bg-red-100 text-red-800';
-      default: return 'bg-amber-100 text-amber-800';
+      case 'available': return 'bg-green-100 text-green-800 border-green-200';
+      case 'unavailable': return 'bg-red-100 text-red-800 border-red-200';
+      default: return 'bg-amber-100 text-amber-800 border-amber-200';
     }
   };
 
@@ -110,30 +120,32 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   return (
     <div className={`space-y-4 ${isMobile ? 'space-y-3' : 'space-y-6'}`}>
       {/* Team Captain Selection */}
-      <Card>
-        <CardHeader className={`${isMobile ? 'pb-2 px-3 pt-3' : 'pb-3'}`}>
-          <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-sm' : 'text-base'}`}>
-            <Crown className={`text-yellow-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-            Team Captain
-          </CardTitle>
-        </CardHeader>
-        <CardContent className={`${isMobile ? 'pt-0 px-3 pb-3' : 'pt-0'}`}>
-          <Select value={globalCaptainId || ''} onValueChange={onCaptainChange}>
-            <SelectTrigger className={isMobile ? 'h-8 text-sm' : 'h-8'}>
-              <SelectValue placeholder="Select captain..." />
-            </SelectTrigger>
-            <SelectContent>
-              {squadPlayers
-                .filter(p => p.availabilityStatus === 'available')
-                .map((player) => (
-                  <SelectItem key={player.id} value={player.id}>
-                    #{player.squadNumber} {player.name}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
+      {squadPlayers.length > 0 && (
+        <Card>
+          <CardHeader className={`${isMobile ? 'pb-2 px-3 pt-3' : 'pb-3'}`}>
+            <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-sm' : 'text-base'}`}>
+              <Crown className={`text-yellow-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              Team Captain
+            </CardTitle>
+          </CardHeader>
+          <CardContent className={`${isMobile ? 'pt-0 px-3 pb-3' : 'pt-0'}`}>
+            <Select value={globalCaptainId || ''} onValueChange={onCaptainChange}>
+              <SelectTrigger className={isMobile ? 'h-8 text-sm' : 'h-8'}>
+                <SelectValue placeholder="Select captain..." />
+              </SelectTrigger>
+              <SelectContent>
+                {squadPlayers
+                  .filter(p => p.availabilityStatus === 'available')
+                  .map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      #{player.squadNumber} {player.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Available Players */}
       <Card>
@@ -153,8 +165,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Players</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="available">Available Only</SelectItem>
+                <SelectItem value="pending">Pending Response</SelectItem>
                 <SelectItem value="unavailable">Unavailable</SelectItem>
               </SelectContent>
             </Select>
@@ -165,7 +177,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
             {filteredAvailablePlayers.length === 0 ? (
               <div className={`text-center text-muted-foreground ${isMobile ? 'py-4 text-sm' : 'py-8'}`}>
                 {availablePlayers.length === 0 
-                  ? 'No players have set their availability yet'
+                  ? 'No players have set their availability yet. Send availability notifications first.'
                   : 'No players match the current filter'
                 }
               </div>
@@ -220,7 +232,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
               </div>
             ) : (
               squadPlayers.map((player) => (
-                <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'}`}>
+                <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'} ${player.availabilityStatus === 'available' ? 'bg-green-50 border-green-200' : player.availabilityStatus === 'unavailable' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                   <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
                     <Badge variant="outline" className={isMobile ? 'text-xs' : ''}>#{player.squadNumber}</Badge>
                     <span className={`font-medium ${isMobile ? 'text-sm' : ''}`}>{player.name}</span>
@@ -230,6 +242,12 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                     {player.type === 'goalkeeper' && (
                       <Badge variant="secondary" className={isMobile ? 'text-xs' : ''}>GK</Badge>
                     )}
+                    <div className="flex items-center gap-1">
+                      {getAvailabilityIcon(player.availabilityStatus)}
+                      <Badge className={`${getAvailabilityColor(player.availabilityStatus)} ${isMobile ? 'text-xs px-1 py-0' : ''}`}>
+                        {isMobile ? player.availabilityStatus.substring(0, 4) : player.availabilityStatus}
+                      </Badge>
+                    </div>
                   </div>
                   
                   <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>

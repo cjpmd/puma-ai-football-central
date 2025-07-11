@@ -87,9 +87,17 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
 
   const handleSquadChange = (newSquadPlayers: any[]) => {
     setSquadPlayers(newSquadPlayers);
-    // Convert squad players to selected players format
-    const playerIds = newSquadPlayers.map(p => p.id);
-    setSelectedPlayers(playerIds);
+    // Convert squad players to selected players format for formation view
+    const availablePlayerIds = newSquadPlayers
+      .filter(p => p.availabilityStatus === 'available')
+      .map(p => p.id);
+    setSelectedPlayers(availablePlayerIds);
+    
+    // Set substitutes as pending/unavailable players who are still in squad
+    const substitutePlayerIds = newSquadPlayers
+      .filter(p => p.availabilityStatus !== 'available')
+      .map(p => p.id);
+    setSubstitutePlayers(substitutePlayerIds);
   };
 
   const handleCaptainChange = (captainId: string) => {
@@ -190,13 +198,29 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
         </TabsList>
 
         <TabsContent value="squad" className="space-y-4">
-          <AvailabilityDrivenSquadManagement
-            teamId={selectedTeam}
-            eventId={eventId}
-            globalCaptainId={globalCaptainId}
-            onSquadChange={handleSquadChange}
-            onCaptainChange={handleCaptainChange}
-          />
+          {availabilityCount === 0 ? (
+            <Card>
+              <CardContent className={`text-center ${isMobile ? 'py-6' : 'py-8'}`}>
+                <Bell className={`h-12 w-12 text-muted-foreground mx-auto mb-4`} />
+                <h3 className="text-lg font-semibold mb-2">Send Availability Notifications</h3>
+                <p className="text-muted-foreground mb-4">
+                  Before you can manage your squad, you need to send availability notifications to your players and staff.
+                </p>
+                <Button onClick={() => setIsNotificationModalOpen(true)}>
+                  <Bell className="h-4 w-4 mr-2" />
+                  Send Notifications
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <AvailabilityDrivenSquadManagement
+              teamId={selectedTeam}
+              eventId={eventId}
+              globalCaptainId={globalCaptainId}
+              onSquadChange={handleSquadChange}
+              onCaptainChange={handleCaptainChange}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="formation" className="space-y-4">
@@ -224,7 +248,10 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
               <CardContent className="text-center py-8">
                 <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-4" />
                 <p className="text-muted-foreground">
-                  Add players to your squad to configure formations
+                  {availabilityCount === 0 
+                    ? 'Send availability notifications first, then add players to your squad to configure formations'
+                    : 'Add players to your squad to configure formations'
+                  }
                 </p>
               </CardContent>
             </Card>
@@ -240,8 +267,15 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              This will send availability notifications to all selected players and staff for this event.
+              This will send availability notifications to all selected players and staff for this event. 
+              Players will be able to respond with their availability status, which will then appear in your squad management.
             </p>
+            {availabilityCount > 0 && (
+              <p className="text-sm text-amber-600">
+                Note: You have already received {availabilityCount} availability responses. 
+                Sending notifications again will create additional requests.
+              </p>
+            )}
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
@@ -250,6 +284,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
                 Cancel
               </Button>
               <Button onClick={handleSendNotifications}>
+                <Bell className="h-4 w-4 mr-2" />
                 Send Notifications
               </Button>
             </div>
