@@ -12,6 +12,7 @@ import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
+import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
