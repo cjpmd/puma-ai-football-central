@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +44,7 @@ export const EventForm: React.FC<EventFormProps> = ({
     end_time: '',
     location: '',
     event_type: 'training',
-    team_id: teamId || teams?.[0]?.id || '',
+    team_id: teamId || '',
     opponent: '',
     description: '',
     notes: '',
@@ -65,7 +64,7 @@ export const EventForm: React.FC<EventFormProps> = ({
   useEffect(() => {
     const loadTeamSettings = async () => {
       if (formData.team_id) {
-        const team = teams?.find(t => t.id === formData.team_id);
+        const team = teams.find(t => t.id === formData.team_id);
         if (team) {
           setSelectedTeam(team);
           // Set defaults from team settings if not editing existing event
@@ -92,7 +91,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         end_time: eventData.endTime || eventData.end_time || '',
         location: eventData.location || '',
         event_type: eventData.type || eventData.event_type || 'training',
-        team_id: eventData.teamId || eventData.team_id || teamId || teams?.[0]?.id || '',
+        team_id: eventData.teamId || eventData.team_id || teamId || '',
         opponent: eventData.opponent || '',
         description: eventData.description || '',
         notes: eventData.notes || '',
@@ -103,14 +102,8 @@ export const EventForm: React.FC<EventFormProps> = ({
         facility_id: eventData.facilityId || eventData.facility_id || '',
         num_teams: eventData.num_teams || 1,
       });
-    } else if (!formData.team_id && (teamId || teams?.[0]?.id)) {
-      // Set default team if not already set
-      setFormData(prev => ({
-        ...prev,
-        team_id: teamId || teams?.[0]?.id || ''
-      }));
     }
-  }, [eventData, teamId, teams]);
+  }, [eventData, teamId]);
 
   useEffect(() => {
     if (formData.team_id) {
@@ -169,32 +162,13 @@ export const EventForm: React.FC<EventFormProps> = ({
       return;
     }
 
-    console.log('Form data before submission:', formData);
-
     setLoading(true);
 
     try {
       const eventDataToSubmit = {
-        teamId: formData.team_id,
-        title: formData.title,
-        date: formData.date,
-        startTime: formData.start_time,
-        endTime: formData.end_time,
-        location: formData.location,
-        type: formData.event_type as 'training' | 'match' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
-        opponent: formData.opponent,
-        description: formData.description,
-        notes: formData.notes,
-        gameFormat: formData.game_format as any,
-        gameDuration: formData.game_duration,
-        isHome: formData.is_home,
-        kitSelection: formData.kit_selection as 'home' | 'away' | 'training',
-        facilityId: formData.facility_id,
-        teams: [], // Initialize as empty array for now
+        ...formData,
         created_by: user?.id,
       };
-
-      console.log('Submitting event data:', eventDataToSubmit);
 
       // If onSubmit prop is provided, use it (for new EventForm interface)
       if (onSubmit) {
@@ -209,23 +183,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         // Update existing event
         const { error } = await supabase
           .from('events')
-          .update({
-            team_id: eventDataToSubmit.teamId,
-            title: eventDataToSubmit.title,
-            date: eventDataToSubmit.date,
-            start_time: eventDataToSubmit.startTime,
-            end_time: eventDataToSubmit.endTime,
-            location: eventDataToSubmit.location,
-            event_type: eventDataToSubmit.type,
-            opponent: eventDataToSubmit.opponent,
-            description: eventDataToSubmit.description,
-            notes: eventDataToSubmit.notes,
-            game_format: eventDataToSubmit.gameFormat,
-            game_duration: eventDataToSubmit.gameDuration,
-            is_home: eventDataToSubmit.isHome,
-            kit_selection: eventDataToSubmit.kitSelection,
-            facility_id: eventDataToSubmit.facilityId,
-          })
+          .update(eventDataToSubmit)
           .eq('id', eventData.id);
 
         if (error) throw error;
@@ -235,7 +193,18 @@ export const EventForm: React.FC<EventFormProps> = ({
         eventId = eventData.id;
       } else {
         // Create new event using the service
-        const newEvent = await eventsService.createEvent(eventDataToSubmit);
+        const newEvent = await eventsService.createEvent({
+          ...eventDataToSubmit,
+          teamId: eventDataToSubmit.team_id,
+          type: eventDataToSubmit.event_type as 'training' | 'fixture' | 'tournament' | 'festival' | 'social' | 'friendly',
+          startTime: eventDataToSubmit.start_time,
+          endTime: eventDataToSubmit.end_time,
+          isHome: eventDataToSubmit.is_home,
+          gameFormat: eventDataToSubmit.game_format as any,
+          gameDuration: eventDataToSubmit.game_duration,
+          kitSelection: eventDataToSubmit.kit_selection as 'home' | 'away' | 'training',
+          facilityId: eventDataToSubmit.facility_id,
+        });
         
         toast.success('Event created successfully');
         if (onEventCreated) onEventCreated(newEvent.id);
@@ -360,7 +329,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                 <SelectValue placeholder="Select team" />
               </SelectTrigger>
               <SelectContent>
-                {teams?.map((team) => (
+                {teams.map((team) => (
                   <SelectItem key={team.id} value={team.id}>
                     {team.name}
                   </SelectItem>
@@ -571,7 +540,7 @@ export const EventForm: React.FC<EventFormProps> = ({
             <Button 
               type="submit" 
               className="flex-1" 
-              disabled={loading || !formData.team_id}
+              disabled={loading}
             >
               {loading ? 'Saving...' : (isEditing ? 'Update Event' : 'Create Event')}
             </Button>

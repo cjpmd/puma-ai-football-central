@@ -370,7 +370,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   </p>
                 )}
 
-                {/* Availability Controls */}
+                {/* Availability Controls - New Addition */}
                 {showAvailabilityControls && (
                   <div className="pt-2 border-t">
                     <QuickAvailabilityControls

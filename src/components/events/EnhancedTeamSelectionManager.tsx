@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,7 +22,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
-import { GameFormat } from '@/types';
 
 interface TeamSelection {
   teamNumber: number;
@@ -376,9 +376,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const currentTeam = getCurrentTeam();
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
-  // Convert game_format to GameFormat type properly
-  const gameFormat: GameFormat = (event.game_format as GameFormat) || '7-a-side';
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
       <div className={`bg-white rounded-lg w-full flex flex-col ${
@@ -533,7 +530,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <DragDropFormationEditor
                     squadPlayers={currentTeam.squadPlayers}
                     periods={currentTeam.periods}
-                    gameFormat={gameFormat}
+                    gameFormat={event.game_format || '7-a-side'}
                     globalCaptainId={currentTeam.globalCaptainId}
                     nameDisplayOption={nameDisplayOption as any}
                     onPeriodsChange={handlePeriodsChange}
