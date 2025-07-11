@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { CalendarGridView } from '@/components/events/CalendarGridView';
@@ -259,20 +258,27 @@ export default function CalendarEvents() {
           <TabsContent value="calendar" className="mt-6">
             <CalendarGridView 
               events={events} 
-              onEventClick={handleEventClick}
-              userAvailability={userAvailability}
-              onAvailabilityChange={handleAvailabilityChange}
+              onEditEvent={handleEventClick}
+              onTeamSelection={handleEventClick}
+              onPostGameEdit={handleEventClick}
+              onDeleteEvent={(eventId: string) => {
+                // Handle delete event
+                console.log('Delete event:', eventId);
+              }}
             />
           </TabsContent>
 
           <TabsContent value="grid" className="mt-6">
             <EventsGridView 
               events={events} 
-              onEventClick={handleEventClick}
-              onEventAction={handleEventAction}
-              eventSelections={eventSelections}
-              userAvailability={userAvailability}
-              onAvailabilityChange={handleAvailabilityChange}
+              onEditEvent={handleEventClick}
+              onTeamSelection={handleEventClick}
+              onPostGameEdit={handleEventClick}
+              onDeleteEvent={(eventId: string) => {
+                // Handle delete event
+                console.log('Delete event:', eventId);
+              }}
+              onScoreEdit={handleEventClick}
             />
           </TabsContent>
         </Tabs>
