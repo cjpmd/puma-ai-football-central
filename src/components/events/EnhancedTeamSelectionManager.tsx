@@ -23,11 +23,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   isOpen,
   onClose,
 }) => {
-  console.log('=== ENHANCED TEAM SELECTION MANAGER RENDER ===');
-  console.log('isOpen:', isOpen);
-  console.log('event:', event);
-  console.log('teamId:', teamId);
-  
   const [selectedView, setSelectedView] = useState<'squad' | 'selection' | 'mobile'>('squad');
   const [selectedTeamNumber, setSelectedTeamNumber] = useState<number>(1);
   const [eventTeams, setEventTeams] = useState<any[]>([]);
@@ -36,9 +31,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   // Load event teams data
   useEffect(() => {
+    if (!isOpen || !event?.id) return;
+
+    let cancelled = false;
+    
     const loadEventTeams = async () => {
-      if (!event?.id) return;
-      
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -48,8 +45,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           .order('team_number');
 
         if (error) throw error;
+        if (cancelled) return;
         
-        console.log('Loaded event teams:', data);
         setEventTeams(data || []);
         
         // If no teams exist but event has teams > 1, create them
@@ -70,20 +67,25 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             .select();
             
           if (createError) throw createError;
-          setEventTeams(newTeams || []);
-          console.log('Created event teams:', newTeams);
+          if (!cancelled) {
+            setEventTeams(newTeams || []);
+          }
         }
       } catch (error) {
         console.error('Error loading event teams:', error);
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    if (isOpen) {
-      loadEventTeams();
-    }
-  }, [event?.id, event?.teams, isOpen]);
+    loadEventTeams();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [event?.id, isOpen]);
 
   const handleTeamNumberChange = (teamNumber: number) => {
     setSelectedTeamNumber(teamNumber);
