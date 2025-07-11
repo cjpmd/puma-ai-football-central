@@ -10,7 +10,7 @@ interface QuickAvailabilityControlsProps {
   eventId: string;
   currentStatus?: 'pending' | 'available' | 'unavailable' | null;
   size?: 'sm' | 'md';
-  onStatusChange?: (status: 'available' | 'unavailable') => void;
+  onStatusChange?: (eventId: string, status: 'available' | 'unavailable') => void;
 }
 
 export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps> = ({
@@ -41,7 +41,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
       if (error) throw error;
 
-      onStatusChange?.(status);
+      onStatusChange?.(eventId, status);
       toast.success(`Availability set to ${status}`);
     } catch (error) {
       console.error('Error updating availability:', error);
