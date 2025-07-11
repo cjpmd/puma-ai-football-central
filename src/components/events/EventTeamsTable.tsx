@@ -15,6 +15,7 @@ import { FormationSelector } from './FormationSelector';
 import { toast } from 'sonner';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { availabilityService } from '@/services/availabilityService';
+import { GameFormat } from '@/types';
 
 interface EventTeamsTableProps {
   eventId: string;
@@ -188,13 +189,14 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
           {squadPlayers.length > 0 ? (
             <div className="space-y-4">
               <FormationSelector
-                gameFormat={gameFormat}
+                gameFormat={gameFormat as GameFormat}
+                selectedFormation="4-3-3"
                 onFormationChange={(formation) => console.log('Formation changed:', formation)}
               />
               <EnhancedFormationView
                 players={squadPlayers}
                 formation="4-3-3"
-                gameFormat={gameFormat}
+                gameFormat={gameFormat as GameFormat}
                 captainId={globalCaptainId}
                 onPlayerMove={() => {}}
                 onSubstitution={() => {}}
