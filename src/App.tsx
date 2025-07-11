@@ -42,7 +42,7 @@ const App = () => (
         <AuthProvider>
           <AuthorizationProvider>
             <Routes>
-              <Route path="/" element={<Navigate to="/auth" replace />} />
+              <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Navigate to="/auth" replace />} />
               <Route path="/account-linking" element={<AccountLinking />} />
