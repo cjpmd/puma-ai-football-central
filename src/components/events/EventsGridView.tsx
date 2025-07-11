@@ -377,7 +377,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                       eventId={event.id}
                       currentStatus={availabilityStatus}
                       size="sm"
-                      onStatusChange={handleAvailabilityChange}
+                      onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
                     />
                   </div>
                 )}

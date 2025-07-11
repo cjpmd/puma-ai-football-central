@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,51 +37,33 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
-  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
   const { teams, user } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
   const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Load availability when user or events change
   useEffect(() => {
-    const loadAvailability = async () => {
-      if (!user?.id || events.length === 0) {
+    loadEventWeather();
+    loadPerformanceCategories();
+  }, [events, teams]);
+
+  useEffect(() => {
+    if (events.length > 0 && user?.id) {
+      loadUserAvailability();
+    }
+  }, [events, user?.id]);
+
+  const loadUserAvailability = async () => {
+    try {
+      if (!user?.id) {
+        console.log('No user ID available for availability loading');
         return;
       }
 
-      try {
-        console.log('=== CALENDAR GRID VIEW DEBUG ===');
-        console.log('Loading availability for user:', user.id);
-
-        const eventIds = events.map(event => event.id);
-        console.log('Event IDs to check:', eventIds.map(id => `${id.slice(-6)} (${id})`));
-        
-        const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
-        console.log('Received availability in calendar:', availability);
-        
-        setUserAvailability(availability);
-        setAvailabilityLoaded(true);
-        console.log('=== END CALENDAR GRID VIEW DEBUG ===');
-      } catch (error) {
-        console.error('Error in loadUserAvailability:', error);
-      }
-    };
-
-    setAvailabilityLoaded(false);
-    setUserAvailability([]);
-    loadAvailability();
-  }, [user?.id, events.length]);
-
-  const loadUserAvailability = useCallback(async () => {
-    if (!user?.id || events.length === 0) {
-      return;
-    }
-
-    try {
-      console.log('=== CALENDAR GRID VIEW MANUAL RELOAD ===');
+      console.log('=== CALENDAR GRID VIEW DEBUG ===');
       console.log('Loading availability for user:', user.id);
+      console.log('User object:', user);
 
       const eventIds = events.map(event => event.id);
       console.log('Event IDs to check:', eventIds.map(id => `${id.slice(-6)} (${id})`));
@@ -90,16 +72,34 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       console.log('Received availability in calendar:', availability);
       
       setUserAvailability(availability);
-      console.log('=== END CALENDAR GRID VIEW MANUAL RELOAD ===');
+      console.log('=== END CALENDAR GRID VIEW DEBUG ===');
     } catch (error) {
       console.error('Error in loadUserAvailability:', error);
     }
-  }, [user?.id, events.length]);
+  };
 
-  useEffect(() => {
-    loadEventWeather();
-    loadPerformanceCategories();
-  }, [events, teams]);
+  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
+    const availability = userAvailability.find(a => a.eventId === eventId);
+    const status = availability?.status || null;
+    console.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
+    return status;
+  };
+
+  const getEventBorderClass = (eventId: string): string => {
+    const status = getAvailabilityStatus(eventId);
+    console.log(`Border class for event ${eventId.slice(-6)}:`, status);
+    
+    switch (status) {
+      case 'available':
+        return 'border-l-green-500 border-l-2';
+      case 'unavailable':
+        return 'border-l-red-500 border-l-2';
+      case 'pending':
+        return 'border-l-amber-500 border-l-2';
+      default:
+        return 'border-l-blue-500 border-l-2';
+    }
+  };
 
   const loadEventWeather = async () => {
     const weatherData: { [eventId: string]: WeatherData } = {};
@@ -149,30 +149,6 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       console.log('Failed to load performance categories:', error);
     }
   };
-
-  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
-    const availability = userAvailability.find(a => a.eventId === eventId);
-    const status = availability?.status || null;
-    console.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
-    return status;
-  };
-
-  const getEventBorderClass = useCallback((eventId: string): string => {
-    const availability = userAvailability.find(a => a.eventId === eventId);
-    const status = availability?.status || null;
-    console.log(`Border class for event ${eventId.slice(-6)}:`, status);
-    
-    switch (status) {
-      case 'available':
-        return 'border-l-green-500 border-l-2';
-      case 'unavailable':
-        return 'border-l-red-500 border-l-2';
-      case 'pending':
-        return 'border-l-amber-500 border-l-2';
-      default:
-        return 'border-l-blue-500 border-l-2';
-    }
-  }, [userAvailability]);
 
   const getEventsForDay = (day: Date) => {
     return events.filter(event => isSameDay(new Date(event.date), day));
@@ -267,22 +243,17 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     return eventDate >= new Date() || isToday(eventDate);
   };
 
-  const handleAvailabilityChange = useCallback((eventId: string, status: 'available' | 'unavailable') => {
-    // Update local state immediately for optimistic UI updates
+  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
+    // Update local state to reflect the change immediately
     setUserAvailability(prev => {
       const existing = prev.find(a => a.eventId === eventId);
-      if (existing && existing.status === status) {
-        // No change needed
-        return prev;
-      }
-      
       if (existing) {
         return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
       } else {
         return [...prev, { eventId, status, source: 'direct' }];
       }
     });
-  }, []);
+  };
 
   return (
     <div className="space-y-4">
@@ -387,14 +358,14 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             </div>
                           )}
 
-                          {/* Availability Controls */}
+                          {/* Availability Controls - New Addition */}
                           {showAvailabilityControls && (
                             <div className="mt-1">
                               <QuickAvailabilityControls
                                 eventId={event.id}
                                 currentStatus={availabilityStatus}
                                 size="sm"
-                                onStatusChange={handleAvailabilityChange}
+                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
                               />
                             </div>
                           )}
