@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay } from '@dnd-kit/core';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -266,7 +265,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                 </CardTitle>
                 <div className="flex items-center gap-2">
                   <FormationSelector
-                    formation={currentPeriod.formation}
+                    gameFormat={gameFormat}
+                    selectedFormation={currentPeriod.formation}
                     onFormationChange={(formation) => updatePeriod(currentPeriodIndex, { formation })}
                   />
                   <Select
@@ -300,6 +300,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                       player={player}
                       isCaptain={player?.id === globalCaptainId}
                       nameDisplayOption={convertedNameDisplayOption}
+                      onRemovePlayer={removePlayerFromPosition}
                     />
                   );
                 })}
@@ -313,6 +314,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             substitutes={currentPeriod.substitutes.map(id => squadPlayers.find(p => p.id === id)).filter(Boolean) as SquadPlayer[]}
             globalCaptainId={globalCaptainId}
             nameDisplayOption={convertedNameDisplayOption}
+            onRemoveFromBench={removeFromBench}
           />
 
           {/* Available Players Panel - Show ALL squad players */}
@@ -336,7 +338,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     <PlayerIcon
                       player={player}
                       nameDisplayOption={convertedNameDisplayOption}
-                      draggable
                     />
                     <div className="mt-1 flex flex-col items-center gap-1">
                       {getPlayerAvailabilityBadge(player)}
