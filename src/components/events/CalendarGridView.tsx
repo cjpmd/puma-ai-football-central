@@ -65,7 +65,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       console.log('User object:', user);
 
       const eventIds = events.map(event => event.id);
-      console.log('Event IDs to check:', eventIds);
+      console.log('Event IDs to check:', eventIds.map(id => `${id.slice(-6)} (${id})`));
       
       const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
       console.log('Received availability in calendar:', availability);

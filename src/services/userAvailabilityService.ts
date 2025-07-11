@@ -112,6 +112,7 @@ export const userAvailabilityService = {
 
     // First, add direct availability
     (directAvailability || []).forEach(item => {
+      console.log(`Processing direct availability for event ${item.event_id.slice(-6)}: ${item.status}`);
       availability.push({
         eventId: item.event_id,
         status: item.status as 'pending' | 'available' | 'unavailable',
@@ -123,6 +124,7 @@ export const userAvailabilityService = {
     // Then add player availability for events not already processed
     playerAvailability.forEach(item => {
       if (!processedEvents.has(item.event_id)) {
+        console.log(`Processing player availability for event ${item.event_id.slice(-6)}: ${item.status}`);
         availability.push({
           eventId: item.event_id,
           status: item.status as 'pending' | 'available' | 'unavailable',
@@ -133,6 +135,8 @@ export const userAvailabilityService = {
     });
 
     console.log('Final processed availability statuses:', availability);
+    console.log('Event IDs with availability:', availability.map(a => a.eventId.slice(-6)));
+    console.log('Event IDs being queried:', eventIds?.map(id => id.slice(-6)));
     console.log('=== END USER AVAILABILITY SERVICE DEBUG ===');
     return availability;
   },
