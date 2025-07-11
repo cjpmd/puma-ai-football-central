@@ -10,7 +10,6 @@ import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
-import { AvailabilityButtons } from '@/components/events/AvailabilityButtons';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -83,16 +82,6 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     const status = availability?.status || null;
     console.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
     return status;
-  };
-
-  const handleAvailabilityChange = (eventId: string, newStatus: 'available' | 'unavailable') => {
-    setUserAvailability(prev => 
-      prev.map(item => 
-        item.eventId === eventId 
-          ? { ...item, status: newStatus }
-          : item
-      )
-    );
   };
 
   const getEventBorderClass = (eventId: string): string => {
@@ -297,7 +286,6 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                       const team = teams?.find(t => t.id === event.team_id);
                       const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
                       const borderClass = getEventBorderClass(event.id);
-                      const availabilityStatus = getAvailabilityStatus(event.id);
                       
                       return (
                         <div key={event.id} className={`space-y-1 p-1 rounded ${borderClass}`}>
@@ -336,17 +324,6 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                           {event.start_time && (
                             <div className="text-xs text-muted-foreground">
                               {event.start_time}
-                            </div>
-                          )}
-
-                          {/* Availability buttons */}
-                          {user?.id && availabilityStatus && (
-                            <div className="my-1">
-                              <AvailabilityButtons
-                                eventId={event.id}
-                                currentStatus={availabilityStatus}
-                                onStatusChange={(newStatus) => handleAvailabilityChange(event.id, newStatus)}
-                              />
                             </div>
                           )}
 

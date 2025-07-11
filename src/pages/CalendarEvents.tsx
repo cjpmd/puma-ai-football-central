@@ -1,120 +1,84 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { CalendarGridView } from '@/components/events/CalendarGridView';
-import { EventsGridView } from '@/components/events/EventsGridView';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, Grid, Plus } from 'lucide-react';
-import { format, isSameDay, isToday, isPast, parseISO, startOfDay } from 'date-fns';
+import { Calendar, Grid3X3, List, Plus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { EventForm } from '@/components/events/EventForm';
+import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
+import { EventsGridView } from '@/components/events/EventsGridView';
+import { CalendarGridView } from '@/components/events/CalendarGridView';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
-import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
-import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
-import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
-import { AvailabilityButtons } from '@/components/events/AvailabilityButtons';
+import { eventsService } from '@/services/eventsService';
+
+type ViewMode = 'grid' | 'calendar' | 'list';
 
 export default function CalendarEvents() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
+  const [filteredEvents, setFilteredEvents] = useState<DatabaseEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showTeamSelection, setShowTeamSelection] = useState(false);
   const [showPostGameEdit, setShowPostGameEdit] = useState(false);
-  const [showEventDetails, setShowEventDetails] = useState(false);
-  const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
-  const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
-  const [activeView, setActiveView] = useState<'calendar' | 'grid'>('calendar');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const { toast } = useToast();
-  const { teams, user } = useAuth();
+  const { teams } = useAuth();
 
   useEffect(() => {
     loadEvents();
   }, [teams]);
 
   useEffect(() => {
-    if (events.length > 0 && user?.id) {
-      loadUserAvailability();
-    }
-  }, [events, user?.id]);
-
-  const loadUserAvailability = async () => {
-    try {
-      if (!user?.id) {
-        console.log('No user ID available for availability loading');
-        return;
-      }
-
-      const eventIds = events.map(event => event.id);
-      const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
-      setUserAvailability(availability);
-    } catch (error) {
-      console.error('Error in loadUserAvailability:', error);
-    }
-  };
-
-  const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
-    const availability = userAvailability.find(a => a.eventId === eventId);
-    const status = availability?.status || null;
-    return status;
-  };
-
-  const handleAvailabilityChange = (eventId: string, newStatus: 'available' | 'unavailable') => {
-    setUserAvailability(prev => 
-      prev.map(item => 
-        item.eventId === eventId 
-          ? { ...item, status: newStatus }
-          : item
-      )
-    );
-  };
+    filterEvents();
+  }, [events, selectedTeam, selectedEventType]);
 
   const loadEvents = async () => {
     try {
       if (!teams || teams.length === 0) return;
 
+      console.log('Loading events for teams:', teams.map(t => ({ id: t.id, name: t.name })));
+
+      const teamIds = teams.map(team => team.id);
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('team_id', teams[0].id)
+        .in('team_id', teamIds)
         .order('date', { ascending: true });
 
       if (error) throw error;
-      console.log('Loaded events:', data?.length);
-      setEvents((data || []) as DatabaseEvent[]);
       
-      // Load event selections to get proper performance category mappings
-      const { data: selectionsData, error: selectionsError } = await supabase
-        .from('event_selections')
-        .select(`
-          event_id,
-          team_number,
-          performance_category_id,
-          performance_categories!inner(name)
-        `)
-        .eq('team_id', teams[0].id);
-
-      if (selectionsError) throw selectionsError;
+      const eventData = (data || []) as DatabaseEvent[];
+      console.log('Loaded events:', eventData.length);
       
-      // Group selections by event_id for easy lookup
-      const selectionsByEvent: {[key: string]: any[]} = {};
-      selectionsData?.forEach(selection => {
-        if (!selectionsByEvent[selection.event_id]) {
-          selectionsByEvent[selection.event_id] = [];
-        }
-        selectionsByEvent[selection.event_id].push(selection);
-      });
-      setEventSelections(selectionsByEvent);
-
+      // Log current user info for debugging
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Current user ID:', user?.id);
+      console.log('Current user email:', user?.email);
+      
+      // Check availability for debugging
+      if (user?.id && eventData.length > 0) {
+        const { data: availabilityData, error: availError } = await supabase
+          .from('event_availability')
+          .select('event_id, status')
+          .eq('user_id', user.id);
+          
+        console.log('User availability records:', availabilityData);
+        if (availError) console.error('Availability error:', availError);
+      }
+      
+      setEvents(eventData);
     } catch (error: any) {
+      console.error('Error loading events:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load events',
@@ -125,33 +89,57 @@ export default function CalendarEvents() {
     }
   };
 
-  const handleCreateEvent = () => {
-    setSelectedEvent(null);
+  const filterEvents = () => {
+    let filtered = events;
+
+    if (selectedTeam !== 'all') {
+      filtered = filtered.filter(event => event.team_id === selectedTeam);
+    }
+
+    if (selectedEventType !== 'all') {
+      filtered = filtered.filter(event => event.event_type === selectedEventType);
+    }
+
+    setFilteredEvents(filtered);
+  };
+
+  const handleEditEvent = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
     setShowEventForm(true);
   };
 
-  const handleEventClick = (event: DatabaseEvent) => {
+  const handleTeamSelection = (event: DatabaseEvent) => {
     setSelectedEvent(event);
-    setShowEventDetails(true);
+    setShowTeamSelection(true);
   };
 
-  const handleEventAction = (event: DatabaseEvent, action: 'setup' | 'squad' | 'report') => {
+  const handlePostGameEdit = (event: DatabaseEvent) => {
     setSelectedEvent(event);
-    
-    switch (action) {
-      case 'setup':
-        setShowEventDetails(false);
-        setShowEventForm(true);
-        break;
-      case 'squad':
-        setShowEventDetails(false);
-        setShowTeamSelection(true);
-        break;
-      case 'report':  
-        setShowEventDetails(false);
-        setShowPostGameEdit(true);
-        break;
+    setShowPostGameEdit(true);
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await eventsService.deleteEvent(eventId);
+      
+      toast({
+        title: 'Success',
+        description: 'Event deleted successfully',
+      });
+      
+      loadEvents();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete event',
+        variant: 'destructive',
+      });
     }
+  };
+
+  const handleScoreEdit = (event: DatabaseEvent) => {
+    setSelectedEvent(event);
+    setShowPostGameEdit(true);
   };
 
   const convertToEventFormat = (dbEvent: DatabaseEvent | null) => {
@@ -173,7 +161,7 @@ export default function CalendarEvents() {
       gameFormat: dbEvent.game_format as GameFormat,
       gameDuration: dbEvent.game_duration,
       scores: dbEvent.scores,
-      playerOfMatchId: dbEvent.player_of_match_id,
+      playerOfTheMatchId: dbEvent.player_of_match_id,
       coachNotes: dbEvent.coach_notes,
       staffNotes: dbEvent.staff_notes,
       trainingNotes: dbEvent.training_notes,
@@ -183,229 +171,291 @@ export default function CalendarEvents() {
       totalMinutes: dbEvent.total_minutes,
       teams: dbEvent.teams,
       kitSelection: dbEvent.kit_selection as 'home' | 'away' | 'training',
-      latitude: dbEvent.latitude,
-      longitude: dbEvent.longitude,
       createdAt: dbEvent.created_at,
-      updatedAt: dbEvent.updated_at
+      updatedAt: dbEvent.updated_at,
+      latitude: dbEvent.latitude,
+      longitude: dbEvent.longitude
     };
   };
 
-  const isMatchType = (eventType: string) => {
-    return ['match', 'fixture', 'friendly'].includes(eventType);
-  };
-
-  const isEventCompleted = (event: DatabaseEvent) => {
-    const today = new Date();
-    const eventDate = new Date(event.date);
-    
-    if (eventDate < today) return true;
-    
-    if (isSameDay(eventDate, today) && event.end_time) {
-      const [hours, minutes] = event.end_time.split(':').map(Number);
-      const eventEndTime = new Date();
-      eventEndTime.setHours(hours, minutes, 0, 0);
-      return new Date() > eventEndTime;
+  const handleFormSubmit = async (eventData: any) => {
+    try {
+      setLoading(true);
+      
+      if (selectedEvent) {
+        // Update existing event
+        await eventsService.updateEvent({
+          id: selectedEvent.id,
+          ...eventData,
+          team_id: eventData.teamId,
+          event_type: eventData.type,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Event updated successfully',
+        });
+      } else {
+        // Create new event
+        await eventsService.createEvent({
+          ...eventData,
+          team_id: eventData.teamId,
+          event_type: eventData.type,
+        });
+        
+        toast({
+          title: 'Success',
+          description: 'Event created successfully',
+        });
+      }
+      
+      setShowEventForm(false);
+      setSelectedEvent(null);
+      loadEvents();
+    } catch (error: any) {
+      console.error('Error submitting event:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to save event',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    return false;
-  };
-
-  const shouldShowTitle = (event: DatabaseEvent) => {
-    return !isMatchType(event.event_type) || !event.opponent;
   };
 
   if (loading) {
     return (
       <DashboardLayout>
-        <div className="container mx-auto p-6">
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+            <p>Loading events...</p>
           </div>
         </div>
       </DashboardLayout>
     );
   }
 
+  const eventTypes = Array.from(new Set(events.map(e => e.event_type)));
+
   return (
     <DashboardLayout>
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Calendar & Events</h1>
-            <p className="text-muted-foreground">
-              Manage your team's schedule and events
-            </p>
-          </div>
-          <Button onClick={handleCreateEvent}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Event
-          </Button>
-        </div>
-
-        <Tabs value={activeView} onValueChange={(value) => setActiveView(value as 'calendar' | 'grid')}>
-          <TabsList className="grid w-full max-w-md grid-cols-2">
-            <TabsTrigger value="calendar" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Calendar View
-            </TabsTrigger>
-            <TabsTrigger value="grid" className="flex items-center gap-2">
-              <Grid className="h-4 w-4" />
-              List View
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="calendar" className="mt-6">
-            <CalendarGridView 
-              events={events} 
-              onEditEvent={handleEventClick}
-              onTeamSelection={handleEventClick}
-              onPostGameEdit={handleEventClick}
-              onDeleteEvent={(eventId: string) => {
-                // Handle delete event
-                console.log('Delete event:', eventId);
-              }}
-            />
-          </TabsContent>
-
-          <TabsContent value="grid" className="mt-6">
-            <EventsGridView 
-              events={events} 
-              onEditEvent={handleEventClick}
-              onTeamSelection={handleEventClick}
-              onPostGameEdit={handleEventClick}
-              onDeleteEvent={(eventId: string) => {
-                // Handle delete event
-                console.log('Delete event:', eventId);
-              }}
-              onScoreEdit={handleEventClick}
-            />
-          </TabsContent>
-        </Tabs>
-
-        {/* Event Details Modal */}
-        <Dialog open={showEventDetails} onOpenChange={setShowEventDetails}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Event Details</DialogTitle>
-            </DialogHeader>
-            {selectedEvent && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Badge className="bg-blue-500 text-white">
-                    {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}
-                  </Badge>
-                  {getAvailabilityStatus(selectedEvent.id) && (
-                    <AvailabilityStatusBadge status={getAvailabilityStatus(selectedEvent.id)!} size="md" />
-                  )}
-                </div>
-                
-                <div>
-                  <h3 className="font-semibold text-lg">
-                    {shouldShowTitle(selectedEvent) 
-                      ? selectedEvent.title
-                      : `${teams?.[0]?.name} vs ${selectedEvent.opponent}`
-                    }
-                  </h3>
-                </div>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="h-4 w-4 text-gray-500" />
-                    <span>{format(new Date(selectedEvent.date), 'EEEE, MMMM do, yyyy')}</span>
-                  </div>
-                  
-                  {selectedEvent.start_time && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span>
-                        {selectedEvent.start_time}
-                        {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {selectedEvent.location && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span>📍 {selectedEvent.location}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Availability buttons */}
-                {user?.id && getAvailabilityStatus(selectedEvent.id) && (
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <h4 className="font-medium mb-2">Your Availability</h4>
-                    <AvailabilityButtons
-                      eventId={selectedEvent.id}
-                      currentStatus={getAvailabilityStatus(selectedEvent.id)}
-                      onStatusChange={(newStatus) => handleAvailabilityChange(selectedEvent.id, newStatus)}
-                    />
-                  </div>
-                )}
-                
-                {selectedEvent.description && (
-                  <div>
-                    <h4 className="font-medium mb-2">Description</h4>
-                    <p className="text-sm text-gray-600">{selectedEvent.description}</p>
-                  </div>
-                )}
-                
-                {selectedEvent.notes && (
-                  <div>
-                    <h4 className="font-medium mb-2">Notes</h4>
-                    <p className="text-sm text-gray-600">{selectedEvent.notes}</p>
-                  </div>
-                )}
-                
-                <div className="flex gap-2 mt-6">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => handleEventAction(selectedEvent, 'setup')}
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5" />
+                  Calendar & Events
+                </CardTitle>
+                <CardDescription>
+                  Manage your team's schedule and events
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => window.open('/account-linking', '_blank')}
+                  size="sm"
+                >
+                  Link Account
+                </Button>
+                <Button onClick={() => setShowEventForm(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Event
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Add account linking notice */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center gap-2 text-sm text-blue-800">
+                <Calendar className="h-4 w-4" />
+                <span>
+                  <strong>Tip:</strong> Link your account to a player to see availability status colors on events. 
+                  <Button 
+                    variant="link" 
+                    className="h-auto p-0 text-blue-600 underline ml-1"
+                    onClick={() => window.open('/account-linking', '_blank')}
                   >
-                    SETUP
+                    Set up linking here
+                  </Button>
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4 mb-6">
+              {/* View Mode Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">View:</span>
+                <div className="flex rounded-lg border">
+                  <Button
+                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('grid')}
+                    className="rounded-r-none"
+                  >
+                    <Grid3X3 className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant="outline"
+                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
                     size="sm"
-                    className="flex-1"
-                    onClick={() => handleEventAction(selectedEvent, 'squad')}
+                    onClick={() => setViewMode('calendar')}
+                    className="rounded-none border-x"
                   >
-                    SQUAD
+                    <Calendar className="h-4 w-4" />
                   </Button>
-                  {isEventCompleted(selectedEvent) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleEventAction(selectedEvent, 'report')}
-                    >
-                      REPORT
-                    </Button>
-                  )}
+                  <Button
+                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    size="sm"
+                    onClick={() => setViewMode('list')}
+                    className="rounded-l-none"
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
+
+              {/* Filters */}
+              <div className="flex gap-4 flex-1">
+                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Teams</SelectItem>
+                    {teams.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={selectedEventType} onValueChange={setSelectedEventType}>
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {eventTypes.map((type) => (
+                      <SelectItem key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Event Count */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline">
+                  {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Events Display */}
+        {filteredEvents.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="font-semibold mb-2">No Events Found</h3>
+              <p className="text-muted-foreground mb-4">
+                {events.length === 0 
+                  ? "You haven't created any events yet. Get started by adding your first event!"
+                  : "No events match your current filters. Try adjusting your search criteria."
+                }
+              </p>
+              <Button onClick={() => setShowEventForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Your First Event
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
+            {viewMode === 'grid' && (
+              <EventsGridView
+                events={filteredEvents}
+                onEditEvent={handleEditEvent}
+                onTeamSelection={handleTeamSelection}
+                onPostGameEdit={handlePostGameEdit}
+                onDeleteEvent={handleDeleteEvent}
+                onScoreEdit={handleScoreEdit}
+              />
             )}
-          </DialogContent>
-        </Dialog>
+            
+            {viewMode === 'calendar' && (
+              <CalendarGridView
+                events={filteredEvents}
+                onEditEvent={handleEditEvent}
+                onTeamSelection={handleTeamSelection}
+                onPostGameEdit={handlePostGameEdit}
+                onDeleteEvent={handleDeleteEvent}
+              />
+            )}
+            
+            {viewMode === 'list' && (
+              <div className="space-y-4">
+                {filteredEvents.map((event) => (
+                  <Card key={event.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-semibold">{event.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {new Date(event.date).toLocaleDateString()} 
+                            {event.start_time && ` at ${event.start_time}`}
+                          </p>
+                          {event.location && (
+                            <p className="text-sm text-muted-foreground">{event.location}</p>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditEvent(event)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleTeamSelection(event)}
+                          >
+                            Team
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </>
+        )}
 
         {/* Event Form Modal */}
         <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
-                {selectedEvent ? 'Edit Event' : 'Create Event'}
+                {selectedEvent ? 'Edit Event' : 'Create New Event'}
               </DialogTitle>
             </DialogHeader>
             <EventForm
               event={convertToEventFormat(selectedEvent)}
-              teamId={teams?.[0]?.id || ''}
-              onSubmit={(eventData) => {
-                setShowEventForm(false);
-                setSelectedEvent(null);
-                loadEvents();
-              }}
+              teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
+              onSubmit={handleFormSubmit}
               onCancel={() => {
                 setShowEventForm(false);
                 setSelectedEvent(null);
@@ -426,9 +476,9 @@ export default function CalendarEvents() {
           />
         )}
 
-        {/* Post Game Edit Modal */}
+        {/* Post Game Edit Modal - Made Full Screen */}
         <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
-          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Post-Game Report</DialogTitle>
             </DialogHeader>
