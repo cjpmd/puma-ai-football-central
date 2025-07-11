@@ -119,6 +119,8 @@ export const EventForm: React.FC<EventFormProps> = ({
         return;
       }
 
+      let eventId: string;
+
       // Otherwise use the original logic
       if (isEditing && eventData?.id) {
         // Update existing event
@@ -131,6 +133,7 @@ export const EventForm: React.FC<EventFormProps> = ({
 
         toast.success('Event updated successfully');
         if (onEventCreated) onEventCreated(eventData.id);
+        eventId = eventData.id;
       } else {
         // Create new event using the service
         const newEvent = await eventsService.createEvent({
@@ -146,11 +149,11 @@ export const EventForm: React.FC<EventFormProps> = ({
         
         toast.success('Event created successfully');
         if (onEventCreated) onEventCreated(newEvent.id);
+        eventId = newEvent.id;
       }
 
       // Create event teams if num_teams > 1
       if (formData.num_teams > 1) {
-        const eventId = eventData?.id || newEvent?.id;
         if (eventId) {
           for (let i = 1; i <= formData.num_teams; i++) {
             await supabase

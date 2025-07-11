@@ -19,6 +19,7 @@ import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelection
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
+import { eventsService } from '@/services/eventsService';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
