@@ -32,7 +32,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
       <MobileHeader title={headerTitle} />
       
       {showTabs && tabs.length > 0 && (
-        <div className={`bg-white border-b ${stickyTabs ? 'sticky top-0 z-10' : ''}`}>
+        <div className={`bg-white border-b ${stickyTabs ? 'sticky top-0 z-20' : ''}`}>
           <div className="flex">
             {tabs.map((tab) => (
               <button
@@ -51,7 +51,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
       )}
       
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto pb-20">
         <div className="p-4">
           {children}
         </div>
