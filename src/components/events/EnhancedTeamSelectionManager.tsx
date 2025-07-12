@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -51,7 +52,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
   const [showMatchDayPack, setShowMatchDayPack] = useState(false);
-  const [initialized, setInitialized] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
@@ -88,17 +89,18 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Initialize teams based on event data when main squad is loaded
+  // Initialize teams and load existing data
   useEffect(() => {
-    if (mainSquadPlayers.length > 0 && teamSelections.length === 0 && !initialized) {
+    if (!isOpen || squadLoading || dataLoaded) return;
+
+    const initializeData = async () => {
+      console.log('Initializing team selection data...');
+      
       // Determine number of teams from event data
       let teamCount = 1;
-      
-      // Check if event.teams exists and is an array
       if (event.teams && Array.isArray(event.teams)) {
         teamCount = Math.max(event.teams.length, 1);
       } else if (event.teams && typeof event.teams === 'string') {
-        // Handle case where teams might be stored as a string
         try {
           const parsedTeams = JSON.parse(event.teams);
           if (Array.isArray(parsedTeams)) {
@@ -108,44 +110,21 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           console.warn('Could not parse teams data:', event.teams);
         }
       }
-      
-      console.log('Initializing team selections with count:', teamCount, 'from event data:', event.teams);
-      
-      // Create initial team selections
-      const initialTeamSelections: TeamSelection[] = [];
-      
-      for (let i = 0; i < teamCount; i++) {
-        // Only Team 1 gets the main squad players, all other teams start empty
-        const convertedSquadPlayers: SquadPlayer[] = i === 0 
-          ? mainSquadPlayers.map(player => ({
-              ...player,
-              squadRole: player.squadRole || 'player' // Provide default value for required property
-            }))
-          : []; // All other teams start with empty squads
 
+      // Create initial team selections structure
+      const initialTeamSelections: TeamSelection[] = [];
+      for (let i = 0; i < teamCount; i++) {
         initialTeamSelections.push({
           teamNumber: i + 1,
-          squadPlayers: convertedSquadPlayers,
+          squadPlayers: [],
           periods: [],
           globalCaptainId: undefined,
           performanceCategory: 'none'
         });
       }
-      
-      console.log('Setting initial team selections:', initialTeamSelections);
-      setTeamSelections(initialTeamSelections);
-      setInitialized(true);
-    }
-  }, [mainSquadPlayers, event.teams, event.id, teamSelections.length, initialized]);
 
-  // Load existing team selections
-  useEffect(() => {
-    const loadExistingSelections = async () => {
-      if (!event.id || !teamId || teamSelections.length === 0 || !initialized) return;
-      
+      // Load existing selections from database
       try {
-        console.log('Loading existing selections for event:', event.id, 'team:', teamId);
-        
         const { data: existingSelections, error } = await supabase
           .from('event_selections')
           .select('*')
@@ -154,12 +133,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           .order('team_number', { ascending: true })
           .order('period_number', { ascending: true });
 
-        if (error) {
-          console.error('Error loading existing selections:', error);
-          throw error;
-        }
+        if (error) throw error;
 
-        console.log('Existing selections loaded:', existingSelections);
+        console.log('Loaded existing selections:', existingSelections);
 
         if (existingSelections && existingSelections.length > 0) {
           // Group selections by team number
@@ -170,58 +146,93 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             return acc;
           }, {} as Record<number, any[]>);
 
-          setTeamSelections(prevSelections => {
-            const loadedTeamSelections: TeamSelection[] = [...prevSelections];
+          // Update team selections with existing data
+          for (const [teamNum, selections] of Object.entries(groupedSelections)) {
+            const teamIndex = parseInt(teamNum) - 1;
+            if (teamIndex >= 0 && teamIndex < initialTeamSelections.length) {
+              const periods: FormationPeriod[] = selections.map(selection => ({
+                id: `period-${selection.period_number}`,
+                periodNumber: selection.period_number,
+                formation: selection.formation,
+                duration: selection.duration_minutes,
+                positions: (selection.player_positions || []).map((pos: any, index: number) => ({
+                  id: `position-${index}`,
+                  positionName: pos.position,
+                  abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
+                  positionGroup: pos.positionGroup || 'midfielder',
+                  x: pos.x || 50,
+                  y: pos.y || 50,
+                  playerId: pos.playerId || pos.player_id
+                })),
+                substitutes: selection.substitute_players || [],
+                captainId: selection.captain_id || undefined
+              }));
 
-            for (const [teamNum, selections] of Object.entries(groupedSelections)) {
-              const teamIndex = parseInt(teamNum) - 1;
-              if (teamIndex >= 0 && teamIndex < loadedTeamSelections.length) {
-                const periods: FormationPeriod[] = selections.map(selection => ({
-                  id: `period-${selection.period_number}`,
-                  periodNumber: selection.period_number,
-                  formation: selection.formation,
-                  duration: selection.duration_minutes,
-                  positions: (selection.player_positions || []).map((pos: any, index: number) => ({
-                    id: `position-${index}`,
-                    positionName: pos.position,
-                    abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
-                    positionGroup: pos.positionGroup || 'midfielder',
-                    x: pos.x || 50,
-                    y: pos.y || 50,
-                    playerId: pos.playerId || pos.player_id
-                  })),
-                  substitutes: selection.substitute_players || [],
-                  captainId: selection.captain_id || undefined
-                }));
+              // Extract squad players from selections (all players who were selected)
+              const squadPlayerIds = new Set<string>();
+              selections.forEach(selection => {
+                (selection.player_positions || []).forEach((pos: any) => {
+                  const playerId = pos.playerId || pos.player_id;
+                  if (playerId) squadPlayerIds.add(playerId);
+                });
+              });
 
-                // Keep existing squad for this team, only update periods and other data
-                loadedTeamSelections[teamIndex] = {
-                  ...loadedTeamSelections[teamIndex],
-                  periods,
-                  globalCaptainId: periods[0]?.captainId,
-                  performanceCategory: selections[0]?.performance_category_id || 'none'
-                };
-              }
+              // Convert squad player IDs to SquadPlayer objects using main squad data
+              const squadPlayers: SquadPlayer[] = mainSquadPlayers.filter(player => 
+                squadPlayerIds.has(player.id)
+              ).map(player => ({
+                ...player,
+                squadRole: player.squadRole || 'player'
+              }));
+
+              initialTeamSelections[teamIndex] = {
+                ...initialTeamSelections[teamIndex],
+                squadPlayers,
+                periods,
+                globalCaptainId: periods[0]?.captainId,
+                performanceCategory: selections[0]?.performance_category_id || 'none'
+              };
             }
-
-            console.log('Updated team selections with existing data:', loadedTeamSelections);
-            return loadedTeamSelections;
-          });
+          }
+        } else {
+          // No existing selections, initialize Team 1 with main squad
+          if (initialTeamSelections.length > 0 && mainSquadPlayers.length > 0) {
+            initialTeamSelections[0].squadPlayers = mainSquadPlayers.map(player => ({
+              ...player,
+              squadRole: player.squadRole || 'player'
+            }));
+          }
         }
+
+        console.log('Final initialized team selections:', initialTeamSelections);
+        setTeamSelections(initialTeamSelections);
+        setDataLoaded(true);
       } catch (error) {
         console.error('Error loading existing selections:', error);
         toast.error('Failed to load existing team selections');
+        
+        // Fallback to basic initialization
+        if (initialTeamSelections.length > 0 && mainSquadPlayers.length > 0) {
+          initialTeamSelections[0].squadPlayers = mainSquadPlayers.map(player => ({
+            ...player,
+            squadRole: player.squadRole || 'player'
+          }));
+        }
+        setTeamSelections(initialTeamSelections);
+        setDataLoaded(true);
       }
     };
 
-    loadExistingSelections();
-  }, [event.id, teamId, initialized]);
+    if (mainSquadPlayers.length > 0) {
+      initializeData();
+    }
+  }, [isOpen, event.id, teamId, mainSquadPlayers, squadLoading, dataLoaded]);
 
   const addTeam = () => {
     const newTeamNumber = teamSelections.length + 1;
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
-      squadPlayers: [], // Always start with empty squad for additional teams
+      squadPlayers: [],
       periods: [],
       globalCaptainId: undefined,
       performanceCategory: 'none'
@@ -252,7 +263,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handleCaptainChange = (captainId: string) => {
-    // Handle the special "no-captain" value
     const actualCaptainId = captainId === 'no-captain' ? undefined : captainId;
     
     const updatedPeriods = getCurrentTeam()?.periods.map(period => ({
@@ -268,22 +278,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
     console.log('Squad changed for team', currentTeamIndex + 1, ':', newSquadPlayers);
-    // Prevent infinite loops by checking if the squad actually changed
-    const currentSquad = getCurrentTeam()?.squadPlayers || [];
-    const squadChanged = JSON.stringify(currentSquad) !== JSON.stringify(newSquadPlayers);
-    
-    if (squadChanged) {
-      // Create a deep copy to ensure independence between teams
-      const independentSquadPlayers = newSquadPlayers.map(player => ({
-        ...player,
-        squadRole: player.squadRole || 'player'
-      }));
-      updateCurrentTeam({ squadPlayers: independentSquadPlayers });
-    }
+    updateCurrentTeam({ squadPlayers: newSquadPlayers });
   };
 
   const handlePerformanceCategoryChange = (categoryId: string) => {
-    // Handle the special "none" value  
     const actualCategoryId = categoryId === 'none' ? 'none' : categoryId;
     updateCurrentTeam({ performanceCategory: actualCategoryId });
   };
@@ -294,12 +292,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       return;
     }
 
-    console.log('Current team selections before save:', teamSelections);
-
+    console.log('Saving team selections:', teamSelections);
     setSaving(true);
+    
     try {
-      console.log('Saving all team selections:', teamSelections);
-      
       // Delete existing selections for this event
       const { error: deleteError } = await supabase
         .from('event_selections')
@@ -307,35 +303,32 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         .eq('event_id', event.id)
         .eq('team_id', teamId);
 
-      if (deleteError) {
-        console.error('Error deleting existing selections:', deleteError);
-        throw deleteError;
-      }
+      if (deleteError) throw deleteError;
 
-      // Create new selections for each team - ALWAYS save all teams even if empty
+      // Create new selections for each team
       const selectionsToInsert = [];
       
       for (const team of teamSelections) {
         console.log(`Processing team ${team.teamNumber} with ${team.periods.length} periods and ${team.squadPlayers.length} squad players`);
         
-        // Always save team data - create a default period if no periods exist
-        const periodsToSave = team.periods.length > 0 ? team.periods : [{
-          id: `period-1`,
-          periodNumber: 1,
-          formation: '4-3-3',
-          duration: event.game_duration || 90,
-          positions: [],
-          substitutes: [],
-          captainId: team.globalCaptainId
-        }];
+        // Create a default period if no periods exist but squad players are present
+        const periodsToSave = team.periods.length > 0 ? team.periods : 
+          team.squadPlayers.length > 0 ? [{
+            id: `period-1`,
+            periodNumber: 1,
+            formation: '4-3-3',
+            duration: event.game_duration || 90,
+            positions: [],
+            substitutes: [],
+            captainId: team.globalCaptainId
+          }] : [];
 
         for (const period of periodsToSave) {
-          // Convert positions to correct format for database
           const playerPositions = period.positions
-            .filter(pos => pos.playerId) // Only include positions with players
+            .filter(pos => pos.playerId)
             .map(pos => ({
               playerId: pos.playerId,
-              player_id: pos.playerId, // Include both formats for compatibility
+              player_id: pos.playerId,
               position: pos.positionName,
               abbreviation: pos.abbreviation,
               positionGroup: pos.positionGroup,
@@ -344,8 +337,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               isSubstitute: false,
               minutes: period.duration
             }));
-
-          console.log(`Saving team ${team.teamNumber} period ${period.periodNumber} with ${playerPositions.length} player positions`);
 
           selectionsToInsert.push({
             event_id: event.id,
@@ -363,20 +354,15 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         }
       }
 
-      console.log('Inserting selections:', selectionsToInsert);
-
       if (selectionsToInsert.length > 0) {
         const { error: insertError } = await supabase
           .from('event_selections')
           .insert(selectionsToInsert);
 
-        if (insertError) {
-          console.error('Error inserting selections:', insertError);
-          throw insertError;
-        }
+        if (insertError) throw insertError;
       }
 
-      // Update the event's teams data to match our current team count
+      // Update the event's teams data
       const { error: updateEventError } = await supabase
         .from('events')
         .update({ 
@@ -386,10 +372,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
       if (updateEventError) {
         console.error('Error updating event teams:', updateEventError);
-        // Don't throw here - the selections are saved, this is just metadata
       }
 
       toast.success('Team selections saved successfully!');
+      
+      // Force a refresh of the data to reflect the saved changes
+      setDataLoaded(false);
+      
     } catch (error) {
       console.error('Error saving selections:', error);
       toast.error('Failed to save team selections');
@@ -465,7 +454,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     onClick={() => {
                       console.log('Switching to team', index + 1);
                       setCurrentTeamIndex(index);
-                      setActiveTab('squad'); // Always go to squad tab when switching teams
+                      setActiveTab('squad');
                     }}
                     className="text-xs px-2 py-1"
                   >
@@ -523,15 +512,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
             <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
-                {currentTeam && (
+                {currentTeam && dataLoaded && (
                   <AvailabilityDrivenSquadManagement
-                    key={`team-${currentTeamIndex}-${Date.now()}`} // Force re-render when switching teams with timestamp
+                    key={`team-${currentTeamIndex}-${currentTeam.squadPlayers.length}`}
                     teamId={teamId}
                     eventId={event.id}
                     globalCaptainId={currentTeam.globalCaptainId}
                     onSquadChange={handleSquadChange}
                     onCaptainChange={(captainId) => {
-                      // Convert empty string to undefined for the handler
                       const actualCaptainId = captainId === '' ? undefined : captainId;
                       handleCaptainChange(actualCaptainId || 'no-captain');
                     }}

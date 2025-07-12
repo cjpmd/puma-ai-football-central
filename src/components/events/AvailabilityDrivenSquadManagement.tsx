@@ -17,9 +17,9 @@ interface AvailabilityDrivenSquadManagementProps {
   globalCaptainId?: string;
   onSquadChange?: (squadPlayers: SquadPlayer[]) => void;
   onCaptainChange?: (captainId: string) => void;
-  allTeamSelections?: any[]; // To check for multi-team selections
-  currentTeamIndex?: number; // To identify current team
-  initialSquadPlayers?: SquadPlayer[]; // Initial squad players for this team
+  allTeamSelections?: any[];
+  currentTeamIndex?: number;
+  initialSquadPlayers?: SquadPlayer[];
 }
 
 export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquadManagementProps> = ({
@@ -34,47 +34,27 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 }) => {
   const {
     availablePlayers,
-    squadPlayers: hookSquadPlayers,
     loading,
-    assignPlayerToSquad,
-    removePlayerFromSquad,
-    updateSquadRole,
-    reload
   } = useAvailabilityBasedSquad(teamId, eventId);
 
-  // Use local state to manage squad for this specific team
+  // Use local state to manage squad for this specific team, initialized from props
   const [localSquadPlayers, setLocalSquadPlayers] = useState<SquadPlayer[]>(initialSquadPlayers);
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [lastNotifiedSquad, setLastNotifiedSquad] = useState<string>('');
 
-  // Initialize local squad from props when component mounts or team changes
+  // Update local state when props change (team switching)
   useEffect(() => {
-    console.log('Initializing squad for team', currentTeamIndex + 1, 'with:', initialSquadPlayers);
+    console.log('Updating local squad for team', currentTeamIndex + 1, 'with initial players:', initialSquadPlayers);
     setLocalSquadPlayers(initialSquadPlayers);
-    setLastNotifiedSquad(JSON.stringify(initialSquadPlayers));
-  }, [currentTeamIndex]); // Only re-initialize when team changes
+    setLocalCaptainId(globalCaptainId || '');
+  }, [currentTeamIndex, globalCaptainId]); // Only update when team changes or captain changes
 
-  // Update captain when globalCaptainId changes
+  // Notify parent when local squad changes, but avoid infinite loops
   useEffect(() => {
-    if (globalCaptainId !== undefined) {
-      setLocalCaptainId(globalCaptainId);
+    if (onSquadChange && localSquadPlayers.length >= 0) {
+      console.log('Notifying parent of squad change:', localSquadPlayers);
+      onSquadChange(localSquadPlayers);
     }
-  }, [globalCaptainId]);
-
-  // Notify parent of squad changes, but prevent infinite loops
-  const notifySquadChange = useCallback((squad: SquadPlayer[]) => {
-    const squadJson = JSON.stringify(squad);
-    if (squadJson !== lastNotifiedSquad && onSquadChange) {
-      console.log('Notifying parent of squad change:', squad);
-      onSquadChange(squad);
-      setLastNotifiedSquad(squadJson);
-    }
-  }, [onSquadChange, lastNotifiedSquad]);
-
-  // Only notify when local squad actually changes
-  useEffect(() => {
-    notifySquadChange(localSquadPlayers);
-  }, [localSquadPlayers, notifySquadChange]);
+  }, [localSquadPlayers]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = (playerId: string) => {
@@ -93,7 +73,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       console.log('Adding player to squad:', player.id);
       
-      // Add to local squad state
       const newSquadPlayer: SquadPlayer = {
         id: player.id,
         name: player.name,
@@ -119,7 +98,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       console.log('Removing player from squad:', playerId);
       
-      // Remove from local squad state
       setLocalSquadPlayers(prev => {
         const newSquad = prev.filter(p => p.id !== playerId);
         console.log('Updated local squad after removing player:', newSquad);
@@ -142,7 +120,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   const handleCaptainChange = async (playerId: string) => {
     try {
-      // Handle the special "no-captain" value
       const actualPlayerId = playerId === 'no-captain' ? '' : playerId;
       
       setLocalCaptainId(actualPlayerId);
@@ -189,7 +166,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }
   };
 
-  // Check if player can be added to squad (available or pending)
   const canAddToSquad = (status: string) => {
     return status === 'available' || status === 'pending';
   };
