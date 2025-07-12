@@ -33,46 +33,47 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       setLoading(true);
       console.log('Loading availability-based squad data for team:', teamId, 'event:', eventId);
 
-      let playersWithAvailability = [];
+      // Always load all team players first
+      const { data: teamPlayers, error: playersError } = await supabase
+        .from('players')
+        .select('id, name, squad_number, type')
+        .eq('team_id', teamId)
+        .eq('status', 'active')
+        .order('squad_number');
 
-      if (eventId) {
-        // Try to get players with availability from parent responses
-        try {
-          playersWithAvailability = await availabilityService.getPlayerAvailabilityFromParents(eventId, teamId);
-          console.log('Players with availability from parents:', playersWithAvailability);
-        } catch (error) {
-          console.warn('Could not load player availability from parents:', error);
-          playersWithAvailability = [];
-        }
+      if (playersError) {
+        console.error('Error loading team players:', playersError);
+        throw playersError;
       }
 
-      // If no players from availability service, load all team players
-      if (playersWithAvailability.length === 0) {
-        console.log('Loading all team players as fallback');
-        const { data: teamPlayers, error: playersError } = await supabase
-          .from('players')
-          .select('id, name, squad_number, type')
-          .eq('team_id', teamId)
-          .eq('status', 'active')
-          .order('squad_number');
+      console.log('Team players loaded:', teamPlayers?.length || 0);
 
-        if (playersError) {
-          console.error('Error loading team players:', playersError);
-          throw playersError;
+      // Convert to expected format with pending status by default
+      let playersWithAvailability = (teamPlayers || []).map(player => ({
+        id: player.id,
+        name: player.name,
+        squadNumber: player.squad_number,
+        type: player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield' as const,
+        availabilityStatus: 'pending' as const,
+        isAssignedToSquad: false,
+        squadRole: 'player' as const
+      }));
+
+      // Try to get availability data if eventId is provided
+      if (eventId) {
+        try {
+          const availabilityData = await availabilityService.getPlayerAvailabilityFromParents(eventId, teamId);
+          console.log('Availability data loaded:', availabilityData.length);
+          
+          // Update availability status for players who have responses
+          playersWithAvailability = playersWithAvailability.map(player => {
+            const availabilityRecord = availabilityData.find(a => a.id === player.id);
+            return availabilityRecord ? availabilityRecord : player;
+          });
+        } catch (error) {
+          console.warn('Could not load availability data:', error);
+          // Continue with pending status for all players
         }
-
-        // Convert to expected format
-        playersWithAvailability = (teamPlayers || []).map(player => ({
-          id: player.id,
-          name: player.name,
-          squadNumber: player.squad_number,
-          type: player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield',
-          availabilityStatus: 'pending' as const,
-          isAssignedToSquad: false,
-          squadRole: 'player' as const
-        }));
-
-        console.log('Team players loaded as fallback:', playersWithAvailability);
       }
 
       // Get current squad assignments if eventId is provided
@@ -84,11 +85,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
           .eq('team_id', teamId)
           .eq('event_id', eventId);
 
-        if (squadError) {
-          console.error('Error loading squad assignments:', squadError);
-        } else {
+        if (!squadError && squadData) {
           console.log('Current squad assignments:', squadData);
-          squadData?.forEach(squad => {
+          squadData.forEach(squad => {
             squadAssignmentMap.set(squad.player_id, squad.squad_role);
           });
         }
@@ -101,7 +100,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         squadRole: squadAssignmentMap.get(player.id) || 'player'
       }));
 
-      console.log('Players with availability and squad status:', updatedPlayers);
+      console.log('Final players with availability and squad status:', updatedPlayers.length);
 
       // Split into available and squad players
       const available = updatedPlayers.filter(p => !p.isAssignedToSquad);
@@ -111,7 +110,6 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       setSquadPlayers(squad);
     } catch (error) {
       console.error('Error loading availability-based squad data:', error);
-      // Set empty arrays on error but don't leave in loading state
       setAvailablePlayers([]);
       setSquadPlayers([]);
     } finally {

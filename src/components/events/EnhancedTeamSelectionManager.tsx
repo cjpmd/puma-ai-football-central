@@ -9,11 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, Users, Gamepad2, Target, Plus, X, FileText } from 'lucide-react';
-import { SquadManagement } from './SquadManagement';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
-import { useSquadManagement } from '@/hooks/useSquadManagement';
-import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
@@ -52,7 +49,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
   const [showMatchDayPack, setShowMatchDayPack] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
@@ -69,9 +65,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     },
     enabled: !!teamId,
   });
-
-  // Load main squad for initial team - use availability-based loading
-  const { squadPlayers: mainSquadPlayers, loading: squadLoading } = useAvailabilityBasedSquad(teamId, event.id);
 
   // Load team name display option
   const { data: teamData } = useQuery({
@@ -91,7 +84,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   // Initialize teams and load existing data
   useEffect(() => {
-    if (!isOpen || squadLoading || dataLoaded) return;
+    if (!isOpen) return;
 
     const initializeData = async () => {
       console.log('Initializing team selection data...');
@@ -168,65 +161,27 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 captainId: selection.captain_id || undefined
               }));
 
-              // Extract squad players from selections (all players who were selected)
-              const squadPlayerIds = new Set<string>();
-              selections.forEach(selection => {
-                (selection.player_positions || []).forEach((pos: any) => {
-                  const playerId = pos.playerId || pos.player_id;
-                  if (playerId) squadPlayerIds.add(playerId);
-                });
-              });
-
-              // Convert squad player IDs to SquadPlayer objects using main squad data
-              const squadPlayers: SquadPlayer[] = mainSquadPlayers.filter(player => 
-                squadPlayerIds.has(player.id)
-              ).map(player => ({
-                ...player,
-                squadRole: player.squadRole || 'player'
-              }));
-
               initialTeamSelections[teamIndex] = {
                 ...initialTeamSelections[teamIndex],
-                squadPlayers,
                 periods,
                 globalCaptainId: periods[0]?.captainId,
                 performanceCategory: selections[0]?.performance_category_id || 'none'
               };
             }
           }
-        } else {
-          // No existing selections, initialize Team 1 with main squad
-          if (initialTeamSelections.length > 0 && mainSquadPlayers.length > 0) {
-            initialTeamSelections[0].squadPlayers = mainSquadPlayers.map(player => ({
-              ...player,
-              squadRole: player.squadRole || 'player'
-            }));
-          }
         }
 
         console.log('Final initialized team selections:', initialTeamSelections);
         setTeamSelections(initialTeamSelections);
-        setDataLoaded(true);
       } catch (error) {
         console.error('Error loading existing selections:', error);
         toast.error('Failed to load existing team selections');
-        
-        // Fallback to basic initialization
-        if (initialTeamSelections.length > 0 && mainSquadPlayers.length > 0) {
-          initialTeamSelections[0].squadPlayers = mainSquadPlayers.map(player => ({
-            ...player,
-            squadRole: player.squadRole || 'player'
-          }));
-        }
         setTeamSelections(initialTeamSelections);
-        setDataLoaded(true);
       }
     };
 
-    if (mainSquadPlayers.length > 0) {
-      initializeData();
-    }
-  }, [isOpen, event.id, teamId, mainSquadPlayers, squadLoading, dataLoaded]);
+    initializeData();
+  }, [isOpen, event.id, teamId]);
 
   const addTeam = () => {
     const newTeamNumber = teamSelections.length + 1;
@@ -376,9 +331,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
       toast.success('Team selections saved successfully!');
       
-      // Force a refresh of the data to reflect the saved changes
-      setDataLoaded(false);
-      
     } catch (error) {
       console.error('Error saving selections:', error);
       toast.error('Failed to save team selections');
@@ -512,9 +464,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
             <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
-                {currentTeam && dataLoaded && (
+                {currentTeam && (
                   <AvailabilityDrivenSquadManagement
-                    key={`team-${currentTeamIndex}-${currentTeam.squadPlayers.length}`}
+                    key={`team-${currentTeamIndex}`}
                     teamId={teamId}
                     eventId={event.id}
                     globalCaptainId={currentTeam.globalCaptainId}
@@ -525,7 +477,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     }}
                     allTeamSelections={teamSelections}
                     currentTeamIndex={currentTeamIndex}
-                    initialSquadPlayers={currentTeam.squadPlayers}
                   />
                 )}
               </TabsContent>
