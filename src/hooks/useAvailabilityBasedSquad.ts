@@ -76,37 +76,37 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         }
       }
 
-      // Get current squad assignments for THIS SPECIFIC TEAM and EVENT COMBINATION
+      // Get squad assignments ONLY for THIS SPECIFIC TEAM AND EVENT
       let squadAssignmentMap = new Map();
       if (eventId) {
         const { data: squadData, error: squadError } = await supabase
           .from('team_squads')
           .select('player_id, squad_role')
-          .eq('team_id', teamId)
+          .eq('team_id', teamId)  // THIS IS THE KEY - only get assignments for THIS team
           .eq('event_id', eventId);
 
         if (!squadError && squadData) {
-          console.log('Current squad assignments for team', teamId, ':', squadData);
+          console.log('Squad assignments for team', teamId, 'event', eventId, ':', squadData);
           squadData.forEach(squad => {
             squadAssignmentMap.set(squad.player_id, squad.squad_role);
           });
         }
       }
 
-      // Update players with squad assignment status - ONLY for this team
+      // Update players with squad assignment status - ONLY for this specific team
       const updatedPlayers = playersWithAvailability.map(player => ({
         ...player,
         isAssignedToSquad: squadAssignmentMap.has(player.id),
         squadRole: (squadAssignmentMap.get(player.id) || 'player') as 'player' | 'captain' | 'vice_captain'
       }));
 
-      console.log('Final players with availability and squad status:', updatedPlayers.length);
+      console.log('Final players with availability and squad status for team', teamId, ':', updatedPlayers.length);
 
       // Split into available and squad players - ensure no overlap
       const available = updatedPlayers.filter(p => !p.isAssignedToSquad);
       const squad = updatedPlayers.filter(p => p.isAssignedToSquad);
 
-      console.log('Available players:', available.length, 'Squad players:', squad.length);
+      console.log('Team', teamId, '- Available players:', available.length, 'Squad players:', squad.length);
 
       setAvailablePlayers(available);
       setSquadPlayers(squad);
