@@ -509,7 +509,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
                 <AvailabilityDrivenSquadManagement
-                  key={`team-${currentTeamIndex}-${currentTeam?.squadPlayers.length || 0}`} // Force re-render when switching teams OR when squad changes
+                  key={`team-${currentTeamIndex}`} // Force re-render when switching teams
                   teamId={teamId}
                   eventId={event.id}
                   globalCaptainId={currentTeam?.globalCaptainId}
@@ -521,7 +521,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   }}
                   allTeamSelections={teamSelections}
                   currentTeamIndex={currentTeamIndex}
-                  initialSquadPlayers={currentTeam?.squadPlayers || []} // Pass current team's squad as initial
                 />
               </TabsContent>
 
