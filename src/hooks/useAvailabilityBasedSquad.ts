@@ -76,7 +76,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         }
       }
 
-      // Get current squad assignments if eventId is provided
+      // Get current squad assignments for THIS SPECIFIC TEAM and EVENT COMBINATION
       let squadAssignmentMap = new Map();
       if (eventId) {
         const { data: squadData, error: squadError } = await supabase
@@ -86,14 +86,14 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
           .eq('event_id', eventId);
 
         if (!squadError && squadData) {
-          console.log('Current squad assignments:', squadData);
+          console.log('Current squad assignments for team', teamId, ':', squadData);
           squadData.forEach(squad => {
             squadAssignmentMap.set(squad.player_id, squad.squad_role);
           });
         }
       }
 
-      // Update players with squad assignment status and ensure no duplicates
+      // Update players with squad assignment status - ONLY for this team
       const updatedPlayers = playersWithAvailability.map(player => ({
         ...player,
         isAssignedToSquad: squadAssignmentMap.has(player.id),
@@ -125,27 +125,54 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
     try {
       console.log('Assigning player to squad:', { teamId, playerId, eventId, squadRole });
 
-      const { error } = await supabase
+      // Check if player is already assigned to ANY team for this event
+      const { data: existingAssignment, error: checkError } = await supabase
         .from('team_squads')
-        .insert({
-          team_id: teamId,
-          player_id: playerId,
-          event_id: eventId,
-          squad_role: squadRole,
-          availability_status: 'available',
-          added_by: user.id
-        });
+        .select('team_id')
+        .eq('player_id', playerId)
+        .eq('event_id', eventId);
 
-      if (error) {
-        console.error('Error assigning player to squad:', error);
-        throw error;
+      if (checkError) throw checkError;
+
+      if (existingAssignment && existingAssignment.length > 0) {
+        const assignedTeamId = existingAssignment[0].team_id;
+        if (assignedTeamId !== teamId) {
+          throw new Error('Player is already assigned to another team for this event');
+        }
+        // If already assigned to this team, just update the role
+        const { error: updateError } = await supabase
+          .from('team_squads')
+          .update({ squad_role: squadRole })
+          .eq('team_id', teamId)
+          .eq('player_id', playerId)
+          .eq('event_id', eventId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Insert new assignment
+        const { error } = await supabase
+          .from('team_squads')
+          .insert({
+            team_id: teamId,
+            player_id: playerId,
+            event_id: eventId,
+            squad_role: squadRole,
+            availability_status: 'available',
+            added_by: user.id
+          });
+
+        if (error) throw error;
       }
 
       // Immediately update local state to prevent duplication
       const playerToMove = availablePlayers.find(p => p.id === playerId);
       if (playerToMove) {
         const updatedPlayer = { ...playerToMove, isAssignedToSquad: true, squadRole };
-        setSquadPlayers(prev => [...prev, updatedPlayer]);
+        setSquadPlayers(prev => {
+          // Ensure no duplicates in squad
+          const filtered = prev.filter(p => p.id !== playerId);
+          return [...filtered, updatedPlayer];
+        });
         setAvailablePlayers(prev => prev.filter(p => p.id !== playerId));
       }
 
@@ -183,7 +210,11 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
           isAssignedToSquad: false, 
           squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
         };
-        setAvailablePlayers(prev => [...prev, updatedPlayer]);
+        setAvailablePlayers(prev => {
+          // Ensure no duplicates in available players
+          const filtered = prev.filter(p => p.id !== playerId);
+          return [...filtered, updatedPlayer];
+        });
         setSquadPlayers(prev => prev.filter(p => p.id !== playerId));
       }
 
