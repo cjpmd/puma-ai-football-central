@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -360,6 +359,19 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           console.error('Error inserting selections:', insertError);
           throw insertError;
         }
+      }
+
+      // Update the event's teams data to match our current team count
+      const { error: updateEventError } = await supabase
+        .from('events')
+        .update({ 
+          teams: teamSelections.map(team => ({ teamNumber: team.teamNumber }))
+        })
+        .eq('id', event.id);
+
+      if (updateEventError) {
+        console.error('Error updating event teams:', updateEventError);
+        // Don't throw here - the selections are saved, this is just metadata
       }
 
       toast.success('Team selections saved successfully!');
