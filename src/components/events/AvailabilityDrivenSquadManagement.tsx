@@ -211,7 +211,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       const newSquadPlayer: SquadPlayer = {
         id: playerToAdd.id,
         name: playerToAdd.name,
-        squadNumber: playerToAdd.squad_number,
+        squadNumber: playerToAdd.squadNumber,
         type: playerToAdd.type as 'goalkeeper' | 'outfield',
         availabilityStatus: 'available',
         squadRole: 'player'
@@ -382,7 +382,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                   <SelectContent>
                     {availableToAdd.map((player) => (
                       <SelectItem key={player.id} value={player.id}>
-                        #{player.squad_number} {player.name}
+                        #{player.squadNumber} {player.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
