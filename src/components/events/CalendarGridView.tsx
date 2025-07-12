@@ -310,7 +310,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                       
                       return (
                         <div key={event.id} className={`space-y-1 p-1 rounded ${borderClass}`}>
-                          {/* Top line: Event type and Kit */}
+                          {/* Top line: Event type, Kit, and Win/Loss/Draw icons */}
                           <div className="flex items-center justify-between">
                             <Badge 
                               className={`text-xs ${matchType ? 'bg-red-500' : 'bg-blue-500'}`}
@@ -318,9 +318,21 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             >
                               {event.event_type}
                             </Badge>
-                            {kitDesign && (
-                              <EnhancedKitAvatar design={kitDesign} size="xs" />
-                            )}
+                            <div className="flex items-center gap-1">
+                              {kitDesign && (
+                                <EnhancedKitAvatar design={kitDesign} size="xs" />
+                              )}
+                              {/* Show outcome icons for completed matches */}
+                              {completed && matchType && teamScores.length > 0 && (
+                                <div className="flex gap-1">
+                                  {teamScores.map((score) => (
+                                    <span key={score.teamNumber} className="text-sm">
+                                      {score.outcomeIcon}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Club badge vs opponent OR title */}
@@ -358,7 +370,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             </div>
                           )}
 
-                          {/* Availability Controls - New Addition */}
+                          {/* Availability Controls */}
                           {showAvailabilityControls && (
                             <div className="mt-1">
                               <QuickAvailabilityControls
@@ -370,18 +382,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             </div>
                           )}
                           
-                          {/* Location and outcome/weather icons */}
+                          {/* Location and weather */}
                           <div className="flex items-center justify-between">
                             <div className="flex gap-1">
-                              {completed && matchType && teamScores.length > 0 && (
-                                <div className="flex gap-1">
-                                  {teamScores.map((score) => (
-                                    <span key={score.teamNumber} className="text-sm">
-                                      {score.outcomeIcon}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
+                              {/* Additional outcome icons space if needed */}
                             </div>
                             {weather && (
                               <img 
