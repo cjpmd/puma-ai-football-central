@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -55,31 +55,35 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Notify parent when squad changes
+  // Memoize the formatted squad players to prevent unnecessary re-renders
+  const squadPlayersFormatted = useMemo(() => {
+    return squadPlayers.map(player => ({
+      id: player.id,
+      name: player.name,
+      squadNumber: player.squadNumber,
+      type: player.type,
+      availabilityStatus: player.availabilityStatus,
+      squadRole: player.squadRole || 'player'
+    }));
+  }, [squadPlayers]);
+
+  // Notify parent when squad changes - use stable reference
   useEffect(() => {
-    if (onSquadChange && squadPlayers.length >= 0) {
-      const squadPlayersFormatted = squadPlayers.map(player => ({
-        id: player.id,
-        name: player.name,
-        squadNumber: player.squadNumber,
-        type: player.type,
-        availabilityStatus: player.availabilityStatus,
-        squadRole: player.squadRole || 'player'
-      }));
+    if (onSquadChange && squadPlayersFormatted.length >= 0) {
       console.log('Notifying parent of squad change:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
     }
-  }, [squadPlayers, onSquadChange]);
+  }, [squadPlayersFormatted, onSquadChange]);
 
   // Check if a player is selected in other teams
-  const isPlayerInOtherTeams = (playerId: string) => {
+  const isPlayerInOtherTeams = useCallback((playerId: string) => {
     return allTeamSelections.some((team, index) => 
       index !== currentTeamIndex && 
       team.squadPlayers?.some((p: any) => p.id === playerId)
     );
-  };
+  }, [allTeamSelections, currentTeamIndex]);
 
-  const handleAddToSquad = async (player: any) => {
+  const handleAddToSquad = useCallback(async (player: any) => {
     try {
       console.log('Adding player to squad:', player.id);
       await assignPlayerToSquad(player.id, 'player');
@@ -88,9 +92,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       console.error('Error adding player to squad:', error);
       toast.error('Failed to add player to squad');
     }
-  };
+  }, [assignPlayerToSquad]);
 
-  const handleRemoveFromSquad = async (playerId: string) => {
+  const handleRemoveFromSquad = useCallback(async (playerId: string) => {
     try {
       console.log('Removing player from squad:', playerId);
       await removePlayerFromSquad(playerId);
@@ -107,9 +111,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       console.error('Error removing player from squad:', error);
       toast.error('Failed to remove player from squad');
     }
-  };
+  }, [removePlayerFromSquad, localCaptainId, onCaptainChange]);
 
-  const handleCaptainChange = async (playerId: string) => {
+  const handleCaptainChange = useCallback(async (playerId: string) => {
     try {
       const actualPlayerId = playerId === 'no-captain' ? '' : playerId;
       
@@ -122,7 +126,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       console.error('Error updating captain:', error);
       toast.error('Failed to update captain');
     }
-  };
+  }, [onCaptainChange]);
 
   const getAvailabilityIcon = (status: string) => {
     switch (status) {
