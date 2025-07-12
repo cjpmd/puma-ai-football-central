@@ -30,8 +30,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   dragId,
   isSelectedInOtherTeams = false
 }) => {
-  // Only enable dragging for available players
-  const shouldEnableDrag = player.availabilityStatus === 'available';
+  // Enable dragging for available AND pending players
+  const shouldEnableDrag = player.availabilityStatus === 'available' || player.availabilityStatus === 'pending';
   
   const {
     attributes,
@@ -57,6 +57,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
         return `border-red-500 bg-red-50 opacity-60 ${baseStyle}`;
       case 'maybe':
         return `border-yellow-500 bg-yellow-50 ${baseStyle}`;
+      case 'pending':
+        return `border-orange-500 bg-orange-50 ${baseStyle}`;
       default:
         return `border-gray-300 bg-gray-50 ${baseStyle}`;
     }
@@ -76,7 +78,7 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
           ${getAvailabilityStyle()}
           ${actualIsDragging ? 'opacity-50' : 'shadow-sm'}
           ${player.availabilityStatus === 'unavailable' ? 'cursor-not-allowed' : shouldEnableDrag ? 'cursor-grab print:cursor-default' : 'cursor-default'}
-          ${player.availabilityStatus === 'available' && shouldEnableDrag ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
+          ${(player.availabilityStatus === 'available' || player.availabilityStatus === 'pending') && shouldEnableDrag ? 'hover:scale-105 hover:shadow-md active:scale-110' : ''}
           transition-all duration-200 ease-in-out
           ${shouldEnableDrag ? 'touch-none select-none' : ''}
           print:scale-100 print:shadow-none
