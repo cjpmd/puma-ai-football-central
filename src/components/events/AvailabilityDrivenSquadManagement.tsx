@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,13 +37,14 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     assignPlayerToSquad,
     removePlayerFromSquad,
     reload
-  } = useAvailabilityBasedSquad(teamId, eventId);
+  } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
     eventId,
+    currentTeamIndex,
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
