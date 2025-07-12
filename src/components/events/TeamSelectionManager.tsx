@@ -15,11 +15,13 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   isOpen,
   onClose
 }) => {
-  // Use the availability-driven squad management directly for proper team isolation
+  // Extract the required props for AvailabilityDrivenSquadManagement
+  const actualTeamId = teamId || event.team_id;
+  
   return (
     <AvailabilityDrivenSquadManagement
-      event={event}
-      teamId={teamId}
+      teamId={actualTeamId}
+      eventId={event.id}
       isOpen={isOpen}
       onClose={onClose}
     />
