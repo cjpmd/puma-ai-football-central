@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { eventsService } from '@/services/eventsService';
+import { GameFormat } from '@/types';
 
 interface EventFormProps {
   onEventCreated?: (eventId: string) => void;
@@ -178,7 +179,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         opponent: formData.opponent,
         description: formData.description,
         notes: formData.notes,
-        gameFormat: formData.game_format,
+        gameFormat: formData.game_format as GameFormat,
         gameDuration: formData.game_duration,
         isHome: formData.is_home,
         kitSelection: formData.kit_selection as 'home' | 'away' | 'training',
