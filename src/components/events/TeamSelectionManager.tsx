@@ -1,6 +1,5 @@
 
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
-import { EnhancedTeamSelectionManager } from './EnhancedTeamSelectionManager';
 import { DatabaseEvent } from '@/types/event';
 
 interface TeamSelectionManagerProps {
@@ -10,7 +9,19 @@ interface TeamSelectionManagerProps {
   onClose: () => void;
 }
 
-export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = (props) => {
-  // Route to the enhanced version which now uses AvailabilityDrivenSquadManagement
-  return <EnhancedTeamSelectionManager {...props} />;
+export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
+  event,
+  teamId,
+  isOpen,
+  onClose
+}) => {
+  // Use the availability-driven squad management directly for proper team isolation
+  return (
+    <AvailabilityDrivenSquadManagement
+      event={event}
+      teamId={teamId}
+      isOpen={isOpen}
+      onClose={onClose}
+    />
+  );
 };

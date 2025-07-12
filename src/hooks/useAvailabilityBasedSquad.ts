@@ -58,7 +58,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         return;
       }
 
-      // 2. Get squad assignments for THIS specific team and event combination
+      // 2. Get squad assignments for THIS specific team and event combination ONLY
       let assignedPlayerIds = new Set<string>();
       let playerRoles = new Map<string, string>();
 
