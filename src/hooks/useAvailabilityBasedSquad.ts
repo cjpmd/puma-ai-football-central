@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +32,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       setLoading(true);
       console.log('Loading availability-based squad data for team:', teamId, 'event:', eventId);
 
-      // Always load all team players first
+      // Load all team players first
       const { data: teamPlayers, error: playersError } = await supabase
         .from('players')
         .select('id, name, squad_number, type')
@@ -48,12 +47,12 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
 
       console.log('Team players loaded:', teamPlayers?.length || 0);
 
-      // Convert to expected format with pending status by default
+      // Convert to expected format with proper type conversion
       let playersWithAvailability = (teamPlayers || []).map(player => ({
         id: player.id,
         name: player.name,
         squadNumber: player.squad_number,
-        type: player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield' as const,
+        type: (player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield') as 'goalkeeper' | 'outfield',
         availabilityStatus: 'pending' as const,
         isAssignedToSquad: false,
         squadRole: 'player' as const
@@ -68,7 +67,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
           // Update availability status for players who have responses
           playersWithAvailability = playersWithAvailability.map(player => {
             const availabilityRecord = availabilityData.find(a => a.id === player.id);
-            return availabilityRecord ? availabilityRecord : player;
+            return availabilityRecord ? { ...player, ...availabilityRecord } : player;
           });
         } catch (error) {
           console.warn('Could not load availability data:', error);
