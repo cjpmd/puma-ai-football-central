@@ -1,31 +1,38 @@
 
-import { ReactNode } from 'react';
+import React from 'react';
 import { MobileHeader } from './MobileHeader';
 import { MobileBottomNav } from './MobileBottomNav';
 
+interface Tab {
+  id: string;
+  label: string;
+}
+
 interface MobileLayoutProps {
-  children: ReactNode;
+  children: React.ReactNode;
   headerTitle?: string;
   showTabs?: boolean;
   activeTab?: string;
-  onTabChange?: (tab: string) => void;
-  tabs?: { id: string; label: string }[];
+  onTabChange?: (tabId: string) => void;
+  tabs?: Tab[];
+  stickyTabs?: boolean;
 }
 
-export function MobileLayout({ 
-  children, 
+export const MobileLayout: React.FC<MobileLayoutProps> = ({
+  children,
   headerTitle,
   showTabs = false,
   activeTab,
   onTabChange,
-  tabs = []
-}: MobileLayoutProps) {
+  tabs = [],
+  stickyTabs = false
+}) => {
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <MobileHeader title={headerTitle} />
       
       {showTabs && tabs.length > 0 && (
-        <div className="bg-white border-b">
+        <div className={`bg-white border-b ${stickyTabs ? 'sticky top-0 z-10' : ''}`}>
           <div className="flex">
             {tabs.map((tab) => (
               <button
@@ -33,7 +40,7 @@ export function MobileLayout({
                 onClick={() => onTabChange?.(tab.id)}
                 className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
                   activeTab === tab.id
-                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
@@ -44,12 +51,13 @@ export function MobileLayout({
         </div>
       )}
       
-      <main className="flex-1 pb-16 overflow-auto">
+      <div className="flex-1 overflow-auto">
         <div className="p-4">
           {children}
         </div>
-      </main>
+      </div>
+      
       <MobileBottomNav />
     </div>
   );
-}
+};

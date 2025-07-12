@@ -431,6 +431,7 @@ export default function CalendarEventsMobile() {
       activeTab={activeTab}
       onTabChange={setActiveTab}
       tabs={tabs}
+      stickyTabs={true}
     >
       <div className="space-y-6">
         {loading ? (
@@ -515,7 +516,6 @@ export default function CalendarEventsMobile() {
                                       className="w-8 h-8 rounded-full"
                                     />
                                   )}
-                                  <span className="font-medium text-sm">{team?.name}</span>
                                 </div>
                                 <span className="text-gray-400">vs</span>
                                 <div className="flex items-center gap-2">
@@ -541,7 +541,7 @@ export default function CalendarEventsMobile() {
                             </div>
                           )}
 
-                          {/* Availability Controls - New Addition */}
+                          {/* Availability Controls */}
                           {showAvailabilityControls && (
                             <div className="flex justify-center pt-2 border-t">
                               <QuickAvailabilityControls
