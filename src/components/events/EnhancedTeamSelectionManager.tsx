@@ -224,7 +224,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     };
     
     console.log('Adding new team:', newTeam);
-    setTeamSelections([...teamSelections, newTeam]);
+    setTeamSelections(prevSelections => [...prevSelections, newTeam]);
     setCurrentTeamIndex(teamSelections.length);
     setActiveTab('squad');
   };
@@ -264,7 +264,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
     console.log('Squad changed for team', currentTeamIndex + 1, ':', newSquadPlayers);
-    updateCurrentTeam({ squadPlayers: newSquadPlayers });
+    // Create a deep copy to ensure independence between teams
+    const independentSquadPlayers = newSquadPlayers.map(player => ({
+      ...player,
+      squadRole: player.squadRole || 'player'
+    }));
+    updateCurrentTeam({ squadPlayers: independentSquadPlayers });
   };
 
   const handlePerformanceCategoryChange = (categoryId: string) => {
@@ -509,7 +514,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
                 <AvailabilityDrivenSquadManagement
-                  key={`team-${currentTeamIndex}`} // Force re-render when switching teams
+                  key={`team-${currentTeamIndex}-${currentTeam?.squadPlayers.length || 0}`} // Force re-render when switching teams or squad changes
                   teamId={teamId}
                   eventId={event.id}
                   globalCaptainId={currentTeam?.globalCaptainId}
@@ -521,6 +526,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   }}
                   allTeamSelections={teamSelections}
                   currentTeamIndex={currentTeamIndex}
+                  initialSquadPlayers={currentTeam?.squadPlayers || []}
                 />
               </TabsContent>
 
