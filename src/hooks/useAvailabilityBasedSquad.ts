@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { availabilityService } from '@/services/availabilityService';
@@ -19,12 +19,23 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
   const [squadPlayers, setSquadPlayers] = useState<AvailablePlayer[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+  
+  // Use refs to track current values and prevent unnecessary re-runs
+  const currentTeamIdRef = useRef(teamId);
+  const currentEventIdRef = useRef(eventId);
+  const currentTeamIndexRef = useRef(currentTeamIndex);
+  const isLoadingRef = useRef(false);
 
   // Create a unique context identifier for logging
   const contextId = `SQUAD-${teamId}-T${currentTeamIndex ?? 0}`;
-  console.log(`[${contextId}] Hook initialized for team ${teamId}, event ${eventId}, teamIndex ${currentTeamIndex}`);
 
-  const loadAvailabilityBasedData = async () => {
+  const loadAvailabilityBasedData = useCallback(async () => {
+    // Prevent multiple simultaneous loads
+    if (isLoadingRef.current) {
+      console.log(`[${contextId}] Load already in progress, skipping`);
+      return;
+    }
+
     if (!teamId) {
       console.log(`[${contextId}] No teamId provided, clearing data`);
       setAvailablePlayers([]);
@@ -35,6 +46,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
 
     try {
       setLoading(true);
+      isLoadingRef.current = true;
       console.log(`[${contextId}] Loading data for team ${teamId}, event ${eventId}, teamIndex ${currentTeamIndex}`);
 
       // 1. Load ALL players for this specific team only
@@ -56,7 +68,6 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         console.log(`[${contextId}] No players found for team`);
         setAvailablePlayers([]);
         setSquadPlayers([]);
-        setLoading(false);
         return;
       }
 
@@ -125,10 +136,11 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       setSquadPlayers([]);
     } finally {
       setLoading(false);
+      isLoadingRef.current = false;
     }
-  };
+  }, [teamId, eventId, currentTeamIndex, contextId]); // Include contextId in dependencies
 
-  const assignPlayerToSquad = async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain' = 'player') => {
+  const assignPlayerToSquad = useCallback(async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain' = 'player') => {
     if (!user || !eventId) {
       console.error(`[${contextId}] Cannot assign player - missing user or eventId`);
       return;
@@ -180,26 +192,30 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       }
 
       // Update local state for THIS team only
-      const playerToMove = availablePlayers.find(p => p.id === playerId);
-      if (playerToMove) {
-        console.log(`[${contextId}] Moving player from available to squad locally`);
-        
-        setAvailablePlayers(prev => prev.filter(p => p.id !== playerId));
-        setSquadPlayers(prev => [...prev, { 
-          ...playerToMove, 
-          isAssignedToSquad: true, 
-          squadRole: squadRole 
-        }]);
-      }
+      setAvailablePlayers(prev => {
+        const playerToMove = prev.find(p => p.id === playerId);
+        if (playerToMove) {
+          console.log(`[${contextId}] Moving player from available to squad locally`);
+          
+          setSquadPlayers(squadPrev => [...squadPrev, { 
+            ...playerToMove, 
+            isAssignedToSquad: true, 
+            squadRole: squadRole 
+          }]);
+          
+          return prev.filter(p => p.id !== playerId);
+        }
+        return prev;
+      });
 
       console.log(`[${contextId}] Successfully assigned player ${playerId}`);
     } catch (error) {
       console.error(`[${contextId}] Error assigning player:`, error);
       throw error;
     }
-  };
+  }, [user, eventId, teamId, contextId]);
 
-  const removePlayerFromSquad = async (playerId: string) => {
+  const removePlayerFromSquad = useCallback(async (playerId: string) => {
     if (!eventId) {
       console.error(`[${contextId}] Cannot remove player - missing eventId`);
       return;
@@ -222,26 +238,30 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       }
 
       // Update local state for THIS team only
-      const playerToMove = squadPlayers.find(p => p.id === playerId);
-      if (playerToMove) {
-        console.log(`[${contextId}] Moving player from squad to available locally`);
-        
-        setSquadPlayers(prev => prev.filter(p => p.id !== playerId));
-        setAvailablePlayers(prev => [...prev, { 
-          ...playerToMove, 
-          isAssignedToSquad: false, 
-          squadRole: 'player' 
-        }]);
-      }
+      setSquadPlayers(prev => {
+        const playerToMove = prev.find(p => p.id === playerId);
+        if (playerToMove) {
+          console.log(`[${contextId}] Moving player from squad to available locally`);
+          
+          setAvailablePlayers(availPrev => [...availPrev, { 
+            ...playerToMove, 
+            isAssignedToSquad: false, 
+            squadRole: 'player' 
+          }]);
+          
+          return prev.filter(p => p.id !== playerId);
+        }
+        return prev;
+      });
 
       console.log(`[${contextId}] Successfully removed player ${playerId}`);
     } catch (error) {
       console.error(`[${contextId}] Error removing player:`, error);
       throw error;
     }
-  };
+  }, [eventId, teamId, contextId]);
 
-  const updateSquadRole = async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain') => {
+  const updateSquadRole = useCallback(async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain') => {
     if (!eventId) return;
 
     try {
@@ -271,12 +291,32 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       console.error(`[${contextId}] Error updating squad role:`, error);
       throw error;
     }
-  };
+  }, [eventId, teamId, contextId]);
 
+  // Only reload when key values actually change
   useEffect(() => {
-    console.log(`[${contextId}] Effect triggered - reloading data due to dependency change`);
+    const teamChanged = currentTeamIdRef.current !== teamId;
+    const eventChanged = currentEventIdRef.current !== eventId;
+    const indexChanged = currentTeamIndexRef.current !== currentTeamIndex;
+
+    if (teamChanged || eventChanged || indexChanged) {
+      console.log(`[${contextId}] Key values changed - reloading data`);
+      console.log(`[${contextId}] Team changed: ${teamChanged}, Event changed: ${eventChanged}, Index changed: ${indexChanged}`);
+      
+      // Update refs
+      currentTeamIdRef.current = teamId;
+      currentEventIdRef.current = eventId;
+      currentTeamIndexRef.current = currentTeamIndex;
+      
+      loadAvailabilityBasedData();
+    }
+  }, [teamId, eventId, currentTeamIndex, loadAvailabilityBasedData]);
+
+  // Initial load
+  useEffect(() => {
+    console.log(`[${contextId}] Hook initialized - performing initial load`);
     loadAvailabilityBasedData();
-  }, [teamId, eventId, currentTeamIndex]); // Added currentTeamIndex as dependency
+  }, []); // Only run on mount
 
   return {
     availablePlayers,
