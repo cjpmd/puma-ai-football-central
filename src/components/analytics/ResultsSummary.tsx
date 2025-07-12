@@ -487,7 +487,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
                           </TableCell>
                           <TableCell rowSpan={selectedTeam === 'all' ? result.teams.length : 1} className="border-r">
                             <Badge className={`text-white text-xs ${getEventTypeBadgeColor(result.eventType)}`}>
-                              {(result.eventType || 'match').toLowerCase()}
+                              {(result.eventType || 'match').toUpperCase()}
                             </Badge>
                           </TableCell>
                         </>
