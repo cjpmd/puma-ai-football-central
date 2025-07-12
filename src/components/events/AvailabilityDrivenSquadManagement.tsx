@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -34,27 +34,58 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 }) => {
   const {
     availablePlayers,
+    squadPlayers: hookSquadPlayers,
     loading,
+    assignPlayerToSquad,
+    removePlayerFromSquad,
+    reload
   } = useAvailabilityBasedSquad(teamId, eventId);
 
-  // Use local state to manage squad for this specific team, initialized from props
-  const [localSquadPlayers, setLocalSquadPlayers] = useState<SquadPlayer[]>(initialSquadPlayers);
+  // Use local state to manage squad for this specific team
+  const [localSquadPlayers, setLocalSquadPlayers] = useState<SquadPlayer[]>([]);
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
 
-  // Update local state when props change (team switching)
-  useEffect(() => {
-    console.log('Updating local squad for team', currentTeamIndex + 1, 'with initial players:', initialSquadPlayers);
-    setLocalSquadPlayers(initialSquadPlayers);
-    setLocalCaptainId(globalCaptainId || '');
-  }, [currentTeamIndex, globalCaptainId]); // Only update when team changes or captain changes
+  console.log('AvailabilityDrivenSquadManagement render:', {
+    teamId,
+    eventId,
+    loading,
+    availablePlayersCount: availablePlayers.length,
+    hookSquadPlayersCount: hookSquadPlayers.length,
+    localSquadPlayersCount: localSquadPlayers.length,
+    initialSquadPlayersCount: initialSquadPlayers.length
+  });
 
-  // Notify parent when local squad changes, but avoid infinite loops
+  // Initialize local squad from hook data or initial props
+  useEffect(() => {
+    if (hookSquadPlayers.length > 0) {
+      console.log('Setting squad from hook data:', hookSquadPlayers);
+      const squadPlayers = hookSquadPlayers.map(player => ({
+        id: player.id,
+        name: player.name,
+        squadNumber: player.squadNumber,
+        type: player.type,
+        availabilityStatus: player.availabilityStatus,
+        squadRole: player.squadRole || 'player'
+      }));
+      setLocalSquadPlayers(squadPlayers);
+    } else if (initialSquadPlayers.length > 0 && localSquadPlayers.length === 0) {
+      console.log('Setting squad from initial props:', initialSquadPlayers);
+      setLocalSquadPlayers(initialSquadPlayers);
+    }
+  }, [hookSquadPlayers, initialSquadPlayers]);
+
+  // Update captain when global captain changes
+  useEffect(() => {
+    setLocalCaptainId(globalCaptainId || '');
+  }, [globalCaptainId]);
+
+  // Notify parent when local squad changes
   useEffect(() => {
     if (onSquadChange && localSquadPlayers.length >= 0) {
       console.log('Notifying parent of squad change:', localSquadPlayers);
       onSquadChange(localSquadPlayers);
     }
-  }, [localSquadPlayers]);
+  }, [localSquadPlayers, onSquadChange]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = (playerId: string) => {
@@ -87,6 +118,12 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         console.log('Updated local squad after adding player:', newSquad);
         return newSquad;
       });
+      
+      // Also call the hook function to persist in database
+      if (assignPlayerToSquad) {
+        await assignPlayerToSquad(player.id, 'player');
+      }
+      
       toast.success('Player added to squad');
     } catch (error: any) {
       console.error('Error adding player to squad:', error);
@@ -103,6 +140,12 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         console.log('Updated local squad after removing player:', newSquad);
         return newSquad;
       });
+      
+      // Also call the hook function to remove from database
+      if (removePlayerFromSquad) {
+        await removePlayerFromSquad(playerId);
+      }
+      
       toast.success('Player removed from squad');
       
       // If this was the captain, clear captain selection
@@ -278,6 +321,16 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           <CardTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Players ({availableCount} available, {pendingCount} pending, {availablePlayers.length} total)
+            {availablePlayers.length === 0 && !loading && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={reload}
+                className="ml-auto"
+              >
+                Reload Players
+              </Button>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -351,8 +404,20 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="text-lg font-medium mb-2">No availability responses yet</p>
-              <p className="text-sm">Send availability notifications to collect player responses</p>
+              <p className="text-lg font-medium mb-2">No players found</p>
+              <p className="text-sm">
+                {loading ? 'Loading players...' : 'No players available for this team. Try reloading or check your team roster.'}
+              </p>
+              {!loading && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={reload}
+                  className="mt-4"
+                >
+                  Reload Players
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

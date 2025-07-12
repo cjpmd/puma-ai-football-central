@@ -21,7 +21,10 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
   const { user } = useAuth();
 
   const loadAvailabilityBasedData = async () => {
-    if (!teamId || !eventId) {
+    if (!teamId) {
+      console.log('No teamId provided, clearing data');
+      setAvailablePlayers([]);
+      setSquadPlayers([]);
       setLoading(false);
       return;
     }
@@ -30,28 +33,66 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       setLoading(true);
       console.log('Loading availability-based squad data for team:', teamId, 'event:', eventId);
 
-      // Get players with availability from parent responses
-      const playersWithAvailability = await availabilityService.getPlayerAvailabilityFromParents(eventId, teamId);
-      
-      // Get current squad assignments
-      const { data: squadData, error: squadError } = await supabase
-        .from('team_squads')
-        .select('player_id, squad_role')
-        .eq('team_id', teamId)
-        .eq('event_id', eventId);
+      let playersWithAvailability = [];
 
-      if (squadError) {
-        console.error('Error loading squad assignments:', squadError);
-        // Don't throw here, squad assignments might not exist yet
+      if (eventId) {
+        // Try to get players with availability from parent responses
+        try {
+          playersWithAvailability = await availabilityService.getPlayerAvailabilityFromParents(eventId, teamId);
+          console.log('Players with availability from parents:', playersWithAvailability);
+        } catch (error) {
+          console.warn('Could not load player availability from parents:', error);
+          playersWithAvailability = [];
+        }
       }
 
-      console.log('Current squad assignments:', squadData);
+      // If no players from availability service, load all team players
+      if (playersWithAvailability.length === 0) {
+        console.log('Loading all team players as fallback');
+        const { data: teamPlayers, error: playersError } = await supabase
+          .from('players')
+          .select('id, name, squad_number, type')
+          .eq('team_id', teamId)
+          .eq('status', 'active')
+          .order('squad_number');
 
-      // Create a map of squad assignments
-      const squadAssignmentMap = new Map();
-      squadData?.forEach(squad => {
-        squadAssignmentMap.set(squad.player_id, squad.squad_role);
-      });
+        if (playersError) {
+          console.error('Error loading team players:', playersError);
+          throw playersError;
+        }
+
+        // Convert to expected format
+        playersWithAvailability = (teamPlayers || []).map(player => ({
+          id: player.id,
+          name: player.name,
+          squadNumber: player.squad_number,
+          type: player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield',
+          availabilityStatus: 'pending' as const,
+          isAssignedToSquad: false,
+          squadRole: 'player' as const
+        }));
+
+        console.log('Team players loaded as fallback:', playersWithAvailability);
+      }
+
+      // Get current squad assignments if eventId is provided
+      let squadAssignmentMap = new Map();
+      if (eventId) {
+        const { data: squadData, error: squadError } = await supabase
+          .from('team_squads')
+          .select('player_id, squad_role')
+          .eq('team_id', teamId)
+          .eq('event_id', eventId);
+
+        if (squadError) {
+          console.error('Error loading squad assignments:', squadError);
+        } else {
+          console.log('Current squad assignments:', squadData);
+          squadData?.forEach(squad => {
+            squadAssignmentMap.set(squad.player_id, squad.squad_role);
+          });
+        }
+      }
 
       // Update players with squad assignment status
       const updatedPlayers = playersWithAvailability.map(player => ({
@@ -70,6 +111,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       setSquadPlayers(squad);
     } catch (error) {
       console.error('Error loading availability-based squad data:', error);
+      // Set empty arrays on error but don't leave in loading state
+      setAvailablePlayers([]);
+      setSquadPlayers([]);
     } finally {
       setLoading(false);
     }
@@ -155,9 +199,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
   };
 
   useEffect(() => {
-    if (eventId) {
-      loadAvailabilityBasedData();
-    }
+    loadAvailabilityBasedData();
   }, [teamId, eventId]);
 
   return {
