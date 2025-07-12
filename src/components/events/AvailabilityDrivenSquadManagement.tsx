@@ -30,12 +30,13 @@ interface AvailabilityDrivenSquadManagementProps {
   onCaptainChange?: (captainId: string) => void;
   allTeamSelections?: TeamSelection[];
   currentTeamIndex?: number;
-  initialSquadPlayers?: SquadPlayer[]; // New prop to pass initial squad
+  initialSquadPlayers?: SquadPlayer[];
 }
 
 interface PlayerWithAvailability extends SquadPlayer {
   availabilityForEvent?: 'available' | 'unavailable' | 'pending';
   isAssignedElsewhere?: boolean;
+  isInCurrentSquad?: boolean;
 }
 
 export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquadManagementProps> = ({ 
@@ -46,13 +47,12 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   onCaptainChange,
   allTeamSelections = [],
   currentTeamIndex = 0,
-  initialSquadPlayers = [] // Use the initial squad from props
+  initialSquadPlayers = []
 }) => {
   const isMobile = useMobileDetection();
   const [squadPlayers, setSquadPlayers] = useState<SquadPlayer[]>(initialSquadPlayers);
-  const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
   const [sortBy, setSortBy] = useState<'name' | 'availability' | 'position'>('availability');
-  const [filterBy, setFilterBy] = useState<'all' | 'available' | 'unavailable' | 'pending'>('all');
+  const [filterBy, setFilterBy] = useState<'all' | 'available' | 'unavailable' | 'pending' | 'in_squad' | 'not_in_squad'>('all');
   const [playersWithAvailability, setPlayersWithAvailability] = useState<PlayerWithAvailability[]>([]);
 
   // Update local squad when initialSquadPlayers changes (when switching teams)
@@ -61,86 +61,87 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setSquadPlayers(initialSquadPlayers);
   }, [initialSquadPlayers, currentTeamIndex]);
 
-  // Get all team players for adding to squad
+  // Get all team players
   const { data: allPlayers = [], isLoading: playersLoading, error: playersError } = useQuery({
     queryKey: ['team-players', teamId],
     queryFn: () => playersService.getActivePlayersByTeamId(teamId),
     enabled: !!teamId,
   });
 
-  // Load availability data for current event
+  // Get players assigned to other teams
+  const getPlayersAssignedToOtherTeams = () => {
+    const assignedPlayerIds = new Set<string>();
+    allTeamSelections.forEach((team, index) => {
+      if (index !== currentTeamIndex) {
+        team.squadPlayers.forEach(player => {
+          assignedPlayerIds.add(player.id);
+        });
+      }
+    });
+    return assignedPlayerIds;
+  };
+
+  // Load availability data and combine with all players
   useEffect(() => {
-    if (eventId && squadPlayers.length > 0) {
-      loadPlayerAvailability();
-    } else {
-      setPlayersWithAvailability(squadPlayers.map(p => ({ ...p })));
-    }
-  }, [squadPlayers, eventId]);
+    const loadPlayerData = async () => {
+      if (!allPlayers.length) return;
+
+      const playersInOtherTeams = getPlayersAssignedToOtherTeams();
+      const squadPlayerIds = new Set(squadPlayers.map(p => p.id));
+
+      let enhancedPlayers: PlayerWithAvailability[] = allPlayers.map(player => ({
+        id: player.id,
+        name: player.name,
+        squadNumber: player.squadNumber,
+        type: player.type as 'goalkeeper' | 'outfield',
+        availabilityStatus: 'available',
+        squadRole: 'player',
+        availabilityForEvent: 'pending' as const,
+        isAssignedElsewhere: playersInOtherTeams.has(player.id),
+        isInCurrentSquad: squadPlayerIds.has(player.id)
+      }));
+
+      // Load availability data for current event if available
+      if (eventId) {
+        try {
+          const { data: userPlayers, error } = await supabase
+            .from('user_players')
+            .select('player_id, user_id')
+            .in('player_id', allPlayers.map(p => p.id));
+
+          if (!error && userPlayers?.length > 0) {
+            const userIds = userPlayers.map(up => up.user_id);
+            
+            if (userIds.length > 0) {
+              const availability = await userAvailabilityService.getUserAvailabilityForEvents(
+                userIds[0],
+                [eventId]
+              );
+
+              enhancedPlayers = enhancedPlayers.map(player => {
+                const playerAvailability = availability.find(a => a.eventId === eventId);
+                return {
+                  ...player,
+                  availabilityForEvent: playerAvailability?.status || 'pending'
+                };
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error loading player availability:', error);
+        }
+      }
+
+      setPlayersWithAvailability(enhancedPlayers);
+    };
+
+    loadPlayerData();
+  }, [allPlayers, squadPlayers, eventId, allTeamSelections, currentTeamIndex]);
 
   // Notify parent when squadPlayers changes
   useEffect(() => {
     onSquadChange?.(squadPlayers);
   }, [squadPlayers, onSquadChange]);
-
-  const loadPlayerAvailability = async () => {
-    if (!eventId) return;
-
-    try {
-      // Get user accounts linked to players
-      const { data: userPlayers, error } = await supabase
-        .from('user_players')
-        .select('player_id, user_id')
-        .in('player_id', squadPlayers.map(p => p.id));
-
-      if (error) throw error;
-
-      const userIds = userPlayers?.map(up => up.user_id) || [];
-      
-      if (userIds.length > 0) {
-        const availability = await userAvailabilityService.getUserAvailabilityForEvents(
-          userIds[0], // This would need to be improved for multiple users
-          [eventId]
-        );
-
-        // Check for conflicts with other events on the same day
-        const { data: eventData } = await supabase
-          .from('events')
-          .select('date')
-          .eq('id', eventId)
-          .single();
-
-        let conflictingEventIds: string[] = [];
-        if (eventData) {
-          const { data: samedayEvents } = await supabase
-            .from('events')
-            .select('id')
-            .eq('date', eventData.date)
-            .eq('team_id', teamId)
-            .neq('id', eventId);
-
-          conflictingEventIds = samedayEvents?.map(e => e.id) || [];
-        }
-
-        const enhancedPlayers = squadPlayers.map(player => {
-          const userPlayer = userPlayers?.find(up => up.player_id === player.id);
-          const playerAvailability = availability.find(a => a.eventId === eventId);
-          
-          return {
-            ...player,
-            availabilityForEvent: playerAvailability?.status || 'pending',
-            isAssignedElsewhere: false // Would check against conflictingEventIds
-          };
-        });
-
-        setPlayersWithAvailability(enhancedPlayers);
-      } else {
-        setPlayersWithAvailability(squadPlayers.map(p => ({ ...p })));
-      }
-    } catch (error) {
-      console.error('Error loading player availability:', error);
-      setPlayersWithAvailability(squadPlayers.map(p => ({ ...p })));
-    }
-  };
 
   // Sort players based on selected criteria
   const sortedPlayers = [...playersWithAvailability].sort((a, b) => {
@@ -157,10 +158,23 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }
   });
 
-  // Filter players based on availability
+  // Filter players based on availability and squad status
   const filteredPlayers = sortedPlayers.filter(player => {
-    if (filterBy === 'all') return true;
-    return player.availabilityForEvent === filterBy;
+    switch (filterBy) {
+      case 'available':
+        return player.availabilityForEvent === 'available';
+      case 'unavailable':
+        return player.availabilityForEvent === 'unavailable';
+      case 'pending':
+        return player.availabilityForEvent === 'pending';
+      case 'in_squad':
+        return player.isInCurrentSquad;
+      case 'not_in_squad':
+        return !player.isInCurrentSquad && !player.isAssignedElsewhere;
+      case 'all':
+      default:
+        return true;
+    }
   });
 
   console.log('AvailabilityDrivenSquadManagement render:', {
@@ -173,34 +187,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     playersError
   });
 
-  // Filter out players already in ANY team's squad (to prevent duplicates across teams)
-  const getPlayersAssignedToOtherTeams = () => {
-    const assignedPlayerIds = new Set<string>();
-    allTeamSelections.forEach((team, index) => {
-      if (index !== currentTeamIndex) { // Exclude current team
-        team.squadPlayers.forEach(player => {
-          assignedPlayerIds.add(player.id);
-        });
-      }
-    });
-    return assignedPlayerIds;
-  };
-
-  const playersInOtherTeams = getPlayersAssignedToOtherTeams();
-  
-  const availableToAdd = allPlayers.filter(
-    player => !squadPlayers.some(squadPlayer => squadPlayer.id === player.id) && 
-               !playersInOtherTeams.has(player.id) // Don't show players already in other teams
-  );
-
-  console.log('Available players to add (excluding those in other teams):', availableToAdd.length);
-
   const handleAddPlayer = async (playerId: string) => {
-    if (!playerId) {
-      toast.error('Please select a player to add');
-      return;
-    }
-    
     try {
       const playerToAdd = allPlayers.find(p => p.id === playerId);
       if (!playerToAdd) {
@@ -219,7 +206,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
       console.log('Adding player to squad:', newSquadPlayer);
       setSquadPlayers(prev => [...prev, newSquadPlayer]);
-      setSelectedPlayerId('');
       toast.success('Player added to squad successfully');
     } catch (error: any) {
       console.error('Error adding player to squad:', error);
@@ -249,11 +235,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         )
       );
       toast.success('Availability updated');
-      
-      // Refresh availability data
-      if (eventId) {
-        loadPlayerAvailability();
-      }
     } catch (error: any) {
       console.error('Error updating availability:', error);
       toast.error(error.message || 'Failed to update availability');
@@ -344,80 +325,46 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           </CardHeader>
           <CardContent className={`space-y-3 ${isMobile ? 'px-3 pb-3' : 'space-y-4'}`}>
             {/* Sort and Filter Controls */}
-            {eventId && (
-              <div className={`flex gap-2 ${isMobile ? 'flex-col space-y-2' : ''}`}>
-                <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-                  <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'w-40'}`}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="availability">Sort by Availability</SelectItem>
-                    <SelectItem value="name">Sort by Name</SelectItem>
-                    <SelectItem value="position">Sort by Position</SelectItem>
-                  </SelectContent>
-                </Select>
-                
-                <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
-                  <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'w-40'}`}>
-                    <Filter className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-2`} />
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Players</SelectItem>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="unavailable">Unavailable</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className={`flex gap-2 ${isMobile ? 'flex-col space-y-2' : ''}`}>
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'w-40'}`}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="availability">Sort by Availability</SelectItem>
+                  <SelectItem value="name">Sort by Name</SelectItem>
+                  <SelectItem value="position">Sort by Position</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              <Select value={filterBy} onValueChange={(value: any) => setFilterBy(value)}>
+                <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'w-48'}`}>
+                  <Filter className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-2`} />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Players</SelectItem>
+                  <SelectItem value="in_squad">In Squad</SelectItem>
+                  <SelectItem value="not_in_squad">Available to Add</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="unavailable">Unavailable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            {/* Add Player Section */}
-            {availableToAdd.length > 0 ? (
-              <div className={`flex gap-2 ${isMobile ? 'flex-col space-y-2' : ''}`}>
-                <Select value={selectedPlayerId} onValueChange={setSelectedPlayerId}>
-                  <SelectTrigger className={`${isMobile ? 'h-8 text-sm' : 'flex-1'}`}>
-                    <SelectValue placeholder="Select player to add to squad..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableToAdd.map((player) => (
-                      <SelectItem key={player.id} value={player.id}>
-                        #{player.squadNumber} {player.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button 
-                  onClick={() => handleAddPlayer(selectedPlayerId)} 
-                  disabled={!selectedPlayerId}
-                  size="sm"
-                  className={isMobile ? 'w-full' : ''}
-                >
-                  <UserPlus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} />
-                  Add
-                </Button>
-              </div>
-            ) : (
-              <div className={`text-center text-muted-foreground ${isMobile ? 'py-3 text-sm' : 'py-4'}`}>
-                {allPlayers.length === 0 
-                  ? 'No players found in this team'
-                  : 'All available players are already assigned to teams'
-                }
-              </div>
-            )}
-
-            {/* Squad Players List */}
+            {/* Players List */}
             <div className={`space-y-2 ${isMobile ? 'space-y-1' : ''}`}>
               {filteredPlayers.length === 0 ? (
                 <div className={`text-center text-muted-foreground ${isMobile ? 'py-4 text-sm' : 'py-8'}`}>
-                  {squadPlayers.length === 0 
-                    ? 'No players in squad. Add players to get started.'
+                  {allPlayers.length === 0 
+                    ? 'No players found in this team'
                     : 'No players match the current filter.'
                   }
                 </div>
               ) : (
                 filteredPlayers.map((player) => (
-                  <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'}`}>
+                  <div key={player.id} className={`flex items-center justify-between border rounded-lg ${isMobile ? 'p-2' : 'p-3'} ${player.isAssignedElsewhere ? 'bg-gray-50 opacity-75' : ''}`}>
                     <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-3'}`}>
                       <Badge variant="outline" className={isMobile ? 'text-xs' : ''}>#{player.squadNumber}</Badge>
                       <span className={`font-medium ${isMobile ? 'text-sm' : ''}`}>{player.name}</span>
@@ -440,7 +387,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                                 <AlertTriangle className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} text-orange-500`} />
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Assigned to multiple events</p>
+                                <p>Assigned to another team</p>
                               </TooltipContent>
                             </Tooltip>
                           )}
@@ -449,33 +396,48 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                     </div>
                     
                     <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
-                      <Select
-                        value={player.availabilityStatus}
-                        onValueChange={(value) => handleAvailabilityChange(player.id, value)}
-                      >
-                        <SelectTrigger className={isMobile ? 'w-24 h-7 text-xs' : 'w-32'}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="available">Available</SelectItem>
-                          <SelectItem value="unavailable">Unavailable</SelectItem>
-                          <SelectItem value="maybe">Maybe</SelectItem>
-                          <SelectItem value="pending">Pending</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      
-                      <Badge className={`${getAvailabilityColor(player.availabilityStatus)} ${isMobile ? 'text-xs px-1 py-0' : ''}`}>
-                        {isMobile ? player.availabilityStatus.substring(0, 4) : player.availabilityStatus}
-                      </Badge>
-                      
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRemovePlayer(player.id)}
-                        className={isMobile ? 'h-7 w-7 p-0' : ''}
-                      >
-                        <UserMinus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                      </Button>
+                      {player.isInCurrentSquad ? (
+                        <>
+                          <Select
+                            value={player.availabilityStatus}
+                            onValueChange={(value) => handleAvailabilityChange(player.id, value)}
+                          >
+                            <SelectTrigger className={isMobile ? 'w-24 h-7 text-xs' : 'w-32'}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="available">Available</SelectItem>
+                              <SelectItem value="unavailable">Unavailable</SelectItem>
+                              <SelectItem value="maybe">Maybe</SelectItem>
+                              <SelectItem value="pending">Pending</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          <Badge className={`${getAvailabilityColor(player.availabilityStatus)} ${isMobile ? 'text-xs px-1 py-0' : ''}`}>
+                            {isMobile ? player.availabilityStatus.substring(0, 4) : player.availabilityStatus}
+                          </Badge>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleRemovePlayer(player.id)}
+                            className={isMobile ? 'h-7 w-7 p-0' : ''}
+                          >
+                            <UserMinus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAddPlayer(player.id)}
+                          disabled={player.isAssignedElsewhere}
+                          className={isMobile ? 'h-7 px-2' : ''}
+                        >
+                          <UserPlus className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} mr-1`} />
+                          {isMobile ? 'Add' : 'Add to Squad'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))
