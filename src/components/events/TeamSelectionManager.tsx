@@ -1,4 +1,5 @@
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
 import { DatabaseEvent } from '@/types/event';
 
@@ -19,11 +20,16 @@ export const TeamSelectionManager: React.FC<TeamSelectionManagerProps> = ({
   const actualTeamId = teamId || event.team_id;
   
   return (
-    <AvailabilityDrivenSquadManagement
-      teamId={actualTeamId}
-      eventId={event.id}
-      isOpen={isOpen}
-      onClose={onClose}
-    />
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Team Selection - {event.title}</DialogTitle>
+        </DialogHeader>
+        <AvailabilityDrivenSquadManagement
+          teamId={actualTeamId}
+          eventId={event.id}
+        />
+      </DialogContent>
+    </Dialog>
   );
 };
