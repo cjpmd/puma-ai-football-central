@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -184,10 +183,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         isHome: formData.is_home,
         kitSelection: formData.kit_selection as 'home' | 'away' | 'training',
         facilityId: formData.facility_id,
-        teams: formData.num_teams > 1 ? Array.from({ length: formData.num_teams }, (_, i) => ({ 
-          id: formData.team_id, 
-          teamNumber: i + 1 
-        })) : undefined,
+        teams: formData.num_teams > 1 ? Array.from({ length: formData.num_teams }, () => formData.team_id) : undefined,
       };
 
       // If onSubmit prop is provided, use it (for new EventForm interface)
