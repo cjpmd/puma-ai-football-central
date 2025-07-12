@@ -97,7 +97,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       const updatedPlayers = playersWithAvailability.map(player => ({
         ...player,
         isAssignedToSquad: squadAssignmentMap.has(player.id),
-        squadRole: squadAssignmentMap.get(player.id) || 'player'
+        squadRole: (squadAssignmentMap.get(player.id) || 'player') as 'player' | 'captain' | 'vice_captain'
       }));
 
       console.log('Final players with availability and squad status:', updatedPlayers.length);
@@ -178,7 +178,11 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       // Immediately update local state to prevent duplication
       const playerToMove = squadPlayers.find(p => p.id === playerId);
       if (playerToMove) {
-        const updatedPlayer = { ...playerToMove, isAssignedToSquad: false, squadRole: 'player' };
+        const updatedPlayer: AvailablePlayer = { 
+          ...playerToMove, 
+          isAssignedToSquad: false, 
+          squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
+        };
         setAvailablePlayers(prev => [...prev, updatedPlayer]);
         setSquadPlayers(prev => prev.filter(p => p.id !== playerId));
       }
