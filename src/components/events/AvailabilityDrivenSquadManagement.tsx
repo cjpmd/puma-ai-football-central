@@ -40,6 +40,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
+  const [hasNotifiedInitialLoad, setHasNotifiedInitialLoad] = useState(false);
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -55,6 +56,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
+  // Reset notification flag when team changes
+  useEffect(() => {
+    setHasNotifiedInitialLoad(false);
+  }, [currentTeamIndex, teamId]);
+
   // Memoize the formatted squad players to prevent unnecessary re-renders
   const squadPlayersFormatted = useMemo(() => {
     return squadPlayers.map(player => ({
@@ -67,13 +73,29 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Notify parent when squad changes - use stable reference
+  // Only notify parent when squad changes AFTER initial load is complete
   useEffect(() => {
-    if (onSquadChange && squadPlayersFormatted.length >= 0) {
-      console.log('Notifying parent of squad change:', squadPlayersFormatted);
+    // Don't notify during loading or if we haven't finished initial load
+    if (loading) {
+      return;
+    }
+
+    // Only notify after we've completed the initial load for this team
+    if (!hasNotifiedInitialLoad) {
+      console.log('Initial load complete for team, notifying parent:', squadPlayersFormatted);
+      setHasNotifiedInitialLoad(true);
+      if (onSquadChange) {
+        onSquadChange(squadPlayersFormatted);
+      }
+      return;
+    }
+
+    // For subsequent changes, notify normally
+    if (onSquadChange) {
+      console.log('Squad data changed, notifying parent:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
     }
-  }, [squadPlayersFormatted, onSquadChange]);
+  }, [squadPlayersFormatted, onSquadChange, loading, hasNotifiedInitialLoad]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
