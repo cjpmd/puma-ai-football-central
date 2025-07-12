@@ -31,9 +31,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
 
     try {
       setLoading(true);
-      console.log('Loading availability-based squad data for team:', teamId, 'event:', eventId);
+      console.log(`[Team ${teamId}] Loading availability-based squad data for event:`, eventId);
 
-      // Load all team players first
+      // Load all team players first - ONLY for this specific team
       const { data: teamPlayers, error: playersError } = await supabase
         .from('players')
         .select('id, name, squad_number, type')
@@ -42,11 +42,11 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         .order('squad_number');
 
       if (playersError) {
-        console.error('Error loading team players:', playersError);
+        console.error(`[Team ${teamId}] Error loading team players:`, playersError);
         throw playersError;
       }
 
-      console.log('Team players loaded:', teamPlayers?.length || 0);
+      console.log(`[Team ${teamId}] Team players loaded:`, teamPlayers?.length || 0);
 
       // Convert to expected format with proper type conversion
       let playersWithAvailability = (teamPlayers || []).map(player => ({
@@ -63,7 +63,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
       if (eventId) {
         try {
           const availabilityData = await availabilityService.getPlayerAvailabilityFromParents(eventId, teamId);
-          console.log('Availability data loaded:', availabilityData.length);
+          console.log(`[Team ${teamId}] Availability data loaded:`, availabilityData.length);
           
           // Update availability status for players who have responses
           playersWithAvailability = playersWithAvailability.map(player => {
@@ -71,7 +71,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
             return availabilityRecord ? { ...player, ...availabilityRecord } : player;
           });
         } catch (error) {
-          console.warn('Could not load availability data:', error);
+          console.warn(`[Team ${teamId}] Could not load availability data:`, error);
           // Continue with pending status for all players
         }
       }
@@ -86,38 +86,39 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
           .eq('event_id', eventId);
 
         if (!squadError && squadData) {
-          console.log(`Squad assignments for team ${teamId}, event ${eventId}:`, squadData);
+          console.log(`[Team ${teamId}] Squad assignments for event ${eventId}:`, squadData);
           squadData.forEach(squad => {
             squadAssignmentMap.set(squad.player_id, squad.squad_role);
           });
         } else if (squadError) {
-          console.error('Error loading squad assignments:', squadError);
+          console.error(`[Team ${teamId}] Error loading squad assignments:`, squadError);
         }
       }
 
-      // Update players with squad assignment status
+      // Update players with squad assignment status - ONLY for this team's players
       const updatedPlayers = playersWithAvailability.map(player => ({
         ...player,
         isAssignedToSquad: squadAssignmentMap.has(player.id),
         squadRole: (squadAssignmentMap.get(player.id) || 'player') as 'player' | 'captain' | 'vice_captain'
       }));
 
-      console.log(`Team ${teamId} final player breakdown:`, {
+      console.log(`[Team ${teamId}] Final player breakdown:`, {
         total: updatedPlayers.length,
         assigned: updatedPlayers.filter(p => p.isAssignedToSquad).length,
         available: updatedPlayers.filter(p => !p.isAssignedToSquad).length
       });
 
-      // Split players ensuring no overlap
+      // Split players ensuring no overlap - THIS IS THE KEY FIX
       const available = updatedPlayers.filter(p => !p.isAssignedToSquad);
       const squad = updatedPlayers.filter(p => p.isAssignedToSquad);
 
-      console.log(`Team ${teamId} - Available: ${available.length}, Squad: ${squad.length}`);
+      console.log(`[Team ${teamId}] Setting state - Available: ${available.length}, Squad: ${squad.length}`);
 
-      setAvailablePlayers(available);
-      setSquadPlayers(squad);
+      // Set state with completely separate arrays for this team only
+      setAvailablePlayers([...available]);
+      setSquadPlayers([...squad]);
     } catch (error) {
-      console.error('Error loading availability-based squad data:', error);
+      console.error(`[Team ${teamId}] Error loading availability-based squad data:`, error);
       setAvailablePlayers([]);
       setSquadPlayers([]);
     } finally {
@@ -129,7 +130,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
     if (!user || !eventId) return;
 
     try {
-      console.log(`Assigning player ${playerId} to team ${teamId} squad for event ${eventId}`);
+      console.log(`[Team ${teamId}] Assigning player ${playerId} to squad for event ${eventId}`);
 
       // Check if player is already assigned to ANY team for this event
       const { data: existingAssignment, error: checkError } = await supabase
@@ -155,7 +156,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
 
         if (updateError) throw updateError;
       } else {
-        // Insert new assignment
+        // Insert new assignment - SCOPED TO THIS TEAM ONLY
         const { error } = await supabase
           .from('team_squads')
           .insert({
@@ -170,25 +171,31 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         if (error) throw error;
       }
 
-      // Update local state immediately to prevent UI issues
-      const playerToMove = availablePlayers.find(p => p.id === playerId);
-      if (playerToMove) {
-        const updatedPlayer = { 
-          ...playerToMove, 
-          isAssignedToSquad: true, 
-          squadRole: squadRole as 'player' | 'captain' | 'vice_captain'
-        };
-        
-        setSquadPlayers(prev => {
-          const filtered = prev.filter(p => p.id !== playerId);
-          return [...filtered, updatedPlayer];
-        });
-        setAvailablePlayers(prev => prev.filter(p => p.id !== playerId));
-      }
+      // Update local state immediately - ONLY for this team's hook instance
+      setAvailablePlayers(prev => {
+        const filtered = prev.filter(p => p.id !== playerId);
+        console.log(`[Team ${teamId}] Updated available players:`, filtered.length);
+        return filtered;
+      });
 
-      console.log(`Successfully assigned player ${playerId} to team ${teamId}`);
+      setSquadPlayers(prev => {
+        const playerToMove = availablePlayers.find(p => p.id === playerId);
+        if (playerToMove) {
+          const updatedPlayer = { 
+            ...playerToMove, 
+            isAssignedToSquad: true, 
+            squadRole: squadRole as 'player' | 'captain' | 'vice_captain'
+          };
+          const newSquad = [...prev.filter(p => p.id !== playerId), updatedPlayer];
+          console.log(`[Team ${teamId}] Updated squad players:`, newSquad.length);
+          return newSquad;
+        }
+        return prev;
+      });
+
+      console.log(`[Team ${teamId}] Successfully assigned player ${playerId}`);
     } catch (error) {
-      console.error('Error in assignPlayerToSquad:', error);
+      console.error(`[Team ${teamId}] Error in assignPlayerToSquad:`, error);
       throw error;
     }
   };
@@ -197,7 +204,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
     if (!eventId) return;
 
     try {
-      console.log(`Removing player ${playerId} from team ${teamId} squad for event ${eventId}`);
+      console.log(`[Team ${teamId}] Removing player ${playerId} from squad for event ${eventId}`);
 
       const { error } = await supabase
         .from('team_squads')
@@ -207,29 +214,35 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         .eq('event_id', eventId);
 
       if (error) {
-        console.error('Error removing player from squad:', error);
+        console.error(`[Team ${teamId}] Error removing player from squad:`, error);
         throw error;
       }
 
-      // Update local state immediately
-      const playerToMove = squadPlayers.find(p => p.id === playerId);
-      if (playerToMove) {
-        const updatedPlayer: AvailablePlayer = { 
-          ...playerToMove, 
-          isAssignedToSquad: false, 
-          squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
-        };
-        
-        setAvailablePlayers(prev => {
-          const filtered = prev.filter(p => p.id !== playerId);
-          return [...filtered, updatedPlayer];
-        });
-        setSquadPlayers(prev => prev.filter(p => p.id !== playerId));
-      }
+      // Update local state immediately - ONLY for this team's hook instance
+      setSquadPlayers(prev => {
+        const filtered = prev.filter(p => p.id !== playerId);
+        console.log(`[Team ${teamId}] Updated squad players after removal:`, filtered.length);
+        return filtered;
+      });
 
-      console.log(`Successfully removed player ${playerId} from team ${teamId}`);
+      setAvailablePlayers(prev => {
+        const playerToMove = squadPlayers.find(p => p.id === playerId);
+        if (playerToMove) {
+          const updatedPlayer: AvailablePlayer = { 
+            ...playerToMove, 
+            isAssignedToSquad: false, 
+            squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
+          };
+          const newAvailable = [...prev.filter(p => p.id !== playerId), updatedPlayer];
+          console.log(`[Team ${teamId}] Updated available players after removal:`, newAvailable.length);
+          return newAvailable;
+        }
+        return prev;
+      });
+
+      console.log(`[Team ${teamId}] Successfully removed player ${playerId}`);
     } catch (error) {
-      console.error('Error in removePlayerFromSquad:', error);
+      console.error(`[Team ${teamId}] Error in removePlayerFromSquad:`, error);
       throw error;
     }
   };
@@ -238,7 +251,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
     if (!eventId) return;
 
     try {
-      console.log(`Updating squad role for player ${playerId} in team ${teamId} to ${squadRole}`);
+      console.log(`[Team ${teamId}] Updating squad role for player ${playerId} to ${squadRole}`);
 
       const { error } = await supabase
         .from('team_squads')
@@ -248,25 +261,26 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string) => {
         .eq('event_id', eventId);
 
       if (error) {
-        console.error('Error updating squad role:', error);
+        console.error(`[Team ${teamId}] Error updating squad role:`, error);
         throw error;
       }
 
-      // Update local state
+      // Update local state - ONLY for this team's hook instance
       setSquadPlayers(prev => prev.map(player => 
         player.id === playerId 
           ? { ...player, squadRole: squadRole }
           : player
       ));
 
-      console.log(`Successfully updated squad role for player ${playerId} in team ${teamId}`);
+      console.log(`[Team ${teamId}] Successfully updated squad role for player ${playerId}`);
     } catch (error) {
-      console.error('Error in updateSquadRole:', error);
+      console.error(`[Team ${teamId}] Error in updateSquadRole:`, error);
       throw error;
     }
   };
 
   useEffect(() => {
+    console.log(`[Team ${teamId}] Effect triggered - reloading data for event:`, eventId);
     loadAvailabilityBasedData();
   }, [teamId, eventId]);
 
