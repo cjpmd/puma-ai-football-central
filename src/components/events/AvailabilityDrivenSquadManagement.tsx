@@ -53,7 +53,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   const [squadPlayers, setSquadPlayers] = useState<SquadPlayer[]>(initialSquadPlayers);
   const [sortBy, setSortBy] = useState<'name' | 'availability' | 'position'>('availability');
   const [filterBy, setFilterBy] = useState<'all' | 'available' | 'unavailable' | 'pending' | 'in_squad' | 'not_in_squad'>('all');
-  const [playersWithAvailability, setPlayersWithAvailability] = useState<PlayerWithAvailability[]>([]);
 
   // Update local squad when initialSquadPlayers changes (when switching teams)
   useEffect(() => {
@@ -68,6 +67,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     enabled: !!teamId,
   });
 
+  // Notify parent when squadPlayers changes
+  useEffect(() => {
+    onSquadChange?.(squadPlayers);
+  }, [squadPlayers, onSquadChange]);
+
   // Get players assigned to other teams
   const getPlayersAssignedToOtherTeams = () => {
     const assignedPlayerIds = new Set<string>();
@@ -81,67 +85,23 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     return assignedPlayerIds;
   };
 
-  // Load availability data and combine with all players
-  useEffect(() => {
-    const loadPlayerData = async () => {
-      if (!allPlayers.length) return;
+  // Create enhanced players list with availability and assignment status
+  const playersWithAvailability: PlayerWithAvailability[] = allPlayers.map(player => {
+    const playersInOtherTeams = getPlayersAssignedToOtherTeams();
+    const squadPlayerIds = new Set(squadPlayers.map(p => p.id));
 
-      const playersInOtherTeams = getPlayersAssignedToOtherTeams();
-      const squadPlayerIds = new Set(squadPlayers.map(p => p.id));
-
-      let enhancedPlayers: PlayerWithAvailability[] = allPlayers.map(player => ({
-        id: player.id,
-        name: player.name,
-        squadNumber: player.squadNumber,
-        type: player.type as 'goalkeeper' | 'outfield',
-        availabilityStatus: 'available',
-        squadRole: 'player',
-        availabilityForEvent: 'pending' as const,
-        isAssignedElsewhere: playersInOtherTeams.has(player.id),
-        isInCurrentSquad: squadPlayerIds.has(player.id)
-      }));
-
-      // Load availability data for current event if available
-      if (eventId) {
-        try {
-          const { data: userPlayers, error } = await supabase
-            .from('user_players')
-            .select('player_id, user_id')
-            .in('player_id', allPlayers.map(p => p.id));
-
-          if (!error && userPlayers?.length > 0) {
-            const userIds = userPlayers.map(up => up.user_id);
-            
-            if (userIds.length > 0) {
-              const availability = await userAvailabilityService.getUserAvailabilityForEvents(
-                userIds[0],
-                [eventId]
-              );
-
-              enhancedPlayers = enhancedPlayers.map(player => {
-                const playerAvailability = availability.find(a => a.eventId === eventId);
-                return {
-                  ...player,
-                  availabilityForEvent: playerAvailability?.status || 'pending'
-                };
-              });
-            }
-          }
-        } catch (error) {
-          console.error('Error loading player availability:', error);
-        }
-      }
-
-      setPlayersWithAvailability(enhancedPlayers);
+    return {
+      id: player.id,
+      name: player.name,
+      squadNumber: player.squadNumber,
+      type: player.type as 'goalkeeper' | 'outfield',
+      availabilityStatus: 'available',
+      squadRole: 'player',
+      availabilityForEvent: 'pending' as const,
+      isAssignedElsewhere: playersInOtherTeams.has(player.id),
+      isInCurrentSquad: squadPlayerIds.has(player.id)
     };
-
-    loadPlayerData();
-  }, [allPlayers, squadPlayers, eventId, allTeamSelections, currentTeamIndex]);
-
-  // Notify parent when squadPlayers changes
-  useEffect(() => {
-    onSquadChange?.(squadPlayers);
-  }, [squadPlayers, onSquadChange]);
+  });
 
   // Sort players based on selected criteria
   const sortedPlayers = [...playersWithAvailability].sort((a, b) => {
@@ -184,7 +144,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     allPlayers: allPlayers.length,
     currentTeamIndex,
     playersLoading,
-    playersError
+    playersError,
+    playersWithAvailability: playersWithAvailability.length,
+    filteredPlayers: filteredPlayers.length
   });
 
   const handleAddPlayer = async (playerId: string) => {
@@ -374,25 +336,23 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       {player.type === 'goalkeeper' && (
                         <Badge variant="secondary" className={isMobile ? 'text-xs' : ''}>GK</Badge>
                       )}
-                      {eventId && (
-                        <div className={`flex items-center gap-1 ${getAvailabilityColorForEvent(player.availabilityForEvent)}`}>
-                          <div className={`w-2 h-2 rounded-full ${
-                            player.availabilityForEvent === 'available' ? 'bg-green-500' :
-                            player.availabilityForEvent === 'unavailable' ? 'bg-red-500' :
-                            'bg-amber-500'
-                          }`} />
-                          {player.isAssignedElsewhere && (
-                            <Tooltip>
-                              <TooltipTrigger>
-                                <AlertTriangle className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} text-orange-500`} />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Assigned to another team</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      )}
+                      <div className={`flex items-center gap-1 ${getAvailabilityColorForEvent(player.availabilityForEvent)}`}>
+                        <div className={`w-2 h-2 rounded-full ${
+                          player.availabilityForEvent === 'available' ? 'bg-green-500' :
+                          player.availabilityForEvent === 'unavailable' ? 'bg-red-500' :
+                          'bg-amber-500'
+                        }`} />
+                        {player.isAssignedElsewhere && (
+                          <Tooltip>
+                            <TooltipTrigger>
+                              <AlertTriangle className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'} text-orange-500`} />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Assigned to another team</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </div>
                     
                     <div className={`flex items-center ${isMobile ? 'gap-1' : 'gap-2'}`}>
