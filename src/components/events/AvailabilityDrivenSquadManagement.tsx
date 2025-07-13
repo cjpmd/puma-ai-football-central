@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [hasDataLoaded, setHasDataLoaded] = useState(false);
+  const [lastNotifiedSquad, setLastNotifiedSquad] = useState<string>('');
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -50,7 +49,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
-    hasDataLoaded
+    lastNotifiedSquad
   });
 
   // Update captain when global captain changes
@@ -58,9 +57,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Reset data loaded flag when team changes
+  // Reset notification tracking when team changes
   useEffect(() => {
-    setHasDataLoaded(false);
+    setLastNotifiedSquad('');
   }, [currentTeamIndex, teamId]);
 
   // Memoize the formatted squad players to prevent unnecessary re-renders
@@ -75,30 +74,26 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Only notify parent when data has actually loaded from database
+  // Only notify parent when squad data actually changes and after loading is complete
   useEffect(() => {
-    // Don't do anything during loading
+    // Don't notify during loading
     if (loading) {
       return;
     }
 
-    // Mark that data has loaded (even if empty, this means we got a response from the database)
-    if (!hasDataLoaded) {
-      setHasDataLoaded(true);
-      console.log('Data loaded from database, notifying parent:', squadPlayersFormatted);
-      // Only notify parent after we've actually loaded data from database
+    // Create a stable string representation for comparison
+    const currentSquadString = JSON.stringify(squadPlayersFormatted.map(p => p.id).sort());
+    
+    // Only notify if the squad composition has actually changed
+    if (currentSquadString !== lastNotifiedSquad) {
+      console.log('Squad composition changed, notifying parent:', squadPlayersFormatted);
+      setLastNotifiedSquad(currentSquadString);
+      
       if (onSquadChange) {
         onSquadChange(squadPlayersFormatted);
       }
-      return;
     }
-
-    // For subsequent changes after data has loaded, notify normally
-    console.log('Squad data changed after loading, notifying parent:', squadPlayersFormatted);
-    if (onSquadChange) {
-      onSquadChange(squadPlayersFormatted);
-    }
-  }, [squadPlayersFormatted, onSquadChange, loading, hasDataLoaded]);
+  }, [squadPlayersFormatted, onSquadChange, loading, lastNotifiedSquad]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {

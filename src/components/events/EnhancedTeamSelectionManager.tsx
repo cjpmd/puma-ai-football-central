@@ -183,7 +183,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     initializeData();
   }, [isOpen, event.id, teamId]);
 
-  const addTeam = () => {
+  const addTeam = async () => {
     const newTeamNumber = teamSelections.length + 1;
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
@@ -194,9 +194,31 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     };
     
     console.log('Adding new team:', newTeam);
-    setTeamSelections(prevSelections => [...prevSelections, newTeam]);
+    const updatedTeamSelections = [...teamSelections, newTeam];
+    setTeamSelections(updatedTeamSelections);
     setCurrentTeamIndex(teamSelections.length);
     setActiveTab('squad');
+
+    // Immediately save the updated team structure to the database
+    try {
+      const { error: updateEventError } = await supabase
+        .from('events')
+        .update({ 
+          teams: updatedTeamSelections.map(team => team.teamNumber.toString())
+        })
+        .eq('id', event.id);
+
+      if (updateEventError) {
+        console.error('Error updating event teams:', updateEventError);
+        toast.error('Failed to save new team');
+      } else {
+        console.log('Successfully saved new team to database');
+        toast.success('New team added');
+      }
+    } catch (error) {
+      console.error('Error saving new team:', error);
+      toast.error('Failed to save new team');
+    }
   };
 
   const getCurrentTeam = (): TeamSelection | null => {
