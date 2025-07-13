@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +41,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
+  const [lastNotifiedSquad, setLastNotifiedSquad] = useState<string>('');
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -55,7 +57,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Memoize the formatted squad players to prevent unnecessary re-renders
+  // Format squad players and notify parent only when composition actually changes
   const squadPlayersFormatted = useMemo(() => {
     return squadPlayers.map(player => ({
       id: player.id,
@@ -67,13 +69,16 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Notify parent immediately when squad changes (no debouncing or complex logic)
+  // Only notify parent when squad composition actually changes (not on every render)
   useEffect(() => {
-    console.log('Squad changed, notifying parent immediately:', squadPlayersFormatted);
-    if (onSquadChange) {
+    const currentSquadHash = JSON.stringify(squadPlayersFormatted.map(p => p.id).sort());
+    
+    if (currentSquadHash !== lastNotifiedSquad && onSquadChange) {
+      console.log('Squad composition changed, notifying parent:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
+      setLastNotifiedSquad(currentSquadHash);
     }
-  }, [squadPlayersFormatted, onSquadChange]);
+  }, [squadPlayersFormatted, onSquadChange, lastNotifiedSquad]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {

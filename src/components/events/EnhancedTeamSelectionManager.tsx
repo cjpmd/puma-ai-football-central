@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -285,34 +284,87 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   };
 
   const handlePerformanceCategoryChange = async (categoryId: string) => {
-    const actualCategoryId = categoryId === 'none' ? 'none' : categoryId;
-    updateCurrentTeam({ performanceCategory: actualCategoryId });
+    const actualCategoryId = categoryId === 'none' ? null : categoryId;
+    const teamNumber = currentTeamIndex + 1;
     
-    console.log('Performance category change requested:', { categoryId: actualCategoryId, teamId, eventId: event.id, teamNumber: currentTeamIndex + 1 });
+    console.log('Performance category change requested:', { 
+      categoryId: actualCategoryId, 
+      teamId, 
+      eventId: event.id, 
+      teamNumber 
+    });
     
-    // Immediately save the performance category to database
+    // Update local state first
+    updateCurrentTeam({ performanceCategory: categoryId });
+    
+    // Immediately save the performance category to database with better error handling
     try {
-      const { data: updatedSelection, error } = await supabase
+      // First check if an event_selection record exists for this team
+      const { data: existingSelection, error: checkError } = await supabase
         .from('event_selections')
-        .update({ 
-          performance_category_id: actualCategoryId === 'none' ? null : actualCategoryId 
-        })
+        .select('id')
         .eq('event_id', event.id)
         .eq('team_id', teamId)
-        .eq('team_number', currentTeamIndex + 1)
-        .select()
-        .single();
+        .eq('team_number', teamNumber)
+        .maybeSingle();
 
-      if (error) {
-        console.error('Error updating performance category:', error);
-        toast.error('Failed to save performance category');
-      } else {
-        console.log('Performance category saved successfully:', updatedSelection);
-        toast.success('Performance category saved');
+      if (checkError) {
+        console.error('Error checking existing selection:', checkError);
+        throw checkError;
       }
-    } catch (error) {
+
+      if (existingSelection) {
+        // Update existing record
+        const { data: updatedSelection, error: updateError } = await supabase
+          .from('event_selections')
+          .update({ 
+            performance_category_id: actualCategoryId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSelection.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error('Error updating performance category:', updateError);
+          throw updateError;
+        }
+
+        console.log('Performance category updated successfully:', updatedSelection);
+      } else {
+        // Create new record
+        const { data: newSelection, error: insertError } = await supabase
+          .from('event_selections')
+          .insert({
+            event_id: event.id,
+            team_id: teamId,
+            team_number: teamNumber,
+            period_number: 1,
+            formation: '4-3-3',
+            duration_minutes: event.game_duration || 90,
+            player_positions: [],
+            substitute_players: [],
+            staff_selection: [],
+            performance_category_id: actualCategoryId
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating new selection with performance category:', insertError);
+          throw insertError;
+        }
+
+        console.log('New selection with performance category created successfully:', newSelection);
+      }
+
+      toast.success('Performance category saved successfully');
+    } catch (error: any) {
       console.error('Error saving performance category:', error);
-      toast.error('Failed to save performance category');
+      toast.error(`Failed to save performance category: ${error.message || 'Unknown error'}`);
+      
+      // Revert local state on error
+      updateCurrentTeam({ performanceCategory: 'none' });
     }
   };
 
@@ -506,7 +558,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <Target className="h-3 w-3" />
                   Category:
                 </Label>
-                <Select value={currentTeam.performanceCategory} onValueChange={handlePerformanceCategoryChange}>
+                <Select value={currentTeam.performanceCategory || 'none'} onValueChange={handlePerformanceCategoryChange}>
                   <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
