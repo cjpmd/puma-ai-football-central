@@ -40,7 +40,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [lastNotifiedSquad, setLastNotifiedSquad] = useState<string>('');
+  const [hasNotifiedInitialLoad, setHasNotifiedInitialLoad] = useState(false);
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -49,7 +49,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
-    lastNotifiedSquad
+    hasNotifiedInitialLoad
   });
 
   // Update captain when global captain changes
@@ -57,9 +57,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Reset notification tracking when team changes
+  // Reset notification flag when team changes
   useEffect(() => {
-    setLastNotifiedSquad('');
+    setHasNotifiedInitialLoad(false);
   }, [currentTeamIndex, teamId]);
 
   // Memoize the formatted squad players to prevent unnecessary re-renders
@@ -74,26 +74,17 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Only notify parent when squad data actually changes and after loading is complete
+  // Only notify parent ONCE when data initially loads
   useEffect(() => {
-    // Don't notify during loading
-    if (loading) {
-      return;
-    }
-
-    // Create a stable string representation for comparison
-    const currentSquadString = JSON.stringify(squadPlayersFormatted.map(p => p.id).sort());
-    
-    // Only notify if the squad composition has actually changed
-    if (currentSquadString !== lastNotifiedSquad) {
-      console.log('Squad composition changed, notifying parent:', squadPlayersFormatted);
-      setLastNotifiedSquad(currentSquadString);
+    if (!loading && !hasNotifiedInitialLoad) {
+      console.log('Initial data load complete, notifying parent once:', squadPlayersFormatted);
+      setHasNotifiedInitialLoad(true);
       
       if (onSquadChange) {
         onSquadChange(squadPlayersFormatted);
       }
     }
-  }, [squadPlayersFormatted, onSquadChange, loading, lastNotifiedSquad]);
+  }, [loading, hasNotifiedInitialLoad, squadPlayersFormatted, onSquadChange]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
@@ -108,11 +99,24 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       console.log('Adding player to squad:', player.id);
       await assignPlayerToSquad(player.id, 'player');
       toast.success('Player added to squad');
+      
+      // Manually notify parent of the change
+      if (onSquadChange) {
+        const updatedSquad = [...squadPlayersFormatted, {
+          id: player.id,
+          name: player.name,
+          squadNumber: player.squadNumber,
+          type: player.type,
+          availabilityStatus: player.availabilityStatus,
+          squadRole: 'player'
+        }];
+        onSquadChange(updatedSquad);
+      }
     } catch (error: any) {
       console.error('Error adding player to squad:', error);
       toast.error('Failed to add player to squad');
     }
-  }, [assignPlayerToSquad]);
+  }, [assignPlayerToSquad, squadPlayersFormatted, onSquadChange]);
 
   const handleRemoveFromSquad = useCallback(async (playerId: string) => {
     try {
@@ -127,11 +131,17 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           onCaptainChange('');
         }
       }
+      
+      // Manually notify parent of the change
+      if (onSquadChange) {
+        const updatedSquad = squadPlayersFormatted.filter(p => p.id !== playerId);
+        onSquadChange(updatedSquad);
+      }
     } catch (error: any) {
       console.error('Error removing player from squad:', error);
       toast.error('Failed to remove player from squad');
     }
-  }, [removePlayerFromSquad, localCaptainId, onCaptainChange]);
+  }, [removePlayerFromSquad, localCaptainId, onCaptainChange, squadPlayersFormatted, onSquadChange]);
 
   const handleCaptainChange = useCallback(async (playerId: string) => {
     try {
