@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -194,13 +195,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     
     console.log('Adding new team:', newTeam);
     const updatedTeamSelections = [...teamSelections, newTeam];
-    setTeamSelections(updatedTeamSelections);
-    setCurrentTeamIndex(teamSelections.length);
-    setActiveTab('squad');
-
-    // Save both the team structure AND create initial event_selection record
+    
     try {
-      // Update event teams
+      // Save both the team structure AND create initial event_selection record IMMEDIATELY
       const { error: updateEventError } = await supabase
         .from('events')
         .update({ 
@@ -214,7 +211,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       }
 
       // Create initial event_selection record for the new team
-      const { error: selectionError } = await supabase
+      const { data: insertedSelection, error: selectionError } = await supabase
         .from('event_selections')
         .insert({
           event_id: event.id,
@@ -227,21 +224,26 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           substitute_players: [],
           staff_selection: [],
           performance_category_id: null
-        });
+        })
+        .select()
+        .single();
 
       if (selectionError) {
         console.error('Error creating initial selection record:', selectionError);
         throw selectionError;
       }
 
-      console.log('Successfully saved new team to database');
-      toast.success('New team added');
+      console.log('Successfully saved new team to database:', insertedSelection);
+      
+      // Now update local state
+      setTeamSelections(updatedTeamSelections);
+      setCurrentTeamIndex(teamSelections.length);
+      setActiveTab('squad');
+      
+      toast.success('New team added and saved');
     } catch (error) {
       console.error('Error saving new team:', error);
       toast.error('Failed to save new team');
-      // Revert the state change if database save failed
-      setTeamSelections(teamSelections);
-      setCurrentTeamIndex(Math.max(0, teamSelections.length - 1));
     }
   };
 
@@ -286,22 +288,27 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     const actualCategoryId = categoryId === 'none' ? 'none' : categoryId;
     updateCurrentTeam({ performanceCategory: actualCategoryId });
     
+    console.log('Performance category change requested:', { categoryId: actualCategoryId, teamId, eventId: event.id, teamNumber: currentTeamIndex + 1 });
+    
     // Immediately save the performance category to database
     try {
-      const { error } = await supabase
+      const { data: updatedSelection, error } = await supabase
         .from('event_selections')
         .update({ 
           performance_category_id: actualCategoryId === 'none' ? null : actualCategoryId 
         })
         .eq('event_id', event.id)
         .eq('team_id', teamId)
-        .eq('team_number', currentTeamIndex + 1);
+        .eq('team_number', currentTeamIndex + 1)
+        .select()
+        .single();
 
       if (error) {
         console.error('Error updating performance category:', error);
         toast.error('Failed to save performance category');
       } else {
-        console.log('Performance category saved successfully');
+        console.log('Performance category saved successfully:', updatedSelection);
+        toast.success('Performance category saved');
       }
     } catch (error) {
       console.error('Error saving performance category:', error);

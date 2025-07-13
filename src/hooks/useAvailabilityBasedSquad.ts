@@ -77,20 +77,46 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
 
       if (eventId) {
         console.log(`[${contextId}] Checking existing squad assignments for team ${teamId}, event ${eventId}`);
-        const { data: squadData, error: squadError } = await supabase
-          .from('team_squads')
-          .select('player_id, squad_role')
-          .eq('team_id', teamId)
-          .eq('event_id', eventId);
+        
+        // Check both team_squads table AND event_selections table for comprehensive data
+        const [squadResponse, selectionsResponse] = await Promise.all([
+          supabase
+            .from('team_squads')
+            .select('player_id, squad_role')
+            .eq('team_id', teamId)
+            .eq('event_id', eventId),
+          supabase
+            .from('event_selections')
+            .select('player_positions')
+            .eq('team_id', teamId)
+            .eq('event_id', eventId)
+        ]);
 
-        if (squadError) {
-          console.error(`[${contextId}] Error loading squad assignments:`, squadError);
-        } else if (squadData) {
-          console.log(`[${contextId}] Found ${squadData.length} existing squad assignments:`, squadData);
-          squadData.forEach(assignment => {
+        // Process team_squads data
+        if (squadResponse.data && squadResponse.data.length > 0) {
+          console.log(`[${contextId}] Found ${squadResponse.data.length} team_squads assignments:`, squadResponse.data);
+          squadResponse.data.forEach(assignment => {
             assignedPlayerIds.add(assignment.player_id);
-            playerRoles.set(assignment.player_id, assignment.squad_role);
-            console.log(`[${contextId}] Player ${assignment.player_id} is assigned with role ${assignment.squad_role}`);
+            playerRoles.set(assignment.player_id, assignment.squad_role || 'player');
+            console.log(`[${contextId}] Player ${assignment.player_id} assigned via team_squads with role ${assignment.squad_role}`);
+          });
+        }
+
+        // Also check event_selections for player assignments
+        if (selectionsResponse.data && selectionsResponse.data.length > 0) {
+          selectionsResponse.data.forEach(selection => {
+            if (selection.player_positions && Array.isArray(selection.player_positions)) {
+              (selection.player_positions as any[]).forEach(pos => {
+                const playerId = pos.playerId || pos.player_id;
+                if (playerId) {
+                  assignedPlayerIds.add(playerId);
+                  if (!playerRoles.has(playerId)) {
+                    playerRoles.set(playerId, 'player');
+                  }
+                  console.log(`[${contextId}] Player ${playerId} found in event_selections`);
+                }
+              });
+            }
           });
         }
       }
@@ -131,6 +157,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       console.log(`[${contextId}] === FINAL RESULTS ===`);
       console.log(`[${contextId}] Available players: ${available.length}`);
       console.log(`[${contextId}] Squad players: ${squad.length}`);
+      console.log(`[${contextId}] Squad player details:`, squad.map(p => ({ id: p.id, name: p.name, role: p.squadRole })));
 
       // 6. Set state - create new arrays to ensure React sees changes
       setAvailablePlayers([...available]);
@@ -179,11 +206,14 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
           .update({ squad_role: squadRole })
           .eq('id', existingAssignment.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error(`[${contextId}] Error updating assignment:`, updateError);
+          throw updateError;
+        }
       } else {
         // Insert new assignment for THIS specific team and event
         console.log(`[${contextId}] Creating new squad assignment`);
-        const { error: insertError } = await supabase
+        const { data: insertedData, error: insertError } = await supabase
           .from('team_squads')
           .insert({
             team_id: teamId,
@@ -192,12 +222,16 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             squad_role: squadRole,
             availability_status: 'available',
             added_by: user.id
-          });
+          })
+          .select()
+          .single();
 
         if (insertError) {
           console.error(`[${contextId}] Error inserting squad assignment:`, insertError);
           throw insertError;
         }
+
+        console.log(`[${contextId}] Successfully created assignment:`, insertedData);
       }
 
       console.log(`[${contextId}] Database operation successful, updating local state`);

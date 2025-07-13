@@ -40,7 +40,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [lastNotifiedSquadIds, setLastNotifiedSquadIds] = useState<Set<string>>(new Set());
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -56,11 +55,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Reset notification tracking when team changes
-  useEffect(() => {
-    setLastNotifiedSquadIds(new Set());
-  }, [currentTeamIndex, teamId]);
-
   // Memoize the formatted squad players to prevent unnecessary re-renders
   const squadPlayersFormatted = useMemo(() => {
     return squadPlayers.map(player => ({
@@ -69,29 +63,17 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       squadNumber: player.squadNumber,
       type: player.type,
       availabilityStatus: player.availabilityStatus,
-      squadRole: (player.squadRole || 'player') as 'player' | 'captain' | 'vice_captain' // Proper type casting
+      squadRole: (player.squadRole || 'player') as 'player' | 'captain' | 'vice_captain'
     }));
   }, [squadPlayers]);
 
-  // Only notify parent when squad composition genuinely changes
+  // Notify parent immediately when squad changes (no debouncing or complex logic)
   useEffect(() => {
-    if (!loading && squadPlayersFormatted.length > 0) {
-      const currentSquadIds = new Set(squadPlayersFormatted.map(p => p.id));
-      
-      // Check if the squad composition has actually changed
-      const hasChanged = currentSquadIds.size !== lastNotifiedSquadIds.size ||
-        [...currentSquadIds].some(id => !lastNotifiedSquadIds.has(id));
-      
-      if (hasChanged) {
-        console.log('Squad composition changed, notifying parent:', squadPlayersFormatted);
-        setLastNotifiedSquadIds(currentSquadIds);
-        
-        if (onSquadChange) {
-          onSquadChange(squadPlayersFormatted);
-        }
-      }
+    console.log('Squad changed, notifying parent immediately:', squadPlayersFormatted);
+    if (onSquadChange) {
+      onSquadChange(squadPlayersFormatted);
     }
-  }, [loading, squadPlayersFormatted, lastNotifiedSquadIds, onSquadChange]);
+  }, [squadPlayersFormatted, onSquadChange]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
@@ -106,25 +88,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       console.log('Adding player to squad:', player.id);
       await assignPlayerToSquad(player.id, 'player');
       toast.success('Player added to squad');
-      
-      // Manual notification to parent with proper typing
-      if (onSquadChange) {
-        const updatedSquad = [...squadPlayersFormatted, {
-          id: player.id,
-          name: player.name,
-          squadNumber: player.squadNumber,
-          type: player.type,
-          availabilityStatus: player.availabilityStatus,
-          squadRole: 'player' as const // Properly typed literal
-        }];
-        onSquadChange(updatedSquad);
-        setLastNotifiedSquadIds(new Set(updatedSquad.map(p => p.id)));
-      }
     } catch (error: any) {
       console.error('Error adding player to squad:', error);
-      toast.error('Failed to add player to squad');
+      toast.error(`Failed to add player to squad: ${error.message}`);
     }
-  }, [assignPlayerToSquad, squadPlayersFormatted, onSquadChange]);
+  }, [assignPlayerToSquad]);
 
   const handleRemoveFromSquad = useCallback(async (playerId: string) => {
     try {
@@ -139,18 +107,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           onCaptainChange('');
         }
       }
-      
-      // Manual notification to parent
-      if (onSquadChange) {
-        const updatedSquad = squadPlayersFormatted.filter(p => p.id !== playerId);
-        onSquadChange(updatedSquad);
-        setLastNotifiedSquadIds(new Set(updatedSquad.map(p => p.id)));
-      }
     } catch (error: any) {
       console.error('Error removing player from squad:', error);
-      toast.error('Failed to remove player from squad');
+      toast.error(`Failed to remove player from squad: ${error.message}`);
     }
-  }, [removePlayerFromSquad, localCaptainId, onCaptainChange, squadPlayersFormatted, onSquadChange]);
+  }, [removePlayerFromSquad, localCaptainId, onCaptainChange]);
 
   const handleCaptainChange = useCallback(async (playerId: string) => {
     try {
