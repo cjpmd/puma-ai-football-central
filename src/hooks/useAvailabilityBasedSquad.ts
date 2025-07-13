@@ -20,13 +20,13 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   
-  // Use refs to track current values and prevent unnecessary re-runs
+  // Use refs to prevent unnecessary re-runs and maintain stability
   const currentTeamIdRef = useRef(teamId);
   const currentEventIdRef = useRef(eventId);
   const currentTeamIndexRef = useRef(currentTeamIndex);
   const isLoadingRef = useRef(false);
 
-  // Create a unique context identifier for logging
+  // Create a stable context identifier
   const contextId = `SQUAD-${teamId}-T${currentTeamIndex ?? 0}`;
 
   const loadAvailabilityBasedData = useCallback(async () => {
@@ -48,7 +48,6 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       setLoading(true);
       isLoadingRef.current = true;
       console.log(`[${contextId}] === STARTING DATA LOAD ===`);
-      console.log(`[${contextId}] Loading data for team ${teamId}, event ${eventId}, teamIndex ${currentTeamIndex}`);
 
       // 1. Load ALL players for this specific team only
       const { data: teamPlayersData, error: playersError } = await supabase
@@ -125,18 +124,15 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         }
       }
 
-      // 5. Split into available and squad players - CRUCIAL: completely separate arrays
+      // 5. Split into available and squad players - maintain separate arrays
       const available = playersWithAvailability.filter(p => !p.isAssignedToSquad);
       const squad = playersWithAvailability.filter(p => p.isAssignedToSquad);
 
       console.log(`[${contextId}] === FINAL RESULTS ===`);
       console.log(`[${contextId}] Available players: ${available.length}`);
       console.log(`[${contextId}] Squad players: ${squad.length}`);
-      squad.forEach(player => {
-        console.log(`[${contextId}] Squad player: ${player.name} (#${player.squadNumber}) - Role: ${player.squadRole}`);
-      });
 
-      // 6. Set state with isolated arrays for this team
+      // 6. Set state - create new arrays to ensure React sees changes
       setAvailablePlayers([...available]);
       setSquadPlayers([...squad]);
 
@@ -206,18 +202,20 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
 
       console.log(`[${contextId}] Database operation successful, updating local state`);
 
-      // Update local state for THIS team only
+      // Update local state immediately - move player from available to squad
       setAvailablePlayers(prev => {
         const playerToMove = prev.find(p => p.id === playerId);
         if (playerToMove) {
           console.log(`[${contextId}] Moving player from available to squad locally`);
           
+          // Add to squad players
           setSquadPlayers(squadPrev => [...squadPrev, { 
             ...playerToMove, 
             isAssignedToSquad: true, 
             squadRole: squadRole 
           }]);
           
+          // Remove from available players
           return prev.filter(p => p.id !== playerId);
         }
         return prev;
@@ -255,18 +253,20 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
 
       console.log(`[${contextId}] Database operation successful, updating local state`);
 
-      // Update local state for THIS team only
+      // Update local state immediately - move player from squad to available
       setSquadPlayers(prev => {
         const playerToMove = prev.find(p => p.id === playerId);
         if (playerToMove) {
           console.log(`[${contextId}] Moving player from squad to available locally`);
           
+          // Add to available players
           setAvailablePlayers(availPrev => [...availPrev, { 
             ...playerToMove, 
             isAssignedToSquad: false, 
             squadRole: 'player' 
           }]);
           
+          // Remove from squad players
           return prev.filter(p => p.id !== playerId);
         }
         return prev;
@@ -311,7 +311,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
     }
   }, [eventId, teamId, contextId]);
 
-  // Only reload when key values actually change
+  // Only reload when key values actually change - but don't clear existing data
   useEffect(() => {
     const teamChanged = currentTeamIdRef.current !== teamId;
     const eventChanged = currentEventIdRef.current !== eventId;
@@ -326,11 +326,12 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       currentEventIdRef.current = eventId;
       currentTeamIndexRef.current = currentTeamIndex;
       
+      // Load data for the new team context
       loadAvailabilityBasedData();
     }
   }, [teamId, eventId, currentTeamIndex, loadAvailabilityBasedData]);
 
-  // Initial load
+  // Initial load only once
   useEffect(() => {
     console.log(`[${contextId}] Hook initialized - performing initial load`);
     loadAvailabilityBasedData();
