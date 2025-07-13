@@ -40,7 +40,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [hasNotifiedInitialLoad, setHasNotifiedInitialLoad] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -49,6 +49,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
+    isInitialized
   });
 
   // Update captain when global captain changes
@@ -56,9 +57,9 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Reset notification flag when team changes
+  // Reset initialization flag when team changes
   useEffect(() => {
-    setHasNotifiedInitialLoad(false);
+    setIsInitialized(false);
   }, [currentTeamIndex, teamId]);
 
   // Memoize the formatted squad players to prevent unnecessary re-renders
@@ -73,29 +74,29 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Only notify parent when squad changes AFTER initial load is complete
+  // CRITICAL FIX: Only notify parent AFTER data is loaded AND only when it actually changes
   useEffect(() => {
-    // Don't notify during loading or if we haven't finished initial load
+    // Don't notify during loading
     if (loading) {
       return;
     }
 
-    // Only notify after we've completed the initial load for this team
-    if (!hasNotifiedInitialLoad) {
-      console.log('Initial load complete for team, notifying parent:', squadPlayersFormatted);
-      setHasNotifiedInitialLoad(true);
+    // Don't notify if we haven't initialized yet
+    if (!isInitialized) {
+      setIsInitialized(true);
+      console.log('Initialization complete - squad data loaded:', squadPlayersFormatted);
       if (onSquadChange) {
         onSquadChange(squadPlayersFormatted);
       }
       return;
     }
 
-    // For subsequent changes, notify normally
+    // For subsequent changes after initialization, notify normally
+    console.log('Squad data changed after initialization, notifying parent:', squadPlayersFormatted);
     if (onSquadChange) {
-      console.log('Squad data changed, notifying parent:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
     }
-  }, [squadPlayersFormatted, onSquadChange, loading, hasNotifiedInitialLoad]);
+  }, [squadPlayersFormatted, onSquadChange, loading, isInitialized]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
