@@ -84,31 +84,10 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         }
       }
 
-      // Create sets for squad assignments (from recovered state)
-      const assignedPlayerIds = new Set(recoveredSquadPlayers.map(p => p.id));
+      console.log(`[${contextId}] Base players loaded - Available: ${playersWithAvailability.length}`);
       
-      // Apply squad assignments from recovery
-      const finalPlayers = playersWithAvailability.map(player => {
-        const recoveredPlayer = recoveredSquadPlayers.find(rp => rp.id === player.id);
-        if (recoveredPlayer) {
-          return {
-            ...player,
-            isAssignedToSquad: true,
-            squadRole: recoveredPlayer.squadRole || 'player',
-            availabilityStatus: recoveredPlayer.availabilityStatus
-          };
-        }
-        return player;
-      });
-
-      // Split into available and squad players
-      const available = finalPlayers.filter(p => !p.isAssignedToSquad);
-      const squad = finalPlayers.filter(p => p.isAssignedToSquad);
-
-      console.log(`[${contextId}] Final results - Available: ${available.length}, Squad: ${squad.length}`);
-      
-      setAvailablePlayers(available);
-      setSquadPlayers(squad);
+      setAvailablePlayers(playersWithAvailability);
+      setSquadPlayers([]);
 
     } catch (error) {
       console.error(`[${contextId}] Error loading data:`, error);
@@ -117,7 +96,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
     } finally {
       setLoading(false);
     }
-  }, [teamId, eventId, currentTeamIndex, contextId, recoveredSquadPlayers]);
+  }, [teamId, eventId, currentTeamIndex, contextId]);
 
   // Load players when recovery is complete
   useEffect(() => {
@@ -125,6 +104,22 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       loadTeamPlayers();
     }
   }, [loadTeamPlayers, isRecovering]);
+
+  // Apply recovered squad state after players are loaded
+  useEffect(() => {
+    if (!loading && !isRecovering && recoveredSquadPlayers.length > 0) {
+      console.log(`[${contextId}] Applying recovered squad state:`, recoveredSquadPlayers);
+      
+      setAvailablePlayers(prevAvailable => {
+        const recoveredPlayerIds = new Set(recoveredSquadPlayers.map(p => p.id));
+        return prevAvailable.filter(p => !recoveredPlayerIds.has(p.id));
+      });
+      
+      setSquadPlayers(recoveredSquadPlayers);
+      
+      console.log(`[${contextId}] Applied recovered state - Squad: ${recoveredSquadPlayers.length}`);
+    }
+  }, [loading, isRecovering, recoveredSquadPlayers, contextId]);
 
   const assignPlayerToSquad = useCallback(async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain' = 'player') => {
     if (!user || !eventId) {
