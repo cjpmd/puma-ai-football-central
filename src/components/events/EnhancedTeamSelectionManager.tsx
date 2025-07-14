@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -48,7 +49,6 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
   const [showMatchDayPack, setShowMatchDayPack] = useState(false);
-  const [savingCategory, setSavingCategory] = useState(false);
 
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
@@ -209,7 +209,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         throw updateEventError;
       }
 
-      // Create initial event_selection record for the new team to ensure it exists
+      // Create initial event_selection record for the new team
       const { data: insertedSelection, error: selectionError } = await supabase
         .from('event_selections')
         .insert({
@@ -288,13 +288,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     const actualCategoryId = categoryId === 'none' ? null : categoryId;
     const teamNumber = currentTeamIndex + 1;
     
-    setSavingCategory(true);
-    
-    // Update local state first with optimistic update
-    const previousCategory = getCurrentTeam()?.performanceCategory;
+    // Update local state immediately (optimistic update)
     updateCurrentTeam({ performanceCategory: categoryId });
     
-    console.log('Performance category change requested:', { 
+    console.log('Saving performance category:', { 
       categoryId: actualCategoryId, 
       teamId, 
       eventId: event.id, 
@@ -302,103 +299,68 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     });
     
     try {
-      // Wait a moment to ensure team state is properly established
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Multiple attempts with increasing delays
-      let attempts = 0;
-      const maxAttempts = 3;
-      let success = false;
-      
-      while (attempts < maxAttempts && !success) {
-        attempts++;
-        
-        try {
-          console.log(`Attempt ${attempts} to save performance category...`);
-          
-          // Check if an event_selection record exists for this team
-          const { data: existingSelection, error: checkError } = await supabase
-            .from('event_selections')
-            .select('id, performance_category_id')
-            .eq('event_id', event.id)
-            .eq('team_id', teamId)
-            .eq('team_number', teamNumber)
-            .maybeSingle();
+      // Ensure event_selection record exists first
+      const { data: existingSelection, error: checkError } = await supabase
+        .from('event_selections')
+        .select('id')
+        .eq('event_id', event.id)
+        .eq('team_id', teamId)
+        .eq('team_number', teamNumber)
+        .maybeSingle();
 
-          if (checkError) {
-            console.error('Error checking existing selection:', checkError);
-            throw new Error(`Database check failed: ${checkError.message}`);
-          }
+      if (checkError) {
+        console.error('Error checking existing selection:', checkError);
+        throw checkError;
+      }
 
-          if (existingSelection) {
-            // Update existing record
-            const { error: updateError } = await supabase
-              .from('event_selections')
-              .update({ 
-                performance_category_id: actualCategoryId,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', existingSelection.id);
+      if (existingSelection) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('event_selections')
+          .update({ 
+            performance_category_id: actualCategoryId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSelection.id);
 
-            if (updateError) {
-              console.error('Error updating performance category:', updateError);
-              throw new Error(`Update failed: ${updateError.message}`);
-            }
+        if (updateError) {
+          console.error('Error updating performance category:', updateError);
+          throw updateError;
+        }
+      } else {
+        // Create new record
+        const { error: insertError } = await supabase
+          .from('event_selections')
+          .insert({
+            event_id: event.id,
+            team_id: teamId,
+            team_number: teamNumber,
+            period_number: 1,
+            formation: '4-3-3',
+            duration_minutes: event.game_duration || 90,
+            player_positions: [],
+            substitute_players: [],
+            staff_selection: [],
+            performance_category_id: actualCategoryId
+          });
 
-            console.log('Performance category updated successfully');
-            success = true;
-          } else {
-            // Create new record
-            const { error: insertError } = await supabase
-              .from('event_selections')
-              .insert({
-                event_id: event.id,
-                team_id: teamId,
-                team_number: teamNumber,
-                period_number: 1,
-                formation: '4-3-3',
-                duration_minutes: event.game_duration || 90,
-                player_positions: [],
-                substitute_players: [],
-                staff_selection: [],
-                performance_category_id: actualCategoryId
-              });
-
-            if (insertError) {
-              console.error('Error creating new selection:', insertError);
-              throw insertError;
-            }
-
-            console.log('New selection with performance category created successfully');
-            success = true;
-          }
-        } catch (attemptError) {
-          console.error(`Attempt ${attempts} failed:`, attemptError);
-          
-          if (attempts >= maxAttempts) {
-            throw attemptError;
-          }
-          
-          // Wait before retry
-          await new Promise(resolve => setTimeout(resolve, attempts * 300));
+        if (insertError) {
+          console.error('Error creating new selection:', insertError);
+          throw insertError;
         }
       }
 
-      if (success) {
-        const categoryName = actualCategoryId 
-          ? performanceCategories.find(c => c.id === actualCategoryId)?.name || 'Unknown'
-          : 'None';
-        toast.success(`Performance category saved: ${categoryName}`);
-      }
+      const categoryName = actualCategoryId 
+        ? performanceCategories.find(c => c.id === actualCategoryId)?.name || 'Unknown'
+        : 'None';
+      toast.success(`Performance category saved: ${categoryName}`);
       
     } catch (error: any) {
       console.error('Error saving performance category:', error);
       toast.error(`Failed to save performance category: ${error.message}`);
       
       // Revert local state on error
-      updateCurrentTeam({ performanceCategory: previousCategory || 'none' });
-    } finally {
-      setSavingCategory(false);
+      updateCurrentTeam({ performanceCategory: 'none' });
     }
   };
 
@@ -601,28 +563,22 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <Target className="h-3 w-3" />
                   Category:
                 </Label>
-                <div className="flex items-center gap-2">
-                  <Select 
-                    value={currentTeam.performanceCategory || 'none'} 
-                    onValueChange={handlePerformanceCategoryChange}
-                    disabled={savingCategory}
-                  >
-                    <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No specific category</SelectItem>
-                      {performanceCategories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {savingCategory && (
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  )}
-                </div>
+                <Select 
+                  value={currentTeam.performanceCategory || 'none'} 
+                  onValueChange={handlePerformanceCategoryChange}
+                >
+                  <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No specific category</SelectItem>
+                    {performanceCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
           </div>
