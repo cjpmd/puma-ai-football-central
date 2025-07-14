@@ -21,10 +21,8 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      external: mode === 'development' ? [] : [
-        '@capacitor/core',
-        '@capacitor/push-notifications'
-      ]
+      // Only exclude Capacitor modules in native builds, not web builds
+      external: []
     }
   },
   define: {
