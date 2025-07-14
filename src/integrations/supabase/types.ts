@@ -1141,6 +1141,7 @@ export type Database = {
           id: string
           name: string | null
           phone: string | null
+          push_token: string | null
           roles: string[] | null
           updated_at: string | null
         }
@@ -1152,6 +1153,7 @@ export type Database = {
           id: string
           name?: string | null
           phone?: string | null
+          push_token?: string | null
           roles?: string[] | null
           updated_at?: string | null
         }
@@ -1163,6 +1165,7 @@ export type Database = {
           id?: string
           name?: string | null
           phone?: string | null
+          push_token?: string | null
           roles?: string[] | null
           updated_at?: string | null
         }
