@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -297,8 +298,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     // Update local state first
     updateCurrentTeam({ performanceCategory: categoryId });
     
-    // Save to database immediately with comprehensive error handling
+    // Save to database immediately with enhanced error handling
     try {
+      // Wait a moment to ensure the event_selection record exists
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Check if an event_selection record exists for this team
       const { data: existingSelection, error: checkError } = await supabase
         .from('event_selections')
@@ -330,28 +334,42 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
         console.log('Performance category updated successfully');
       } else {
-        // Create new record - this should already exist from addTeam, but handle edge case
-        const { error: insertError } = await supabase
-          .from('event_selections')
-          .insert({
-            event_id: event.id,
-            team_id: teamId,
-            team_number: teamNumber,
-            period_number: 1,
-            formation: '4-3-3',
-            duration_minutes: event.game_duration || 90,
-            player_positions: [],
-            substitute_players: [],
-            staff_selection: [],
-            performance_category_id: actualCategoryId
-          });
+        // Create new record with retry logic
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        while (retryCount < maxRetries) {
+          try {
+            const { error: insertError } = await supabase
+              .from('event_selections')
+              .insert({
+                event_id: event.id,
+                team_id: teamId,
+                team_number: teamNumber,
+                period_number: 1,
+                formation: '4-3-3',
+                duration_minutes: event.game_duration || 90,
+                player_positions: [],
+                substitute_players: [],
+                staff_selection: [],
+                performance_category_id: actualCategoryId
+              });
 
-        if (insertError) {
-          console.error('Error creating new selection with performance category:', insertError);
-          throw new Error(`Insert failed: ${insertError.message}`);
+            if (insertError) {
+              throw insertError;
+            }
+
+            console.log('New selection with performance category created successfully');
+            break;
+          } catch (error) {
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              throw error;
+            }
+            console.log(`Retry ${retryCount} for performance category save...`);
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         }
-
-        console.log('New selection with performance category created successfully');
       }
 
       const categoryName = actualCategoryId 

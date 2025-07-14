@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Users, UserPlus, Crown, CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
 import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
+import { usePrevious } from '@/hooks/usePrevious';
 import { toast } from 'sonner';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { SquadPlayer } from '@/types/teamSelection';
@@ -41,6 +41,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -49,6 +50,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
+    hasInitialized
   });
 
   // Update captain when global captain changes
@@ -68,13 +70,44 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Only notify parent when squad composition actually changes - use IDs for comparison
+  // Use previous value to detect genuine changes
+  const previousSquadPlayers = usePrevious(squadPlayersFormatted);
+
+  // Only notify parent when squad composition genuinely changes after initialization
   useEffect(() => {
-    if (!loading && onSquadChange && squadPlayersFormatted.length >= 0) {
-      console.log('Squad composition changed, notifying parent:', squadPlayersFormatted);
+    // Don't notify during initial load
+    if (loading || !hasInitialized) {
+      return;
+    }
+
+    // Check if squad has genuinely changed
+    const hasChanged = !previousSquadPlayers || 
+      squadPlayersFormatted.length !== previousSquadPlayers.length ||
+      squadPlayersFormatted.some(player => 
+        !previousSquadPlayers.find(prev => prev.id === player.id)
+      );
+
+    if (hasChanged && onSquadChange) {
+      console.log('Squad composition genuinely changed, notifying parent:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
     }
-  }, [squadPlayersFormatted, onSquadChange, loading]);
+  }, [squadPlayersFormatted, previousSquadPlayers, onSquadChange, loading, hasInitialized]);
+
+  // Initialize component state after data loads
+  useEffect(() => {
+    if (!loading && !hasInitialized) {
+      console.log('Initializing component with squad data:', squadPlayersFormatted);
+      setHasInitialized(true);
+      
+      // Notify parent of initial state after a brief delay to ensure parent is ready
+      if (onSquadChange && squadPlayersFormatted.length > 0) {
+        setTimeout(() => {
+          console.log('Notifying parent of initial squad state:', squadPlayersFormatted);
+          onSquadChange(squadPlayersFormatted);
+        }, 100);
+      }
+    }
+  }, [loading, hasInitialized, squadPlayersFormatted, onSquadChange]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
