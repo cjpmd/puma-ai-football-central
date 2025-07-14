@@ -140,7 +140,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       periodNumber: newPeriodNumber,
       formation: lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1',
       duration: 8,
-      positions: lastPeriod ? [...lastPeriod.positions] : [],
+      positions: lastPeriod ? [...lastPeriod.positions] : createPositionSlots(lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1'),
       substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
       captainId: globalCaptainId
     };
@@ -207,7 +207,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       }
       return period;
     });
-    onPeriodsChange(updatedPeriods);
+    
+    // Force a re-render to ensure positions appear immediately
+    setTimeout(() => {
+      onPeriodsChange(updatedPeriods);
+    }, 0);
   };
 
   const updatePeriodDuration = (periodId: string, duration: number) => {

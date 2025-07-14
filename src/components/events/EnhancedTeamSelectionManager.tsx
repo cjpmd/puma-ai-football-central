@@ -247,6 +247,66 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     }
   };
 
+  const deleteTeam = async (teamIndex: number) => {
+    if (teamSelections.length <= 1) {
+      toast.error('Cannot delete the last remaining team');
+      return;
+    }
+
+    const teamToDelete = teamSelections[teamIndex];
+    if (!teamToDelete) return;
+
+    console.log('Deleting team:', teamToDelete.teamNumber);
+    
+    try {
+      // Delete from database
+      const { error: deleteError } = await supabase
+        .from('event_selections')
+        .delete()
+        .eq('event_id', event.id)
+        .eq('team_id', teamId)
+        .eq('team_number', teamToDelete.teamNumber);
+
+      if (deleteError) {
+        console.error('Error deleting team from database:', deleteError);
+        throw deleteError;
+      }
+
+      // Update local state
+      const updatedTeamSelections = teamSelections.filter((_, index) => index !== teamIndex);
+      
+      // Renumber teams to maintain sequential order
+      const renumberedTeams = updatedTeamSelections.map((team, index) => ({
+        ...team,
+        teamNumber: index + 1
+      }));
+
+      setTeamSelections(renumberedTeams);
+      
+      // Adjust current team index if necessary
+      if (currentTeamIndex >= teamIndex) {
+        setCurrentTeamIndex(Math.max(0, currentTeamIndex - 1));
+      }
+
+      // Update event's teams data
+      const { error: updateEventError } = await supabase
+        .from('events')
+        .update({ 
+          teams: renumberedTeams.map(team => team.teamNumber.toString())
+        })
+        .eq('id', event.id);
+
+      if (updateEventError) {
+        console.error('Error updating event teams:', updateEventError);
+      }
+      
+      toast.success('Team deleted successfully');
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      toast.error('Failed to delete team');
+    }
+  };
+
   const getCurrentTeam = (): TeamSelection | null => {
     return teamSelections[currentTeamIndex] || null;
   };
@@ -529,31 +589,42 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           <div className={`flex flex-col gap-2 ${isMobile ? 'mt-2' : 'mt-4'}`}>
             <div className="flex items-center gap-2 flex-wrap">
               <Label className="text-xs font-medium">Teams:</Label>
-              <div className="flex gap-1 flex-wrap">
-                {teamSelections.map((team, index) => (
-                  <Button
-                    key={team.teamNumber}
-                    variant={index === currentTeamIndex ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => {
-                      console.log('Switching to team', index + 1);
-                      setCurrentTeamIndex(index);
-                      setActiveTab('squad');
-                    }}
-                    className="text-xs px-2 py-1"
-                  >
-                    Team {team.teamNumber}
-                    {team.squadPlayers.length > 0 && (
-                      <Badge variant="secondary" className="ml-1 text-xs">
-                        {team.squadPlayers.length}
-                      </Badge>
-                    )}
-                  </Button>
-                ))}
-                <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1">
-                  <Plus className="h-3 w-3" />
-                </Button>
-              </div>
+               <div className="flex gap-1 flex-wrap">
+                 {teamSelections.map((team, index) => (
+                   <div key={team.teamNumber} className="flex items-center">
+                     <Button
+                       variant={index === currentTeamIndex ? 'default' : 'outline'}
+                       size="sm"
+                       onClick={() => {
+                         console.log('Switching to team', index + 1);
+                         setCurrentTeamIndex(index);
+                         setActiveTab('squad');
+                       }}
+                       className="text-xs px-2 py-1 rounded-r-none border-r-0"
+                     >
+                       Team {team.teamNumber}
+                       {team.squadPlayers.length > 0 && (
+                         <Badge variant="secondary" className="ml-1 text-xs">
+                           {team.squadPlayers.length}
+                         </Badge>
+                       )}
+                     </Button>
+                     {teamSelections.length > 1 && (
+                       <Button
+                         variant={index === currentTeamIndex ? 'default' : 'outline'}
+                         size="sm"
+                         onClick={() => deleteTeam(index)}
+                         className="text-xs px-1 py-1 rounded-l-none text-destructive hover:text-destructive hover:bg-destructive/10"
+                       >
+                         <X className="h-3 w-3" />
+                       </Button>
+                     )}
+                   </div>
+                 ))}
+                 <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1">
+                   <Plus className="h-3 w-3" />
+                 </Button>
+               </div>
             </div>
 
             {/* Performance Category Selection for Current Team */}
