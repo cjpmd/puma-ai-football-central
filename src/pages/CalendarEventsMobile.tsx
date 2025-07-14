@@ -433,7 +433,7 @@ export default function CalendarEventsMobile() {
       tabs={tabs}
       stickyTabs={true}
     >
-      <div className="space-y-6">
+      <div className="space-y-6 pb-8">
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>

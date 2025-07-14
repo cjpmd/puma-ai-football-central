@@ -255,10 +255,10 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveFromSquad(player.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 md:px-4 px-2"
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Remove
+                      <X className="h-4 w-4 md:mr-1" />
+                      <span className="hidden md:inline">Remove</span>
                     </Button>
                   </div>
                 ))}
@@ -328,13 +328,13 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       variant="default"
                       size="sm"
                       onClick={() => handleAddToSquad(player)}
-                      className={player.availabilityStatus === 'available' 
+                      className={`md:px-4 px-2 ${player.availabilityStatus === 'available' 
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-yellow-600 hover:bg-yellow-700 text-white"
-                      }
+                      }`}
                     >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      Add to Squad
+                      <UserPlus className="h-4 w-4 md:mr-1" />
+                      <span className="hidden md:inline">Add to Squad</span>
                     </Button>
                   ) : (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">

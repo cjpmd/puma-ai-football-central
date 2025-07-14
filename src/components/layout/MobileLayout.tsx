@@ -51,7 +51,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
       )}
       
-      <div className="flex-1 overflow-auto pb-20">
+      <div className="flex-1 overflow-y-auto pb-24">
         <div className="p-4">
           {children}
         </div>

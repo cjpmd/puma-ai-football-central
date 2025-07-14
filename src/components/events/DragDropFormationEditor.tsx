@@ -717,7 +717,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="space-y-6 print:space-y-4">
+      <div className="flex flex-col h-full space-y-6 print:space-y-4">
         {/* Time tracking alerts */}
         {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
           <Alert variant="destructive">
@@ -730,45 +730,47 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Alert>
         )}
 
-        {/* Available Players */}
-        <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" className="w-full justify-between print:hidden">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                <span>Available Players ({unusedPlayers.length})</span>
-              </div>
-              {availablePlayersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="print:block">
-            <Card>
-              <CardContent className="pt-4">
-                {unusedPlayers.length === 0 ? (
-                  <div className="text-center text-muted-foreground py-4">
-                    All available players have been assigned
-                  </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {unusedPlayers.map((player) => (
-                      <PlayerIcon
-                        key={player.id}
-                        player={player}
-                        isCaptain={player.id === globalCaptainId}
-                        nameDisplayOption={mappedNameDisplayOption}
-                        isCircular={false}
-                        dragId={player.id}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Available Players - Fixed section */}
+        <div className="flex-shrink-0">
+          <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="outline" className="w-full justify-between print:hidden">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span>Available Players ({unusedPlayers.length})</span>
+                </div>
+                {availablePlayersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="print:block">
+              <Card>
+                <CardContent className="pt-4">
+                  {unusedPlayers.length === 0 ? (
+                    <div className="text-center text-muted-foreground py-4">
+                      All available players have been assigned
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {unusedPlayers.map((player) => (
+                        <PlayerIcon
+                          key={player.id}
+                          player={player}
+                          isCaptain={player.id === globalCaptainId}
+                          nameDisplayOption={mappedNameDisplayOption}
+                          isCircular={false}
+                          dragId={player.id}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
 
-        {/* Periods organized by halves */}
-        <div className="space-y-6">
+        {/* Scrollable Formation Area */}
+        <div className="flex-1 overflow-y-auto space-y-6">
           {firstHalf.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -796,39 +798,39 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
               </div>
             </div>
           )}
-        </div>
 
-        {/* Add Period Button */}
-        <div className="flex justify-center print:hidden">
-          <Button onClick={addPeriod} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Add Period
-          </Button>
-        </div>
+          {/* Add Period Button */}
+          <div className="flex justify-center print:hidden">
+            <Button onClick={addPeriod} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Add Period
+            </Button>
+          </div>
 
-        {/* Playing Time Summary */}
-        {Object.keys(playingTimeSummary).length > 0 && (
-          <Card className="print:break-inside-avoid">
-            <CardHeader>
-              <CardTitle className="text-lg">Playing Time Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                {Object.entries(playingTimeSummary).map(([playerId, minutes]) => {
-                  const player = squadPlayers.find(p => p.id === playerId);
-                  if (!player) return null;
-                  
-                  return (
-                    <div key={playerId} className="flex items-center justify-between p-2 bg-muted rounded">
-                      <span className="text-sm font-medium">{player.name}</span>
-                      <Badge variant="outline">{minutes}min</Badge>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+          {/* Playing Time Summary */}
+          {Object.keys(playingTimeSummary).length > 0 && (
+            <Card className="print:break-inside-avoid">
+              <CardHeader>
+                <CardTitle className="text-lg">Playing Time Summary</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {Object.entries(playingTimeSummary).map(([playerId, minutes]) => {
+                    const player = squadPlayers.find(p => p.id === playerId);
+                    if (!player) return null;
+                    
+                    return (
+                      <div key={playerId} className="flex items-center justify-between p-2 bg-muted rounded">
+                        <span className="text-sm font-medium">{player.name}</span>
+                        <Badge variant="outline">{minutes}min</Badge>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       <DragOverlay>
