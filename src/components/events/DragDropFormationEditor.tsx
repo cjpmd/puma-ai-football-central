@@ -81,6 +81,28 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     formations: gameFormatFormations.length
   });
 
+  // Ensure all periods have proper position slots when formations are set
+  useEffect(() => {
+    let needsUpdate = false;
+    const updatedPeriods = periods.map(period => {
+      // If period has a formation but no positions, create them
+      if (period.formation && (!period.positions || period.positions.length === 0)) {
+        console.log('Creating missing positions for period:', period.id, 'formation:', period.formation);
+        needsUpdate = true;
+        return {
+          ...period,
+          positions: createPositionSlots(period.formation)
+        };
+      }
+      return period;
+    });
+
+    if (needsUpdate) {
+      console.log('Updating periods with missing positions');
+      onPeriodsChange(updatedPeriods);
+    }
+  }, [periods, gameFormat]);
+
   const halfDuration = gameDuration / 2;
 
   const calculateGameTime = (periodIndex: number) => {
