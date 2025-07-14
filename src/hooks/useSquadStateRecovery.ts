@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AvailablePlayer } from './useAvailabilityBasedSquad';
 
-export const useSquadStateRecovery = (teamId: string, eventId: string) => {
+export const useSquadStateRecovery = (teamId: string, eventId: string, teamNumber?: number) => {
   const [recoveredSquadPlayers, setRecoveredSquadPlayers] = useState<AvailablePlayer[]>([]);
   const [isRecovering, setIsRecovering] = useState(true);
 
@@ -15,14 +15,15 @@ export const useSquadStateRecovery = (teamId: string, eventId: string) => {
       }
 
       try {
-        console.log(`[Squad Recovery] Starting for team ${teamId}, event ${eventId}`);
+        console.log(`[Squad Recovery] Starting for team ${teamId}, event ${eventId}, team number ${teamNumber}`);
         
-        // Get existing squad assignments from team_squads table
+        // Get existing squad assignments from team_squads table with team number filtering
         const { data: squadAssignments, error: squadError } = await supabase
           .from('team_squads')
-          .select('player_id, squad_role')
+          .select('player_id, squad_role, availability_status')
           .eq('team_id', teamId)
-          .eq('event_id', eventId);
+          .eq('event_id', eventId)
+          .eq('team_number', teamNumber || 1);
 
         if (squadError) {
           console.error('[Squad Recovery] Error fetching squad assignments:', squadError);
@@ -51,7 +52,7 @@ export const useSquadStateRecovery = (teamId: string, eventId: string) => {
           return;
         }
 
-        // Combine squad assignments with player data
+        // Combine squad assignments with player data, preserving availability status
         const recoveredPlayers: AvailablePlayer[] = playersData.map(player => {
           const assignment = squadAssignments.find(a => a.player_id === player.id);
           return {
@@ -59,11 +60,11 @@ export const useSquadStateRecovery = (teamId: string, eventId: string) => {
             name: player.name,
             squadNumber: player.squad_number,
             type: (player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield') as 'goalkeeper' | 'outfield',
-            availabilityStatus: 'available' as const,
+            availabilityStatus: (assignment?.availability_status || 'pending') as 'available' | 'unavailable' | 'pending',
             isAssignedToSquad: true,
             squadRole: (assignment?.squad_role || 'player') as 'player' | 'captain' | 'vice_captain'
           };
-        });
+        }).filter(player => player.availabilityStatus !== 'unavailable'); // Remove unavailable players from squad
 
         console.log(`[Squad Recovery] Recovered ${recoveredPlayers.length} squad players:`, recoveredPlayers);
         setRecoveredSquadPlayers(recoveredPlayers);
@@ -76,7 +77,7 @@ export const useSquadStateRecovery = (teamId: string, eventId: string) => {
     };
 
     recoverSquadState();
-  }, [teamId, eventId]);
+  }, [teamId, eventId, teamNumber]);
 
   return { recoveredSquadPlayers, isRecovering };
 };

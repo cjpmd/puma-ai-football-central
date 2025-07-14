@@ -1427,6 +1427,7 @@ export type Database = {
           player_id: string
           squad_role: string
           team_id: string
+          team_number: number
           updated_at: string
         }
         Insert: {
@@ -1440,6 +1441,7 @@ export type Database = {
           player_id: string
           squad_role?: string
           team_id: string
+          team_number?: number
           updated_at?: string
         }
         Update: {
@@ -1453,6 +1455,7 @@ export type Database = {
           player_id?: string
           squad_role?: string
           team_id?: string
+          team_number?: number
           updated_at?: string
         }
         Relationships: [

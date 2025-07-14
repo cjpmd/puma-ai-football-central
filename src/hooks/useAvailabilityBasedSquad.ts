@@ -22,7 +22,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
   const { user } = useAuth();
   
   const contextId = `SQUAD-${teamId}-T${currentTeamIndex ?? 0}`;
-  const { recoveredSquadPlayers, isRecovering } = useSquadStateRecovery(teamId, eventId || '');
+  const { recoveredSquadPlayers, isRecovering } = useSquadStateRecovery(teamId, eventId || '', (currentTeamIndex ?? 0) + 1);
 
   const loadTeamPlayers = useCallback(async () => {
     if (!teamId) {
@@ -137,6 +137,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         .eq('player_id', playerId)
         .eq('team_id', teamId)
         .eq('event_id', eventId)
+        .eq('team_number', (currentTeamIndex ?? 0) + 1)
         .maybeSingle();
 
       if (checkError) {
@@ -157,14 +158,16 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         }
       } else {
         // Create new assignment
+        const playerToAssign = availablePlayers.find(p => p.id === playerId);
         const { error: insertError } = await supabase
           .from('team_squads')
           .insert({
             team_id: teamId,
             player_id: playerId,
             event_id: eventId,
+            team_number: (currentTeamIndex ?? 0) + 1,
             squad_role: squadRole,
-            availability_status: 'available',
+            availability_status: playerToAssign?.availabilityStatus || 'pending',
             added_by: user.id
           });
 
@@ -193,7 +196,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       console.error(`[${contextId}] Error assigning player:`, error);
       throw error;
     }
-  }, [user, eventId, teamId, contextId]);
+  }, [user, eventId, teamId, contextId, currentTeamIndex, availablePlayers]);
 
   const removePlayerFromSquad = useCallback(async (playerId: string) => {
     if (!eventId) {
@@ -210,7 +213,8 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         .delete()
         .eq('team_id', teamId)
         .eq('player_id', playerId)
-        .eq('event_id', eventId);
+        .eq('event_id', eventId)
+        .eq('team_number', (currentTeamIndex ?? 0) + 1);
 
       if (error) {
         console.error(`[${contextId}] Error removing player from squad:`, error);
@@ -236,7 +240,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       console.error(`[${contextId}] Error removing player:`, error);
       throw error;
     }
-  }, [eventId, teamId, contextId]);
+  }, [eventId, teamId, contextId, currentTeamIndex]);
 
   const updateSquadRole = useCallback(async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain') => {
     if (!eventId) return;
@@ -249,7 +253,8 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         .update({ squad_role: squadRole })
         .eq('team_id', teamId)
         .eq('player_id', playerId)
-        .eq('event_id', eventId);
+        .eq('event_id', eventId)
+        .eq('team_number', (currentTeamIndex ?? 0) + 1);
 
       if (error) {
         console.error(`[${contextId}] Error updating squad role:`, error);
@@ -268,7 +273,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       console.error(`[${contextId}] Error updating squad role:`, error);
       throw error;
     }
-  }, [eventId, teamId, contextId]);
+  }, [eventId, teamId, contextId, currentTeamIndex]);
 
   return {
     availablePlayers,
