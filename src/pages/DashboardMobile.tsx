@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 
 interface LiveStats {
   playersCount: number;
@@ -136,6 +137,9 @@ export default function DashboardMobile() {
   return (
     <MobileLayout>
       <div className="space-y-6">
+        {/* Push Notification Setup */}
+        <PushNotificationSetup />
+        
         {/* Live Stats */}
         <div className="grid grid-cols-2 gap-4">
           <Card className="touch-manipulation">
