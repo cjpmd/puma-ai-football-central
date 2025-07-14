@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2 } from 'lucide-react';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
@@ -49,6 +49,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
   const [showMatchDayPack, setShowMatchDayPack] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
 
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
@@ -288,6 +289,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     const actualCategoryId = categoryId === 'none' ? null : categoryId;
     const teamNumber = currentTeamIndex + 1;
     
+    setSavingCategory(true);
+    
     console.log('Performance category change requested:', { 
       categoryId: actualCategoryId, 
       teamId, 
@@ -295,51 +298,61 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       teamNumber 
     });
     
-    // Update local state first
+    // Update local state first with optimistic update
+    const previousCategory = getCurrentTeam()?.performanceCategory;
     updateCurrentTeam({ performanceCategory: categoryId });
     
-    // Save to database immediately with enhanced error handling
+    // Save to database with enhanced error handling and retry logic
     try {
-      // Wait a moment to ensure the event_selection record exists
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // Multiple attempts with increasing delays
+      let attempts = 0;
+      const maxAttempts = 5;
+      let success = false;
       
-      // Check if an event_selection record exists for this team
-      const { data: existingSelection, error: checkError } = await supabase
-        .from('event_selections')
-        .select('id, performance_category_id')
-        .eq('event_id', event.id)
-        .eq('team_id', teamId)
-        .eq('team_number', teamNumber)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Error checking existing selection:', checkError);
-        throw new Error(`Database check failed: ${checkError.message}`);
-      }
-
-      if (existingSelection) {
-        // Update existing record
-        const { error: updateError } = await supabase
-          .from('event_selections')
-          .update({ 
-            performance_category_id: actualCategoryId,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingSelection.id);
-
-        if (updateError) {
-          console.error('Error updating performance category:', updateError);
-          throw new Error(`Update failed: ${updateError.message}`);
-        }
-
-        console.log('Performance category updated successfully');
-      } else {
-        // Create new record with retry logic
-        let retryCount = 0;
-        const maxRetries = 3;
+      while (attempts < maxAttempts && !success) {
+        attempts++;
         
-        while (retryCount < maxRetries) {
-          try {
+        try {
+          // Wait progressively longer between attempts
+          if (attempts > 1) {
+            await new Promise(resolve => setTimeout(resolve, attempts * 200));
+          }
+          
+          console.log(`Attempt ${attempts} to save performance category...`);
+          
+          // Check if an event_selection record exists for this team
+          const { data: existingSelection, error: checkError } = await supabase
+            .from('event_selections')
+            .select('id, performance_category_id')
+            .eq('event_id', event.id)
+            .eq('team_id', teamId)
+            .eq('team_number', teamNumber)
+            .maybeSingle();
+
+          if (checkError) {
+            console.error('Error checking existing selection:', checkError);
+            throw new Error(`Database check failed: ${checkError.message}`);
+          }
+
+          if (existingSelection) {
+            // Update existing record
+            const { error: updateError } = await supabase
+              .from('event_selections')
+              .update({ 
+                performance_category_id: actualCategoryId,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', existingSelection.id);
+
+            if (updateError) {
+              console.error('Error updating performance category:', updateError);
+              throw new Error(`Update failed: ${updateError.message}`);
+            }
+
+            console.log('Performance category updated successfully');
+            success = true;
+          } else {
+            // Create new record
             const { error: insertError } = await supabase
               .from('event_selections')
               .insert({
@@ -356,33 +369,39 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               });
 
             if (insertError) {
+              console.error('Error creating new selection:', insertError);
               throw insertError;
             }
 
             console.log('New selection with performance category created successfully');
-            break;
-          } catch (error) {
-            retryCount++;
-            if (retryCount >= maxRetries) {
-              throw error;
-            }
-            console.log(`Retry ${retryCount} for performance category save...`);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            success = true;
           }
+        } catch (attemptError) {
+          console.error(`Attempt ${attempts} failed:`, attemptError);
+          
+          if (attempts >= maxAttempts) {
+            throw attemptError;
+          }
+          
+          // Continue to next attempt
         }
       }
 
-      const categoryName = actualCategoryId 
-        ? performanceCategories.find(c => c.id === actualCategoryId)?.name || 'Unknown'
-        : 'None';
-      toast.success(`Performance category saved: ${categoryName}`);
+      if (success) {
+        const categoryName = actualCategoryId 
+          ? performanceCategories.find(c => c.id === actualCategoryId)?.name || 'Unknown'
+          : 'None';
+        toast.success(`Performance category saved: ${categoryName}`);
+      }
       
     } catch (error: any) {
       console.error('Error saving performance category:', error);
       toast.error(`Failed to save performance category: ${error.message}`);
       
       // Revert local state on error
-      updateCurrentTeam({ performanceCategory: 'none' });
+      updateCurrentTeam({ performanceCategory: previousCategory || 'none' });
+    } finally {
+      setSavingCategory(false);
     }
   };
 
@@ -528,8 +547,17 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 </>
               )}
               <Button onClick={saveSelections} disabled={saving} size={isMobile ? "sm" : "default"}>
-                <Save className="h-3 w-3 mr-1" />
-                {saving ? 'Saving...' : 'Save'}
+                {saving ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3 w-3 mr-1" />
+                    Save
+                  </>
+                )}
               </Button>
               <Button variant="outline" onClick={onClose} size={isMobile ? "sm" : "default"}>
                 <X className="h-3 w-3 mr-1" />
@@ -576,19 +604,28 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <Target className="h-3 w-3" />
                   Category:
                 </Label>
-                <Select value={currentTeam.performanceCategory || 'none'} onValueChange={handlePerformanceCategoryChange}>
-                  <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No specific category</SelectItem>
-                    {performanceCategories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <Select 
+                    value={currentTeam.performanceCategory || 'none'} 
+                    onValueChange={handlePerformanceCategoryChange}
+                    disabled={savingCategory}
+                  >
+                    <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No specific category</SelectItem>
+                      {performanceCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {savingCategory && (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
               </div>
             )}
           </div>

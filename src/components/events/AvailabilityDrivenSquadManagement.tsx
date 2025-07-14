@@ -41,7 +41,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [hasInitialized, setHasInitialized] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isStateReady, setIsStateReady] = useState(false);
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -50,13 +51,16 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
-    hasInitialized
+    isInitialized,
+    isStateReady
   });
 
   // Update captain when global captain changes
   useEffect(() => {
-    setLocalCaptainId(globalCaptainId || '');
-  }, [globalCaptainId]);
+    if (globalCaptainId !== localCaptainId) {
+      setLocalCaptainId(globalCaptainId || '');
+    }
+  }, [globalCaptainId, localCaptainId]);
 
   // Stable squad players formatting with proper typing
   const squadPlayersFormatted = useMemo(() => {
@@ -73,41 +77,57 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   // Use previous value to detect genuine changes
   const previousSquadPlayers = usePrevious(squadPlayersFormatted);
 
+  // Initialize component state after data loads with debouncing
+  useEffect(() => {
+    if (!loading && !isInitialized) {
+      console.log('Initializing component with squad data:', squadPlayersFormatted);
+      setIsInitialized(true);
+      
+      // Add a small delay to ensure parent is ready and prevent race conditions
+      const initTimeout = setTimeout(() => {
+        setIsStateReady(true);
+        if (onSquadChange && squadPlayersFormatted.length > 0) {
+          console.log('Notifying parent of initial squad state:', squadPlayersFormatted);
+          onSquadChange(squadPlayersFormatted);
+        }
+      }, 150);
+
+      return () => clearTimeout(initTimeout);
+    }
+  }, [loading, isInitialized, squadPlayersFormatted, onSquadChange]);
+
   // Only notify parent when squad composition genuinely changes after initialization
   useEffect(() => {
-    // Don't notify during initial load
-    if (loading || !hasInitialized) {
+    // Don't notify during initial load or if state is not ready
+    if (loading || !isInitialized || !isStateReady) {
       return;
     }
 
     // Check if squad has genuinely changed
-    const hasChanged = !previousSquadPlayers || 
+    const hasGenuineChange = !previousSquadPlayers || 
       squadPlayersFormatted.length !== previousSquadPlayers.length ||
-      squadPlayersFormatted.some(player => 
-        !previousSquadPlayers.find(prev => prev.id === player.id)
-      );
+      squadPlayersFormatted.some((player, index) => {
+        const prevPlayer = previousSquadPlayers[index];
+        return !prevPlayer || 
+               player.id !== prevPlayer.id ||
+               player.availabilityStatus !== prevPlayer.availabilityStatus;
+      });
 
-    if (hasChanged && onSquadChange) {
-      console.log('Squad composition genuinely changed, notifying parent:', squadPlayersFormatted);
-      onSquadChange(squadPlayersFormatted);
-    }
-  }, [squadPlayersFormatted, previousSquadPlayers, onSquadChange, loading, hasInitialized]);
-
-  // Initialize component state after data loads
-  useEffect(() => {
-    if (!loading && !hasInitialized) {
-      console.log('Initializing component with squad data:', squadPlayersFormatted);
-      setHasInitialized(true);
+    if (hasGenuineChange && onSquadChange) {
+      console.log('Squad composition genuinely changed, notifying parent:', {
+        previousCount: previousSquadPlayers?.length || 0,
+        currentCount: squadPlayersFormatted.length,
+        squadPlayers: squadPlayersFormatted
+      });
       
-      // Notify parent of initial state after a brief delay to ensure parent is ready
-      if (onSquadChange && squadPlayersFormatted.length > 0) {
-        setTimeout(() => {
-          console.log('Notifying parent of initial squad state:', squadPlayersFormatted);
-          onSquadChange(squadPlayersFormatted);
-        }, 100);
-      }
+      // Debounce the notification to prevent rapid-fire updates
+      const notifyTimeout = setTimeout(() => {
+        onSquadChange(squadPlayersFormatted);
+      }, 100);
+
+      return () => clearTimeout(notifyTimeout);
     }
-  }, [loading, hasInitialized, squadPlayersFormatted, onSquadChange]);
+  }, [squadPlayersFormatted, previousSquadPlayers, onSquadChange, loading, isInitialized, isStateReady]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
@@ -225,6 +245,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Selected Squad ({squadPlayers.length})
+            {!isStateReady && (
+              <Badge variant="outline" className="text-xs">
+                Loading...
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
