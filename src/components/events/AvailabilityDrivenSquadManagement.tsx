@@ -60,14 +60,28 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
   // Format squad players for parent component
   const squadPlayersFormatted = useMemo(() => {
-    return squadPlayers.map(player => ({
-      id: player.id,
-      name: player.name,
-      squadNumber: player.squadNumber,
-      type: player.type,
-      availabilityStatus: player.availabilityStatus,
-      squadRole: (player.squadRole || 'player') as 'player' | 'captain' | 'vice_captain'
-    }));
+    return squadPlayers
+      .map(player => ({
+        id: player.id,
+        name: player.name,
+        squadNumber: player.squadNumber,
+        type: player.type,
+        availabilityStatus: player.availabilityStatus,
+        squadRole: (player.squadRole || 'player') as 'player' | 'captain' | 'vice_captain'
+      }))
+      .sort((a, b) => {
+        // Primary sort: availability status (available -> pending -> unavailable)
+        const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
+        const aOrder = availabilityOrder[a.availabilityStatus as keyof typeof availabilityOrder] || 4;
+        const bOrder = availabilityOrder[b.availabilityStatus as keyof typeof availabilityOrder] || 4;
+        
+        if (aOrder !== bOrder) {
+          return aOrder - bOrder;
+        }
+        
+        // Secondary sort: squad number
+        return a.squadNumber - b.squadNumber;
+      });
   }, [squadPlayers]);
 
   // Notify parent component when squad changes
@@ -219,7 +233,21 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
 
               {/* Squad Players List */}
               <div className="space-y-3">
-                {squadPlayers.map((player) => (
+                {squadPlayers
+                  .sort((a, b) => {
+                    // Primary sort: availability status (available -> pending -> unavailable)
+                    const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
+                    const aOrder = availabilityOrder[a.availabilityStatus as keyof typeof availabilityOrder] || 4;
+                    const bOrder = availabilityOrder[b.availabilityStatus as keyof typeof availabilityOrder] || 4;
+                    
+                    if (aOrder !== bOrder) {
+                      return aOrder - bOrder;
+                    }
+                    
+                    // Secondary sort: squad number
+                    return a.squadNumber - b.squadNumber;
+                  })
+                  .map((player) => (
                   <div key={player.id} className={`flex items-center justify-between p-4 rounded-lg border ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -295,7 +323,21 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         <CardContent>
           {availablePlayers.length > 0 ? (
             <div className="space-y-3">
-              {availablePlayers.map((player) => (
+              {availablePlayers
+                .sort((a, b) => {
+                  // Primary sort: availability status (available -> pending -> unavailable)
+                  const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
+                  const aOrder = availabilityOrder[a.availabilityStatus as keyof typeof availabilityOrder] || 4;
+                  const bOrder = availabilityOrder[b.availabilityStatus as keyof typeof availabilityOrder] || 4;
+                  
+                  if (aOrder !== bOrder) {
+                    return aOrder - bOrder;
+                  }
+                  
+                  // Secondary sort: squad number
+                  return a.squadNumber - b.squadNumber;
+                })
+                .map((player) => (
                 <div key={player.id} className={`flex items-center justify-between p-4 rounded-lg border transition-opacity ${getAvailabilityColor(player.availabilityStatus)}`}>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
