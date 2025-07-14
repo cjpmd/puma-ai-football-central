@@ -41,7 +41,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [lastNotifiedSquad, setLastNotifiedSquad] = useState<string>('');
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -57,7 +56,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     setLocalCaptainId(globalCaptainId || '');
   }, [globalCaptainId]);
 
-  // Format squad players and notify parent only when composition actually changes
+  // Stable squad players formatting with proper typing
   const squadPlayersFormatted = useMemo(() => {
     return squadPlayers.map(player => ({
       id: player.id,
@@ -69,16 +68,13 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     }));
   }, [squadPlayers]);
 
-  // Only notify parent when squad composition actually changes (not on every render)
+  // Only notify parent when squad composition actually changes - use IDs for comparison
   useEffect(() => {
-    const currentSquadHash = JSON.stringify(squadPlayersFormatted.map(p => p.id).sort());
-    
-    if (currentSquadHash !== lastNotifiedSquad && onSquadChange) {
+    if (!loading && onSquadChange && squadPlayersFormatted.length >= 0) {
       console.log('Squad composition changed, notifying parent:', squadPlayersFormatted);
       onSquadChange(squadPlayersFormatted);
-      setLastNotifiedSquad(currentSquadHash);
     }
-  }, [squadPlayersFormatted, onSquadChange, lastNotifiedSquad]);
+  }, [squadPlayersFormatted, onSquadChange, loading]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
@@ -92,18 +88,19 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     try {
       console.log('Adding player to squad:', player.id);
       await assignPlayerToSquad(player.id, 'player');
-      toast.success('Player added to squad');
+      toast.success(`${player.name} added to squad`);
     } catch (error: any) {
       console.error('Error adding player to squad:', error);
-      toast.error(`Failed to add player to squad: ${error.message}`);
+      toast.error(`Failed to add ${player.name}: ${error.message}`);
     }
   }, [assignPlayerToSquad]);
 
   const handleRemoveFromSquad = useCallback(async (playerId: string) => {
     try {
+      const playerName = squadPlayers.find(p => p.id === playerId)?.name || 'Player';
       console.log('Removing player from squad:', playerId);
       await removePlayerFromSquad(playerId);
-      toast.success('Player removed from squad');
+      toast.success(`${playerName} removed from squad`);
       
       // If this was the captain, clear captain selection
       if (playerId === localCaptainId) {
@@ -114,9 +111,10 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       }
     } catch (error: any) {
       console.error('Error removing player from squad:', error);
-      toast.error(`Failed to remove player from squad: ${error.message}`);
+      const playerName = squadPlayers.find(p => p.id === playerId)?.name || 'Player';
+      toast.error(`Failed to remove ${playerName}: ${error.message}`);
     }
-  }, [removePlayerFromSquad, localCaptainId, onCaptainChange]);
+  }, [removePlayerFromSquad, localCaptainId, onCaptainChange, squadPlayers]);
 
   const handleCaptainChange = useCallback(async (playerId: string) => {
     try {
@@ -126,12 +124,14 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       if (onCaptainChange) {
         onCaptainChange(actualPlayerId);
       }
-      toast.success('Captain updated');
+      
+      const playerName = actualPlayerId ? squadPlayers.find(p => p.id === actualPlayerId)?.name : 'None';
+      toast.success(`Captain updated: ${playerName}`);
     } catch (error: any) {
       console.error('Error updating captain:', error);
       toast.error('Failed to update captain');
     }
-  }, [onCaptainChange]);
+  }, [onCaptainChange, squadPlayers]);
 
   const getAvailabilityIcon = (status: string) => {
     switch (status) {

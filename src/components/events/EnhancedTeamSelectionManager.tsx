@@ -193,14 +193,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     };
     
     console.log('Adding new team:', newTeam);
-    const updatedTeamSelections = [...teamSelections, newTeam];
     
     try {
-      // Save both the team structure AND create initial event_selection record IMMEDIATELY
+      // First update the event's teams data
       const { error: updateEventError } = await supabase
         .from('events')
         .update({ 
-          teams: updatedTeamSelections.map(team => team.teamNumber.toString())
+          teams: [...teamSelections.map(t => t.teamNumber.toString()), newTeamNumber.toString()]
         })
         .eq('id', event.id);
 
@@ -209,7 +208,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         throw updateEventError;
       }
 
-      // Create initial event_selection record for the new team
+      // Create initial event_selection record for the new team to ensure it exists
       const { data: insertedSelection, error: selectionError } = await supabase
         .from('event_selections')
         .insert({
@@ -234,12 +233,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
       console.log('Successfully saved new team to database:', insertedSelection);
       
-      // Now update local state
+      // Update local state
+      const updatedTeamSelections = [...teamSelections, newTeam];
       setTeamSelections(updatedTeamSelections);
       setCurrentTeamIndex(teamSelections.length);
       setActiveTab('squad');
       
-      toast.success('New team added and saved');
+      toast.success('New team added and saved successfully');
     } catch (error) {
       console.error('Error saving new team:', error);
       toast.error('Failed to save new team');
@@ -297,12 +297,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     // Update local state first
     updateCurrentTeam({ performanceCategory: categoryId });
     
-    // Immediately save the performance category to database with better error handling
+    // Save to database immediately with comprehensive error handling
     try {
-      // First check if an event_selection record exists for this team
+      // Check if an event_selection record exists for this team
       const { data: existingSelection, error: checkError } = await supabase
         .from('event_selections')
-        .select('id')
+        .select('id, performance_category_id')
         .eq('event_id', event.id)
         .eq('team_id', teamId)
         .eq('team_number', teamNumber)
@@ -310,30 +310,28 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
       if (checkError) {
         console.error('Error checking existing selection:', checkError);
-        throw checkError;
+        throw new Error(`Database check failed: ${checkError.message}`);
       }
 
       if (existingSelection) {
         // Update existing record
-        const { data: updatedSelection, error: updateError } = await supabase
+        const { error: updateError } = await supabase
           .from('event_selections')
           .update({ 
             performance_category_id: actualCategoryId,
             updated_at: new Date().toISOString()
           })
-          .eq('id', existingSelection.id)
-          .select()
-          .single();
+          .eq('id', existingSelection.id);
 
         if (updateError) {
           console.error('Error updating performance category:', updateError);
-          throw updateError;
+          throw new Error(`Update failed: ${updateError.message}`);
         }
 
-        console.log('Performance category updated successfully:', updatedSelection);
+        console.log('Performance category updated successfully');
       } else {
-        // Create new record
-        const { data: newSelection, error: insertError } = await supabase
+        // Create new record - this should already exist from addTeam, but handle edge case
+        const { error: insertError } = await supabase
           .from('event_selections')
           .insert({
             event_id: event.id,
@@ -346,22 +344,24 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             substitute_players: [],
             staff_selection: [],
             performance_category_id: actualCategoryId
-          })
-          .select()
-          .single();
+          });
 
         if (insertError) {
           console.error('Error creating new selection with performance category:', insertError);
-          throw insertError;
+          throw new Error(`Insert failed: ${insertError.message}`);
         }
 
-        console.log('New selection with performance category created successfully:', newSelection);
+        console.log('New selection with performance category created successfully');
       }
 
-      toast.success('Performance category saved successfully');
+      const categoryName = actualCategoryId 
+        ? performanceCategories.find(c => c.id === actualCategoryId)?.name || 'Unknown'
+        : 'None';
+      toast.success(`Performance category saved: ${categoryName}`);
+      
     } catch (error: any) {
       console.error('Error saving performance category:', error);
-      toast.error(`Failed to save performance category: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to save performance category: ${error.message}`);
       
       // Revert local state on error
       updateCurrentTeam({ performanceCategory: 'none' });
