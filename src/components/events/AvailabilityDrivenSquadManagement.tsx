@@ -41,8 +41,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   } = useAvailabilityBasedSquad(teamId, eventId, currentTeamIndex);
 
   const [localCaptainId, setLocalCaptainId] = useState<string>(globalCaptainId || '');
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [isStateReady, setIsStateReady] = useState(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  const [dataReady, setDataReady] = useState(false);
 
   console.log('AvailabilityDrivenSquadManagement render:', {
     teamId,
@@ -51,8 +51,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     loading,
     availablePlayersCount: availablePlayers.length,
     squadPlayersCount: squadPlayers.length,
-    isInitialized,
-    isStateReady
+    hasInitialLoad,
+    dataReady
   });
 
   // Update captain when global captain changes
@@ -77,41 +77,47 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   // Use previous value to detect genuine changes
   const previousSquadPlayers = usePrevious(squadPlayersFormatted);
 
-  // Initialize component state after data loads with debouncing
+  // Wait for data to be ready before marking as initialized
   useEffect(() => {
-    if (!loading && !isInitialized) {
-      console.log('Initializing component with squad data:', squadPlayersFormatted);
-      setIsInitialized(true);
+    if (!loading && !hasInitialLoad) {
+      console.log('Data loading complete, marking as initialized');
+      setHasInitialLoad(true);
       
-      // Add a small delay to ensure parent is ready and prevent race conditions
-      const initTimeout = setTimeout(() => {
-        setIsStateReady(true);
-        if (onSquadChange && squadPlayersFormatted.length > 0) {
-          console.log('Notifying parent of initial squad state:', squadPlayersFormatted);
-          onSquadChange(squadPlayersFormatted);
-        }
-      }, 150);
+      // Add a delay to ensure all data is properly loaded
+      const readyTimeout = setTimeout(() => {
+        setDataReady(true);
+        console.log('Data ready, initial squad state:', squadPlayersFormatted);
+      }, 250);
 
-      return () => clearTimeout(initTimeout);
+      return () => clearTimeout(readyTimeout);
     }
-  }, [loading, isInitialized, squadPlayersFormatted, onSquadChange]);
+  }, [loading, hasInitialLoad, squadPlayersFormatted]);
 
-  // Only notify parent when squad composition genuinely changes after initialization
+  // Only notify parent after data is ready and when squad genuinely changes
   useEffect(() => {
-    // Don't notify during initial load or if state is not ready
-    if (loading || !isInitialized || !isStateReady) {
+    // Don't notify during initial load or if data is not ready
+    if (loading || !hasInitialLoad || !dataReady) {
+      console.log('Skipping notification - not ready:', { loading, hasInitialLoad, dataReady });
+      return;
+    }
+
+    // For initial notification, always send current state after data is ready
+    if (!previousSquadPlayers && onSquadChange) {
+      console.log('Sending initial squad state to parent:', squadPlayersFormatted);
+      onSquadChange(squadPlayersFormatted);
       return;
     }
 
     // Check if squad has genuinely changed
-    const hasGenuineChange = !previousSquadPlayers || 
+    const hasGenuineChange = previousSquadPlayers && (
       squadPlayersFormatted.length !== previousSquadPlayers.length ||
       squadPlayersFormatted.some((player, index) => {
         const prevPlayer = previousSquadPlayers[index];
         return !prevPlayer || 
                player.id !== prevPlayer.id ||
                player.availabilityStatus !== prevPlayer.availabilityStatus;
-      });
+      })
+    );
 
     if (hasGenuineChange && onSquadChange) {
       console.log('Squad composition genuinely changed, notifying parent:', {
@@ -123,11 +129,11 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
       // Debounce the notification to prevent rapid-fire updates
       const notifyTimeout = setTimeout(() => {
         onSquadChange(squadPlayersFormatted);
-      }, 100);
+      }, 50);
 
       return () => clearTimeout(notifyTimeout);
     }
-  }, [squadPlayersFormatted, previousSquadPlayers, onSquadChange, loading, isInitialized, isStateReady]);
+  }, [squadPlayersFormatted, previousSquadPlayers, onSquadChange, loading, hasInitialLoad, dataReady]);
 
   // Check if a player is selected in other teams
   const isPlayerInOtherTeams = useCallback((playerId: string) => {
@@ -245,7 +251,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
             Selected Squad ({squadPlayers.length})
-            {!isStateReady && (
+            {!dataReady && (
               <Badge variant="outline" className="text-xs">
                 Loading...
               </Badge>

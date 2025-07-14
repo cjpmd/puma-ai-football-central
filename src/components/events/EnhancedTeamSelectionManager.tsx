@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -291,6 +290,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     
     setSavingCategory(true);
     
+    // Update local state first with optimistic update
+    const previousCategory = getCurrentTeam()?.performanceCategory;
+    updateCurrentTeam({ performanceCategory: categoryId });
+    
     console.log('Performance category change requested:', { 
       categoryId: actualCategoryId, 
       teamId, 
@@ -298,26 +301,19 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       teamNumber 
     });
     
-    // Update local state first with optimistic update
-    const previousCategory = getCurrentTeam()?.performanceCategory;
-    updateCurrentTeam({ performanceCategory: categoryId });
-    
-    // Save to database with enhanced error handling and retry logic
     try {
+      // Wait a moment to ensure team state is properly established
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Multiple attempts with increasing delays
       let attempts = 0;
-      const maxAttempts = 5;
+      const maxAttempts = 3;
       let success = false;
       
       while (attempts < maxAttempts && !success) {
         attempts++;
         
         try {
-          // Wait progressively longer between attempts
-          if (attempts > 1) {
-            await new Promise(resolve => setTimeout(resolve, attempts * 200));
-          }
-          
           console.log(`Attempt ${attempts} to save performance category...`);
           
           // Check if an event_selection record exists for this team
@@ -383,7 +379,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             throw attemptError;
           }
           
-          // Continue to next attempt
+          // Wait before retry
+          await new Promise(resolve => setTimeout(resolve, attempts * 300));
         }
       }
 
