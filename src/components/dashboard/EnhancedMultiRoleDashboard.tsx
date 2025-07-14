@@ -198,10 +198,8 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
           <main className="flex-1 overflow-auto">
             <div className="container mx-auto p-6">
               <div className="space-y-6">
-                {/* Push Notification Setup - Show once for mobile users */}
-                {isMobile && (
-                  <PushNotificationSetup />
-                )}
+                {/* Push Notification Setup */}
+                <PushNotificationSetup />
 
                 {user && (
                   <Card>
@@ -252,10 +250,8 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
   // For non-dashboard routes, return the original simple dashboard
   return (
     <div className="space-y-6">
-      {/* Push Notification Setup - Show once for mobile users */}
-      {isMobile && (
-        <PushNotificationSetup />
-      )}
+      {/* Push Notification Setup */}
+      <PushNotificationSetup />
 
       {user && (
         <Card>

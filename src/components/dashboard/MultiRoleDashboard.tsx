@@ -41,10 +41,8 @@ export const MultiRoleDashboard: React.FC<MultiRoleDashboardProps> = ({ onNaviga
 
   return (
     <div className="space-y-6">
-      {/* Push Notification Setup - Show once for mobile users */}
-      {isMobile && (
-        <PushNotificationSetup />
-      )}
+      {/* Push Notification Setup */}
+      <PushNotificationSetup />
 
       {user && (
         <Card>
