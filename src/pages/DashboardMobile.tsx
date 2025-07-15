@@ -47,9 +47,15 @@ export default function DashboardMobile() {
     try {
       // Use teams from allTeams if available, otherwise fallback to teams
       const teamsToUse = allTeams?.length ? allTeams : (teams || []);
-      if (!teamsToUse.length) return;
+      console.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })));
+      
+      if (!teamsToUse.length) {
+        console.log('No teams available for loading data');
+        return;
+      }
       
       const teamIds = teamsToUse.map(team => team.id);
+      console.log('Team IDs for queries:', teamIds);
       
       // Load players count from all connected teams
       const { count: playersCount } = await supabase
@@ -65,19 +71,24 @@ export default function DashboardMobile() {
         .gte('date', new Date().toISOString().split('T')[0]);
 
       // Load upcoming events details with team information
-      const { data: upcomingEventsData } = await supabase
+      const { data: upcomingEventsData, error: upcomingError } = await supabase
         .from('events')
         .select(`
           *,
           teams!inner(
             id, name, logo_url, kit_designs, club_id,
-            clubs!club_id(name, logo_url)
+            clubs!teams_club_id_fkey(name, logo_url)
           )
         `)
         .in('team_id', teamIds)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
         .limit(5);
+
+      if (upcomingError) {
+        console.error('Error loading upcoming events:', upcomingError);
+      }
+      console.log('Upcoming events data:', upcomingEventsData?.length, upcomingEventsData);
 
       // Add team context to events
       const upcomingEvents = upcomingEventsData?.map(event => ({
@@ -91,13 +102,13 @@ export default function DashboardMobile() {
       })) || [];
 
       // Load recent completed events with results
-      const { data: recentResultsData } = await supabase
+      const { data: recentResultsData, error: recentError } = await supabase
         .from('events')
         .select(`
           *,
           teams!inner(
             id, name, logo_url, kit_designs, club_id,
-            clubs!club_id(name, logo_url)
+            clubs!teams_club_id_fkey(name, logo_url)
           )
         `)
         .in('team_id', teamIds)
@@ -105,6 +116,11 @@ export default function DashboardMobile() {
         .not('scores', 'is', null)
         .order('date', { ascending: false })
         .limit(5);
+
+      if (recentError) {
+        console.error('Error loading recent results:', recentError);
+      }
+      console.log('Recent results data:', recentResultsData?.length, recentResultsData);
 
       const recentResults = recentResultsData?.map(event => ({
         ...event,
@@ -117,7 +133,7 @@ export default function DashboardMobile() {
       })) || [];
 
       // Load pending availability for current user with team context
-      const { data: pendingAvailabilityData } = await supabase
+      const { data: pendingAvailabilityData, error: pendingError } = await supabase
         .from('event_availability')
         .select(`
           *,
@@ -125,13 +141,18 @@ export default function DashboardMobile() {
             id, title, date, start_time, event_type, opponent, team_id,
             teams!inner(
               id, name, logo_url, club_id,
-              clubs!club_id(name, logo_url)
+              clubs!teams_club_id_fkey(name, logo_url)
             )
           )
         `)
         .eq('user_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
+
+      if (pendingError) {
+        console.error('Error loading pending availability:', pendingError);
+      }
+      console.log('Pending availability data:', pendingAvailabilityData?.length, pendingAvailabilityData);
 
       const pendingAvailability = pendingAvailabilityData?.map(availability => ({
         ...availability,
