@@ -122,10 +122,18 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
         // Process multi-team format
         let teamNumber = 1;
         while (scoresData[`team_${teamNumber}`] !== undefined) {
-          const ourScore = scoresData[`team_${teamNumber}`];
-          const opponentScore = scoresData[`opponent_${teamNumber}`];
-          const outcome = scoresData[`outcome_${teamNumber}`];
+          const ourScore = scoresData[`team_${teamNumber}`] || 0;
+          const opponentScore = scoresData[`opponent_${teamNumber}`] || 0;
+          const rawOutcome = scoresData[`outcome_${teamNumber}`];
           const teamName = eventCategories[teamNumber.toString()] || `Team ${teamNumber}`;
+          
+          // Calculate outcome if not provided or invalid
+          let outcome: 'win' | 'loss' | 'draw';
+          if (rawOutcome === 'win' || rawOutcome === 'loss' || rawOutcome === 'draw') {
+            outcome = rawOutcome;
+          } else {
+            outcome = ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw';
+          }
           
           let outcomeIcon = '';
           if (outcome === 'win') outcomeIcon = '🏆';
