@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { pushNotificationService } from '@/services/pushNotificationService';
 import { useAuth } from '@/contexts/AuthContext';
+import { Capacitor } from '@capacitor/core';
 
 export const usePushNotifications = () => {
   const [isInitialized, setIsInitialized] = useState(false);
@@ -9,7 +10,7 @@ export const usePushNotifications = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    if (user && !isInitialized) {
+    if (user && !isInitialized && Capacitor.isNativePlatform()) {
       initializeNotifications();
     }
   }, [user, isInitialized]);
@@ -26,6 +27,11 @@ export const usePushNotifications = () => {
   };
 
   const requestPermissions = async () => {
+    if (!Capacitor.isNativePlatform()) {
+      console.log('Push notifications not supported on web platform');
+      return false;
+    }
+    
     const granted = await pushNotificationService.initializePushNotifications();
     setPermissionGranted(granted);
     return granted;

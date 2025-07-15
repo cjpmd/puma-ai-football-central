@@ -5,10 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Bell, BellOff, CheckCircle } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { toast } from 'sonner';
+import { Capacitor } from '@capacitor/core';
 
 export const PushNotificationSetup: React.FC = () => {
   const { isInitialized, permissionGranted, requestPermissions } = usePushNotifications();
   const [isRequesting, setIsRequesting] = useState(false);
+
+  // Only show on native platforms (iOS/Android)
+  if (!Capacitor.isNativePlatform()) {
+    return null;
+  }
 
   const handleRequestPermissions = async () => {
     setIsRequesting(true);

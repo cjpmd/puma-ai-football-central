@@ -1,5 +1,6 @@
 
 import { PushNotifications } from '@capacitor/push-notifications';
+import { Capacitor } from '@capacitor/core';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface NotificationPayload {
@@ -11,6 +12,14 @@ export interface NotificationPayload {
 export const pushNotificationService = {
   async initializePushNotifications(): Promise<boolean> {
     try {
+      // Check if we're running on a native platform
+      if (!Capacitor.isNativePlatform()) {
+        console.log('Push notifications not supported on web platform');
+        return false;
+      }
+
+      console.log('Initializing push notifications on platform:', Capacitor.getPlatform());
+      
       // Request permission for push notifications
       const permissionStatus = await PushNotifications.requestPermissions();
       
