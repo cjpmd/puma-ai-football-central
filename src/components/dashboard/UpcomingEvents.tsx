@@ -22,6 +22,12 @@ interface Event {
   opponent: string | null;
   scores: { home: number; away: number } | null;
   team_name: string;
+  team_context?: {
+    name: string;
+    logo_url?: string;
+    club_name?: string;
+    club_logo_url?: string;
+  };
   is_home?: boolean;
 }
 
@@ -31,7 +37,7 @@ interface UserAvailability {
 }
 
 export function UpcomingEvents() {
-  const { teams } = useAuth();
+  const { allTeams, connectedPlayers } = useAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
@@ -40,11 +46,11 @@ export function UpcomingEvents() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (teams.length > 0) {
+    if (allTeams.length > 0) {
       loadUpcomingEvents();
       loadUserAvailability();
     }
-  }, [teams]);
+  }, [allTeams]);
 
   const loadUserAvailability = async () => {
     try {
@@ -93,12 +99,18 @@ export function UpcomingEvents() {
 
   const loadUpcomingEvents = async () => {
     try {
-      const teamIds = teams.map(t => t.id);
+      const teamIds = allTeams.map(t => t.id);
       const today = new Date().toISOString().split('T')[0];
       
       const { data: eventsData, error } = await supabase
         .from('events')
-        .select('id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id, kit_selection, is_home')
+        .select(`
+          id, title, date, start_time, end_time, location, event_type, opponent, scores, team_id, kit_selection, is_home,
+          teams!inner(
+            id, name, logo_url, kit_designs, club_id,
+            clubs!club_id(name, logo_url)
+          )
+        `)
         .in('team_id', teamIds)
         .gte('date', today)
         .order('date', { ascending: true })
@@ -111,10 +123,16 @@ export function UpcomingEvents() {
       }
 
       const eventsWithTeams = (eventsData || []).map(event => {
-        const team = teams.find(t => t.id === event.team_id);
+        const team = allTeams.find(t => t.id === event.team_id);
         return {
           ...event,
-          team_name: team?.name || 'Unknown Team',
+          team_name: team?.name || event.teams.name,
+          team_context: {
+            name: event.teams.name,
+            logo_url: event.teams.logo_url,
+            club_name: event.teams.clubs?.name,
+            club_logo_url: event.teams.clubs?.logo_url
+          },
           scores: event.scores as { home: number; away: number } | null
         };
       });
@@ -194,12 +212,30 @@ export function UpcomingEvents() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-lg">Next Event</CardTitle>
-                <CardDescription>{nextEvent.team_name}</CardDescription>
+                <div className="flex items-center gap-2">
+                  {nextEvent.team_context?.logo_url ? (
+                    <img 
+                      src={nextEvent.team_context.logo_url} 
+                      alt={nextEvent.team_context.name}
+                      className="w-4 h-4 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                      {nextEvent.team_context?.name?.slice(0, 2).toUpperCase() || nextEvent.team_name.slice(0, 2).toUpperCase()}
+                    </div>
+                  )}
+                  <CardDescription>
+                    {nextEvent.team_context?.name || nextEvent.team_name}
+                    {nextEvent.team_context?.club_name && (
+                      <span className="text-muted-foreground"> • {nextEvent.team_context.club_name}</span>
+                    )}
+                  </CardDescription>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="secondary">{nextEvent.event_type}</Badge>
                 {(() => {
-                  const team = teams.find(t => t.name === nextEvent.team_name);
+                  const team = allTeams.find(t => t.name === nextEvent.team_name);
                   const kitDesign = team?.kitDesigns?.[(nextEvent as any).kit_selection as 'home' | 'away' | 'training'];
                   return kitDesign && <EnhancedKitAvatar design={kitDesign} size="sm" />;
                 })()}
@@ -221,7 +257,7 @@ export function UpcomingEvents() {
               ) : (
                 <div className="flex items-center gap-2">
                   {(() => {
-                    const team = teams.find(t => t.name === nextEvent.team_name);
+                    const team = allTeams.find(t => t.name === nextEvent.team_name);
                     return team?.logoUrl && (
                       <img 
                         src={team.logoUrl} 
@@ -255,7 +291,7 @@ export function UpcomingEvents() {
               >
                 View Details
               </Button>
-              <Button 
+                <Button 
                 size="sm" 
                 variant="outline" 
                 onClick={() => handleManageSquad(nextEvent)}
@@ -270,7 +306,7 @@ export function UpcomingEvents() {
 
       <div className="grid gap-3">
         {events.slice(nextEvent ? 1 : 0).map((event) => {
-          const team = teams.find(t => t.name === event.team_name);
+          const team = allTeams.find(t => t.name === event.team_name);
           const kitDesign = team?.kitDesigns?.[(event as any).kit_selection as 'home' | 'away' | 'training'];
           const outcome = getEventOutcome(event);
           
@@ -284,7 +320,22 @@ export function UpcomingEvents() {
                         {event.event_type}
                       </Badge>
                       {kitDesign && <EnhancedKitAvatar design={kitDesign} size="xs" />}
-                      <span className="text-xs text-muted-foreground">{event.team_name}</span>
+                      <div className="flex items-center gap-1">
+                        {event.team_context?.logo_url ? (
+                          <img 
+                            src={event.team_context.logo_url} 
+                            alt={event.team_context.name}
+                            className="w-3 h-3 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-3 h-3 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                            {event.team_context?.name?.slice(0, 1).toUpperCase() || event.team_name.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {event.team_context?.name || event.team_name}
+                        </span>
+                      </div>
                       {outcome && (
                         <span className="text-sm" title={outcome.outcome}>
                           {outcome.icon}
@@ -373,7 +424,7 @@ export function UpcomingEvents() {
           {selectedEvent && (
             <EventTeamsTable
               eventId={selectedEvent.id}
-              primaryTeamId={teams.find(t => t.name === selectedEvent.team_name)?.id || teams[0]?.id}
+              primaryTeamId={allTeams.find(t => t.name === selectedEvent.team_name)?.id || allTeams[0]?.id}
               gameFormat="7-a-side"
             />
           )}

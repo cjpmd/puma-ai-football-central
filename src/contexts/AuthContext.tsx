@@ -4,12 +4,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { Team, Club, Profile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 
+interface ConnectedPlayer {
+  id: string;
+  name: string;
+  team: Team;
+  relationship: string;
+  squadNumber: number;
+  age: number;
+}
+
 interface AuthContextType {
   user: any;
   session: any;
   profile: Profile | null;
   teams: Team[];
   clubs: Club[];
+  connectedPlayers: ConnectedPlayer[];
+  allTeams: Team[]; // Combined teams from direct membership + connected players
   currentTeam: Team | null;
   loading: boolean;
   login: () => Promise<void>;
@@ -28,6 +39,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [connectedPlayers, setConnectedPlayers] = useState<ConnectedPlayer[]>([]);
+  const [allTeams, setAllTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const navigate = useNavigate();
@@ -59,7 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   Promise.all([
                     fetchProfile(session.user.id),
                     fetchTeams(session.user.id),
-                    fetchClubs(session.user.id)
+                    fetchClubs(session.user.id),
+                    fetchConnectedPlayers(session.user.id)
                   ]).catch(error => {
                     console.error('Error loading user data after auth change:', error);
                   });
@@ -71,6 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setSession(null);
               setTeams([]);
               setClubs([]);
+              setConnectedPlayers([]);
+              setAllTeams([]);
               setProfile(null);
             }
           } finally {
@@ -104,7 +120,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               Promise.all([
                 fetchProfile(existingSession.user.id),
                 fetchTeams(existingSession.user.id),
-                fetchClubs(existingSession.user.id)
+                fetchClubs(existingSession.user.id),
+                fetchConnectedPlayers(existingSession.user.id)
               ]).catch(error => {
                 console.error('Error loading initial user data:', error);
               }).finally(() => {
@@ -260,6 +277,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const validTeams = teamDetails.filter(team => team !== null);
       setTeams(validTeams as Team[]);
       console.log('Teams loaded successfully:', validTeams.length);
+      
+      // Update allTeams after teams are loaded
+      updateAllTeams(validTeams as Team[]);
 
     } catch (error: any) {
       console.error('Error fetching teams:', error.message);
@@ -333,6 +353,107 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const fetchConnectedPlayers = async (userId: string) => {
+    try {
+      console.log('Fetching connected players for user:', userId);
+      const { data: playerConnections, error: connectionsError } = await supabase
+        .from('user_players')
+        .select(`
+          player_id,
+          relationship,
+          players!inner(
+            id,
+            name,
+            squad_number,
+            date_of_birth,
+            team_id,
+            teams!inner(*)
+          )
+        `)
+        .eq('user_id', userId);
+
+      if (connectionsError) {
+        throw connectionsError;
+      }
+
+      if (!playerConnections || playerConnections.length === 0) {
+        console.log('No connected players found for user');
+        setConnectedPlayers([]);
+        return;
+      }
+
+      const connectedPlayersData: ConnectedPlayer[] = playerConnections.map(connection => {
+        const player = connection.players;
+        const team = player.teams;
+        const age = new Date().getFullYear() - new Date(player.date_of_birth).getFullYear();
+        
+        return {
+          id: player.id,
+          name: player.name,
+          team: {
+            id: team.id,
+            name: team.name,
+            ageGroup: team.age_group,
+            seasonStart: team.season_start,
+            seasonEnd: team.season_end,
+            clubId: team.club_id,
+            subscriptionType: team.subscription_type,
+            gameFormat: team.game_format,
+            gameDuration: team.game_duration || 90,
+            kitIcons: team.kit_icons,
+            logoUrl: team.logo_url,
+            kitDesigns: team.kit_designs,
+            performanceCategories: team.performance_categories || [],
+            managerName: team.manager_name,
+            managerEmail: team.manager_email,
+            managerPhone: team.manager_phone,
+            createdAt: team.created_at,
+            updatedAt: team.updated_at,
+          } as Team,
+          relationship: connection.relationship,
+          squadNumber: player.squad_number,
+          age: age
+        };
+      });
+
+      setConnectedPlayers(connectedPlayersData);
+      console.log('Connected players loaded successfully:', connectedPlayersData.length);
+      
+      // Update allTeams with connected player teams
+      updateAllTeams(teams, connectedPlayersData.map(cp => cp.team));
+
+    } catch (error: any) {
+      console.error('Error fetching connected players:', error.message);
+      toast({
+        title: 'Connected players fetch failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+      setConnectedPlayers([]);
+    }
+  };
+
+  const updateAllTeams = (directTeams: Team[] = teams, connectedTeams: Team[] = []) => {
+    // Combine direct teams and connected player teams, removing duplicates
+    const allTeamsMap = new Map<string, Team>();
+    
+    // Add direct teams
+    directTeams.forEach(team => {
+      allTeamsMap.set(team.id, team);
+    });
+    
+    // Add connected player teams
+    connectedTeams.forEach(team => {
+      if (!allTeamsMap.has(team.id)) {
+        allTeamsMap.set(team.id, team);
+      }
+    });
+    
+    const combinedTeams = Array.from(allTeamsMap.values());
+    setAllTeams(combinedTeams);
+    console.log('All teams updated:', combinedTeams.length);
+  };
+
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -364,6 +485,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
       setTeams([]);
       setClubs([]);
+      setConnectedPlayers([]);
+      setAllTeams([]);
       setProfile(null);
       
       // Then attempt to sign out from Supabase
@@ -425,7 +548,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await Promise.all([
           fetchProfile(user.id),
           fetchTeams(user.id),
-          fetchClubs(user.id)
+          fetchClubs(user.id),
+          fetchConnectedPlayers(user.id)
         ]);
       } catch (error: any) {
         console.error('Error refreshing user data:', error.message);
@@ -446,7 +570,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     teams,
     clubs,
-    currentTeam: teams && teams.length > 0 ? teams[0] : null,
+    connectedPlayers,
+    allTeams,
+    currentTeam: allTeams && allTeams.length > 0 ? allTeams[0] : null,
     loading,
     login,
     logout: signOut,

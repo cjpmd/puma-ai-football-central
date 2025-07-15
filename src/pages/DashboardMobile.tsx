@@ -22,7 +22,7 @@ interface LiveStats {
 }
 
 export default function DashboardMobile() {
-  const { teams, profile, user } = useAuth();
+  const { teams, allTeams, connectedPlayers, profile, user } = useAuth();
   const { toast } = useToast();
   const [stats, setStats] = useState<LiveStats>({
     playersCount: 0,
@@ -39,63 +39,115 @@ export default function DashboardMobile() {
 
   useEffect(() => {
     loadLiveData();
-  }, [currentTeam]);
+  }, [allTeams, connectedPlayers]);
 
   const loadLiveData = async () => {
-    if (!currentTeam || !user) return;
+    if (!user || (!allTeams?.length && !connectedPlayers?.length)) return;
 
     try {
-      // Load players count
+      const teamIds = allTeams.map(team => team.id);
+      
+      // Load players count from all connected teams
       const { count: playersCount } = await supabase
         .from('players')
         .select('*', { count: 'exact', head: true })
-        .eq('team_id', currentTeam.id);
+        .in('team_id', teamIds);
 
-      // Load upcoming events count
+      // Load upcoming events count from all teams
       const { count: eventsCount } = await supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
-        .eq('team_id', currentTeam.id)
+        .in('team_id', teamIds)
         .gte('date', new Date().toISOString().split('T')[0]);
 
-      // Load upcoming events details
-      const { data: upcomingEvents } = await supabase
+      // Load upcoming events details with team information
+      const { data: upcomingEventsData } = await supabase
         .from('events')
-        .select('*')
-        .eq('team_id', currentTeam.id)
+        .select(`
+          *,
+          teams!inner(
+            id, name, logo_url, kit_designs, club_id,
+            clubs!club_id(name, logo_url)
+          )
+        `)
+        .in('team_id', teamIds)
         .gte('date', new Date().toISOString().split('T')[0])
         .order('date', { ascending: true })
-        .limit(3);
+        .limit(5);
+
+      // Add team context to events
+      const upcomingEvents = upcomingEventsData?.map(event => ({
+        ...event,
+        team_context: {
+          name: event.teams.name,
+          logo_url: event.teams.logo_url,
+          club_name: event.teams.clubs?.name,
+          club_logo_url: event.teams.clubs?.logo_url
+        }
+      })) || [];
 
       // Load recent completed events with results
-      const { data: recentResults } = await supabase
+      const { data: recentResultsData } = await supabase
         .from('events')
-        .select('*')
-        .eq('team_id', currentTeam.id)
+        .select(`
+          *,
+          teams!inner(
+            id, name, logo_url, kit_designs, club_id,
+            clubs!club_id(name, logo_url)
+          )
+        `)
+        .in('team_id', teamIds)
         .lt('date', new Date().toISOString().split('T')[0])
         .not('scores', 'is', null)
         .order('date', { ascending: false })
         .limit(5);
 
-      // Load pending availability for current user
-      const { data: pendingAvailability } = await supabase
+      const recentResults = recentResultsData?.map(event => ({
+        ...event,
+        team_context: {
+          name: event.teams.name,
+          logo_url: event.teams.logo_url,
+          club_name: event.teams.clubs?.name,
+          club_logo_url: event.teams.clubs?.logo_url
+        }
+      })) || [];
+
+      // Load pending availability for current user with team context
+      const { data: pendingAvailabilityData } = await supabase
         .from('event_availability')
         .select(`
           *,
           events!inner(
-            id, title, date, start_time, event_type, opponent
+            id, title, date, start_time, event_type, opponent, team_id,
+            teams!inner(
+              id, name, logo_url, club_id,
+              clubs!club_id(name, logo_url)
+            )
           )
         `)
         .eq('user_id', user.id)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
+      const pendingAvailability = pendingAvailabilityData?.map(availability => ({
+        ...availability,
+        events: {
+          ...availability.events,
+          team_context: {
+            name: availability.events.teams.name,
+            logo_url: availability.events.teams.logo_url,
+            club_name: availability.events.teams.clubs?.name,
+            club_logo_url: availability.events.teams.clubs?.logo_url
+          }
+        }
+      })) || [];
+
       setStats({
         playersCount: playersCount || 0,
         eventsCount: eventsCount || 0,
         upcomingEvents: upcomingEvents || [],
         recentResults: recentResults || [],
-        pendingAvailability: pendingAvailability || []
+        pendingAvailability: pendingAvailability
       });
     } catch (error: any) {
       toast({
@@ -179,7 +231,23 @@ export default function DashboardMobile() {
             <CardContent className="space-y-3">
               {stats.pendingAvailability.slice(0, 2).map((availability) => (
                 <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200">
-                  <div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {availability.events.team_context?.logo_url ? (
+                        <img 
+                          src={availability.events.team_context.logo_url} 
+                          alt={availability.events.team_context.name}
+                          className="w-4 h-4 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                          {availability.events.team_context?.name?.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {availability.events.team_context?.name}
+                      </span>
+                    </div>
                     <div className="font-medium">
                       {availability.events.event_type === 'training' 
                         ? availability.events.title 
@@ -280,7 +348,31 @@ export default function DashboardMobile() {
             {stats.upcomingEvents.length > 0 ? (
               stats.upcomingEvents.map((event) => (
                 <div key={event.id} className={`flex items-center justify-between p-3 rounded-lg ${getEventTypeColor(event.event_type)}`}>
-                  <div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {event.team_context?.logo_url ? (
+                        <img 
+                          src={event.team_context.logo_url} 
+                          alt={event.team_context.name}
+                          className="w-4 h-4 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                          {event.team_context?.name?.slice(0, 2).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {event.team_context?.name}
+                      </span>
+                      {event.team_context?.club_name && (
+                        <>
+                          <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-xs text-muted-foreground">
+                            {event.team_context.club_name}
+                          </span>
+                        </>
+                      )}
+                    </div>
                     <div className="font-medium">
                       {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
                     </div>
@@ -319,7 +411,23 @@ export default function DashboardMobile() {
                   const result = getResultFromScores(event.scores);
                   return (
                     <div key={event.id} className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          {event.team_context?.logo_url ? (
+                            <img 
+                              src={event.team_context.logo_url} 
+                              alt={event.team_context.name}
+                              className="w-4 h-4 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                              {event.team_context?.name?.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {event.team_context?.name}
+                          </span>
+                        </div>
                         <span className="text-sm font-medium">vs {event.opponent}</span>
                         <div className="text-xs text-muted-foreground">
                           {new Date(event.date).toLocaleDateString()}
