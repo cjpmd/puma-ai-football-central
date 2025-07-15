@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -185,14 +186,19 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     while (scoresData[`team_${teamNumber}`] !== undefined) {
       const ourScore = scoresData[`team_${teamNumber}`];
       const opponentScore = scoresData[`opponent_${teamNumber}`];
-      const outcome = scoresData[`outcome_${teamNumber}`];
       const categoryId = scoresData[`team_${teamNumber}_category_id`];
       const teamName = performanceCategories[categoryId] || `T${teamNumber}`;
       
-      let outcomeIcon = '';
-      if (outcome === 'win') outcomeIcon = '🏆';
-      else if (outcome === 'loss') outcomeIcon = '❌';
-      else if (outcome === 'draw') outcomeIcon = '🤝';
+      let outcome = 'draw';
+      let outcomeIcon = '🤝';
+      
+      if (ourScore > opponentScore) {
+        outcome = 'win';
+        outcomeIcon = '🏆';
+      } else if (ourScore < opponentScore) {
+        outcome = 'loss';
+        outcomeIcon = '❌';
+      }
       
       scores.push({
         teamNumber,
@@ -211,17 +217,23 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       const ourScore = event.is_home ? scoresData.home : scoresData.away;
       const opponentScore = event.is_home ? scoresData.away : scoresData.home;
       
-      let outcomeIcon = '';
-      if (ourScore > opponentScore) outcomeIcon = '🏆';
-      else if (ourScore < opponentScore) outcomeIcon = '❌';
-      else outcomeIcon = '🤝';
+      let outcome = 'draw';
+      let outcomeIcon = '🤝';
+      
+      if (ourScore > opponentScore) {
+        outcome = 'win';
+        outcomeIcon = '🏆';
+      } else if (ourScore < opponentScore) {
+        outcome = 'loss';
+        outcomeIcon = '❌';
+      }
       
       scores.push({
         teamNumber: 1,
         teamName: 'T1',
         ourScore,
         opponentScore,
-        outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',
+        outcome,
         outcomeIcon
       });
     }
