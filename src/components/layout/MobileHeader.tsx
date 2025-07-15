@@ -31,7 +31,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
   const currentClub = clubs?.[0];
 
   return (
-    <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-cyan-400 text-white">
+    <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-cyan-400 text-white pt-[calc(theme(spacing.safe-top)+0.75rem)]">
       <div className="flex items-center justify-between h-14 px-4">
         <div className="flex-1">
           {title ? (

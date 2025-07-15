@@ -3,7 +3,7 @@ import { Facebook, Twitter, Instagram } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="bg-puma-blue-50 border-t">
+    <footer className="bg-puma-blue-50 border-t pb-[calc(theme(spacing.safe-bottom)+0.75rem)]">
       <div className="container py-12 md:py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">

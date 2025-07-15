@@ -22,7 +22,7 @@ export function Header() {
   console.log('Header - showTeamLogo:', showTeamLogo, 'currentTeam:', currentTeam);
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pt-[calc(theme(spacing.safe-top)+0.75rem)]">
       <div className="container flex h-14 items-center">
         <div className="mr-4 flex">
           <Logo className="h-6 w-6" showText={true} />
