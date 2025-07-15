@@ -244,18 +244,21 @@ export default function DashboardMobile() {
         {/* Push Notification Setup */}
         <PushNotificationSetup />
         
-        {/* Pending Availability - First Priority */}
-        {stats.pendingAvailability.length > 0 && (
-          <Card className="border-orange-200 bg-orange-50">
+        {/* Availability Status - Always Show */}
+        {stats.pendingAvailability.length > 0 ? (
+          <Card className="border-orange-200 bg-orange-50 animate-fade-in">
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center">
                 <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
                 Availability Requests
+                <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-700">
+                  {stats.pendingAvailability.length}
+                </Badge>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {stats.pendingAvailability.slice(0, 2).map((availability) => (
-                <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200">
+                <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200 hover-scale">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       {availability.events.team_context?.logo_url ? (
@@ -283,7 +286,7 @@ export default function DashboardMobile() {
                       {availability.events.start_time && `, ${availability.events.start_time}`}
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-orange-100 text-orange-700">
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700 pulse">
                     Response Needed
                   </Badge>
                 </div>
@@ -294,23 +297,28 @@ export default function DashboardMobile() {
                 </p>
               )}
               <Link to="/calendar">
-                <Button variant="ghost" className="w-full h-10">
-                  View All Requests
+                <Button className="w-full h-10 bg-orange-600 hover:bg-orange-700 text-white">
+                  Confirm Availability ({stats.pendingAvailability.length})
                 </Button>
               </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-green-200 bg-green-50">
+            <CardContent className="p-4 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
+                  <Calendar className="h-4 w-4 text-white" />
+                </div>
+                <span className="text-green-800 font-medium">All Caught Up!</span>
+              </div>
+              <p className="text-sm text-green-700">No availability requests pending</p>
             </CardContent>
           </Card>
         )}
         
         {/* Live Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="touch-manipulation">
-            <CardContent className="p-4 text-center">
-              <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-2xl font-bold">{stats.playersCount}</div>
-              <div className="text-sm text-muted-foreground">Players</div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-1 gap-4">
           <Card className="touch-manipulation">
             <CardContent className="p-4 text-center">
               <Calendar className="h-8 w-8 mx-auto mb-2 text-green-600" />
