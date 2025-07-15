@@ -133,46 +133,60 @@ export default function DashboardMobile() {
       })) || [];
 
       // Load pending availability for current user with team context
-      const { data: pendingAvailabilityData, error: pendingError } = await supabase
+      // First, get all upcoming events that might need availability confirmation
+      const upcomingEventsForAvailability = upcomingEvents.filter(event => {
+        const eventDate = new Date(event.date);
+        const now = new Date();
+        // Only include events that are in the future
+        return eventDate > now;
+      });
+
+      console.log('Upcoming events for availability check:', upcomingEventsForAvailability.length);
+
+      // Check existing availability records for these events
+      const eventIds = upcomingEventsForAvailability.map(event => event.id);
+      const { data: existingAvailability, error: availabilityError } = await supabase
         .from('event_availability')
-        .select(`
-          *,
-          events!inner(
-            id, title, date, start_time, event_type, opponent, team_id,
-            teams!inner(
-              id, name, logo_url, club_id,
-              clubs!teams_club_id_fkey(name, logo_url)
-            )
-          )
-        `)
+        .select('event_id, status')
         .eq('user_id', user.id)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+        .in('event_id', eventIds);
 
-      if (pendingError) {
-        console.error('Error loading pending availability:', pendingError);
+      if (availabilityError) {
+        console.error('Error loading existing availability:', availabilityError);
       }
-      console.log('Pending availability data:', pendingAvailabilityData?.length, pendingAvailabilityData);
 
-      const pendingAvailability = pendingAvailabilityData?.map(availability => ({
-        ...availability,
+      console.log('Existing availability records:', existingAvailability?.length || 0, existingAvailability);
+
+      // Filter events that need availability confirmation
+      const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
+        const existingRecord = existingAvailability?.find(a => a.event_id === event.id);
+        // Show events that have no record or have 'pending' status
+        return !existingRecord || existingRecord.status === 'pending';
+      });
+
+      console.log('Events needing availability confirmation:', eventsNeedingAvailability.length);
+
+      // Format these events for the availability display
+      const pendingAvailabilityData = eventsNeedingAvailability.map(event => ({
+        id: `${event.id}_${user.id}`,
+        event_id: event.id,
+        user_id: user.id,
+        role: 'player',
+        status: 'pending',
         events: {
-          ...availability.events,
-          team_context: {
-            name: availability.events.teams.name,
-            logo_url: availability.events.teams.logo_url,
-            club_name: availability.events.teams.clubs?.name,
-            club_logo_url: availability.events.teams.clubs?.logo_url
-          }
+          ...event,
+          team_context: event.team_context
         }
-      })) || [];
+      }));
+
+      console.log('Pending availability data:', pendingAvailabilityData?.length, pendingAvailabilityData);
 
       setStats({
         playersCount: playersCount || 0,
         eventsCount: eventsCount || 0,
         upcomingEvents: upcomingEvents || [],
         recentResults: recentResults || [],
-        pendingAvailability: pendingAvailability
+        pendingAvailability: pendingAvailabilityData
       });
     } catch (error: any) {
       toast({
