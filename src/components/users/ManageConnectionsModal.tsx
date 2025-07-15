@@ -6,10 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Link2, UserPlus, Building2, Users, X } from 'lucide-react';
+import { Link2, UserPlus, Building2, Users, X, QrCode, Hash } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { TeamJoinModal } from '@/components/codes/TeamJoinModal';
+import { PlayerLinkModal } from '@/components/codes/PlayerLinkModal';
 
 interface ManageConnectionsModalProps {
   isOpen: boolean;
@@ -43,6 +45,8 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
   const [playerCode, setPlayerCode] = useState('');
   const [availablePlayers, setAvailablePlayers] = useState<LinkablePlayer[]>([]);
   const [connectedPlayers, setConnectedPlayers] = useState<ConnectedPlayer[]>([]);
+  const [teamJoinModalOpen, setTeamJoinModalOpen] = useState(false);
+  const [playerLinkModalOpen, setPlayerLinkModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -295,12 +299,54 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
           </TabsList>
 
           <TabsContent value="connect" className="space-y-4">
-            {/* Team Connection */}
+            {/* New Team Join with Code */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <QrCode className="h-5 w-5" />
+                  Join Team with Code
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Use a team join code to connect as a player, parent, or staff member
+                </p>
+                <Button 
+                  onClick={() => setTeamJoinModalOpen(true)}
+                  className="w-full"
+                >
+                  Join Team with Code
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* New Player Link with Code */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Hash className="h-5 w-5" />
+                  Link to Player
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Use a player or parent linking code to connect to a specific player
+                </p>
+                <Button 
+                  onClick={() => setPlayerLinkModalOpen(true)}
+                  className="w-full"
+                >
+                  Link to Player
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Legacy Team Connection */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Users className="h-5 w-5" />
-                  Connect to Team
+                  Connect to Team (Legacy)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -343,12 +389,12 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
               </CardContent>
             </Card>
 
-            {/* Player Connection */}
+            {/* Legacy Player Connection */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <UserPlus className="h-5 w-5" />
-                  Connect as Parent
+                  Connect as Parent (Legacy)
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -475,6 +521,18 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
             )}
           </TabsContent>
         </Tabs>
+
+        {/* New Code-Based Modals */}
+        <TeamJoinModal 
+          isOpen={teamJoinModalOpen} 
+          onClose={() => setTeamJoinModalOpen(false)}
+          onSuccess={refreshUserData}
+        />
+        <PlayerLinkModal 
+          isOpen={playerLinkModalOpen} 
+          onClose={() => setPlayerLinkModalOpen(false)}
+          onSuccess={refreshUserData}
+        />
       </DialogContent>
     </Dialog>
   );

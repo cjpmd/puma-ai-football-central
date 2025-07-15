@@ -8,11 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { TeamForm } from '@/components/teams/TeamForm';
 import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
 import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
+import { CodeManagementModal } from '@/components/codes/CodeManagementModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
-import { PlusCircle, Settings, UserPlus, Users } from 'lucide-react';
+import { PlusCircle, Settings, UserPlus, Users, QrCode } from 'lucide-react';
 
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData, user } = useAuth();
@@ -22,6 +23,8 @@ const TeamManagement = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [isCodeManagementModalOpen, setIsCodeManagementModalOpen] = useState(false);
+  const [codeManagementTeamId, setCodeManagementTeamId] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -260,6 +263,11 @@ const TeamManagement = () => {
     setIsStaffModalOpen(true);
   };
 
+  const openCodeManagementModal = (team: Team) => {
+    setCodeManagementTeamId(team.id);
+    setIsCodeManagementModalOpen(true);
+  };
+
   const openEditTeamDialog = (team: Team) => {
     setSelectedTeam(team);
     setIsTeamDialogOpen(true);
@@ -356,7 +364,7 @@ const TeamManagement = () => {
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex flex-wrap gap-2">
         <Button 
           variant="outline" 
           size="sm" 
@@ -374,6 +382,16 @@ const TeamManagement = () => {
           <Settings className="mr-2 h-4 w-4" />
           Settings {isLinked ? '(View)' : ''}
         </Button>
+        {!isLinked && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => openCodeManagementModal(team)}
+          >
+            <QrCode className="mr-2 h-4 w-4" />
+            Codes
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
@@ -486,6 +504,12 @@ const TeamManagement = () => {
           />
         </>
       )}
+      
+      <CodeManagementModal
+        isOpen={isCodeManagementModalOpen}
+        onClose={() => setIsCodeManagementModalOpen(false)}
+        teamId={codeManagementTeamId}
+      />
     </DashboardLayout>
   );
 };

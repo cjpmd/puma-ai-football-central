@@ -1011,6 +1011,8 @@ export type Database = {
           name: string
           objectives: Json | null
           parent_id: string | null
+          parent_linking_code: string | null
+          parent_linking_code_expires_at: string | null
           performance_category_id: string | null
           photo_url: string | null
           play_style: string | null
@@ -1039,6 +1041,8 @@ export type Database = {
           name: string
           objectives?: Json | null
           parent_id?: string | null
+          parent_linking_code?: string | null
+          parent_linking_code_expires_at?: string | null
           performance_category_id?: string | null
           photo_url?: string | null
           play_style?: string | null
@@ -1067,6 +1071,8 @@ export type Database = {
           name?: string
           objectives?: Json | null
           parent_id?: string | null
+          parent_linking_code?: string | null
+          parent_linking_code_expires_at?: string | null
           performance_category_id?: string | null
           photo_url?: string | null
           play_style?: string | null
@@ -1247,6 +1253,64 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      team_code_usage: {
+        Row: {
+          code_used: string
+          created_at: string | null
+          id: string
+          ip_address: string | null
+          joined_at: string | null
+          role_joined: string
+          team_id: string
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          code_used: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          joined_at?: string | null
+          role_joined: string
+          team_id: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          code_used?: string
+          created_at?: string | null
+          id?: string
+          ip_address?: string | null
+          joined_at?: string | null
+          role_joined?: string
+          team_id?: string
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_code_usage_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_code_usage_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_code_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_equipment: {
         Row: {
@@ -1638,6 +1702,8 @@ export type Database = {
           season_end: string
           season_start: string
           subscription_type: string | null
+          team_join_code: string | null
+          team_join_code_expires_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1662,6 +1728,8 @@ export type Database = {
           season_end: string
           season_start: string
           subscription_type?: string | null
+          team_join_code?: string | null
+          team_join_code_expires_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1686,6 +1754,8 @@ export type Database = {
           season_end?: string
           season_start?: string
           subscription_type?: string | null
+          team_join_code?: string | null
+          team_join_code_expires_at?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -2091,6 +2161,14 @@ export type Database = {
       }
       generate_club_serial: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_parent_linking_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_team_join_code: {
+        Args: { team_name: string }
         Returns: string
       }
       get_current_user_id: {
