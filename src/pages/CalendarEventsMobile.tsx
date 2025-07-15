@@ -47,8 +47,9 @@ export default function CalendarEventsMobile() {
   // Check if user can edit events (not parent or player)
   const canEditEvents = () => {
     if (!profile?.roles) return false;
-    // Parent and player users cannot edit events
-    return !profile.roles.includes('parent') && !profile.roles.includes('player');
+    // Allow editing if user has any management/coaching roles
+    const canEditRoles = ['global_admin', 'club_admin', 'team_manager', 'coach', 'staff'];
+    return profile.roles.some(role => canEditRoles.includes(role));
   };
 
   useEffect(() => {
