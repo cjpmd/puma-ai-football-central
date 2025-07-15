@@ -509,30 +509,6 @@ export default function CalendarEventsMobile() {
           </Card>
         )}
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button 
-              className="w-full h-12 justify-start text-left" 
-              variant="outline"
-              onClick={() => setShowEditProfile(true)}
-            >
-              <User className="h-5 w-5 mr-3" />
-              Edit Profile
-            </Button>
-            <Button 
-              className="w-full h-12 justify-start text-left" 
-              variant="outline"
-              onClick={() => setShowManageConnections(true)}
-            >
-              <Link2 className="h-5 w-5 mr-3" />
-              Manage Connections
-            </Button>
-          </CardContent>
-        </Card>
 
         {loading ? (
           <div className="text-center py-8">

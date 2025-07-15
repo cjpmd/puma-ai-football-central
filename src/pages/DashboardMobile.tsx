@@ -42,10 +42,14 @@ export default function DashboardMobile() {
   }, [allTeams, connectedPlayers]);
 
   const loadLiveData = async () => {
-    if (!user || (!allTeams?.length && !connectedPlayers?.length)) return;
+    if (!user) return;
 
     try {
-      const teamIds = allTeams.map(team => team.id);
+      // Use teams from allTeams if available, otherwise fallback to teams
+      const teamsToUse = allTeams?.length ? allTeams : (teams || []);
+      if (!teamsToUse.length) return;
+      
+      const teamIds = teamsToUse.map(team => team.id);
       
       // Load players count from all connected teams
       const { count: playersCount } = await supabase
