@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,13 +14,15 @@ import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
-import { Calendar, Clock, MapPin, Users } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 import { eventsService } from '@/services/eventsService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { EditProfileModal } from '@/components/users/EditProfileModal';
+import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -40,6 +42,9 @@ export default function CalendarEventsMobile() {
   const [showExpandedTeamSelection, setShowExpandedTeamSelection] = useState(false);
   const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showManageConnections, setShowManageConnections] = useState(false);
+  const [pendingAvailability, setPendingAvailability] = useState<any[]>([]);
   const { toast } = useToast();
   const { teams, user, profile } = useAuth();
   const { hasPermission } = useAuthorization();
@@ -59,8 +64,31 @@ export default function CalendarEventsMobile() {
   useEffect(() => {
     if (events.length > 0 && user?.id) {
       loadUserAvailability();
+      loadPendingAvailability();
     }
   }, [events, user?.id]);
+
+  const loadPendingAvailability = async () => {
+    try {
+      if (!user?.id) return;
+
+      const { data: pending } = await supabase
+        .from('event_availability')
+        .select(`
+          *,
+          events!inner(
+            id, title, date, start_time, event_type, opponent
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      setPendingAvailability(pending || []);
+    } catch (error) {
+      console.error('Error loading pending availability:', error);
+    }
+  };
 
   const loadUserAvailability = async () => {
     try {
@@ -444,6 +472,68 @@ export default function CalendarEventsMobile() {
       stickyTabs={true}
     >
       <div className="space-y-6 pb-8">
+        {/* Pending Availability - First Priority */}
+        {pendingAvailability.length > 0 && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
+                Availability Requests
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pendingAvailability.slice(0, 2).map((availability) => (
+                <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200">
+                  <div>
+                    <div className="font-medium">
+                      {availability.events.event_type === 'training' 
+                        ? availability.events.title 
+                        : `vs ${availability.events.opponent || 'TBD'}`}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(availability.events.date).toLocaleDateString()}
+                      {availability.events.start_time && `, ${availability.events.start_time}`}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700">
+                    Response Needed
+                  </Badge>
+                </div>
+              ))}
+              {pendingAvailability.length > 2 && (
+                <p className="text-sm text-center text-muted-foreground">
+                  +{pendingAvailability.length - 2} more requests
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Quick Actions */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button 
+              className="w-full h-12 justify-start text-left" 
+              variant="outline"
+              onClick={() => setShowEditProfile(true)}
+            >
+              <User className="h-5 w-5 mr-3" />
+              Edit Profile
+            </Button>
+            <Button 
+              className="w-full h-12 justify-start text-left" 
+              variant="outline"
+              onClick={() => setShowManageConnections(true)}
+            >
+              <Link2 className="h-5 w-5 mr-3" />
+              Manage Connections
+            </Button>
+          </CardContent>
+        </Card>
+
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
@@ -797,13 +887,23 @@ export default function CalendarEventsMobile() {
               isOpen={showPostGameEdit}
               onClose={() => {
                 setShowPostGameEdit(false);
-                setSelectedEvent(null);
-                loadEvents();
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </MobileLayout>
-  );
-}
+                 setSelectedEvent(null);
+                 loadEvents();
+               }}
+             />
+           )}
+         </DialogContent>
+       </Dialog>
+
+       {/* Profile and Connection Modals */}
+       <EditProfileModal 
+         isOpen={showEditProfile} 
+         onClose={() => setShowEditProfile(false)} 
+       />
+       <ManageConnectionsModal 
+         isOpen={showManageConnections} 
+         onClose={() => setShowManageConnections(false)} 
+       />
+     </MobileLayout>
+   );
+ }

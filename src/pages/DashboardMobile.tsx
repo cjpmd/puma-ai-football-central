@@ -167,25 +167,7 @@ export default function DashboardMobile() {
         {/* Push Notification Setup */}
         <PushNotificationSetup />
         
-        {/* Live Stats */}
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="touch-manipulation">
-            <CardContent className="p-4 text-center">
-              <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
-              <div className="text-2xl font-bold">{stats.playersCount}</div>
-              <div className="text-sm text-muted-foreground">Players</div>
-            </CardContent>
-          </Card>
-          <Card className="touch-manipulation">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <div className="text-2xl font-bold">{stats.eventsCount}</div>
-              <div className="text-sm text-muted-foreground">Upcoming Events</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Pending Availability */}
+        {/* Pending Availability - First Priority */}
         {stats.pendingAvailability.length > 0 && (
           <Card className="border-orange-200 bg-orange-50">
             <CardHeader className="pb-3">
@@ -226,6 +208,24 @@ export default function DashboardMobile() {
             </CardContent>
           </Card>
         )}
+        
+        {/* Live Stats */}
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="touch-manipulation">
+            <CardContent className="p-4 text-center">
+              <Users className="h-8 w-8 mx-auto mb-2 text-blue-600" />
+              <div className="text-2xl font-bold">{stats.playersCount}</div>
+              <div className="text-sm text-muted-foreground">Players</div>
+            </CardContent>
+          </Card>
+          <Card className="touch-manipulation">
+            <CardContent className="p-4 text-center">
+              <Calendar className="h-8 w-8 mx-auto mb-2 text-green-600" />
+              <div className="text-2xl font-bold">{stats.eventsCount}</div>
+              <div className="text-sm text-muted-foreground">Upcoming Events</div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Quick Actions */}
         <Card>
@@ -233,7 +233,7 @@ export default function DashboardMobile() {
             <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {canManageTeam() ? (
+            {canManageTeam() && (
               <>
                 <Link to="/calendar">
                   <Button className="w-full h-12 justify-start text-left" variant="outline">
@@ -248,26 +248,23 @@ export default function DashboardMobile() {
                   </Button>
                 </Link>
               </>
-            ) : (
-              <>
-                <Button 
-                  className="w-full h-12 justify-start text-left" 
-                  variant="outline"
-                  onClick={() => setShowEditProfile(true)}
-                >
-                  <User className="h-5 w-5 mr-3" />
-                  Edit Profile
-                </Button>
-                <Button 
-                  className="w-full h-12 justify-start text-left" 
-                  variant="outline"
-                  onClick={() => setShowManageConnections(true)}
-                >
-                  <Link2 className="h-5 w-5 mr-3" />
-                  Manage Connections
-                </Button>
-              </>
             )}
+            <Button 
+              className="w-full h-12 justify-start text-left" 
+              variant="outline"
+              onClick={() => setShowEditProfile(true)}
+            >
+              <User className="h-5 w-5 mr-3" />
+              Edit Profile
+            </Button>
+            <Button 
+              className="w-full h-12 justify-start text-left" 
+              variant="outline"
+              onClick={() => setShowManageConnections(true)}
+            >
+              <Link2 className="h-5 w-5 mr-3" />
+              Manage Connections
+            </Button>
           </CardContent>
         </Card>
 
