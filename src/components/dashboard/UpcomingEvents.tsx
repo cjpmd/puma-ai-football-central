@@ -320,21 +320,23 @@ export function UpcomingEvents() {
                         {event.event_type}
                       </Badge>
                       {kitDesign && <EnhancedKitAvatar design={kitDesign} size="xs" />}
-                      <div className="flex items-center gap-1">
-                        {event.team_context?.logo_url ? (
-                          <img 
-                            src={event.team_context.logo_url} 
-                            alt={event.team_context.name}
-                            className="w-3 h-3 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-3 h-3 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                            {event.team_context?.name?.slice(0, 1).toUpperCase() || event.team_name.slice(0, 1).toUpperCase()}
-                          </div>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {event.team_context?.name || event.team_name}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {event.team_context?.logo_url ? (
+                            <img 
+                              src={event.team_context.logo_url} 
+                              alt={event.team_context.name}
+                              className="w-4 h-4 rounded-full"
+                            />
+                          ) : (
+                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                              {event.team_context?.name?.slice(0, 1).toUpperCase() || event.team_name.slice(0, 1).toUpperCase()}
+                            </div>
+                          )}
+                          <span className="text-sm font-medium text-foreground">
+                            {event.team_context?.name || event.team_name}
+                          </span>
+                        </div>
                       </div>
                       {outcome && (
                         <span className="text-sm" title={outcome.outcome}>
