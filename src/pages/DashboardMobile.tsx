@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
+import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 
 interface LiveStats {
   playersCount: number;
@@ -36,6 +37,22 @@ export default function DashboardMobile() {
   const [showManageConnections, setShowManageConnections] = useState(false);
 
   const currentTeam = teams?.[0];
+
+  const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
+    // Update the local state to reflect the change
+    setStats(prevStats => ({
+      ...prevStats,
+      pendingAvailability: prevStats.pendingAvailability.filter(availability => 
+        availability.event_id !== eventId
+      )
+    }));
+    
+    // Show success message
+    toast({
+      title: "Availability updated",
+      description: `Marked as ${status} for this event`,
+    });
+  };
 
   useEffect(() => {
     loadLiveData();
@@ -300,9 +317,12 @@ export default function DashboardMobile() {
                       {availability.events.start_time && `, ${availability.events.start_time}`}
                     </div>
                   </div>
-                  <Badge variant="outline" className="bg-orange-100 text-orange-700 pulse">
-                    Response Needed
-                  </Badge>
+                  <QuickAvailabilityControls 
+                    eventId={availability.event_id}
+                    currentStatus="pending"
+                    size="sm"
+                    onStatusChange={(status) => handleAvailabilityStatusChange(availability.event_id, status)}
+                  />
                 </div>
               ))}
               {stats.pendingAvailability.length > 2 && (
