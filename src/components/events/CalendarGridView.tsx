@@ -404,7 +404,14 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                           {/* Location and weather */}
                           <div className="flex items-center justify-between">
                             <div className="flex gap-1">
-                              {/* Additional outcome icons space if needed */}
+                              {/* Outcome icons for completed matches */}
+                              {completed && teamScores.length > 0 && (
+                                <div className="flex gap-1">
+                                  {teamScores.map((score, index) => (
+                                    <span key={index} className="text-lg">{score.outcomeIcon}</span>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                             {weather && (
                               <img 
