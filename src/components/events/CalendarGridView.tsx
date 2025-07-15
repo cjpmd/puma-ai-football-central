@@ -181,6 +181,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     const scores = [];
     const scoresData = event.scores as any;
     
+    console.log('Desktop calendar - getTeamScores for event:', event.id, 'scores:', scoresData);
+    
     // Check for team_1, team_2, etc. (performance category teams)
     let teamNumber = 1;
     while (scoresData[`team_${teamNumber}`] !== undefined) {
@@ -199,6 +201,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         outcome = 'loss';
         outcomeIcon = '❌';
       }
+      
+      console.log(`Team ${teamNumber}: ${ourScore}-${opponentScore}, outcome: ${outcome}, icon: ${outcomeIcon}`);
       
       scores.push({
         teamNumber,
@@ -228,6 +232,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         outcomeIcon = '❌';
       }
       
+      console.log(`Home/Away: ${ourScore}-${opponentScore}, outcome: ${outcome}, icon: ${outcomeIcon}`);
+      
       scores.push({
         teamNumber: 1,
         teamName: 'T1',
@@ -238,6 +244,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       });
     }
     
+    console.log('Final scores array:', scores);
     return scores;
   };
 
