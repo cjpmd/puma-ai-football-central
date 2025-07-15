@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Link2, UserPlus, Building2, Users } from 'lucide-react';
+import { Link2, UserPlus, Building2, Users, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,15 @@ interface LinkablePlayer {
   linking_code: string;
 }
 
+interface ConnectedPlayer {
+  id: string;
+  name: string;
+  squad_number: number;
+  team_name: string;
+  age_group: string;
+  relationship: string;
+}
+
 export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({ 
   isOpen, onClose 
 }) => {
@@ -33,10 +42,12 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
   const [clubCode, setClubCode] = useState('');
   const [playerCode, setPlayerCode] = useState('');
   const [availablePlayers, setAvailablePlayers] = useState<LinkablePlayer[]>([]);
+  const [connectedPlayers, setConnectedPlayers] = useState<ConnectedPlayer[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       loadAvailablePlayers();
+      loadConnectedPlayers();
     }
   }, [isOpen]);
 
@@ -65,6 +76,69 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
       setAvailablePlayers(players);
     } catch (error: any) {
       console.error('Error loading players:', error);
+    }
+  };
+
+  const loadConnectedPlayers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_players')
+        .select(`
+          id,
+          relationship,
+          players!inner(
+            id,
+            name,
+            squad_number,
+            teams!inner(
+              name,
+              age_group
+            )
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+
+      const players = data?.map(connection => ({
+        id: connection.id,
+        name: (connection.players as any).name,
+        squad_number: (connection.players as any).squad_number,
+        team_name: (connection.players as any).teams?.name || 'Unknown Team',
+        age_group: (connection.players as any).teams?.age_group || 'Unknown',
+        relationship: connection.relationship
+      })) || [];
+
+      setConnectedPlayers(players);
+    } catch (error: any) {
+      console.error('Error loading connected players:', error);
+    }
+  };
+
+  const handleRemovePlayerConnection = async (connectionId: string, playerName: string) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('user_players')
+        .delete()
+        .eq('id', connectionId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Removed connection to ${playerName}`
+      });
+
+      await loadConnectedPlayers();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -192,6 +266,7 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
 
       setPlayerCode('');
       await refreshUserData();
+      await loadConnectedPlayers();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -340,6 +415,40 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
               </Card>
             )}
 
+            {/* Connected Players */}
+            {connectedPlayers && connectedPlayers.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Connected Players</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {connectedPlayers.map((player) => (
+                      <div key={player.id} className="flex items-center justify-between p-2 border rounded">
+                        <div>
+                          <div className="font-medium">{player.name} #{player.squad_number}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {player.team_name} • {player.age_group}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{player.relationship}</Badge>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleRemovePlayerConnection(player.id, player.name)}
+                            disabled={loading}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Current Roles */}
             {profile?.roles && profile.roles.length > 0 && (
               <Card>
@@ -358,7 +467,7 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
               </Card>
             )}
 
-            {(!teams || teams.length === 0) && (!clubs || clubs.length === 0) && (
+            {(!teams || teams.length === 0) && (!clubs || clubs.length === 0) && (!connectedPlayers || connectedPlayers.length === 0) && (
               <div className="text-center py-8 text-muted-foreground">
                 <Link2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No connections found. Use the Connect tab to link your account.</p>
