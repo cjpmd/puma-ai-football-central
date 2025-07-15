@@ -3,31 +3,37 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users, Trophy, Plus, TrendingUp } from 'lucide-react';
+import { Calendar, Users, Trophy, Plus, TrendingUp, User, Link2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
+import { EditProfileModal } from '@/components/users/EditProfileModal';
+import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 
 interface LiveStats {
   playersCount: number;
   eventsCount: number;
   upcomingEvents: any[];
   recentResults: any[];
+  pendingAvailability: any[];
 }
 
 export default function DashboardMobile() {
-  const { teams } = useAuth();
+  const { teams, profile, user } = useAuth();
   const { toast } = useToast();
   const [stats, setStats] = useState<LiveStats>({
     playersCount: 0,
     eventsCount: 0,
     upcomingEvents: [],
-    recentResults: []
+    recentResults: [],
+    pendingAvailability: []
   });
   const [loading, setLoading] = useState(true);
+  const [showEditProfile, setShowEditProfile] = useState(false);
+  const [showManageConnections, setShowManageConnections] = useState(false);
 
   const currentTeam = teams?.[0];
 
@@ -36,7 +42,7 @@ export default function DashboardMobile() {
   }, [currentTeam]);
 
   const loadLiveData = async () => {
-    if (!currentTeam) return;
+    if (!currentTeam || !user) return;
 
     try {
       // Load players count
@@ -71,11 +77,25 @@ export default function DashboardMobile() {
         .order('date', { ascending: false })
         .limit(5);
 
+      // Load pending availability for current user
+      const { data: pendingAvailability } = await supabase
+        .from('event_availability')
+        .select(`
+          *,
+          events!inner(
+            id, title, date, start_time, event_type, opponent
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
       setStats({
         playersCount: playersCount || 0,
         eventsCount: eventsCount || 0,
         upcomingEvents: upcomingEvents || [],
-        recentResults: recentResults || []
+        recentResults: recentResults || [],
+        pendingAvailability: pendingAvailability || []
       });
     } catch (error: any) {
       toast({
@@ -124,6 +144,13 @@ export default function DashboardMobile() {
     return null;
   };
 
+  // Check if user can manage teams (not just parent or player)
+  const canManageTeam = () => {
+    if (!profile?.roles) return false;
+    const managementRoles = ['global_admin', 'club_admin', 'team_manager', 'team_coach', 'team_assistant_manager', 'coach', 'staff'];
+    return profile.roles.some(role => managementRoles.includes(role));
+  };
+
   if (loading) {
     return (
       <MobileLayout>
@@ -158,24 +185,89 @@ export default function DashboardMobile() {
           </Card>
         </div>
 
+        {/* Pending Availability */}
+        {stats.pendingAvailability.length > 0 && (
+          <Card className="border-orange-200 bg-orange-50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
+                Availability Requests
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {stats.pendingAvailability.slice(0, 2).map((availability) => (
+                <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200">
+                  <div>
+                    <div className="font-medium">
+                      {availability.events.event_type === 'training' 
+                        ? availability.events.title 
+                        : `vs ${availability.events.opponent || 'TBD'}`}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {new Date(availability.events.date).toLocaleDateString()}
+                      {availability.events.start_time && `, ${availability.events.start_time}`}
+                    </div>
+                  </div>
+                  <Badge variant="outline" className="bg-orange-100 text-orange-700">
+                    Response Needed
+                  </Badge>
+                </div>
+              ))}
+              {stats.pendingAvailability.length > 2 && (
+                <p className="text-sm text-center text-muted-foreground">
+                  +{stats.pendingAvailability.length - 2} more requests
+                </p>
+              )}
+              <Link to="/calendar">
+                <Button variant="ghost" className="w-full h-10">
+                  View All Requests
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Quick Actions */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Link to="/calendar">
-              <Button className="w-full h-12 justify-start text-left" variant="outline">
-                <Plus className="h-5 w-5 mr-3" />
-                Create Event
-              </Button>
-            </Link>
-            <Link to="/players">
-              <Button className="w-full h-12 justify-start text-left" variant="outline">
-                <Users className="h-5 w-5 mr-3" />
-                Manage Players
-              </Button>
-            </Link>
+            {canManageTeam() ? (
+              <>
+                <Link to="/calendar">
+                  <Button className="w-full h-12 justify-start text-left" variant="outline">
+                    <Plus className="h-5 w-5 mr-3" />
+                    Create Event
+                  </Button>
+                </Link>
+                <Link to="/players">
+                  <Button className="w-full h-12 justify-start text-left" variant="outline">
+                    <Users className="h-5 w-5 mr-3" />
+                    Manage Players
+                  </Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Button 
+                  className="w-full h-12 justify-start text-left" 
+                  variant="outline"
+                  onClick={() => setShowEditProfile(true)}
+                >
+                  <User className="h-5 w-5 mr-3" />
+                  Edit Profile
+                </Button>
+                <Button 
+                  className="w-full h-12 justify-start text-left" 
+                  variant="outline"
+                  onClick={() => setShowManageConnections(true)}
+                >
+                  <Link2 className="h-5 w-5 mr-3" />
+                  Manage Connections
+                </Button>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -250,6 +342,16 @@ export default function DashboardMobile() {
             )}
           </CardContent>
         </Card>
+
+        {/* Modals */}
+        <EditProfileModal 
+          isOpen={showEditProfile} 
+          onClose={() => setShowEditProfile(false)} 
+        />
+        <ManageConnectionsModal 
+          isOpen={showManageConnections} 
+          onClose={() => setShowManageConnections(false)} 
+        />
       </div>
     </MobileLayout>
   );
