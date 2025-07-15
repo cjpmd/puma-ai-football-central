@@ -20,6 +20,7 @@ import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusB
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 import { eventsService } from '@/services/eventsService';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -40,7 +41,15 @@ export default function CalendarEventsMobile() {
   const [eventSelections, setEventSelections] = useState<{[key: string]: any[]}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const { toast } = useToast();
-  const { teams, user } = useAuth();
+  const { teams, user, profile } = useAuth();
+  const { hasPermission } = useAuthorization();
+
+  // Check if user can edit events (not parent or player)
+  const canEditEvents = () => {
+    if (!profile?.roles) return false;
+    // Parent and player users cannot edit events
+    return !profile.roles.includes('parent') && !profile.roles.includes('player');
+  };
 
   useEffect(() => {
     loadEvents();
@@ -652,16 +661,18 @@ export default function CalendarEventsMobile() {
                     <Users className="h-4 w-4" />
                     Team Selection
                   </h4>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      setShowEventDetails(false);
-                      setShowExpandedTeamSelection(true);
-                    }}
-                  >
-                    View Full
-                  </Button>
+                  {canEditEvents() && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        setShowEventDetails(false);
+                        setShowExpandedTeamSelection(true);
+                      }}
+                    >
+                      View Full
+                    </Button>
+                  )}
                 </div>
                 <MobileTeamSelectionView
                   event={selectedEvent}
@@ -701,34 +712,36 @@ export default function CalendarEventsMobile() {
                 </div>
               )}
               
-              <div className="flex gap-2 mt-6">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleEventAction(selectedEvent, 'setup')}
-                >
-                  SETUP
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => handleEventAction(selectedEvent, 'squad')}
-                >
-                  SQUAD
-                </Button>
-                {isEventCompleted(selectedEvent) && (
+              {canEditEvents() && (
+                <div className="flex gap-2 mt-6">
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1"
-                    onClick={() => handleEventAction(selectedEvent, 'report')}
+                    onClick={() => handleEventAction(selectedEvent, 'setup')}
                   >
-                    REPORT
+                    SETUP
                   </Button>
-                )}
-              </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => handleEventAction(selectedEvent, 'squad')}
+                  >
+                    SQUAD
+                  </Button>
+                  {isEventCompleted(selectedEvent) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => handleEventAction(selectedEvent, 'report')}
+                    >
+                      REPORT
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
