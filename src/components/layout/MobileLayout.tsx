@@ -51,7 +51,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
       )}
       
-      <div className={`flex-1 overflow-y-auto pb-[calc(1.5rem+theme(spacing.safe-bottom)+0.75rem)] ${stickyTabs && showTabs ? 'pt-0' : ''}`}>
+      <div className={`flex-1 overflow-y-auto pb-[calc(5rem+theme(spacing.safe-bottom))] ${stickyTabs && showTabs ? 'pt-0' : ''}`}>
         <div className="p-4">
           {children}
         </div>
