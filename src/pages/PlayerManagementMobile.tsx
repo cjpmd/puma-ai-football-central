@@ -3,12 +3,22 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Filter } from 'lucide-react';
+import { Search, Plus, Filter, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
 import { Player, Team } from '@/types';
+
+// Mobile-specific components
+import { PlayerActionSheet } from '@/components/players/mobile/PlayerActionSheet';
+import { EditPlayerModal } from '@/components/players/mobile/EditPlayerModal';
+import { PlayerStatsModal } from '@/components/players/mobile/PlayerStatsModal';
+import { PlayerAttributesModal } from '@/components/players/mobile/PlayerAttributesModal';
+import { PlayerObjectivesModal } from '@/components/players/mobile/PlayerObjectivesModal';
+import { PlayerCommentsModal } from '@/components/players/mobile/PlayerCommentsModal';
+import { PlayerHistoryModal } from '@/components/players/mobile/PlayerHistoryModal';
+import { PlayerParentsModal } from '@/components/players/mobile/PlayerParentsModal';
 
 // Use the actual database player type
 type DatabasePlayerRow = {
@@ -46,6 +56,17 @@ export default function PlayerManagementMobile() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { teams } = useAuth();
+
+  // Modal states
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [attributesModalOpen, setAttributesModalOpen] = useState(false);
+  const [objectivesModalOpen, setObjectivesModalOpen] = useState(false);
+  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [parentsModalOpen, setParentsModalOpen] = useState(false);
 
   useEffect(() => {
     loadPlayers();
@@ -133,20 +154,15 @@ export default function PlayerManagementMobile() {
   };
 
   const handleEditPlayer = (player: Player) => {
-    // Navigate to edit form or open modal
-    toast({ 
-      title: 'Edit Player', 
-      description: `Opening edit form for ${player.name}`,
-    });
-    // TODO: Implement edit form navigation or modal
+    setSelectedPlayer(player);
+    setEditModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleManageParents = (player: Player) => {
-    toast({ 
-      title: 'Manage Parents', 
-      description: `Parent management for ${player.name} - Feature coming soon`,
-    });
-    // TODO: Implement parent management
+    setSelectedPlayer(player);
+    setParentsModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleRemoveFromSquad = async (player: Player) => {
@@ -329,41 +345,37 @@ export default function PlayerManagementMobile() {
   };
 
   const handleManageAttributes = (player: Player) => {
-    toast({ 
-      title: 'Manage Attributes', 
-      description: `Attributes management for ${player.name} - Feature coming soon`,
-    });
+    setSelectedPlayer(player);
+    setAttributesModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleManageObjectives = (player: Player) => {
-    toast({ 
-      title: 'Manage Objectives', 
-      description: `Objectives management for ${player.name} - Feature coming soon`,
-    });
+    setSelectedPlayer(player);
+    setObjectivesModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleManageComments = (player: Player) => {
-    toast({ 
-      title: 'Manage Comments', 
-      description: `Comments management for ${player.name} - Feature coming soon`,
-    });
+    setSelectedPlayer(player);
+    setCommentsModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleViewStats = (player: Player) => {
-    toast({ 
-      title: 'View Stats', 
-      description: `Stats viewing for ${player.name} - Feature coming soon`,
-    });
+    setSelectedPlayer(player);
+    setStatsModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleViewHistory = (player: Player) => {
-    toast({ 
-      title: 'View History', 
-      description: `History viewing for ${player.name} - Feature coming soon`,
-    });
+    setSelectedPlayer(player);
+    setHistoryModalOpen(true);
+    setActionSheetOpen(false);
   };
 
   const handleTransferPlayer = (player: Player) => {
+    setActionSheetOpen(false);
     toast({ 
       title: 'Transfer Player', 
       description: `Transfer functionality for ${player.name} - Feature coming soon`,
@@ -371,6 +383,7 @@ export default function PlayerManagementMobile() {
   };
 
   const handleLeaveTeam = async (player: Player) => {
+    setActionSheetOpen(false);
     if (!confirm(`Are you sure ${player.name} wants to leave the team?`)) {
       return;
     }
@@ -400,6 +413,11 @@ export default function PlayerManagementMobile() {
         variant: 'destructive',
       });
     }
+  };
+
+  const handlePlayerCardClick = (player: Player) => {
+    setSelectedPlayer(player);
+    setActionSheetOpen(true);
   };
 
   return (
@@ -446,7 +464,7 @@ export default function PlayerManagementMobile() {
             <div className="grid grid-cols-1 gap-4">
               {filteredPlayers.map((player) => (
                 <div key={player.id} className="flex justify-center">
-                  <div className="w-full max-w-[300px]">
+                  <div className="w-full max-w-[300px] relative">
                     <FifaStylePlayerCard
                       player={player}
                       team={currentTeam}
@@ -466,6 +484,15 @@ export default function PlayerManagementMobile() {
                       onTransferPlayer={handleTransferPlayer}
                       onLeaveTeam={handleLeaveTeam}
                     />
+                    {/* Mobile Action Button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePlayerCardClick(player)}
+                      className="absolute top-2 right-2 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-30 backdrop-blur-sm"
+                    >
+                      <Settings className="h-4 w-4 text-white" />
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -473,6 +500,88 @@ export default function PlayerManagementMobile() {
           )}
         </div>
       </div>
+
+      {/* Mobile Modals */}
+      {selectedPlayer && (
+        <>
+          <PlayerActionSheet
+            player={selectedPlayer}
+            isOpen={actionSheetOpen}
+            onClose={() => setActionSheetOpen(false)}
+            onEditPlayer={handleEditPlayer}
+            onManageParents={handleManageParents}
+            onManageAttributes={handleManageAttributes}
+            onManageObjectives={handleManageObjectives}
+            onManageComments={handleManageComments}
+            onViewStats={handleViewStats}
+            onViewHistory={handleViewHistory}
+            onTransferPlayer={handleTransferPlayer}
+            onLeaveTeam={handleLeaveTeam}
+          />
+          
+          <EditPlayerModal
+            player={selectedPlayer}
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onSave={() => {
+              loadPlayers();
+              setEditModalOpen(false);
+            }}
+          />
+          
+          <PlayerStatsModal
+            player={selectedPlayer}
+            isOpen={statsModalOpen}
+            onClose={() => setStatsModalOpen(false)}
+          />
+          
+          <PlayerAttributesModal
+            player={selectedPlayer}
+            isOpen={attributesModalOpen}
+            onClose={() => setAttributesModalOpen(false)}
+            onSave={() => {
+              loadPlayers();
+              setAttributesModalOpen(false);
+            }}
+          />
+          
+          <PlayerObjectivesModal
+            player={selectedPlayer}
+            isOpen={objectivesModalOpen}
+            onClose={() => setObjectivesModalOpen(false)}
+            onSave={() => {
+              loadPlayers();
+              setObjectivesModalOpen(false);
+            }}
+          />
+          
+          <PlayerCommentsModal
+            player={selectedPlayer}
+            isOpen={commentsModalOpen}
+            onClose={() => setCommentsModalOpen(false)}
+            onSave={() => {
+              loadPlayers();
+              setCommentsModalOpen(false);
+            }}
+          />
+          
+          <PlayerHistoryModal
+            player={selectedPlayer}
+            isOpen={historyModalOpen}
+            onClose={() => setHistoryModalOpen(false)}
+          />
+          
+          <PlayerParentsModal
+            player={selectedPlayer}
+            isOpen={parentsModalOpen}
+            onClose={() => setParentsModalOpen(false)}
+            onSave={() => {
+              loadPlayers();
+              setParentsModalOpen(false);
+            }}
+          />
+        </>
+      )}
     </MobileLayout>
   );
 }
