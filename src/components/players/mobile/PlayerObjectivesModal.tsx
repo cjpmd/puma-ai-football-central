@@ -38,7 +38,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [objectives, setObjectives] = useState<Objective[]>(
-    player.objectives || []
+    (player.objectives as unknown as Objective[]) || []
   );
   const [newObjective, setNewObjective] = useState({
     title: '',
@@ -93,7 +93,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
       const { error } = await supabase
         .from('players')
         .update({
-          objectives: objectives
+          objectives: objectives as any
         })
         .eq('id', player.id);
 

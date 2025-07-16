@@ -32,7 +32,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [attributes, setAttributes] = useState<Attribute[]>(
-    player.attributes || []
+    (player.attributes as unknown as Attribute[]) || []
   );
   const [newAttribute, setNewAttribute] = useState({
     name: '',
@@ -81,7 +81,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
       const { error } = await supabase
         .from('players')
         .update({
-          attributes: attributes
+          attributes: attributes as any
         })
         .eq('id', player.id);
 

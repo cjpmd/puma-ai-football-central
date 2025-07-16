@@ -15,7 +15,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   isOpen,
   onClose
 }) => {
-  const stats = player.matchStats || {};
+  const stats = (player.matchStats as any) || {};
   const totalGames = stats.totalGames || 0;
   const totalMinutes = stats.totalMinutes || 0;
   const captainGames = stats.captainGames || 0;
@@ -108,10 +108,10 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   {topPositions.map(([position, minutes], index) => (
                     <div key={position} className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">
-                          {position}
-                        </Badge>
-                        <span className="text-sm">{minutes} min</span>
+                         <Badge variant="outline" className="text-xs">
+                           {String(position)}
+                         </Badge>
+                        <span className="text-sm">{Number(minutes)} min</span>
                       </div>
                       <div className="text-xs text-muted-foreground">
                         #{index + 1}

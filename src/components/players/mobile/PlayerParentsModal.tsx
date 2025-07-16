@@ -308,7 +308,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                     </div>
                   </CardContent>
                 </Card>
-              ))
+              ))}
             </div>
           ) : (
             <Card>

@@ -37,7 +37,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
   const { profile } = useAuth();
   const [saving, setSaving] = useState(false);
   const [comments, setComments] = useState<Comment[]>(
-    player.comments || []
+    (player.comments as unknown as Comment[]) || []
   );
   const [newComment, setNewComment] = useState({
     text: '',
@@ -81,7 +81,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
       const { error } = await supabase
         .from('players')
         .update({
-          comments: comments
+          comments: comments as any
         })
         .eq('id', player.id);
 

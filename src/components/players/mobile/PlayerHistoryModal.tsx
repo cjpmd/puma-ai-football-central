@@ -111,7 +111,7 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
         type: 'general',
         title: 'Player Added',
         description: `${player.name} was added to the team`,
-        date: player.createdAt || new Date().toISOString()
+        date: player.created_at || new Date().toISOString()
       });
 
       // Sort all events by date (newest first)
