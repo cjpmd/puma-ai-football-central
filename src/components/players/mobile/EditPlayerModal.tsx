@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface EditPlayerModalProps {
   player: Player;
@@ -22,6 +23,9 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
   onSave
 }) => {
   const { toast } = useToast();
+  const { isTeamManager, isGlobalAdmin } = useAuthorization();
+  
+  const canEditSquadNumber = isTeamManager(player.teamId) || isGlobalAdmin;
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: player.name || '',
@@ -101,7 +105,13 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
                 value={formData.squadNumber}
                 onChange={(e) => setFormData(prev => ({ ...prev, squadNumber: parseInt(e.target.value) || 0 }))}
                 placeholder="Enter squad number"
+                disabled={!canEditSquadNumber}
               />
+              {!canEditSquadNumber && (
+                <p className="text-xs text-muted-foreground">
+                  Only managers and admins can edit squad numbers
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

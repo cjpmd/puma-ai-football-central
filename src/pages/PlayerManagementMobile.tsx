@@ -463,38 +463,30 @@ export default function PlayerManagementMobile() {
           ) : (
             <div className="grid grid-cols-1 gap-4">
               {filteredPlayers.map((player) => (
-                <div key={player.id} className="flex justify-center">
-                  <div className="w-full max-w-[300px] relative">
-                    <FifaStylePlayerCard
-                      player={player}
-                      team={currentTeam}
-                      onEdit={handleEditPlayer}
-                      onManageParents={handleManageParents}
-                      onRemoveFromSquad={handleRemoveFromSquad}
-                      onUpdatePhoto={handleUpdatePhoto}
-                      onDeletePhoto={handleDeletePhoto}
-                      onSaveFunStats={handleSaveFunStats}
-                      onSavePlayStyle={handleSavePlayStyle}
-                      onSaveCardDesign={handleSaveCardDesign}
-                      onManageAttributes={handleManageAttributes}
-                      onManageObjectives={handleManageObjectives}
-                      onManageComments={handleManageComments}
-                      onViewStats={handleViewStats}
-                      onViewHistory={handleViewHistory}
-                      onTransferPlayer={handleTransferPlayer}
-                      onLeaveTeam={handleLeaveTeam}
-                    />
-                    {/* Mobile Action Button */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handlePlayerCardClick(player)}
-                      className="absolute top-2 right-2 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-30 backdrop-blur-sm"
-                    >
-                      <Settings className="h-4 w-4 text-white" />
-                    </Button>
+                  <div key={player.id} className="flex justify-center">
+                    <div className="w-full max-w-[300px] relative">
+                      <FifaStylePlayerCard
+                        player={player}
+                        team={currentTeam}
+                        onEdit={handleEditPlayer}
+                        onManageParents={handleManageParents}
+                        onRemoveFromSquad={handleRemoveFromSquad}
+                        onUpdatePhoto={handleUpdatePhoto}
+                        onDeletePhoto={handleDeletePhoto}
+                        onSaveFunStats={handleSaveFunStats}
+                        onSavePlayStyle={handleSavePlayStyle}
+                        onSaveCardDesign={handleSaveCardDesign}
+                        onManageAttributes={handleManageAttributes}
+                        onManageObjectives={handleManageObjectives}
+                        onManageComments={handleManageComments}
+                        onViewStats={handleViewStats}
+                        onViewHistory={handleViewHistory}
+                        onTransferPlayer={handleTransferPlayer}
+                        onLeaveTeam={handleLeaveTeam}
+                        onClose={() => handlePlayerCardClick(player)}
+                      />
+                    </div>
                   </div>
-                </div>
               ))}
             </div>
           )}
