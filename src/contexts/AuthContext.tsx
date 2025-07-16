@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 interface ConnectedPlayer {
   id: string;
   name: string;
+  photoUrl?: string;
   team: Team;
   relationship: string;
   squadNumber: number;
@@ -366,6 +367,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             name,
             squad_number,
             date_of_birth,
+            photo_url,
             team_id,
             teams!inner(*)
           )
@@ -390,6 +392,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return {
           id: player.id,
           name: player.name,
+          photoUrl: player.photo_url,
           team: {
             id: team.id,
             name: team.name,

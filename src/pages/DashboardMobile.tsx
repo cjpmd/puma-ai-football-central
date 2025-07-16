@@ -320,9 +320,17 @@ export default function DashboardMobile() {
                 <div className="flex flex-wrap gap-2 justify-center">
                   {connectedPlayers.map((player) => (
                     <div key={player.id} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                        {getInitials(player.name)}
-                      </div>
+                      {player.photoUrl ? (
+                        <img 
+                          src={player.photoUrl} 
+                          alt={player.name}
+                          className="w-6 h-6 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                          {getInitials(player.name)}
+                        </div>
+                      )}
                       <span className="text-sm font-medium">{player.name}</span>
                     </div>
                   ))}
@@ -346,8 +354,8 @@ export default function DashboardMobile() {
             </CardHeader>
             <CardContent className="space-y-3">
               {stats.pendingAvailability.slice(0, 2).map((availability) => (
-                <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200 hover-scale">
-                  <div className="flex-1">
+                <div key={availability.id} className="space-y-3 p-3 rounded-lg bg-white border border-orange-200 hover-scale">
+                  <div>
                     <div className="flex items-center gap-2 mb-1">
                       {availability.events.team_context?.logo_url ? (
                         <img 
