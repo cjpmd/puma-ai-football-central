@@ -35,51 +35,64 @@ export function MobileHeader({ title }: MobileHeaderProps) {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  return (
-    <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-cyan-400 text-white pt-[calc(theme(spacing.safe-top)+0.75rem)]">
-      <div className="flex items-center justify-between h-14 px-4">
-        <div className="flex-1 min-w-0">
-          {title ? (
-            <h1 className="text-sm font-semibold text-white truncate">{title}</h1>
-          ) : teams && teams.length > 1 ? (
-            <div className="flex items-center gap-2">
-              {teams.slice(0, 3).map((team, index) => (
-                <div key={team.id} className="flex items-center">
-                  {team.logoUrl ? (
-                    <img 
-                      src={team.logoUrl} 
-                      alt={team.name}
-                      className="w-6 h-6 rounded-full"
-                    />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
-                      {getInitials(team.name)}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {teams.length > 3 && (
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
-                  +{teams.length - 3}
-                </div>
-              )}
-            </div>
-          ) : currentClub ? (
-            <div className="flex items-center gap-2">
-              {currentClub.logoUrl ? (
+  // Helper function to render header content based on display type
+  const renderHeaderContent = () => {
+    if (title) {
+      return <h1 className="text-sm font-semibold text-white truncate">{title}</h1>;
+    }
+
+    if (teams && teams.length > 1) {
+      return (
+        <div className="flex items-center gap-2">
+          {teams.slice(0, 3).map((team, index) => (
+            <div key={team.id} className="flex items-center">
+              {team.logoUrl ? (
                 <img 
-                  src={currentClub.logoUrl} 
-                  alt={currentClub.name}
+                  src={team.logoUrl} 
+                  alt={team.name}
                   className="w-6 h-6 rounded-full"
                 />
               ) : (
                 <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
-                  {getInitials(currentClub.name)}
+                  {getInitials(team.name)}
                 </div>
               )}
-              <span className="text-sm font-medium text-white truncate">{currentClub.name}</span>
             </div>
-          ) : currentTeam ? (
+          ))}
+          {teams.length > 3 && (
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+              +{teams.length - 3}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (currentClub) {
+      return (
+        <div className="flex items-center gap-2">
+          {currentClub.logoUrl ? (
+            <img 
+              src={currentClub.logoUrl} 
+              alt={currentClub.name}
+              className="w-6 h-6 rounded-full"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+              {getInitials(currentClub.name)}
+            </div>
+          )}
+          <span className="text-sm font-medium text-white truncate">{currentClub.name}</span>
+        </div>
+      );
+    }
+
+    if (currentTeam) {
+      const headerDisplayType = currentTeam.headerDisplayType || 'logo_and_name';
+      
+      switch (headerDisplayType) {
+        case 'logo_and_name':
+          return (
             <div className="flex items-center gap-2">
               {currentTeam.logoUrl ? (
                 <img 
@@ -94,9 +107,47 @@ export function MobileHeader({ title }: MobileHeaderProps) {
               )}
               <span className="text-sm font-medium text-white truncate">{currentTeam.name}</span>
             </div>
+          );
+        case 'logo_only':
+          return (
+            <div className="flex items-center gap-2">
+              {currentTeam.logoUrl ? (
+                <img 
+                  src={currentTeam.logoUrl} 
+                  alt={currentTeam.name}
+                  className="w-6 h-6 rounded-full"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                  {getInitials(currentTeam.name)}
+                </div>
+              )}
+            </div>
+          );
+        case 'custom_image':
+          return currentTeam.headerImageUrl ? (
+            <img 
+              src={currentTeam.headerImageUrl} 
+              alt="Custom header"
+              className="h-6 max-w-40 object-contain"
+            />
           ) : (
             <span className="text-sm font-medium text-white">Team Manager</span>
-          )}
+          );
+        case 'none':
+        default:
+          return <span className="text-sm font-medium text-white">Team Manager</span>;
+      }
+    }
+
+    return <span className="text-sm font-medium text-white">Team Manager</span>;
+  };
+
+  return (
+    <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-cyan-400 text-white pt-[calc(theme(spacing.safe-top)+0.75rem)]">
+      <div className="flex items-center justify-between h-14 px-4">
+        <div className="flex-1 min-w-0">
+          {renderHeaderContent()}
         </div>
         
         <Sheet>

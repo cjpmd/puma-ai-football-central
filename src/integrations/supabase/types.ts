@@ -1686,6 +1686,8 @@ export type Database = {
           created_at: string | null
           game_duration: number | null
           game_format: string
+          header_display_type: string | null
+          header_image_url: string | null
           home_latitude: number | null
           home_location: string | null
           home_longitude: number | null
@@ -1712,6 +1714,8 @@ export type Database = {
           created_at?: string | null
           game_duration?: number | null
           game_format: string
+          header_display_type?: string | null
+          header_image_url?: string | null
           home_latitude?: number | null
           home_location?: string | null
           home_longitude?: number | null
@@ -1738,6 +1742,8 @@ export type Database = {
           created_at?: string | null
           game_duration?: number | null
           game_format?: string
+          header_display_type?: string | null
+          header_image_url?: string | null
           home_latitude?: number | null
           home_location?: string | null
           home_longitude?: number | null

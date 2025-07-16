@@ -30,6 +30,8 @@ export interface FAConnection {
 
 export type NameDisplayOption = 'firstName' | 'surname' | 'fullName' | 'initials';
 
+export type HeaderDisplayType = 'logo_and_name' | 'logo_only' | 'none' | 'custom_image';
+
 export interface Team {
   id: string;
   name: string;
@@ -61,6 +63,8 @@ export interface Team {
   faConnection?: FAConnection;
   staff?: TeamStaff[];
   nameDisplayOption?: NameDisplayOption;
+  headerDisplayType?: HeaderDisplayType;
+  headerImageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

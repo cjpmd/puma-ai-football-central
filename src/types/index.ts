@@ -14,6 +14,7 @@ export type UserRole =
 export type SubscriptionType = "free" | "premium" | "pro" | "analytics_plus";
 export type PlayerSubscriptionType = "full_squad" | "training" | "trialist";
 export type SubscriptionStatus = "active" | "inactive" | "pending" | "paused";
+export type HeaderDisplayType = 'logo_and_name' | 'logo_only' | 'none' | 'custom_image';
 
 export type User = {
   id: string;
@@ -46,6 +47,8 @@ export type Team = {
   managerName?: string;
   managerEmail?: string;
   managerPhone?: string;
+  headerDisplayType?: HeaderDisplayType;
+  headerImageUrl?: string;
   privacySettings?: {
     showScoresToParents: boolean;
     showScoresToPlayers: boolean;
