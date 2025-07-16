@@ -8,8 +8,9 @@ import { Player, PlayerComment } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { formatDate } from '@/lib/utils';
-import { Plus, Trash2, MessageSquare } from 'lucide-react';
+import { Plus, Trash2, MessageSquare, Lock } from 'lucide-react';
 
 interface PlayerCommentsModalProps {
   player: Player;
@@ -26,9 +27,12 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
 }) => {
   const { toast } = useToast();
   const { profile } = useAuth();
+  const { isGlobalAdmin, isTeamManager, hasPermission } = useAuthorization();
   const [saving, setSaving] = useState(false);
   const [comments, setComments] = useState<PlayerComment[]>(player?.comments || []);
   const [newComment, setNewComment] = useState('');
+  
+  const canEdit = isGlobalAdmin || isTeamManager(player.team_id) || hasPermission({ resource: 'players', action: 'manage', resourceId: player.team_id });
 
   const handleAddComment = () => {
     if (newComment.trim()) {
@@ -85,38 +89,41 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
           <SheetTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Coach Comments - {player.name}
+            {!canEdit && <Lock className="h-4 w-4 text-muted-foreground" />}
           </SheetTitle>
         </SheetHeader>
         
         <ScrollArea className="flex-1 p-6">
           <div className="space-y-6">
             {/* Add New Comment */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Plus className="h-4 w-4" />
-                    <h3 className="font-medium">Add Comment</h3>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Textarea
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="Add a coaching comment..."
-                      className="flex-1"
-                      rows={3}
-                    />
-                    <Button 
-                      onClick={handleAddComment}
-                      disabled={!newComment.trim()}
-                      className="self-end"
-                    >
+            {canEdit && (
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2">
                       <Plus className="h-4 w-4" />
-                    </Button>
+                      <h3 className="font-medium">Add Comment</h3>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Textarea
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a coaching comment..."
+                        className="flex-1"
+                        rows={3}
+                      />
+                      <Button 
+                        onClick={handleAddComment}
+                        disabled={!newComment.trim()}
+                        className="self-end"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Existing Comments */}
             <div className="space-y-4">
@@ -139,14 +146,16 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
                   {comments.map((comment) => (
                     <Card key={comment.id}>
                       <CardContent className="pt-4 relative">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRemoveComment(comment.id)}
-                          className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {canEdit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveComment(comment.id)}
+                            className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                         
                         <div className="space-y-2 pr-8">
                           <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
@@ -167,8 +176,8 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1">
-            {saving ? 'Saving...' : 'Save Changes'}
+          <Button onClick={handleSave} disabled={saving || !canEdit} className="flex-1">
+            {saving ? 'Saving...' : canEdit ? 'Save Changes' : 'View Only'}
           </Button>
         </div>
       </SheetContent>

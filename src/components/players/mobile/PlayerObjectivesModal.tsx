@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Player, PlayerObjective } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { format } from 'date-fns';
-import { Plus, Trash2, Check, ArrowUpRight, Circle, Target, Star } from 'lucide-react';
+import { Plus, Trash2, Check, ArrowUpRight, Circle, Target, Star, Lock } from 'lucide-react';
 
 interface PlayerObjectivesModalProps {
   player: Player;
@@ -28,9 +29,12 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
   onSave
 }) => {
   const { toast } = useToast();
+  const { isGlobalAdmin, isTeamManager, hasPermission } = useAuthorization();
   const [saving, setSaving] = useState(false);
   const [objectives, setObjectives] = useState<PlayerObjective[]>(player?.objectives || []);
   const [showAddForm, setShowAddForm] = useState(false);
+  
+  const canEdit = isGlobalAdmin || isTeamManager(player.team_id) || hasPermission({ resource: 'players', action: 'manage', resourceId: player.team_id });
 
   const [newObjective, setNewObjective] = useState<Partial<PlayerObjective>>({
     title: '',
@@ -147,6 +151,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
           <SheetTitle className="flex items-center gap-2">
             <Target className="h-5 w-5" />
             Player Objectives - {player.name}
+            {!canEdit && <Lock className="h-4 w-4 text-muted-foreground" />}
           </SheetTitle>
         </SheetHeader>
         
@@ -157,7 +162,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                 <Target className="h-4 w-4" />
                 Objectives
               </h3>
-              {!showAddForm && (
+              {!showAddForm && canEdit && (
                 <Button 
                   onClick={() => setShowAddForm(true)}
                   size="sm"
@@ -258,16 +263,18 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                 {objectives.map((objective) => (
                   <Card key={objective.id}>
                     <CardContent className="pt-6">
-                      <div className="absolute top-3 right-3 flex space-x-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleRemoveObjective(objective.id)}
-                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+                      {canEdit && (
+                        <div className="absolute top-3 right-3 flex space-x-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveObjective(objective.id)}
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                       
                       <div className="space-y-3 pr-8">
                         <div className="flex items-center justify-between">
@@ -301,6 +308,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                               objective.id, 
                               value as 'ongoing' | 'improving' | 'complete'
                             )}
+                            disabled={!canEdit}
                           >
                             <SelectTrigger className="h-8 w-32">
                               <SelectValue />
@@ -340,8 +348,8 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={saving} className="flex-1">
-            {saving ? 'Saving...' : 'Save Changes'}
+          <Button onClick={handleSave} disabled={saving || !canEdit} className="flex-1">
+            {saving ? 'Saving...' : canEdit ? 'Save Changes' : 'View Only'}
           </Button>
         </div>
       </SheetContent>
