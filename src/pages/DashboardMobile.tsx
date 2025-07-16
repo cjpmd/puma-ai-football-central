@@ -269,11 +269,68 @@ export default function DashboardMobile() {
     );
   }
 
+  // Helper function to get initials
+  const getInitials = (name: string) => {
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
     <MobileLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 pb-safe-bottom">
         {/* Push Notification Setup */}
         <PushNotificationSetup />
+        
+        {/* Welcome Message */}
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-foreground mb-2">
+            Welcome, {profile?.name || 'Player'}!
+          </h2>
+          
+          {/* Teams and Players Section */}
+          <div className="space-y-4">
+            {/* Connected Teams */}
+            {(allTeams?.length || teams?.length) && (
+              <div className="bg-card rounded-lg p-4 border">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Teams</h3>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {(allTeams?.length ? allTeams : teams)?.map((team) => (
+                    <div key={team.id} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                      {team.logoUrl ? (
+                        <img 
+                          src={team.logoUrl} 
+                          alt={team.name}
+                          className="w-6 h-6 rounded-full"
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                          {getInitials(team.name)}
+                        </div>
+                      )}
+                      <span className="text-sm font-medium">{team.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Connected Players */}
+            {connectedPlayers?.length > 0 && (
+              <div className="bg-card rounded-lg p-4 border">
+                <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Players</h3>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {connectedPlayers.map((player) => (
+                    <div key={player.id} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                        {getInitials(player.name)}
+                      </div>
+                      <span className="text-sm font-medium">{player.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         
         {/* Availability Status - Always Show */}
         {stats.pendingAvailability.length > 0 ? (

@@ -98,30 +98,26 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   // Pending or no status set
   return (
-    <div className="flex items-center gap-1">
-      <div className="flex items-center gap-1 text-amber-600">
-        <Clock className={iconSize} />
-        <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Set Availability</span>
-      </div>
+    <div className="flex items-center gap-2">
       <Button
-        variant="ghost"
         size="sm"
-        className={`text-green-600 hover:text-green-700 ${buttonSize}`}
+        className={`bg-green-600 hover:bg-green-700 text-white ${size === 'sm' ? 'h-7 px-3' : 'h-8 px-4'}`}
         onClick={() => updateAvailability('available')}
         disabled={isUpdating}
         title="Mark as available"
       >
-        <Check className={iconSize} />
+        <Check className={`${iconSize} mr-1`} />
+        <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Accept</span>
       </Button>
       <Button
-        variant="ghost"
         size="sm"
-        className={`text-red-600 hover:text-red-700 ${buttonSize}`}
+        className={`bg-red-600 hover:bg-red-700 text-white ${size === 'sm' ? 'h-7 px-3' : 'h-8 px-4'}`}
         onClick={() => updateAvailability('unavailable')}
         disabled={isUpdating}
         title="Mark as unavailable"
       >
-        <X className={iconSize} />
+        <X className={`${iconSize} mr-1`} />
+        <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Decline</span>
       </Button>
     </div>
   );

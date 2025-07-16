@@ -30,32 +30,72 @@ export function MobileHeader({ title }: MobileHeaderProps) {
   const currentTeam = teams?.[0];
   const currentClub = clubs?.[0];
 
+  // Helper function to get team initials
+  const getInitials = (name: string) => {
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
     <div className="sticky top-0 z-40 bg-gradient-to-r from-blue-500 to-cyan-400 text-white pt-[calc(theme(spacing.safe-top)+0.75rem)]">
       <div className="flex items-center justify-between h-14 px-4">
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           {title ? (
-            <h1 className="text-lg font-semibold text-white">{title}</h1>
+            <h1 className="text-sm font-semibold text-white truncate">{title}</h1>
+          ) : teams && teams.length > 1 ? (
+            <div className="flex items-center gap-2">
+              {teams.slice(0, 3).map((team, index) => (
+                <div key={team.id} className="flex items-center">
+                  {team.logoUrl ? (
+                    <img 
+                      src={team.logoUrl} 
+                      alt={team.name}
+                      className="w-6 h-6 rounded-full"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                      {getInitials(team.name)}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {teams.length > 3 && (
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                  +{teams.length - 3}
+                </div>
+              )}
+            </div>
           ) : currentClub ? (
-            <EntityHeader 
-              logoUrl={currentClub.logoUrl}
-              entityName={currentClub.name}
-              entityType="club"
-              textColor="text-white"
-            />
+            <div className="flex items-center gap-2">
+              {currentClub.logoUrl ? (
+                <img 
+                  src={currentClub.logoUrl} 
+                  alt={currentClub.name}
+                  className="w-6 h-6 rounded-full"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                  {getInitials(currentClub.name)}
+                </div>
+              )}
+              <span className="text-sm font-medium text-white truncate">{currentClub.name}</span>
+            </div>
           ) : currentTeam ? (
-            <EntityHeader 
-              logoUrl={currentTeam.logoUrl}
-              entityName={currentTeam.name}
-              entityType="team"
-              textColor="text-white"
-            />
+            <div className="flex items-center gap-2">
+              {currentTeam.logoUrl ? (
+                <img 
+                  src={currentTeam.logoUrl} 
+                  alt={currentTeam.name}
+                  className="w-6 h-6 rounded-full"
+                />
+              ) : (
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                  {getInitials(currentTeam.name)}
+                </div>
+              )}
+              <span className="text-sm font-medium text-white truncate">{currentTeam.name}</span>
+            </div>
           ) : (
-            <EntityHeader 
-              entityName="Team Manager"
-              entityType="team"
-              textColor="text-white"
-            />
+            <span className="text-sm font-medium text-white">Team Manager</span>
           )}
         </div>
         
