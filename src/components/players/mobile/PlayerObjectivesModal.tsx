@@ -4,29 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Player } from '@/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Player, PlayerObjective } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Trash2, CheckCircle, Circle } from 'lucide-react';
+import { format } from 'date-fns';
+import { Plus, Trash2, Check, ArrowUpRight, Circle, Target, Star } from 'lucide-react';
 
 interface PlayerObjectivesModalProps {
   player: Player;
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-}
-
-interface Objective {
-  id: string;
-  title: string;
-  description: string;
-  category: string;
-  priority: 'Low' | 'Medium' | 'High';
-  status: 'Not Started' | 'In Progress' | 'Completed';
-  targetDate?: string;
-  createdAt: string;
 }
 
 export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
@@ -37,53 +29,54 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
 }) => {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [objectives, setObjectives] = useState<Objective[]>(
-    (player.objectives as unknown as Objective[]) || []
-  );
-  const [newObjective, setNewObjective] = useState({
+  const [objectives, setObjectives] = useState<PlayerObjective[]>(player?.objectives || []);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const [newObjective, setNewObjective] = useState<Partial<PlayerObjective>>({
     title: '',
     description: '',
-    category: 'Technical',
-    priority: 'Medium' as const,
-    targetDate: ''
+    difficultyRating: 3,
+    reviewDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+    status: 'ongoing',
+    createdAt: new Date().toISOString(),
+    createdBy: 'Current User'
   });
 
-  const categories = ['Technical', 'Physical', 'Mental', 'Tactical', 'Personal'];
-  const priorities = ['Low', 'Medium', 'High'] as const;
-  const statuses = ['Not Started', 'In Progress', 'Completed'] as const;
-
   const handleAddObjective = () => {
-    if (!newObjective.title.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Objective title is required',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    const objective: Objective = {
-      id: Date.now().toString(),
-      title: newObjective.title.trim(),
-      description: newObjective.description.trim(),
-      category: newObjective.category,
-      priority: newObjective.priority,
-      status: 'Not Started',
-      targetDate: newObjective.targetDate || undefined,
-      createdAt: new Date().toISOString()
-    };
-
-    setObjectives(prev => [...prev, objective]);
-    setNewObjective({ title: '', description: '', category: 'Technical', priority: 'Medium', targetDate: '' });
+    const id = `obj-${Date.now()}`;
+    setObjectives([
+      ...objectives,
+      {
+        id,
+        title: newObjective.title || '',
+        description: newObjective.description || '',
+        difficultyRating: newObjective.difficultyRating || 3,
+        reviewDate: newObjective.reviewDate || '',
+        status: newObjective.status as 'ongoing' | 'improving' | 'complete',
+        createdAt: newObjective.createdAt || new Date().toISOString(),
+        createdBy: newObjective.createdBy || 'Current User'
+      }
+    ]);
+    
+    setNewObjective({
+      title: '',
+      description: '',
+      difficultyRating: 3,
+      reviewDate: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+      status: 'ongoing',
+      createdAt: new Date().toISOString(),
+      createdBy: 'Current User'
+    });
+    setShowAddForm(false);
   };
 
   const handleRemoveObjective = (id: string) => {
-    setObjectives(prev => prev.filter(obj => obj.id !== id));
+    setObjectives(objectives.filter(obj => obj.id !== id));
   };
 
-  const handleUpdateObjective = (id: string, field: keyof Objective, value: any) => {
-    setObjectives(prev => prev.map(obj => 
-      obj.id === id ? { ...obj, [field]: value } : obj
+  const handleStatusChange = (id: string, status: 'ongoing' | 'improving' | 'complete') => {
+    setObjectives(objectives.map(obj => 
+      obj.id === id ? { ...obj, status } : obj
     ));
   };
 
@@ -117,163 +110,233 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
     }
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'ongoing':
+        return <Circle className="h-4 w-4 text-blue-500" />;
+      case 'improving':
+        return <ArrowUpRight className="h-4 w-4 text-yellow-500" />;
+      case 'complete':
+        return <Check className="h-4 w-4 text-green-500" />;
+      default:
+        return <Circle className="h-4 w-4" />;
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'Completed': return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'In Progress': return <Circle className="h-4 w-4 text-yellow-600" />;
-      default: return <Circle className="h-4 w-4 text-gray-400" />;
+      case 'ongoing':
+        return <Badge variant="secondary">Ongoing</Badge>;
+      case 'improving':
+        return <Badge className="bg-yellow-500">Improving</Badge>;
+      case 'complete':
+        return <Badge className="bg-green-500">Complete</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
     }
+  };
+
+  const getDifficultyStars = (rating: number) => {
+    return '★'.repeat(rating) + '☆'.repeat(5 - rating);
   };
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh]">
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader className="border-b pb-4">
-          <SheetTitle>Player Objectives</SheetTitle>
-          <p className="text-sm text-muted-foreground">{player.name}</p>
+          <SheetTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Player Objectives - {player.name}
+          </SheetTitle>
         </SheetHeader>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Add New Objective */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Add New Objective</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="objTitle">Title</Label>
-                <Input
-                  id="objTitle"
-                  value={newObjective.title}
-                  onChange={(e) => setNewObjective(prev => ({ ...prev, title: e.target.value }))}
-                  placeholder="e.g., Improve passing accuracy"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="objDescription">Description</Label>
-                <Textarea
-                  id="objDescription"
-                  value={newObjective.description}
-                  onChange={(e) => setNewObjective(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Detailed description of the objective"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="objCategory">Category</Label>
-                  <select
-                    id="objCategory"
-                    value={newObjective.category}
-                    onChange={(e) => setNewObjective(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full p-2 border rounded-md"
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="objPriority">Priority</Label>
-                  <select
-                    id="objPriority"
-                    value={newObjective.priority}
-                    onChange={(e) => setNewObjective(prev => ({ ...prev, priority: e.target.value as any }))}
-                    className="w-full p-2 border rounded-md"
-                  >
-                    {priorities.map(priority => (
-                      <option key={priority} value={priority}>{priority}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="objTargetDate">Target Date (Optional)</Label>
-                <Input
-                  id="objTargetDate"
-                  type="date"
-                  value={newObjective.targetDate}
-                  onChange={(e) => setNewObjective(prev => ({ ...prev, targetDate: e.target.value }))}
-                />
-              </div>
-              <Button onClick={handleAddObjective} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Objective
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Existing Objectives */}
-          {objectives.length > 0 ? (
-            <div className="space-y-4">
-              {objectives.map(obj => (
-                <Card key={obj.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        {getStatusIcon(obj.status)}
-                        <CardTitle className="text-sm">{obj.title}</CardTitle>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveObjective(obj.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {obj.description && (
-                      <p className="text-sm text-muted-foreground">{obj.description}</p>
-                    )}
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{obj.category}</Badge>
-                      <Badge className={getPriorityColor(obj.priority)}>{obj.priority}</Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <select
-                        value={obj.status}
-                        onChange={(e) => handleUpdateObjective(obj.id, 'status', e.target.value)}
-                        className="w-full p-2 border rounded-md text-sm"
-                      >
-                        {statuses.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {obj.targetDate && (
-                      <div className="text-xs text-muted-foreground">
-                        Target: {new Date(obj.targetDate).toLocaleDateString()}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Objectives
+              </h3>
+              {!showAddForm && (
+                <Button 
+                  onClick={() => setShowAddForm(true)}
+                  size="sm"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add
+                </Button>
+              )}
             </div>
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">No objectives set yet</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
 
-        <div className="border-t p-6 flex gap-3">
+            {showAddForm && (
+              <Card>
+                <CardContent className="pt-6 space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Objective Title</Label>
+                    <Input
+                      id="title"
+                      value={newObjective.title}
+                      onChange={(e) => setNewObjective({ ...newObjective, title: e.target.value })}
+                      placeholder="e.g. Improve Passing Accuracy"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={newObjective.description}
+                      onChange={(e) => setNewObjective({ ...newObjective, description: e.target.value })}
+                      placeholder="Describe the objective and how it will be achieved"
+                      rows={3}
+                      required
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="difficultyRating">Difficulty (1-5)</Label>
+                      <Select 
+                        value={newObjective.difficultyRating?.toString()}
+                        onValueChange={(value) => setNewObjective({ ...newObjective, difficultyRating: parseInt(value) })}
+                      >
+                        <SelectTrigger id="difficultyRating">
+                          <SelectValue placeholder="Select difficulty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">1 - Very Easy</SelectItem>
+                          <SelectItem value="2">2 - Easy</SelectItem>
+                          <SelectItem value="3">3 - Moderate</SelectItem>
+                          <SelectItem value="4">4 - Difficult</SelectItem>
+                          <SelectItem value="5">5 - Very Difficult</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="reviewDate">Review Date</Label>
+                      <Input
+                        id="reviewDate"
+                        type="date"
+                        value={newObjective.reviewDate}
+                        onChange={(e) => setNewObjective({ ...newObjective, reviewDate: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+                
+                <CardFooter className="flex justify-end space-x-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowAddForm(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddObjective}
+                    disabled={!newObjective.title || !newObjective.description || !newObjective.reviewDate}
+                  >
+                    Add Objective
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
+
+            {objectives.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                    <Target className="h-8 w-8" />
+                    <p>No objectives have been set for this player yet</p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {objectives.map((objective) => (
+                  <Card key={objective.id}>
+                    <CardContent className="pt-6">
+                      <div className="absolute top-3 right-3 flex space-x-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveObjective(objective.id)}
+                          className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      
+                      <div className="space-y-3 pr-8">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold">{objective.title}</h4>
+                          {getStatusBadge(objective.status)}
+                        </div>
+                        
+                        <p className="text-sm text-muted-foreground">{objective.description}</p>
+                        
+                        <div className="flex justify-between text-sm">
+                          <div className="flex items-center gap-1">
+                            <Star className="h-3 w-3 text-yellow-500" />
+                            <span className="text-muted-foreground">Difficulty:</span>
+                            <span className="text-yellow-500">{getDifficultyStars(objective.difficultyRating)}</span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Review:</span>{' '}
+                            {format(new Date(objective.reviewDate), 'dd MMM yyyy')}
+                          </div>
+                        </div>
+                        
+                        <div className="flex justify-between items-center text-sm">
+                          <div>
+                            <span className="text-muted-foreground">Created:</span>{' '}
+                            {format(new Date(objective.createdAt), 'dd MMM yyyy')} by {objective.createdBy}
+                          </div>
+                          
+                          <Select 
+                            value={objective.status}
+                            onValueChange={(value) => handleStatusChange(
+                              objective.id, 
+                              value as 'ongoing' | 'improving' | 'complete'
+                            )}
+                          >
+                            <SelectTrigger className="h-8 w-32">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="ongoing">
+                                <div className="flex items-center gap-2">
+                                  <Circle className="h-4 w-4 text-blue-500" />
+                                  <span>Ongoing</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="improving">
+                                <div className="flex items-center gap-2">
+                                  <ArrowUpRight className="h-4 w-4 text-yellow-500" />
+                                  <span>Improving</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="complete">
+                                <div className="flex items-center gap-2">
+                                  <Check className="h-4 w-4 text-green-500" />
+                                  <span>Complete</span>
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+
+        <div className="border-t p-4 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>

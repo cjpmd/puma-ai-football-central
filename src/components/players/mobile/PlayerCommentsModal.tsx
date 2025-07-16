@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Player } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Player, PlayerComment } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { formatDate } from '@/lib/utils';
 import { Plus, Trash2, MessageSquare } from 'lucide-react';
 
 interface PlayerCommentsModalProps {
@@ -15,16 +16,6 @@ interface PlayerCommentsModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: () => void;
-}
-
-interface Comment {
-  id: string;
-  text: string;
-  author: string;
-  authorId: string;
-  category: string;
-  createdAt: string;
-  isPrivate: boolean;
 }
 
 export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
@@ -36,43 +27,25 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
   const { toast } = useToast();
   const { profile } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(
-    (player.comments as unknown as Comment[]) || []
-  );
-  const [newComment, setNewComment] = useState({
-    text: '',
-    category: 'General',
-    isPrivate: false
-  });
-
-  const categories = ['General', 'Performance', 'Behavior', 'Development', 'Injury'];
+  const [comments, setComments] = useState<PlayerComment[]>(player?.comments || []);
+  const [newComment, setNewComment] = useState('');
 
   const handleAddComment = () => {
-    if (!newComment.text.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Comment text is required',
-        variant: 'destructive'
-      });
-      return;
+    if (newComment.trim()) {
+      const comment: PlayerComment = {
+        id: `comment-${Date.now()}`,
+        text: newComment,
+        createdAt: new Date().toISOString(),
+        createdBy: profile?.name || 'Current User'
+      };
+      
+      setComments([...comments, comment]);
+      setNewComment('');
     }
-
-    const comment: Comment = {
-      id: Date.now().toString(),
-      text: newComment.text.trim(),
-      author: profile?.name || 'Unknown',
-      authorId: profile?.id || '',
-      category: newComment.category,
-      createdAt: new Date().toISOString(),
-      isPrivate: newComment.isPrivate
-    };
-
-    setComments(prev => [comment, ...prev]);
-    setNewComment({ text: '', category: 'General', isPrivate: false });
   };
 
   const handleRemoveComment = (id: string) => {
-    setComments(prev => prev.filter(comment => comment.id !== id));
+    setComments(comments.filter(comment => comment.id !== id));
   };
 
   const handleSave = async () => {
@@ -105,121 +78,92 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'Performance': return 'bg-blue-100 text-blue-800';
-      case 'Behavior': return 'bg-green-100 text-green-800';
-      case 'Development': return 'bg-purple-100 text-purple-800';
-      case 'Injury': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh]">
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader className="border-b pb-4">
-          <SheetTitle>Player Comments</SheetTitle>
-          <p className="text-sm text-muted-foreground">{player.name}</p>
+          <SheetTitle className="flex items-center gap-2">
+            <MessageSquare className="h-5 w-5" />
+            Coach Comments - {player.name}
+          </SheetTitle>
         </SheetHeader>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Add New Comment */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Add New Comment</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Textarea
-                  value={newComment.text}
-                  onChange={(e) => setNewComment(prev => ({ ...prev, text: e.target.value }))}
-                  placeholder="Enter your comment..."
-                  rows={4}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Category</label>
-                  <select
-                    value={newComment.category}
-                    onChange={(e) => setNewComment(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full p-2 border rounded-md"
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-6">
+            {/* Add New Comment */}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    <h3 className="font-medium">Add Comment</h3>
+                  </div>
+                  <div className="flex space-x-2">
+                    <Textarea
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      placeholder="Add a coaching comment..."
+                      className="flex-1"
+                      rows={3}
+                    />
+                    <Button 
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim()}
+                      className="self-end"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Visibility</label>
-                  <select
-                    value={newComment.isPrivate ? 'private' : 'team'}
-                    onChange={(e) => setNewComment(prev => ({ ...prev, isPrivate: e.target.value === 'private' }))}
-                    className="w-full p-2 border rounded-md"
-                  >
-                    <option value="team">Team Visible</option>
-                    <option value="private">Private</option>
-                  </select>
-                </div>
-              </div>
-              <Button onClick={handleAddComment} className="w-full">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Comment
-              </Button>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Existing Comments */}
-          {comments.length > 0 ? (
+            {/* Existing Comments */}
             <div className="space-y-4">
-              {comments.map(comment => (
-                <Card key={comment.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">{comment.author}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(comment.createdAt).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {comment.authorId === profile?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveComment(comment.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <p className="text-sm">{comment.text}</p>
-                    
-                    <div className="flex items-center gap-2">
-                      <Badge className={getCategoryColor(comment.category)}>
-                        {comment.category}
-                      </Badge>
-                      {comment.isPrivate && (
-                        <Badge variant="secondary">Private</Badge>
-                      )}
+              <h3 className="font-medium flex items-center gap-2">
+                <MessageSquare className="h-4 w-4" />
+                Comment History
+              </h3>
+              
+              {comments.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <MessageSquare className="h-8 w-8" />
+                      <p>No coaching comments have been added yet</p>
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              ) : (
+                <div className="space-y-3">
+                  {comments.map((comment) => (
+                    <Card key={comment.id}>
+                      <CardContent className="pt-4 relative">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveComment(comment.id)}
+                          className="absolute top-2 right-2 h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        
+                        <div className="space-y-2 pr-8">
+                          <p className="text-sm whitespace-pre-wrap">{comment.text}</p>
+                          <div className="text-xs text-muted-foreground">
+                            Added by {comment.createdBy} on {formatDate(comment.createdAt, 'PPp')}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          ) : (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <p className="text-muted-foreground">No comments added yet</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+          </div>
+        </ScrollArea>
 
-        <div className="border-t p-6 flex gap-3">
+        <div className="border-t p-4 flex gap-3">
           <Button variant="outline" onClick={onClose} className="flex-1">
             Cancel
           </Button>
