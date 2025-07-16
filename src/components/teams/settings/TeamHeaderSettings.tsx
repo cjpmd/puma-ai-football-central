@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface TeamHeaderSettingsProps {
   team: Team;
@@ -21,9 +22,12 @@ export const TeamHeaderSettings: React.FC<TeamHeaderSettingsProps> = ({
   onSave,
   isSaving
 }) => {
+  const { teams } = useAuth();
+  const hasMultipleTeams = teams && teams.length > 1;
+  
   const [formData, setFormData] = useState({
-    headerDisplayType: team.headerDisplayType || 'logo_and_name',
-    headerImageUrl: team.headerImageUrl || ''
+    headerDisplayType: (team as any).headerDisplayType || 'logo_and_name',
+    headerImageUrl: (team as any).headerImageUrl || ''
   });
 
   const handleDisplayTypeChange = (value: HeaderDisplayType) => {
@@ -122,9 +126,9 @@ export const TeamHeaderSettings: React.FC<TeamHeaderSettingsProps> = ({
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom_image" id="custom_image" />
-                <Label htmlFor="custom_image" className="font-normal">
-                  Upload Custom Image
+                <RadioGroupItem value="custom_image" id="custom_image" disabled={hasMultipleTeams} />
+                <Label htmlFor="custom_image" className={`font-normal ${hasMultipleTeams ? 'text-muted-foreground' : ''}`}>
+                  Upload Custom Image {hasMultipleTeams && '(Not available with multiple teams)'}
                 </Label>
               </div>
             </RadioGroup>

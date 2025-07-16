@@ -88,7 +88,7 @@ export function MobileHeader({ title }: MobileHeaderProps) {
     }
 
     if (currentTeam) {
-      const headerDisplayType = currentTeam.headerDisplayType || 'logo_and_name';
+      const headerDisplayType = (currentTeam as any).headerDisplayType || 'logo_and_name';
       
       switch (headerDisplayType) {
         case 'logo_and_name':
@@ -125,9 +125,9 @@ export function MobileHeader({ title }: MobileHeaderProps) {
             </div>
           );
         case 'custom_image':
-          return currentTeam.headerImageUrl ? (
+          return (currentTeam as any).headerImageUrl ? (
             <img 
-              src={currentTeam.headerImageUrl} 
+              src={(currentTeam as any).headerImageUrl} 
               alt="Custom header"
               className="h-6 max-w-40 object-contain"
             />
