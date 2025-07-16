@@ -483,7 +483,6 @@ export default function PlayerManagementMobile() {
                         onViewHistory={handleViewHistory}
                         onTransferPlayer={handleTransferPlayer}
                         onLeaveTeam={handleLeaveTeam}
-                        onClose={() => handlePlayerCardClick(player)}
                       />
                     </div>
                   </div>
