@@ -2,8 +2,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
-import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3 } from 'lucide-react';
+import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3, TrendingUp, History } from 'lucide-react';
 
 interface PlayerStatsModalProps {
   player: Player;
@@ -38,22 +39,39 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh]">
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader className="border-b pb-4">
-          <SheetTitle>Player Statistics</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Player Statistics
+          </SheetTitle>
           <p className="text-sm text-muted-foreground">{player.name}</p>
         </SheetHeader>
         
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="summary" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 mx-6 mt-4">
-              <TabsTrigger value="summary">Summary</TabsTrigger>
-              <TabsTrigger value="positions">Positions</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="history">History</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="summary" className="flex-1 overflow-y-auto p-6 space-y-6">
+        <Tabs defaultValue="summary" className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-4 mx-6 mt-4">
+            <TabsTrigger value="summary" className="flex items-center gap-1">
+              <Target className="h-3 w-3" />
+              <span className="text-xs">Sum</span>
+            </TabsTrigger>
+            <TabsTrigger value="positions" className="flex items-center gap-1">
+              <MapPin className="h-3 w-3" />
+              <span className="text-xs">Pos</span>
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center gap-1">
+              <TrendingUp className="h-3 w-3" />
+              <span className="text-xs">Perf</span>
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-1">
+              <History className="h-3 w-3" />
+              <span className="text-xs">Hist</span>
+            </TabsTrigger>
+          </TabsList>
+          
+          <div className="flex-1 min-h-0 overflow-hidden">
+            <TabsContent value="summary" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-6 py-4">
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-4">
                 <Card>
@@ -138,17 +156,21 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 </Card>
               )}
 
-              {totalGames === 0 && (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <p className="text-muted-foreground">No match statistics available</p>
-                  </CardContent>
-                </Card>
-              )}
+                  {totalGames === 0 && (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <p className="text-muted-foreground">No match statistics available</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="positions" className="flex-1 overflow-y-auto p-6 space-y-4">
-              <Card>
+            <TabsContent value="positions" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 py-4">
+                  <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <MapPin className="h-4 w-4" />
@@ -175,15 +197,19 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">No position data available</p>
-                  )}
-                </CardContent>
-              </Card>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">No position data available</p>
+                    )}
+                  </CardContent>
+                </Card>
+                </div>
+              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="performance" className="flex-1 overflow-y-auto p-6 space-y-4">
-              <Card>
+            <TabsContent value="performance" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 py-4">
+                  <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <BarChart3 className="h-4 w-4" />
@@ -218,15 +244,19 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">No performance category data available</p>
-                  )}
-                </CardContent>
-              </Card>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">No performance category data available</p>
+                    )}
+                  </CardContent>
+                </Card>
+                </div>
+              </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="history" className="flex-1 overflow-y-auto p-6 space-y-4">
-              <Card>
+            <TabsContent value="history" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 py-4">
+                  <Card>
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
@@ -275,14 +305,16 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground text-center py-8">No match history available</p>
-                  )}
-                </CardContent>
-              </Card>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-8">No match history available</p>
+                    )}
+                  </CardContent>
+                </Card>
+                </div>
+              </ScrollArea>
             </TabsContent>
-          </Tabs>
-        </div>
+          </div>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

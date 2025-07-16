@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -174,13 +175,16 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh]">
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader className="border-b pb-4">
-          <SheetTitle>Player History</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            <History className="h-5 w-5" />
+            Player History
+          </SheetTitle>
           <p className="text-sm text-muted-foreground">{player.name}</p>
         </SheetHeader>
         
-        <div className="flex-1 overflow-y-auto p-6">
+        <ScrollArea className="flex-1 p-6">
           {loading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
@@ -231,7 +235,7 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
               </CardContent>
             </Card>
           )}
-        </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

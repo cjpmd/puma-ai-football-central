@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -189,13 +190,17 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh]">
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader className="border-b pb-4">
-          <SheetTitle>Manage Parents</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Manage Parents
+          </SheetTitle>
           <p className="text-sm text-muted-foreground">{player.name}</p>
         </SheetHeader>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <ScrollArea className="flex-1 p-6">
+          <div className="space-y-6">
           {/* Add New Parent */}
           <Card>
             <CardHeader>
@@ -317,10 +322,11 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                 <p className="text-muted-foreground">No parents/guardians added yet</p>
               </CardContent>
             </Card>
-          )}
-        </div>
+            )}
+          </div>
+        </ScrollArea>
 
-        <div className="border-t p-6">
+        <div className="border-t p-4">
           <Button onClick={onClose} className="w-full">
             Close
           </Button>
