@@ -19,6 +19,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
+import { getFormationsByFormat } from '@/utils/formationUtils';
+
+// Helper function to create a default period with the first available formation
+const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): FormationPeriod => {
+  const formations = getFormationsByFormat(gameFormat as any);
+  const defaultFormation = formations[0]?.id || '4-3-3';
+  
+  return {
+    id: 'period-1',
+    periodNumber: 1,
+    formation: defaultFormation,
+    duration: gameDuration,
+    positions: [], // Will be populated by DragDropFormationEditor
+    substitutes: [],
+    captainId: undefined
+  };
+};
 
 interface TeamSelection {
   teamNumber: number;
@@ -171,6 +188,17 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           }
         }
 
+        // Ensure teams without periods get a default period with the first formation
+        for (let i = 0; i < initialTeamSelections.length; i++) {
+          if (initialTeamSelections[i].periods.length === 0) {
+            const defaultPeriod = createDefaultPeriod(
+              event.game_format || '7-a-side', 
+              event.game_duration || 50
+            );
+            initialTeamSelections[i].periods = [defaultPeriod];
+          }
+        }
+
         console.log('Final initialized team selections:', initialTeamSelections);
         setTeamSelections(initialTeamSelections);
       } catch (error) {
@@ -185,10 +213,15 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   const addTeam = async () => {
     const newTeamNumber = teamSelections.length + 1;
+    const defaultPeriod = createDefaultPeriod(
+      event.game_format || '7-a-side', 
+      event.game_duration || 50
+    );
+    
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
       squadPlayers: [],
-      periods: [],
+      periods: [defaultPeriod],
       globalCaptainId: undefined,
       performanceCategory: 'none'
     };
