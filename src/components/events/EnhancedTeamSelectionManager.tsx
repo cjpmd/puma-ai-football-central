@@ -655,20 +655,20 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-            <TabsList className={`grid w-full grid-cols-2 ${isMobile ? 'mx-2 mt-2' : 'mx-6 mt-4'}`}>
-              <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
-                <Users className="h-3 w-3" />
-                Squad
-              </TabsTrigger>
-              <TabsTrigger value="formation" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
-                <Gamepad2 className="h-3 w-3" />
-                Formation
-              </TabsTrigger>
-            </TabsList>
+        <div className="flex-1 overflow-auto">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
+            <div className={`${isMobile ? 'p-2' : 'p-6'} space-y-4`}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                  <Users className="h-3 w-3" />
+                  Squad
+                </TabsTrigger>
+                <TabsTrigger value="formation" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                  <Gamepad2 className="h-3 w-3" />
+                  Formation
+                </TabsTrigger>
+              </TabsList>
 
-            <div className={`flex-1 overflow-auto ${isMobile ? 'p-2' : 'p-6'}`}>
               <TabsContent value="squad" className="h-full mt-0">
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement
