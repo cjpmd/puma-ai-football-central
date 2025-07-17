@@ -464,12 +464,7 @@ export default function CalendarEventsMobile() {
       return event.start_time || 'TBD';
     }
 
-    // If user has multiple teams with different times, show "Multiple Times"
-    if (context.isMultipleTeams && context.displayTime.display_text === 'Multiple Times') {
-      return 'Multiple Times - See Details';
-    }
-
-    // Show the user's specific time
+    // Always show the user's specific time, never "Multiple Times"
     return formatEventTimeDisplay(context);
   };
 
@@ -561,7 +556,6 @@ export default function CalendarEventsMobile() {
           </Card>
         )}
 
-
         {loading ? (
           <div className="text-center py-8">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
@@ -605,9 +599,9 @@ export default function CalendarEventsMobile() {
                               <div className="text-xs text-gray-500 uppercase">
                                 {format(eventDate, 'EEE dd MMM')}
                               </div>
-                               <div className="text-lg font-bold text-gray-900">
-                                 {getUserRelevantTimeDisplay(event)}
-                               </div>
+                              <div className="text-lg font-bold text-gray-900">
+                                {getUserRelevantTimeDisplay(event)}
+                              </div>
                             </div>
                             
                             <div className="flex items-center gap-2">
@@ -908,26 +902,26 @@ export default function CalendarEventsMobile() {
               isOpen={showPostGameEdit}
               onClose={() => {
                 setShowPostGameEdit(false);
-                 setSelectedEvent(null);
-                 loadEvents();
-               }}
-             />
-           )}
-         </DialogContent>
-       </Dialog>
+                setSelectedEvent(null);
+                loadEvents();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
-       {/* Profile and Connection Modals */}
-       <EditProfileModal 
-         isOpen={showEditProfile} 
-         onClose={() => setShowEditProfile(false)} 
-       />
-       <ManageConnectionsModal 
-         isOpen={showManageConnections} 
-         onClose={() => setShowManageConnections(false)} 
-       />
-     </MobileLayout>
-   );
- }
+      {/* Profile and Connection Modals */}
+      <EditProfileModal 
+        isOpen={showEditProfile} 
+        onClose={() => setShowEditProfile(false)} 
+      />
+      <ManageConnectionsModal 
+        isOpen={showManageConnections} 
+        onClose={() => setShowManageConnections(false)} 
+      />
+    </MobileLayout>
+  );
+}
 
 // Component to display team-specific times in event details
 const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {

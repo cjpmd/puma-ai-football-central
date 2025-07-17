@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
 
@@ -129,32 +130,19 @@ export const getUserContextForEvent = async (
         }
       };
     } else {
-      // User connected to multiple teams with potentially different times
-      const uniqueStartTimes = [...new Set(relevantTeamTimes.map(tt => tt.startTime).filter(Boolean))];
+      // User connected to multiple teams - instead of showing "Multiple Times", 
+      // prioritize the first team they're connected to or fall back to event default
+      const primaryTeamTime = relevantTeamTimes[0];
       
-      if (uniqueStartTimes.length === 1) {
-        // All teams have the same start time
-        return {
-          userTeamConnections,
-          isMultipleTeams: true,
-          displayTime: {
-            start_time: uniqueStartTimes[0],
-            meeting_time: relevantTeamTimes[0].meetingTime || event.meeting_time || null,
-            display_text: uniqueStartTimes[0] || 'TBD'
-          }
-        };
-      } else {
-        // Multiple different start times
-        return {
-          userTeamConnections,
-          isMultipleTeams: true,
-          displayTime: {
-            start_time: null,
-            meeting_time: null,
-            display_text: 'Multiple Times'
-          }
-        };
-      }
+      return {
+        userTeamConnections,
+        isMultipleTeams: true,
+        displayTime: {
+          start_time: primaryTeamTime.startTime || event.start_time,
+          meeting_time: primaryTeamTime.meetingTime || event.meeting_time || null,
+          display_text: primaryTeamTime.startTime || event.start_time || 'TBD'
+        }
+      };
     }
   } catch (error) {
     console.error('Error getting user context for event:', error);
@@ -174,11 +162,7 @@ export const getUserContextForEvent = async (
  * Format time display for calendar components
  */
 export const formatEventTimeDisplay = (context: UserTeamContext): string => {
-  const { displayTime, isMultipleTeams } = context;
-  
-  if (displayTime.display_text === 'Multiple Times') {
-    return '🕐 Multiple Times - See Details';
-  }
+  const { displayTime } = context;
   
   if (displayTime.meeting_time && displayTime.start_time) {
     return `🕐 Meet: ${displayTime.meeting_time} | Start: ${displayTime.start_time}`;
