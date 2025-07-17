@@ -53,21 +53,51 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
+  const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
 
+  // Show initial accept/decline buttons for pending or no status
+  if (!currentStatus || currentStatus === 'pending') {
+    return (
+      <div className="flex items-center gap-2">
+        <Button
+          size="sm"
+          className={`bg-green-600 hover:bg-green-700 text-white ${size === 'sm' ? 'h-7 px-3' : 'h-8 px-4'}`}
+          onClick={() => updateAvailability('available')}
+          disabled={isUpdating}
+          title="Mark as available"
+        >
+          <Check className={`${iconSize} mr-1`} />
+          <span className={textSize}>Accept</span>
+        </Button>
+        <Button
+          size="sm"
+          className={`bg-red-600 hover:bg-red-700 text-white ${size === 'sm' ? 'h-7 px-3' : 'h-8 px-4'}`}
+          onClick={() => updateAvailability('unavailable')}
+          disabled={isUpdating}
+          title="Mark as unavailable"
+        >
+          <X className={`${iconSize} mr-1`} />
+          <span className={textSize}>Decline</span>
+        </Button>
+      </div>
+    );
+  }
+
+  // Show status with change option
   if (currentStatus === 'available') {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1 text-green-600">
           <Check className={iconSize} />
-          <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Going</span>
+          <span className={textSize}>Available</span>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className={`text-red-600 hover:text-red-700 ${buttonSize}`}
+          className={`text-red-600 hover:text-red-700 hover:bg-red-50 ${buttonSize}`}
           onClick={() => updateAvailability('unavailable')}
           disabled={isUpdating}
-          title="Mark as unavailable"
+          title="Change to unavailable"
         >
           <X className={iconSize} />
         </Button>
@@ -77,18 +107,18 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   if (currentStatus === 'unavailable') {
     return (
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-1 text-red-600">
           <X className={iconSize} />
-          <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Not Going</span>
+          <span className={textSize}>Unavailable</span>
         </div>
         <Button
           variant="ghost"
           size="sm"
-          className={`text-green-600 hover:text-green-700 ${buttonSize}`}
+          className={`text-green-600 hover:text-green-700 hover:bg-green-50 ${buttonSize}`}
           onClick={() => updateAvailability('available')}
           disabled={isUpdating}
-          title="Mark as available"
+          title="Change to available"
         >
           <Check className={iconSize} />
         </Button>
@@ -96,29 +126,5 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     );
   }
 
-  // Pending or no status set
-  return (
-    <div className="flex items-center gap-2">
-      <Button
-        size="sm"
-        className={`bg-green-600 hover:bg-green-700 text-white ${size === 'sm' ? 'h-7 px-3' : 'h-8 px-4'}`}
-        onClick={() => updateAvailability('available')}
-        disabled={isUpdating}
-        title="Mark as available"
-      >
-        <Check className={`${iconSize} mr-1`} />
-        <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Accept</span>
-      </Button>
-      <Button
-        size="sm"
-        className={`bg-red-600 hover:bg-red-700 text-white ${size === 'sm' ? 'h-7 px-3' : 'h-8 px-4'}`}
-        onClick={() => updateAvailability('unavailable')}
-        disabled={isUpdating}
-        title="Mark as unavailable"
-      >
-        <X className={`${iconSize} mr-1`} />
-        <span className={size === 'sm' ? 'text-xs' : 'text-sm'}>Decline</span>
-      </Button>
-    </div>
-  );
+  return null;
 };

@@ -605,11 +605,6 @@ export default function CalendarEventsMobile() {
                             </div>
                             
                             <div className="flex items-center gap-2">
-                              {/* Availability status badge */}
-                              {availabilityStatus && (
-                                <AvailabilityStatusBadge status={availabilityStatus} size="sm" />
-                              )}
-                              
                               {/* Result icons for completed matches - show ALL team results */}
                               {completed && teamScores.length > 0 && (
                                 <div className="flex gap-1">
@@ -663,7 +658,7 @@ export default function CalendarEventsMobile() {
                             </div>
                           )}
 
-                          {/* Availability Controls */}
+                          {/* Availability Controls - Now at bottom */}
                           {showAvailabilityControls && (
                             <div className="flex justify-center pt-2 border-t">
                               <QuickAvailabilityControls
