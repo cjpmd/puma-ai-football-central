@@ -158,25 +158,38 @@ export const useSquadManagement = (teamId: string, eventId?: string) => {
     try {
       console.log('Updating player availability:', { teamId, playerId, eventId, status });
       
-      let query = supabase
-        .from('team_squads')
-        .update({ availability_status: status })
-        .eq('team_id', teamId)
-        .eq('player_id', playerId);
-
       if (eventId) {
-        query = query.eq('event_id', eventId);
-      } else {
-        query = query.is('event_id', null);
-      }
+        // Update availability for ALL teams in this event for this player
+        // This ensures consistency across all team selections
+        const { error } = await supabase
+          .from('team_squads')
+          .update({ availability_status: status })
+          .eq('player_id', playerId)
+          .eq('event_id', eventId);
 
-      const { error } = await query;
-      if (error) {
-        console.error('Error updating availability:', error);
-        throw error;
+        if (error) {
+          console.error('Error updating availability across all teams:', error);
+          throw error;
+        }
+        
+        console.log('Availability updated successfully across all teams for event');
+      } else {
+        // For non-event specific updates, only update the current team
+        const { error } = await supabase
+          .from('team_squads')
+          .update({ availability_status: status })
+          .eq('team_id', teamId)
+          .eq('player_id', playerId)
+          .is('event_id', null);
+
+        if (error) {
+          console.error('Error updating availability:', error);
+          throw error;
+        }
+        
+        console.log('Availability updated successfully for team');
       }
       
-      console.log('Availability updated successfully');
       await loadSquadPlayers();
     } catch (error) {
       console.error('Error updating player availability:', error);
