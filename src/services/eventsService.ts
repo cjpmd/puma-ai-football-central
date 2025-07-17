@@ -46,7 +46,9 @@ export const eventsService = {
         const eventTeams = eventData.teams.map((team: any, index: number) => ({
           event_id: data.id,
           team_id: team.id || eventData.teamId, // Use team.id if available, fallback to main teamId
-          team_number: index + 1
+          team_number: index + 1,
+          start_time: team.start_time || eventData.startTime || null,
+          meeting_time: team.meeting_time || eventData.meetingTime || null
         }));
         
         const { error: eventTeamsError } = await supabase
@@ -66,7 +68,9 @@ export const eventsService = {
           .insert({
             event_id: data.id,
             team_id: eventData.teamId,
-            team_number: 1
+            team_number: 1,
+            start_time: eventData.startTime || null,
+            meeting_time: eventData.meetingTime || null
           });
           
         if (eventTeamError) {

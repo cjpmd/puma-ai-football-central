@@ -23,6 +23,7 @@ import { eventsService } from '@/services/eventsService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
+import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
 const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
@@ -45,6 +46,7 @@ export default function CalendarEventsMobile() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [pendingAvailability, setPendingAvailability] = useState<any[]>([]);
+  const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const { toast } = useToast();
   const { teams, user, profile } = useAuth();
   const { hasPermission } = useAuthorization();
@@ -65,6 +67,7 @@ export default function CalendarEventsMobile() {
     if (events.length > 0 && user?.id) {
       loadUserAvailability();
       loadPendingAvailability();
+      loadEventTimeContexts();
     }
   }, [events, user?.id]);
 
@@ -225,6 +228,23 @@ export default function CalendarEventsMobile() {
     // Show availability controls for future events only
     const eventDate = new Date(event.date);
     return eventDate >= new Date() || isToday(eventDate);
+  };
+
+  const loadEventTimeContexts = async () => {
+    if (!user?.id || events.length === 0) return;
+
+    try {
+      const contexts: {[eventId: string]: UserTeamContext} = {};
+      
+      for (const event of events) {
+        const context = await getUserContextForEvent(event, user.id);
+        contexts[event.id] = context;
+      }
+      
+      setEventTimeContexts(contexts);
+    } catch (error) {
+      console.error('Error loading event time contexts:', error);
+    }
   };
 
   const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
@@ -553,9 +573,12 @@ export default function CalendarEventsMobile() {
                               <div className="text-xs text-gray-500 uppercase">
                                 {format(eventDate, 'EEE dd MMM')}
                               </div>
-                              <div className="text-lg font-bold text-gray-900">
-                                {event.start_time || '--:--'}
-                              </div>
+                               <div className="text-lg font-bold text-gray-900">
+                                 {eventTimeContexts[event.id] 
+                                   ? formatEventTimeDisplay(eventTimeContexts[event.id])
+                                   : event.start_time || '--:--'
+                                 }
+                               </div>
                             </div>
                             
                             <div className="flex items-center gap-2">
@@ -671,12 +694,16 @@ export default function CalendarEventsMobile() {
                   <span>{format(new Date(selectedEvent.date), 'EEEE, MMMM do, yyyy')}</span>
                 </div>
                 
-                {selectedEvent.start_time && (
+                {(selectedEvent.start_time || eventTimeContexts[selectedEvent.id]) && (
                   <div className="flex items-center gap-2 text-sm">
                     <Clock className="h-4 w-4 text-gray-500" />
                     <span>
-                      {selectedEvent.start_time}
-                      {selectedEvent.end_time && ` - ${selectedEvent.end_time}`}
+                      {eventTimeContexts[selectedEvent.id] 
+                        ? formatEventTimeDisplay(eventTimeContexts[selectedEvent.id])
+                        : selectedEvent.start_time && selectedEvent.end_time
+                        ? `${selectedEvent.start_time} - ${selectedEvent.end_time}`
+                        : selectedEvent.start_time || 'TBD'
+                      }
                     </span>
                   </div>
                 )}
