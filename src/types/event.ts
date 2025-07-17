@@ -28,7 +28,11 @@ export interface DatabaseEvent {
   facility_booking_id?: string;
   meeting_time?: string;
   total_minutes?: number;
-  teams?: string[];
+  teams?: Array<{
+    id: string;
+    start_time?: string;
+    meeting_time?: string;
+  }> | string[];
   kit_selection?: 'home' | 'away' | 'training';
   created_at: string;
   updated_at: string;

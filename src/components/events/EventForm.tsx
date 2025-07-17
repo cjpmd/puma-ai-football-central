@@ -227,7 +227,17 @@ export const EventForm: React.FC<EventFormProps> = ({
         isHome: formData.is_home,
         kitSelection: formData.kit_selection as 'home' | 'away' | 'training',
         facilityId: formData.facility_id,
-        teams: formData.num_teams > 1 ? Array.from({ length: formData.num_teams }, () => formData.team_id) : undefined,
+        meetingTime: formData.meeting_time,
+        teams: formData.num_teams > 1 ? Array.from({ length: formData.num_teams }, (_, i) => {
+          const teamNumber = i + 1;
+          const teamStartTime = teamTimes[teamNumber]?.start_time || formData.start_time;
+          const teamMeetingTime = teamTimes[teamNumber]?.meeting_time || (teamStartTime ? calculateMeetingTime(teamStartTime) : formData.meeting_time);
+          return {
+            id: formData.team_id,
+            start_time: teamStartTime,
+            meeting_time: teamMeetingTime
+          };
+        }) : undefined,
       };
 
       // If onSubmit prop is provided, use it (for new EventForm interface)

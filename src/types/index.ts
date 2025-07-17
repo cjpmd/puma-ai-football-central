@@ -288,7 +288,11 @@ export interface Event {
   facilityBookingId?: string;
   meetingTime?: string;
   totalMinutes?: number;
-  teams?: string[];
+  teams?: Array<{
+    id: string;
+    start_time?: string;
+    meeting_time?: string;
+  }> | string[];
   kitSelection?: 'home' | 'away' | 'training';
   createdAt?: string;
   updatedAt?: string;
