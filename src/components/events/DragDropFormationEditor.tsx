@@ -157,12 +157,25 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const newPeriodNumber = periods.length + 1;
     const lastPeriod = periods[periods.length - 1];
     
+    // Create deep copies of position objects to ensure each period is independent
+    const createDeepCopyPositions = (positions: PositionSlotType[]): PositionSlotType[] => {
+      return positions.map(pos => ({
+        id: `position-${Math.random().toString(36).substr(2, 9)}`, // Generate new unique ID
+        positionName: pos.positionName,
+        abbreviation: pos.abbreviation,
+        positionGroup: pos.positionGroup,
+        x: pos.x,
+        y: pos.y,
+        playerId: pos.playerId // Copy the player assignment
+      }));
+    };
+    
     const newPeriod: FormationPeriod = {
       id: `period-${newPeriodNumber}`,
       periodNumber: newPeriodNumber,
       formation: lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1',
       duration: 8,
-      positions: lastPeriod ? [...lastPeriod.positions] : createPositionSlots(lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1'),
+      positions: lastPeriod ? createDeepCopyPositions(lastPeriod.positions) : createPositionSlots(lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1'),
       substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
       captainId: globalCaptainId
     };
@@ -261,7 +274,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       const positionData = positions.find(p => p.positionName === pos.position);
       
       return {
-        id: `position-${index}`,
+        id: `position-${Math.random().toString(36).substr(2, 9)}`, // Generate unique ID for each position
         positionName: pos.position,
         abbreviation: positionData?.abbreviation || getDefaultAbbreviation(pos.position),
         positionGroup: positionData?.positionGroup || getPositionGroup(pos.position),
