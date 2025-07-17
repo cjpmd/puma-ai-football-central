@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { eventsService } from '@/services/eventsService';
 import { format } from 'date-fns';
 import { Calendar, Clock, MapPin, Users, X } from 'lucide-react';
+import { GameFormat } from '@/types';
 
 interface MobileEventFormProps {
   onClose: () => void;
@@ -36,7 +37,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     type: 'training' as 'training' | 'match' | 'fixture' | 'friendly',
     opponent: '',
     isHome: true,
-    gameFormat: '11v11',
+    gameFormat: '11-a-side' as GameFormat,
     gameDuration: 90,
     notes: ''
   });
@@ -216,15 +217,15 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                       <Users className="h-4 w-4" />
                       Format
                     </Label>
-                    <Select value={formData.gameFormat} onValueChange={(value) => setFormData(prev => ({ ...prev, gameFormat: value }))}>
+                    <Select value={formData.gameFormat} onValueChange={(value: GameFormat) => setFormData(prev => ({ ...prev, gameFormat: value }))}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="11v11">11v11</SelectItem>
-                        <SelectItem value="9v9">9v9</SelectItem>
-                        <SelectItem value="7v7">7v7</SelectItem>
-                        <SelectItem value="5v5">5v5</SelectItem>
+                        <SelectItem value="11-a-side">11-a-side</SelectItem>
+                        <SelectItem value="9-a-side">9-a-side</SelectItem>
+                        <SelectItem value="7-a-side">7-a-side</SelectItem>
+                        <SelectItem value="5-a-side">5-a-side</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
