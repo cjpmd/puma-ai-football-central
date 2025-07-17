@@ -1,4 +1,3 @@
-
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +12,7 @@ import { PushNotificationSetup } from '@/components/notifications/PushNotificati
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
+import { MobileEventForm } from '@/components/events/MobileEventForm';
 
 interface LiveStats {
   playersCount: number;
@@ -35,6 +35,7 @@ export default function DashboardMobile() {
   const [loading, setLoading] = useState(true);
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
+  const [showMobileEventForm, setShowMobileEventForm] = useState(false);
 
   const currentTeam = teams?.[0];
 
@@ -52,6 +53,12 @@ export default function DashboardMobile() {
       title: "Availability updated",
       description: `Marked as ${status} for this event`,
     });
+  };
+
+  const handleEventCreated = () => {
+    setShowMobileEventForm(false);
+    // Reload the stats to reflect the new event
+    loadLiveData();
   };
 
   useEffect(() => {
@@ -435,12 +442,14 @@ export default function DashboardMobile() {
           <CardContent className="space-y-3">
             {canManageTeam() && (
               <>
-                <Link to="/calendar">
-                  <Button className="w-full h-12 justify-start text-left" variant="outline">
-                    <Plus className="h-5 w-5 mr-3" />
-                    Create Event
-                  </Button>
-                </Link>
+                <Button 
+                  className="w-full h-12 justify-start text-left" 
+                  variant="outline"
+                  onClick={() => setShowMobileEventForm(true)}
+                >
+                  <Plus className="h-5 w-5 mr-3" />
+                  Create Event
+                </Button>
                 <Link to="/players">
                   <Button className="w-full h-12 justify-start text-left" variant="outline">
                     <Users className="h-5 w-5 mr-3" />
@@ -581,6 +590,14 @@ export default function DashboardMobile() {
           isOpen={showManageConnections} 
           onClose={() => setShowManageConnections(false)} 
         />
+        
+        {/* Mobile Event Form Modal */}
+        {showMobileEventForm && (
+          <MobileEventForm
+            onClose={() => setShowMobileEventForm(false)}
+            onEventCreated={handleEventCreated}
+          />
+        )}
       </div>
     </MobileLayout>
   );

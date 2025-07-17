@@ -528,19 +528,6 @@ export default function CalendarEventsMobile() {
       stickyTabs={true}
     >
       <div className="space-y-6 pb-8">
-        {/* Create Event Button - Only show for admin/manager */}
-        {canCreateEvents() && (
-          <div className="flex justify-end">
-            <Button 
-              onClick={() => setShowMobileEventForm(true)}
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Create Event
-            </Button>
-          </div>
-        )}
-
         {/* Pending Availability - First Priority */}
         {pendingAvailability.length > 0 && (
           <Card className="border-orange-200 bg-orange-50">
