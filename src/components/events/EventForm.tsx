@@ -37,6 +37,7 @@ export const EventForm: React.FC<EventFormProps> = ({
   
   // Use event prop if provided, otherwise use initialData
   const eventData = event || initialData;
+  const actualIsEditing = isEditing || !!eventData?.id;
   
   const [formData, setFormData] = useState({
     title: '',
@@ -108,11 +109,11 @@ export const EventForm: React.FC<EventFormProps> = ({
       });
       
       // Load team-specific times if editing
-      if (eventData?.id && isEditing) {
+      if (eventData?.id && actualIsEditing) {
         loadTeamTimes(eventData.id);
       }
     }
-  }, [eventData, teamId, isEditing]);
+  }, [eventData, teamId, actualIsEditing]);
 
   useEffect(() => {
     if (formData.team_id) {
@@ -182,6 +183,11 @@ export const EventForm: React.FC<EventFormProps> = ({
       });
 
       setTeamTimes(timesMap);
+      
+      // Update num_teams based on loaded data
+      if (data && data.length > 1) {
+        setFormData(prev => ({ ...prev, num_teams: data.length }));
+      }
     } catch (error) {
       console.error('Error loading team times:', error);
     }
@@ -249,7 +255,7 @@ export const EventForm: React.FC<EventFormProps> = ({
       let eventId: string;
 
       // Otherwise use the original logic
-      if (isEditing && eventData?.id) {
+      if (actualIsEditing && eventData?.id) {
         // Update existing event
         const { error } = await supabase
           .from('events')
@@ -270,6 +276,7 @@ export const EventForm: React.FC<EventFormProps> = ({
             kit_selection: cleanEventData.kitSelection,
             facility_id: cleanEventData.facilityId || null,
             meeting_time: formData.meeting_time,
+            teams: cleanEventData.teams || null,
           })
           .eq('id', eventData.id);
 
@@ -341,36 +348,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         eventId = newEvent.id;
       }
 
-      // Create event teams if num_teams > 1
-      if (formData.num_teams > 1) {
-        if (eventId) {
-          for (let i = 1; i <= formData.num_teams; i++) {
-            const teamStartTime = teamTimes[i]?.start_time || formData.start_time;
-            const teamMeetingTime = teamTimes[i]?.meeting_time || (teamStartTime ? calculateMeetingTime(teamStartTime) : formData.meeting_time);
-            
-            await supabase
-              .from('event_teams')
-              .insert({
-                event_id: eventId,
-                team_id: formData.team_id,
-                team_number: i,
-                start_time: teamStartTime,
-                meeting_time: teamMeetingTime
-              });
-          }
-        }
-      } else if (eventId) {
-        // For single team events, also create event_teams record for consistency
-        await supabase
-          .from('event_teams')
-          .insert({
-            event_id: eventId,
-            team_id: formData.team_id,
-            team_number: 1,
-            start_time: formData.start_time,
-            meeting_time: formData.meeting_time || (formData.start_time ? calculateMeetingTime(formData.start_time) : '')
-          });
-      }
     } catch (error: any) {
       console.error('Error saving event:', error);
       toast.error(error.message || 'Failed to save event');
@@ -413,7 +390,7 @@ export const EventForm: React.FC<EventFormProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="h-5 w-5" />
-          {isEditing ? 'Edit Event' : 'Create New Event'}
+          {actualIsEditing ? 'Edit Event' : 'Create New Event'}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -483,7 +460,6 @@ export const EventForm: React.FC<EventFormProps> = ({
               </SelectContent>
             </Select>
           </div>
-
 
           <div>
             <Label htmlFor="description">Description</Label>
@@ -796,7 +772,7 @@ export const EventForm: React.FC<EventFormProps> = ({
               className="flex-1" 
               disabled={loading}
             >
-              {loading ? 'Saving...' : (isEditing ? 'Update Event' : 'Create Event')}
+              {loading ? 'Saving...' : (actualIsEditing ? 'Update Event' : 'Create Event')}
             </Button>
           </div>
         </form>

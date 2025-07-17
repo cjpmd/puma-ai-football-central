@@ -457,6 +457,38 @@ export default function CalendarEventsMobile() {
     }
   };
 
+  // Get user-relevant time display for mobile calendar cards
+  const getUserRelevantTimeDisplay = (event: DatabaseEvent): string => {
+    const context = eventTimeContexts[event.id];
+    if (!context) {
+      return event.start_time || 'TBD';
+    }
+
+    // If user has multiple teams with different times, show "Multiple Times"
+    if (context.isMultipleTeams && context.displayTime.display_text === 'Multiple Times') {
+      return 'Multiple Times - See Details';
+    }
+
+    // Show the user's specific time
+    return formatEventTimeDisplay(context);
+  };
+
+  const getEventTeamTimes = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_teams')
+        .select('team_number, start_time, meeting_time')
+        .eq('event_id', eventId)
+        .order('team_number');
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error loading event team times:', error);
+      return [];
+    }
+  };
+
   const filteredEvents = getFilteredEvents();
   const groupedEvents = groupEventsByMonth(filteredEvents);
 
@@ -574,10 +606,7 @@ export default function CalendarEventsMobile() {
                                 {format(eventDate, 'EEE dd MMM')}
                               </div>
                                <div className="text-lg font-bold text-gray-900">
-                                 {eventTimeContexts[event.id] 
-                                   ? formatEventTimeDisplay(eventTimeContexts[event.id])
-                                   : event.start_time || '--:--'
-                                 }
+                                 {getUserRelevantTimeDisplay(event)}
                                </div>
                             </div>
                             
@@ -694,19 +723,8 @@ export default function CalendarEventsMobile() {
                   <span>{format(new Date(selectedEvent.date), 'EEEE, MMMM do, yyyy')}</span>
                 </div>
                 
-                {(selectedEvent.start_time || eventTimeContexts[selectedEvent.id]) && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <span>
-                      {eventTimeContexts[selectedEvent.id] 
-                        ? formatEventTimeDisplay(eventTimeContexts[selectedEvent.id])
-                        : selectedEvent.start_time && selectedEvent.end_time
-                        ? `${selectedEvent.start_time} - ${selectedEvent.end_time}`
-                        : selectedEvent.start_time || 'TBD'
-                      }
-                    </span>
-                  </div>
-                )}
+                {/* Show team times for multi-team events */}
+                <EventTeamTimesDisplay eventId={selectedEvent.id} />
                 
                 {selectedEvent.location && (
                   <div className="flex items-center gap-2 text-sm">
@@ -910,3 +928,74 @@ export default function CalendarEventsMobile() {
      </MobileLayout>
    );
  }
+
+// Component to display team-specific times in event details
+const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
+  const [teamTimes, setTeamTimes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadTeamTimes = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('event_teams')
+          .select('team_number, start_time, meeting_time')
+          .eq('event_id', eventId)
+          .order('team_number');
+
+        if (error) throw error;
+        setTeamTimes(data || []);
+      } catch (error) {
+        console.error('Error loading team times:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTeamTimes();
+  }, [eventId]);
+
+  if (loading) return null;
+  
+  if (teamTimes.length <= 1) {
+    // Single team or no teams - show regular time display
+    const singleTeam = teamTimes[0];
+    if (singleTeam?.start_time || singleTeam?.meeting_time) {
+      return (
+        <div className="flex items-center gap-2 text-sm">
+          <Clock className="h-4 w-4 text-gray-500" />
+          <span>
+            {singleTeam.meeting_time && singleTeam.start_time
+              ? `Meet: ${singleTeam.meeting_time} | KO: ${singleTeam.start_time}`
+              : singleTeam.start_time || 'TBD'
+            }
+          </span>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  // Multiple teams - show all team times
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Clock className="h-4 w-4 text-gray-500" />
+        <span>Team Times</span>
+      </div>
+      <div className="space-y-1 ml-6">
+        {teamTimes.map((team) => (
+          <div key={team.team_number} className="text-sm text-gray-600">
+            <span className="font-medium">Team {team.team_number}:</span>
+            {team.meeting_time && team.start_time
+              ? ` Meet ${team.meeting_time} | KO ${team.start_time}`
+              : team.start_time 
+              ? ` KO ${team.start_time}`
+              : ' Time TBD'
+            }
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
