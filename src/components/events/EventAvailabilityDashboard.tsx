@@ -204,7 +204,8 @@ export const EventAvailabilityDashboard: React.FC<EventAvailabilityDashboardProp
                       </div>
                       <div className="text-right">
                         <AvailabilityStatusBadge 
-                          status={availability.status as any} 
+                          eventId={event.id} 
+                          userId={availability.user_id}
                           size="md" 
                         />
                         {availability.responded_at && (
