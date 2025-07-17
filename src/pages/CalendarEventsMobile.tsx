@@ -2,22 +2,27 @@
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, MapPin, Users, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, parseISO } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
+
+const tabs = [
+  { id: 'fixtures', label: 'FIXTURES' },
+  { id: 'training', label: 'TRAINING' },
+  { id: 'friendlies', label: 'FRIENDLIES' }
+];
 
 export default function CalendarEventsMobile() {
   const { teams, user } = useAuth();
   const { toast } = useToast();
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('fixtures');
 
   const currentTeam = teams?.[0];
 
@@ -26,15 +31,10 @@ export default function CalendarEventsMobile() {
 
     setLoading(true);
     try {
-      const start = startOfMonth(currentDate);
-      const end = endOfMonth(currentDate);
-
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('team_id', currentTeam.id)
-        .gte('date', format(start, 'yyyy-MM-dd'))
-        .lte('date', format(end, 'yyyy-MM-dd'))
         .order('date', { ascending: true });
 
       if (error) throw error;
@@ -54,22 +54,7 @@ export default function CalendarEventsMobile() {
 
   useEffect(() => {
     loadEvents();
-  }, [currentDate, currentTeam]);
-
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => direction === 'prev' ? subMonths(prev, 1) : addMonths(prev, 1));
-  };
-
-  const getDaysInMonth = () => {
-    const start = startOfMonth(currentDate);
-    const end = endOfMonth(currentDate);
-    return eachDayOfInterval({ start, end });
-  };
-
-  const getEventsForDate = (date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return events.filter(event => event.date === dateStr);
-  };
+  }, [currentTeam]);
 
   const getEventTypeColor = (eventType: string) => {
     switch (eventType) {
@@ -81,7 +66,22 @@ export default function CalendarEventsMobile() {
     }
   };
 
-  const selectedEvents = selectedDate ? getEventsForDate(selectedDate) : [];
+  const getFilteredEvents = () => {
+    return events.filter(event => {
+      switch (activeTab) {
+        case 'fixtures':
+          return event.event_type === 'match' || event.event_type === 'fixture';
+        case 'training':
+          return event.event_type === 'training';
+        case 'friendlies':
+          return event.event_type === 'friendly';
+        default:
+          return true;
+      }
+    });
+  };
+
+  const filteredEvents = getFilteredEvents();
 
   if (loading) {
     return (
@@ -94,130 +94,103 @@ export default function CalendarEventsMobile() {
   }
 
   return (
-    <MobileLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Calendar</h1>
-            {currentTeam && (
-              <p className="text-sm text-muted-foreground">{currentTeam.name}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Month Navigation */}
-        <div className="flex items-center justify-between">
-          <Button variant="outline" size="icon" onClick={() => navigateMonth('prev')}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="text-xl font-semibold">
-            {format(currentDate, 'MMMM yyyy')}
+    <MobileLayout 
+      showTabs={true}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      tabs={tabs}
+    >
+      <div className="space-y-4">
+        {/* Month Header */}
+        <div className="text-center">
+          <h2 className="text-lg font-semibold text-gray-600">
+            {format(new Date(), 'MMMM yyyy').toUpperCase()}
           </h2>
-          <Button variant="outline" size="icon" onClick={() => navigateMonth('next')}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="grid grid-cols-7 gap-1">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="text-center text-sm font-medium text-muted-foreground p-2">
-              {day}
-            </div>
-          ))}
-          {getDaysInMonth().map(date => {
-            const dayEvents = getEventsForDate(date);
-            const isSelected = selectedDate && format(date, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
-            
-            return (
-              <button
-                key={date.toISOString()}
-                onClick={() => setSelectedDate(date)}
-                className={`
-                  relative p-2 text-sm border rounded-lg min-h-12 
-                  ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}
-                  ${!isSameMonth(date, currentDate) ? 'text-gray-400' : ''}
-                  ${isToday(date) ? 'bg-yellow-50 border-yellow-300' : ''}
-                  hover:bg-gray-50 transition-colors
-                `}
-              >
-                <div className="font-medium">{date.getDate()}</div>
-                {dayEvents.length > 0 && (
-                  <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Selected Date Events */}
-        {selectedDate && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">
-                {format(selectedDate, 'EEEE, MMMM d')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {selectedEvents.length > 0 ? (
-                <div className="space-y-3">
-                  {selectedEvents.map((event) => (
-                    <div key={event.id} className="flex items-start space-x-3 p-3 rounded-lg border">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={getEventTypeColor(event.event_type)}>
-                            {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
-                          </Badge>
-                          {user && (
-                            <AvailabilityStatusBadge 
-                              eventId={event.id}
-                              userId={user.id}
-                            />
-                          )}
+        {/* Events List */}
+        {filteredEvents.length > 0 ? (
+          <div className="space-y-4">
+            {filteredEvents.map((event) => (
+              <Card key={event.id} className="border border-gray-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4 mb-2">
+                        <div className="text-left">
+                          <div className="text-xs text-gray-500 uppercase tracking-wide">
+                            {format(parseISO(event.date), 'EEE dd MMM')}
+                          </div>
+                          <div className="text-lg font-semibold">
+                            {event.start_time || 'TBD'}
+                          </div>
                         </div>
-                        <h3 className="font-medium">
-                          {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
-                        </h3>
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          {event.start_time && (
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {event.start_time}
-                              {event.end_time && ` - ${event.end_time}`}
+                        
+                        {event.event_type !== 'training' && (
+                          <div className="flex items-center gap-2 flex-1">
+                            <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                              <span className="text-xs font-medium">
+                                {currentTeam?.name?.substring(0, 2) || 'TM'}
+                              </span>
                             </div>
-                          )}
-                          {event.location && (
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {event.location}
-                            </div>
-                          )}
-                          {event.game_format && (
-                            <div className="flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {event.game_format}
-                            </div>
-                          )}
-                        </div>
-                        {event.description && (
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {event.description}
-                          </p>
+                            <span className="text-sm text-gray-600">vs</span>
+                            <span className="font-medium">{event.opponent || 'TBD'}</span>
+                          </div>
+                        )}
+                        
+                        {event.event_type === 'training' && (
+                          <div className="flex-1">
+                            <span className="font-medium">{event.title || 'Training Session'}</span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        {event.location && (
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {event.location}
+                          </div>
+                        )}
+                        {event.game_format && (
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            {event.game_format}
+                          </div>
+                        )}
+                        {!event.is_home && event.event_type !== 'training' && (
+                          <span className="text-orange-600">• Away</span>
+                        )}
+                        {event.is_home && event.event_type !== 'training' && (
+                          <span className="text-green-600">• Home</span>
                         )}
                       </div>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">
-                  No events scheduled for this date
-                </p>
-              )}
-            </CardContent>
-          </Card>
+
+                    <div className="flex items-center gap-2">
+                      {user && (
+                        <AvailabilityStatusBadge 
+                          eventId={event.id}
+                          userId={user.id}
+                        />
+                      )}
+                      <div className="flex flex-col items-center gap-1">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">
+              No {activeTab.toLowerCase()} scheduled
+            </p>
+          </div>
         )}
       </div>
     </MobileLayout>
