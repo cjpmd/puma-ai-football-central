@@ -11,10 +11,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { EventForm } from '@/components/events/EventForm';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
+import { MobileEventForm } from '@/components/events/MobileEventForm';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
-import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
@@ -37,6 +38,7 @@ export default function CalendarEventsMobile() {
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
+  const [showMobileEventForm, setShowMobileEventForm] = useState(false);
   const [showTeamSelection, setShowTeamSelection] = useState(false);
   const [showPostGameEdit, setShowPostGameEdit] = useState(false);
   const [showEventDetails, setShowEventDetails] = useState(false);
@@ -50,6 +52,13 @@ export default function CalendarEventsMobile() {
   const { toast } = useToast();
   const { teams, user, profile } = useAuth();
   const { hasPermission } = useAuthorization();
+
+  // Check if user can create events (admin or manager roles only)
+  const canCreateEvents = () => {
+    if (!profile?.roles) return false;
+    const allowedRoles = ['global_admin', 'club_admin', 'team_manager'];
+    return profile.roles.some(role => allowedRoles.includes(role));
+  };
 
   // Check if user can edit events (not parent or player)
   const canEditEvents = () => {
@@ -519,6 +528,19 @@ export default function CalendarEventsMobile() {
       stickyTabs={true}
     >
       <div className="space-y-6 pb-8">
+        {/* Create Event Button - Only show for admin/manager */}
+        {canCreateEvents() && (
+          <div className="flex justify-end">
+            <Button 
+              onClick={() => setShowMobileEventForm(true)}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Create Event
+            </Button>
+          </div>
+        )}
+
         {/* Pending Availability - First Priority */}
         {pendingAvailability.length > 0 && (
           <Card className="border-orange-200 bg-orange-50">
@@ -679,6 +701,17 @@ export default function CalendarEventsMobile() {
           ))
         )}
       </div>
+
+      {/* Mobile Event Form Modal */}
+      {showMobileEventForm && (
+        <MobileEventForm
+          onClose={() => setShowMobileEventForm(false)}
+          onEventCreated={() => {
+            setShowMobileEventForm(false);
+            loadEvents();
+          }}
+        />
+      )}
 
       {/* Event Details Modal */}
       <Dialog open={showEventDetails} onOpenChange={setShowEventDetails}>
