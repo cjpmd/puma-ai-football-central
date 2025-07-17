@@ -474,8 +474,8 @@ export const EventForm: React.FC<EventFormProps> = ({
             </Select>
           </div>
 
-          {/* Date & Time */}
-          {formData.num_teams === 1 ? (
+          {/* Only show times here for single team events */}
+          {formData.num_teams === 1 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="start_time">Start Time</Label>
@@ -514,85 +514,6 @@ export const EventForm: React.FC<EventFormProps> = ({
                   value={formData.end_time}
                   onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
                 />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="start_time">Default Start Time</Label>
-                  <Input
-                    id="start_time"
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Used as default for all teams
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="end_time">End Time</Label>
-                  <Input
-                    id="end_time"
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-                  />
-                </div>
-              </div>
-              
-              {/* Team-specific times */}
-              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
-                <h3 className="font-medium flex items-center gap-2">
-                  <Clock className="h-4 w-4" />
-                  Team-Specific Times
-                </h3>
-                
-                {Array.from({ length: formData.num_teams }, (_, i) => i + 1).map(teamNumber => (
-                  <div key={teamNumber} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
-                    <Label className="text-sm font-medium">Team {teamNumber}</Label>
-                    <div>
-                      <Label htmlFor={`team_${teamNumber}_start_time`} className="text-xs">Start Time</Label>
-                      <Input
-                        id={`team_${teamNumber}_start_time`}
-                        type="time"
-                        value={teamTimes[teamNumber]?.start_time || formData.start_time}
-                        onChange={(e) => {
-                          const newStartTime = e.target.value;
-                          setTeamTimes(prev => ({
-                            ...prev,
-                            [teamNumber]: {
-                              ...prev[teamNumber],
-                              start_time: newStartTime,
-                              meeting_time: prev[teamNumber]?.meeting_time || calculateMeetingTime(newStartTime)
-                            }
-                          }));
-                        }}
-                        className="text-sm"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor={`team_${teamNumber}_meeting_time`} className="text-xs">Meeting Time</Label>
-                      <Input
-                        id={`team_${teamNumber}_meeting_time`}
-                        type="time"
-                        value={teamTimes[teamNumber]?.meeting_time || (teamTimes[teamNumber]?.start_time ? calculateMeetingTime(teamTimes[teamNumber].start_time) : '')}
-                        onChange={(e) => {
-                          setTeamTimes(prev => ({
-                            ...prev,
-                            [teamNumber]: {
-                              ...prev[teamNumber],
-                              meeting_time: e.target.value
-                            }
-                          }));
-                        }}
-                        placeholder="Auto-calculated"
-                        className="text-sm"
-                      />
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}
@@ -747,6 +668,135 @@ export const EventForm: React.FC<EventFormProps> = ({
                   This will create {formData.num_teams} team{formData.num_teams > 1 ? 's' : ''} in the team selection interface
                 </p>
               </div>
+
+              {/* Start Time Settings */}
+              {formData.num_teams > 1 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="start_time">Default Start Time</Label>
+                      <Input
+                        id="start_time"
+                        type="time"
+                        value={formData.start_time}
+                        onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Used as default for all teams
+                      </p>
+                    </div>
+                    <div>
+                      <Label htmlFor="end_time">End Time</Label>
+                      <Input
+                        id="end_time"
+                        type="time"
+                        value={formData.end_time}
+                        onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Team-specific times */}
+                  <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Team-Specific Times
+                    </h3>
+                    
+                    {Array.from({ length: formData.num_teams }, (_, i) => i + 1).map(teamNumber => {
+                      const currentStartTime = teamTimes[teamNumber]?.start_time || formData.start_time;
+                      const currentMeetingTime = teamTimes[teamNumber]?.meeting_time;
+                      const calculatedMeetingTime = currentStartTime ? calculateMeetingTime(currentStartTime) : '';
+                      
+                      return (
+                        <div key={teamNumber} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                          <Label className="text-sm font-medium">Team {teamNumber}</Label>
+                          <div>
+                            <Label htmlFor={`team_${teamNumber}_start_time`} className="text-xs">Start Time</Label>
+                            <Input
+                              id={`team_${teamNumber}_start_time`}
+                              type="time"
+                              value={currentStartTime}
+                              onChange={(e) => {
+                                const newStartTime = e.target.value;
+                                setTeamTimes(prev => ({
+                                  ...prev,
+                                  [teamNumber]: {
+                                    ...prev[teamNumber],
+                                    start_time: newStartTime,
+                                    meeting_time: prev[teamNumber]?.meeting_time || calculateMeetingTime(newStartTime)
+                                  }
+                                }));
+                              }}
+                              className="text-sm"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`team_${teamNumber}_meeting_time`} className="text-xs">Meeting Time</Label>
+                            <Input
+                              id={`team_${teamNumber}_meeting_time`}
+                              type="time"
+                              value={currentMeetingTime || calculatedMeetingTime}
+                              onChange={(e) => {
+                                setTeamTimes(prev => ({
+                                  ...prev,
+                                  [teamNumber]: {
+                                    ...prev[teamNumber],
+                                    meeting_time: e.target.value
+                                  }
+                                }));
+                              }}
+                              placeholder="Auto-calculated"
+                              className="text-sm"
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label htmlFor="start_time">Start Time</Label>
+                    <Input
+                      id="start_time"
+                      type="time"
+                      value={formData.start_time}
+                      onChange={(e) => {
+                        const newStartTime = e.target.value;
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          start_time: newStartTime,
+                          meeting_time: prev.meeting_time || calculateMeetingTime(newStartTime)
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="meeting_time">Meeting Time</Label>
+                    <Input
+                      id="meeting_time"
+                      type="time"
+                      value={formData.meeting_time}
+                      onChange={(e) => setFormData(prev => ({ ...prev, meeting_time: e.target.value }))}
+                      placeholder="30 mins before start"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Defaults to 30 mins before start time
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="end_time">End Time</Label>
+                    <Input
+                      id="end_time"
+                      type="time"
+                      value={formData.end_time}
+                      onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
