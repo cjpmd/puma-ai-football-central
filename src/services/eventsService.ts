@@ -11,8 +11,8 @@ export const eventsService = {
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
-        start_time: eventData.startTime,
-        end_time: eventData.endTime,
+        start_time: eventData.startTime || null, // Convert empty string to null
+        end_time: eventData.endTime || null, // Convert empty string to null
         event_type: eventData.type,
         location: eventData.location,
         latitude: eventData.latitude,
@@ -24,7 +24,7 @@ export const eventsService = {
         kit_selection: eventData.kitSelection,
         teams: eventData.teams,  // Save the teams array
         facility_id: eventData.facilityId || null, // Convert empty string to null
-        meeting_time: eventData.meetingTime,
+        meeting_time: eventData.meetingTime || null, // Convert empty string to null
         notes: eventData.notes,
         training_notes: eventData.trainingNotes
       };
@@ -92,8 +92,8 @@ export const eventsService = {
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
-        start_time: eventData.startTime,
-        end_time: eventData.endTime,
+        start_time: eventData.startTime || null, // Convert empty string to null
+        end_time: eventData.endTime || null, // Convert empty string to null
         event_type: eventData.type,
         location: eventData.location,
         latitude: eventData.latitude,
@@ -105,7 +105,7 @@ export const eventsService = {
         kit_selection: eventData.kitSelection,
         teams: eventData.teams,  // Save the teams array
         facility_id: eventData.facilityId || null, // Convert empty string to null
-        meeting_time: eventData.meetingTime,
+        meeting_time: eventData.meetingTime || null, // Convert empty string to null
         notes: eventData.notes,
         training_notes: eventData.trainingNotes
       };
