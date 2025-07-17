@@ -478,7 +478,7 @@ export const EventForm: React.FC<EventFormProps> = ({
           {formData.num_teams === 1 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="start_time">Start Time</Label>
+                <Label htmlFor="start_time">KO</Label>
                 <Input
                   id="start_time"
                   type="time"
@@ -712,7 +712,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                         <div key={teamNumber} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
                           <Label className="text-sm font-medium">Team {teamNumber}</Label>
                           <div>
-                            <Label htmlFor={`team_${teamNumber}_start_time`} className="text-xs">Start Time</Label>
+                            <Label htmlFor={`team_${teamNumber}_start_time`} className="text-xs">KO</Label>
                             <Input
                               id={`team_${teamNumber}_start_time`}
                               type="time"
@@ -722,9 +722,8 @@ export const EventForm: React.FC<EventFormProps> = ({
                                 setTeamTimes(prev => ({
                                   ...prev,
                                   [teamNumber]: {
-                                    ...prev[teamNumber],
                                     start_time: newStartTime,
-                                    meeting_time: prev[teamNumber]?.meeting_time || calculateMeetingTime(newStartTime)
+                                    meeting_time: calculateMeetingTime(newStartTime)
                                   }
                                 }));
                               }}
@@ -742,6 +741,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                                   ...prev,
                                   [teamNumber]: {
                                     ...prev[teamNumber],
+                                    start_time: prev[teamNumber]?.start_time || formData.start_time,
                                     meeting_time: e.target.value
                                   }
                                 }));
@@ -758,7 +758,7 @@ export const EventForm: React.FC<EventFormProps> = ({
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="start_time">Start Time</Label>
+                    <Label htmlFor="start_time">KO</Label>
                     <Input
                       id="start_time"
                       type="time"
