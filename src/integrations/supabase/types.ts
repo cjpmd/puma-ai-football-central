@@ -489,6 +489,8 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          meeting_time: string | null
+          start_time: string | null
           team_id: string
           team_number: number
           updated_at: string
@@ -497,6 +499,8 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          meeting_time?: string | null
+          start_time?: string | null
           team_id: string
           team_number?: number
           updated_at?: string
@@ -505,6 +509,8 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          meeting_time?: string | null
+          start_time?: string | null
           team_id?: string
           team_number?: number
           updated_at?: string

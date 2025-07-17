@@ -10,6 +10,7 @@ import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { WeatherService } from '@/services/weatherService';
 import { QuickAvailabilityControls } from './QuickAvailabilityControls';
+import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -42,13 +43,15 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   const [performanceCategoryNames, setPerformanceCategoryNames] = useState<{ [eventId: string]: { [teamNumber: string]: string } }>({});
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
-  const { teams } = useAuth();
+  const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
+  const { teams, user } = useAuth();
 
   useEffect(() => {
     loadPerformanceCategoryNames();
     loadEventWeather();
     loadUserAvailability();
-  }, [events]);
+    loadEventTimeContexts();
+  }, [events, user?.id]);
 
   const loadUserAvailability = async () => {
     try {
@@ -156,6 +159,23 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     }
     
     setEventWeather(weatherData);
+  };
+
+  const loadEventTimeContexts = async () => {
+    if (!user?.id || events.length === 0) return;
+
+    try {
+      const contexts: {[eventId: string]: UserTeamContext} = {};
+      
+      for (const event of events) {
+        const context = await getUserContextForEvent(event, user.id);
+        contexts[event.id] = context;
+      }
+      
+      setEventTimeContexts(contexts);
+    } catch (error) {
+      console.error('Error loading event time contexts:', error);
+    }
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
@@ -325,10 +345,10 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                   {format(new Date(event.date), 'MMM dd, yyyy')}
                 </p>
                 
-                {event.start_time && (
+                {/* Time Display - now shows team-specific times */}
+                {eventTimeContexts[event.id] && (
                   <p className="text-sm text-muted-foreground">
-                    {event.start_time}
-                    {event.end_time && ` - ${event.end_time}`}
+                    {formatEventTimeDisplay(eventTimeContexts[event.id])}
                   </p>
                 )}
                 

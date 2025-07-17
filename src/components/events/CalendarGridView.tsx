@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { QuickAvailabilityControls } from './QuickAvailabilityControls';
+import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -38,6 +39,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
+  const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const { teams, user } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
@@ -47,7 +49,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   useEffect(() => {
     loadEventWeather();
     loadPerformanceCategories();
-  }, [events, teams]);
+    loadEventTimeContexts();
+  }, [events, teams, user?.id]);
 
   useEffect(() => {
     if (events.length > 0 && user?.id) {
@@ -148,6 +151,23 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       setPerformanceCategories(categoryMap);
     } catch (error) {
       console.log('Failed to load performance categories:', error);
+    }
+  };
+
+  const loadEventTimeContexts = async () => {
+    if (!user?.id || events.length === 0) return;
+
+    try {
+      const contexts: {[eventId: string]: UserTeamContext} = {};
+      
+      for (const event of events) {
+        const context = await getUserContextForEvent(event, user.id);
+        contexts[event.id] = context;
+      }
+      
+      setEventTimeContexts(contexts);
+    } catch (error) {
+      console.error('Error loading event time contexts:', error);
     }
   };
 
@@ -371,13 +391,14 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                               <span className="text-muted-foreground">vs</span>
                               <span className="font-medium truncate">{event.opponent}</span>
                             </div>
-                          )}
-                          
-                          {event.start_time && (
-                            <div className="text-xs text-muted-foreground">
-                              {event.start_time}
-                            </div>
-                          )}
+                           )}
+                           
+                           {/* Time Display - now shows team-specific times */}
+                           {eventTimeContexts[event.id] && (
+                             <div className="text-xs text-muted-foreground">
+                               {formatEventTimeDisplay(eventTimeContexts[event.id])}
+                             </div>
+                           )}
 
                           {teamScores.length > 0 && matchType && (
                             <div className="space-y-1">

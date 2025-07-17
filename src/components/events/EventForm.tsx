@@ -55,7 +55,9 @@ export const EventForm: React.FC<EventFormProps> = ({
     kit_selection: 'home',
     facility_id: '',
     num_teams: 1,
+    meeting_time: '',
   });
+  const [teamTimes, setTeamTimes] = useState<{[teamNumber: number]: {start_time: string, meeting_time: string}}>({});
   const [loading, setLoading] = useState(false);
   const [performanceCategories, setPerformanceCategories] = useState<any[]>([]);
   const [facilities, setFacilities] = useState<any[]>([]);
@@ -102,9 +104,15 @@ export const EventForm: React.FC<EventFormProps> = ({
         kit_selection: eventData.kitSelection || eventData.kit_selection || 'home',
         facility_id: eventData.facilityId || eventData.facility_id || '',
         num_teams: eventData.num_teams || 1,
+        meeting_time: eventData.meetingTime || eventData.meeting_time || '',
       });
+      
+      // Load team-specific times if editing
+      if (eventData?.id && isEditing) {
+        loadTeamTimes(eventData.id);
+      }
     }
-  }, [eventData, teamId]);
+  }, [eventData, teamId, isEditing]);
 
   useEffect(() => {
     if (formData.team_id) {
@@ -154,6 +162,42 @@ export const EventForm: React.FC<EventFormProps> = ({
       console.error('Error loading facilities:', error);
       setFacilities([]);
     }
+  };
+
+  const loadTeamTimes = async (eventId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('event_teams')
+        .select('team_number, start_time, meeting_time')
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+
+      const timesMap: {[teamNumber: number]: {start_time: string, meeting_time: string}} = {};
+      data?.forEach(team => {
+        timesMap[team.team_number] = {
+          start_time: team.start_time || '',
+          meeting_time: team.meeting_time || ''
+        };
+      });
+
+      setTeamTimes(timesMap);
+    } catch (error) {
+      console.error('Error loading team times:', error);
+    }
+  };
+
+  // Auto-calculate meeting time (30 mins before start time)
+  const calculateMeetingTime = (startTime: string): string => {
+    if (!startTime) return '';
+    
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
+    
+    const meetingDate = new Date(startDate.getTime() - 30 * 60 * 1000); // 30 minutes earlier
+    
+    return `${meetingDate.getHours().toString().padStart(2, '0')}:${meetingDate.getMinutes().toString().padStart(2, '0')}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -215,10 +259,65 @@ export const EventForm: React.FC<EventFormProps> = ({
             is_home: cleanEventData.isHome,
             kit_selection: cleanEventData.kitSelection,
             facility_id: cleanEventData.facilityId || null,
+            meeting_time: formData.meeting_time,
           })
           .eq('id', eventData.id);
 
         if (error) throw error;
+
+        // Update or create team-specific times
+        if (formData.num_teams > 1) {
+          // Delete existing event_teams first
+          await supabase
+            .from('event_teams')
+            .delete()
+            .eq('event_id', eventData.id);
+
+          // Insert updated team times
+          for (let i = 1; i <= formData.num_teams; i++) {
+            const teamStartTime = teamTimes[i]?.start_time || formData.start_time;
+            const teamMeetingTime = teamTimes[i]?.meeting_time || (teamStartTime ? calculateMeetingTime(teamStartTime) : formData.meeting_time);
+            
+            await supabase
+              .from('event_teams')
+              .insert({
+                event_id: eventData.id,
+                team_id: formData.team_id,
+                team_number: i,
+                start_time: teamStartTime,
+                meeting_time: teamMeetingTime
+              });
+          }
+        } else {
+          // Single team - update or create event_teams record
+          const { data: existingTeam } = await supabase
+            .from('event_teams')
+            .select('id')
+            .eq('event_id', eventData.id)
+            .eq('team_number', 1)
+            .single();
+
+          if (existingTeam) {
+            await supabase
+              .from('event_teams')
+              .update({
+                start_time: formData.start_time,
+                meeting_time: formData.meeting_time || (formData.start_time ? calculateMeetingTime(formData.start_time) : '')
+              })
+              .eq('event_id', eventData.id)
+              .eq('team_number', 1);
+          } else {
+            await supabase
+              .from('event_teams')
+              .insert({
+                event_id: eventData.id,
+                team_id: formData.team_id,
+                team_number: 1,
+                start_time: formData.start_time,
+                meeting_time: formData.meeting_time || (formData.start_time ? calculateMeetingTime(formData.start_time) : '')
+              });
+          }
+        }
 
         toast.success('Event updated successfully');
         if (onEventCreated) onEventCreated(eventData.id);
@@ -236,15 +335,31 @@ export const EventForm: React.FC<EventFormProps> = ({
       if (formData.num_teams > 1) {
         if (eventId) {
           for (let i = 1; i <= formData.num_teams; i++) {
+            const teamStartTime = teamTimes[i]?.start_time || formData.start_time;
+            const teamMeetingTime = teamTimes[i]?.meeting_time || (teamStartTime ? calculateMeetingTime(teamStartTime) : formData.meeting_time);
+            
             await supabase
               .from('event_teams')
               .insert({
                 event_id: eventId,
                 team_id: formData.team_id,
-                team_number: i
+                team_number: i,
+                start_time: teamStartTime,
+                meeting_time: teamMeetingTime
               });
           }
         }
+      } else if (eventId) {
+        // For single team events, also create event_teams record for consistency
+        await supabase
+          .from('event_teams')
+          .insert({
+            event_id: eventId,
+            team_id: formData.team_id,
+            team_number: 1,
+            start_time: formData.start_time,
+            meeting_time: formData.meeting_time || (formData.start_time ? calculateMeetingTime(formData.start_time) : '')
+          });
       }
     } catch (error: any) {
       console.error('Error saving event:', error);
@@ -360,26 +475,127 @@ export const EventForm: React.FC<EventFormProps> = ({
           </div>
 
           {/* Date & Time */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="start_time">Start Time</Label>
-              <Input
-                id="start_time"
-                type="time"
-                value={formData.start_time}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
-              />
+          {formData.num_teams === 1 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="start_time">Start Time</Label>
+                <Input
+                  id="start_time"
+                  type="time"
+                  value={formData.start_time}
+                  onChange={(e) => {
+                    const newStartTime = e.target.value;
+                    setFormData(prev => ({ 
+                      ...prev, 
+                      start_time: newStartTime,
+                      meeting_time: prev.meeting_time || calculateMeetingTime(newStartTime)
+                    }));
+                  }}
+                />
+              </div>
+              <div>
+                <Label htmlFor="meeting_time">Meeting Time</Label>
+                <Input
+                  id="meeting_time"
+                  type="time"
+                  value={formData.meeting_time}
+                  onChange={(e) => setFormData(prev => ({ ...prev, meeting_time: e.target.value }))}
+                  placeholder="30 mins before start"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Defaults to 30 mins before start time
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="end_time">End Time</Label>
+                <Input
+                  id="end_time"
+                  type="time"
+                  value={formData.end_time}
+                  onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="end_time">End Time</Label>
-              <Input
-                id="end_time"
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
-              />
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="start_time">Default Start Time</Label>
+                  <Input
+                    id="start_time"
+                    type="time"
+                    value={formData.start_time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Used as default for all teams
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="end_time">End Time</Label>
+                  <Input
+                    id="end_time"
+                    type="time"
+                    value={formData.end_time}
+                    onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                  />
+                </div>
+              </div>
+              
+              {/* Team-specific times */}
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/50">
+                <h3 className="font-medium flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Team-Specific Times
+                </h3>
+                
+                {Array.from({ length: formData.num_teams }, (_, i) => i + 1).map(teamNumber => (
+                  <div key={teamNumber} className="grid grid-cols-1 md:grid-cols-3 gap-3 items-center">
+                    <Label className="text-sm font-medium">Team {teamNumber}</Label>
+                    <div>
+                      <Label htmlFor={`team_${teamNumber}_start_time`} className="text-xs">Start Time</Label>
+                      <Input
+                        id={`team_${teamNumber}_start_time`}
+                        type="time"
+                        value={teamTimes[teamNumber]?.start_time || formData.start_time}
+                        onChange={(e) => {
+                          const newStartTime = e.target.value;
+                          setTeamTimes(prev => ({
+                            ...prev,
+                            [teamNumber]: {
+                              ...prev[teamNumber],
+                              start_time: newStartTime,
+                              meeting_time: prev[teamNumber]?.meeting_time || calculateMeetingTime(newStartTime)
+                            }
+                          }));
+                        }}
+                        className="text-sm"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor={`team_${teamNumber}_meeting_time`} className="text-xs">Meeting Time</Label>
+                      <Input
+                        id={`team_${teamNumber}_meeting_time`}
+                        type="time"
+                        value={teamTimes[teamNumber]?.meeting_time || (teamTimes[teamNumber]?.start_time ? calculateMeetingTime(teamTimes[teamNumber].start_time) : '')}
+                        onChange={(e) => {
+                          setTeamTimes(prev => ({
+                            ...prev,
+                            [teamNumber]: {
+                              ...prev[teamNumber],
+                              meeting_time: e.target.value
+                            }
+                          }));
+                        }}
+                        placeholder="Auto-calculated"
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div>
             <Label htmlFor="description">Description</Label>
