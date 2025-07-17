@@ -717,7 +717,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex flex-col h-full space-y-6 print:space-y-4">
+      <div className="h-full overflow-y-auto space-y-6 print:space-y-4">
         {/* Time tracking alerts */}
         {(timeCheck.totalExceeded || timeCheck.firstHalfExceeded || timeCheck.secondHalfExceeded) && (
           <Alert variant="destructive">
@@ -730,8 +730,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Alert>
         )}
 
-        {/* Available Players - Fixed section */}
-        <div className="flex-shrink-0">
+        {/* Available Players - Now scrollable with everything else */}
+        <div>
           <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="outline" className="w-full justify-between print:hidden">
@@ -769,8 +769,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </Collapsible>
         </div>
 
-        {/* Scrollable Formation Area */}
-        <div className="flex-1 overflow-y-auto space-y-6">
+        {/* Formation Area - Now part of the overall scroll */}
+        <div className="space-y-6">
           {firstHalf.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
