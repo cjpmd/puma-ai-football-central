@@ -58,27 +58,69 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       }
 
       // Convert to our format
-      const allPlayers = teamPlayersData.map(player => ({
+      const allPlayers: AvailablePlayer[] = teamPlayersData.map(player => ({
         id: player.id,
         name: player.name,
         squadNumber: player.squad_number,
         type: (player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield') as 'goalkeeper' | 'outfield',
-        availabilityStatus: 'pending' as const,
+        availabilityStatus: 'pending' as 'available' | 'unavailable' | 'pending',
         isAssignedToSquad: false,
-        squadRole: 'player' as const
+        squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
       }));
 
       // Get availability data if eventId is provided
       let playersWithAvailability = allPlayers;
       if (eventId) {
         try {
-          const availabilityData = await availabilityService.getPlayerAvailabilityFromParents(eventId, teamId);
-          console.log(`[${contextId}] Loaded availability for ${availabilityData.length} players`);
-          
-          playersWithAvailability = allPlayers.map(player => {
-            const availabilityRecord = availabilityData.find(a => a.id === player.id);
-            return availabilityRecord ? { ...player, ...availabilityRecord } : player;
-          });
+          // Get availability for the event
+          const { data: eventAvailability, error: availabilityError } = await supabase
+            .from('event_availability')
+            .select('user_id, status, role')
+            .eq('event_id', eventId);
+
+          if (availabilityError) {
+            console.warn(`[${contextId}] Error loading event availability:`, availabilityError);
+          } else {
+            console.log(`[${contextId}] Loaded event availability for ${eventAvailability?.length || 0} user records`);
+            
+            // Get user-player relationships for all players in this team
+            const playerIds = allPlayers.map(p => p.id);
+            const { data: userPlayerRelationships, error: relationshipError } = await supabase
+              .from('user_players')
+              .select('user_id, player_id, relationship')
+              .in('player_id', playerIds);
+
+            if (relationshipError) {
+              console.warn(`[${contextId}] Error loading user-player relationships:`, relationshipError);
+            } else {
+              console.log(`[${contextId}] Loaded ${userPlayerRelationships?.length || 0} user-player relationships`);
+              
+              // Map availability to players
+              playersWithAvailability = allPlayers.map(player => {
+                // Find user relationships for this player
+                const userRelationships = userPlayerRelationships?.filter(rel => rel.player_id === player.id) || [];
+                
+                // Find availability records for users connected to this player
+                let availabilityStatus: 'available' | 'unavailable' | 'pending' = 'pending';
+                for (const relationship of userRelationships) {
+                  const userAvailability = eventAvailability?.find(a => a.user_id === relationship.user_id);
+                  if (userAvailability) {
+                    if (userAvailability.status === 'available') {
+                      availabilityStatus = 'available';
+                      break;
+                    } else if (userAvailability.status === 'unavailable') {
+                      availabilityStatus = 'unavailable';
+                    }
+                  }
+                }
+                
+                return {
+                  ...player,
+                  availabilityStatus
+                };
+              });
+            }
+          }
         } catch (error) {
           console.warn(`[${contextId}] Could not load availability data:`, error);
         }
