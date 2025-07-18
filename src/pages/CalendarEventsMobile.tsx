@@ -1040,19 +1040,19 @@ const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
       <div className="text-sm font-medium">
         <span>Team Times</span>
       </div>
-      <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-4">
         {teamTimes.map((team) => (
           <div key={team.team_number} className="text-sm text-gray-600">
             <div className="font-medium mb-1">Team {team.team_number}:</div>
             {team.meeting_time && team.start_time ? (
-              <div className="space-y-1 ml-2">
+              <div className="space-y-1">
                 <div>Meet: {formatTime(team.meeting_time)}</div>
                 <div>Start: {formatTime(team.start_time)}</div>
               </div>
             ) : team.start_time ? (
-              <div className="ml-2">Start: {formatTime(team.start_time)}</div>
+              <div>Start: {formatTime(team.start_time)}</div>
             ) : (
-              <div className="ml-2">Time TBD</div>
+              <div>Time TBD</div>
             )}
           </div>
         ))}
