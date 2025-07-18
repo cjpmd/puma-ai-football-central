@@ -709,7 +709,13 @@ export default function CalendarEventsMobile() {
                           {/* Availability Controls - Now at bottom */}
                           {showAvailabilityControls && availabilityStatus && (
                             <div className="flex justify-center pt-2 border-t">
-                              <AvailabilityStatusBadge status={availabilityStatus} size="sm" />
+                              <AvailabilityStatusBadge 
+                                eventId={event.id}
+                                status={availabilityStatus} 
+                                size="sm" 
+                                interactive={true}
+                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                              />
                             </div>
                           )}
                         </div>
