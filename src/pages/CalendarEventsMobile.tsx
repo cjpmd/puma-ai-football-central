@@ -53,6 +53,40 @@ export default function CalendarEventsMobile() {
   const { teams, user, profile } = useAuth();
   const { hasPermission } = useAuthorization();
 
+  // Swipe detection state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  // Swipe functionality
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+
+    if (isLeftSwipe || isRightSwipe) {
+      const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+      
+      if (isLeftSwipe && currentIndex < tabs.length - 1) {
+        // Swipe left - go to next tab
+        setActiveTab(tabs[currentIndex + 1].id);
+      } else if (isRightSwipe && currentIndex > 0) {
+        // Swipe right - go to previous tab
+        setActiveTab(tabs[currentIndex - 1].id);
+      }
+    }
+  };
+
   // Check if user can create events (admin or manager roles only)
   const canCreateEvents = () => {
     if (!profile?.roles) return false;
@@ -527,7 +561,12 @@ export default function CalendarEventsMobile() {
       tabs={tabs}
       stickyTabs={true}
     >
-      <div className="space-y-6 pb-8">
+      <div 
+        className="space-y-6 pb-8"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Pending Availability - First Priority */}
         {pendingAvailability.length > 0 && (
           <Card className="border-orange-200 bg-orange-50">
