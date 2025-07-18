@@ -943,6 +943,15 @@ const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
   const [teamTimes, setTeamTimes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const formatTime = (timeStr?: string) => {
+    if (!timeStr) return '';
+    try {
+      return format(new Date(`2000-01-01T${timeStr}`), 'h:mm a');
+    } catch (error) {
+      return timeStr;
+    }
+  };
+
   useEffect(() => {
     const loadTeamTimes = async () => {
       try {
@@ -971,14 +980,15 @@ const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
     const singleTeam = teamTimes[0];
     if (singleTeam?.start_time || singleTeam?.meeting_time) {
       return (
-        <div className="flex items-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-gray-500" />
-          <span>
-            {singleTeam.meeting_time && singleTeam.start_time
-              ? `Meet: ${singleTeam.meeting_time} | KO: ${singleTeam.start_time}`
-              : singleTeam.start_time || 'TBD'
-            }
-          </span>
+        <div className="text-sm">
+          {singleTeam.meeting_time && singleTeam.start_time ? (
+            <div className="space-y-1">
+              <div>Meet: {formatTime(singleTeam.meeting_time)}</div>
+              <div>Start: {formatTime(singleTeam.start_time)}</div>
+            </div>
+          ) : (
+            <div>Start: {formatTime(singleTeam.start_time) || 'TBD'}</div>
+          )}
         </div>
       );
     }
@@ -988,20 +998,23 @@ const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
   // Multiple teams - show all team times
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <Clock className="h-4 w-4 text-gray-500" />
+      <div className="text-sm font-medium">
         <span>Team Times</span>
       </div>
-      <div className="space-y-1 ml-6">
+      <div className="space-y-3">
         {teamTimes.map((team) => (
           <div key={team.team_number} className="text-sm text-gray-600">
-            <span className="font-medium">Team {team.team_number}:</span>
-            {team.meeting_time && team.start_time
-              ? ` Meet ${team.meeting_time} | KO ${team.start_time}`
-              : team.start_time 
-              ? ` KO ${team.start_time}`
-              : ' Time TBD'
-            }
+            <div className="font-medium mb-1">Team {team.team_number}:</div>
+            {team.meeting_time && team.start_time ? (
+              <div className="space-y-1 ml-2">
+                <div>Meet: {formatTime(team.meeting_time)}</div>
+                <div>Start: {formatTime(team.start_time)}</div>
+              </div>
+            ) : team.start_time ? (
+              <div className="ml-2">Start: {formatTime(team.start_time)}</div>
+            ) : (
+              <div className="ml-2">Time TBD</div>
+            )}
           </div>
         ))}
       </div>
