@@ -43,7 +43,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       console.log('TeamBasicSettings: Changing field', field, 'to', value);
       const updatedData = { ...formData, [field]: value };
       setFormData(updatedData);
-      onUpdate(updatedData);
+      // Don't call onUpdate here - only when saving
     } catch (error) {
       console.error('Error in handleInputChange:', error);
       toast.error('Failed to update field');
@@ -59,12 +59,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       homeLongitude: location.lng
     };
     setFormData(updatedData);
-    onUpdate(updatedData);
+    // Don't call onUpdate here - only when saving
   };
 
   const handleSave = async () => {
     try {
       console.log('Saving team data:', formData);
+      
+      // Call parent's onUpdate with form data first
+      onUpdate(formData);
       
       const { error } = await supabase
         .from('teams')
@@ -93,7 +96,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
       console.log('Team saved successfully');
       toast.success('Team settings saved successfully');
-      onSave();
+      // Don't call onSave() which would close the modal
     } catch (error) {
       console.error('Error saving team:', error);
       toast.error('Failed to save team settings');
