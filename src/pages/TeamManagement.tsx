@@ -192,6 +192,7 @@ const TeamManagement = () => {
       if ('seasonEnd' in teamData) updateData.season_end = teamData.seasonEnd;
       if ('clubId' in teamData) updateData.club_id = teamData.clubId || null;
       if ('gameFormat' in teamData) updateData.game_format = teamData.gameFormat;
+      if ('gameDuration' in teamData) updateData.game_duration = teamData.gameDuration;
       if ('subscriptionType' in teamData) updateData.subscription_type = teamData.subscriptionType;
       if ('performanceCategories' in teamData) updateData.performance_categories = teamData.performanceCategories;
       if ('kitIcons' in teamData) updateData.kit_icons = teamData.kitIcons;
@@ -200,6 +201,11 @@ const TeamManagement = () => {
       if ('managerName' in teamData) updateData.manager_name = teamData.managerName;
       if ('managerEmail' in teamData) updateData.manager_email = teamData.managerEmail;
       if ('managerPhone' in teamData) updateData.manager_phone = teamData.managerPhone;
+      if ('homeLocation' in teamData) updateData.home_location = teamData.homeLocation;
+      if ('homeLatitude' in teamData) updateData.home_latitude = teamData.homeLatitude;
+      if ('homeLongitude' in teamData) updateData.home_longitude = teamData.homeLongitude;
+      if ('headerDisplayType' in teamData) updateData.header_display_type = teamData.headerDisplayType;
+      if ('headerImageUrl' in teamData) updateData.header_image_url = teamData.headerImageUrl;
       
       updateData.updated_at = new Date().toISOString();
 
@@ -228,17 +234,19 @@ const TeamManagement = () => {
         }
       }
 
-      // Update local team state
-      setSelectedTeam(prev => prev ? { ...prev, ...teamData } : null);
-
+      // Don't update local state immediately to prevent crashes
+      // Let the success refresh handle the state update
       console.log('Team updated successfully');
-      await refreshUserData();
-      await loadLinkedTeams();
       
+      // Show success message first
       toast({
         title: 'Team updated',
         description: `${teamData.name || selectedTeam.name} has been updated successfully.`,
       });
+      
+      // Then refresh data which will properly update all states
+      await refreshUserData();
+      await loadLinkedTeams();
     } catch (error: any) {
       console.error('Error updating team:', error);
       toast({
