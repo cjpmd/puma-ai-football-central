@@ -39,9 +39,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   });
 
   const handleInputChange = (field: string, value: any) => {
-    const updatedData = { ...formData, [field]: value };
-    setFormData(updatedData);
-    onUpdate(updatedData);
+    try {
+      console.log('TeamBasicSettings: Changing field', field, 'to', value);
+      const updatedData = { ...formData, [field]: value };
+      setFormData(updatedData);
+      onUpdate(updatedData);
+    } catch (error) {
+      console.error('Error in handleInputChange:', error);
+      toast.error('Failed to update field');
+    }
   };
 
   const handleHomeLocationSelect = (location: { lat: number; lng: number; address: string }) => {
