@@ -123,25 +123,18 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             const address = place.formatted_address;
             console.log('[LocationInput] Setting address:', address);
             
-            // Clear the input first to ensure proper update
-            if (inputRef.current) {
-              inputRef.current.value = '';
-            }
+            // Update the state immediately without clearing first
+            onChange(address);
             
-            // Set the address with a small delay to ensure proper rendering
-            setTimeout(() => {
-              onChange(address);
-              
-              // If geometry is available, call onLocationSelect
-              if (place.geometry && place.geometry.location && onLocationSelect) {
-                const lat = place.geometry.location.lat();
-                const lng = place.geometry.location.lng();
-                console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
-                onLocationSelect({ lat, lng, address });
-              } else {
-                console.warn('[LocationInput] Place selected but no geometry available');
-              }
-            }, 10);
+            // If geometry is available, call onLocationSelect
+            if (place.geometry && place.geometry.location && onLocationSelect) {
+              const lat = place.geometry.location.lat();
+              const lng = place.geometry.location.lng();
+              console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
+              onLocationSelect({ lat, lng, address });
+            } else {
+              console.warn('[LocationInput] Place selected but no geometry available');
+            }
           } else {
             console.warn('[LocationInput] Place selected but no formatted_address available:', place);
           }
