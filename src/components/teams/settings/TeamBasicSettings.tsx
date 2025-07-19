@@ -193,7 +193,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
             </p>
             {formData.homeLatitude && formData.homeLongitude && (
               <p className="text-xs text-green-600 mt-1">
-                ✓ Location coordinates saved: {formData.homeLatitude.toFixed(6)}, {formData.homeLongitude.toFixed(6)}
+                ✓ Location coordinates saved: {Number(formData.homeLatitude).toFixed(6)}, {Number(formData.homeLongitude).toFixed(6)}
               </p>
             )}
           </div>
