@@ -38,6 +38,11 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [parents, setParents] = useState<Parent[]>([]);
   const [editingParent, setEditingParent] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{ name: string; email: string; phone: string }>({
+    name: '',
+    email: '',
+    phone: ''
+  });
   const [newParent, setNewParent] = useState({
     name: '',
     email: '',
@@ -290,11 +295,6 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
             <div className="space-y-4">
               {parents.map(parent => {
                 const isEditing = editingParent === parent.id;
-                const [editData, setEditData] = useState({
-                  name: parent.name,
-                  email: parent.email,
-                  phone: parent.phone || ''
-                });
 
                 return (
                   <Card key={parent.id}>
@@ -328,7 +328,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                                 size="sm"
                                 onClick={() => {
                                   setEditingParent(null);
-                                  setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                  setEditData({ name: '', email: '', phone: '' });
                                 }}
                               >
                                 <X className="h-4 w-4 text-red-500" />
