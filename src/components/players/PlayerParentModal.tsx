@@ -7,7 +7,7 @@ import { Player, Parent } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { playersService } from '@/services/playersService';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlusCircle, Copy, User, X } from 'lucide-react';
+import { PlusCircle, Copy, User, X, Edit, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,6 +26,12 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingParent, setEditingParent] = useState<string | null>(null);
+  const [editData, setEditData] = useState<{ name: string; email: string; phone: string }>({
+    name: '',
+    email: '',
+    phone: ''
+  });
   const [formData, setFormData] = useState<Partial<Parent>>({
     name: '',
     email: '',
@@ -79,6 +85,7 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
       if (player?.id) {
         queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
       }
+      setEditingParent(null);
       toast({
         title: 'Parent Updated',
         description: 'Parent details have been updated.',
@@ -151,6 +158,17 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     if (window.confirm('Are you sure you want to remove this parent?')) {
       deleteParentMutation.mutate(parentId);
     }
+  };
+
+  const handleUpdateParent = (parentId: string) => {
+    updateParentMutation.mutate({ 
+      id: parentId, 
+      data: { 
+        name: editData.name, 
+        email: editData.email, 
+        phone: editData.phone 
+      } 
+    });
   };
 
   const copyToClipboard = (text: string) => {
@@ -314,69 +332,139 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                     </Card>
                   )}
 
-                  {parents.map((parent) => (
-                    <Card key={parent.id}>
-                      <CardContent className="pt-6">
-                        <div className="absolute top-2 right-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleDelete(parent.id)}
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between">
-                            <Label className="font-bold">{parent.name}</Label>
+                  {parents.map((parent) => {
+                    const isEditing = editingParent === parent.id;
+                    
+                    return (
+                      <Card key={parent.id}>
+                        <CardContent className="pt-6">
+                          <div className="absolute top-2 right-2 flex gap-1">
+                            {isEditing ? (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleUpdateParent(parent.id)}
+                                  className="h-8 w-8 p-0 text-green-500 hover:text-green-700"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingParent(null);
+                                    setEditData({ name: '', email: '', phone: '' });
+                                  }}
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingParent(parent.id);
+                                    setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => handleDelete(parent.id)}
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
                           </div>
-                          <div>
-                            <Label className="text-sm text-muted-foreground">Email:</Label>
-                            <div>{parent.email}</div>
-                          </div>
-                          {parent.phone && (
+                          <div className="space-y-2">
+                            <div className="flex justify-between">
+                              {isEditing ? (
+                                <Input
+                                  value={editData.name}
+                                  onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                                  className="font-bold mr-20"
+                                />
+                              ) : (
+                                <Label className="font-bold">{parent.name}</Label>
+                              )}
+                            </div>
+                            <div>
+                              <Label className="text-sm text-muted-foreground">Email:</Label>
+                              {isEditing ? (
+                                <Input
+                                  type="email"
+                                  value={editData.email}
+                                  onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
+                                  className="mt-1"
+                                />
+                              ) : (
+                                <div>{parent.email}</div>
+                              )}
+                            </div>
                             <div>
                               <Label className="text-sm text-muted-foreground">Phone:</Label>
-                              <div>{parent.phone}</div>
+                              {isEditing ? (
+                                <Input
+                                  type="tel"
+                                  value={editData.phone}
+                                  onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
+                                  placeholder="Phone number"
+                                  className="mt-1"
+                                />
+                              ) : (
+                                <div>{parent.phone || 'No phone'}</div>
+                              )}
                             </div>
-                          )}
-                          <div>
-                            <Label className="text-sm text-muted-foreground">Subscription:</Label>
-                            <div>
-                              {parent.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'} 
-                              {' • '}
-                              <span className="capitalize">{parent.subscriptionStatus}</span>
-                            </div>
+                            {!isEditing && (
+                              <>
+                                <div>
+                                  <Label className="text-sm text-muted-foreground">Subscription:</Label>
+                                  <div>
+                                    {parent.subscriptionType === 'full_squad' ? 'Full Squad' : 'Training Only'} 
+                                    {' • '}
+                                    <span className="capitalize">{parent.subscriptionStatus}</span>
+                                  </div>
+                                </div>
+                                <div>
+                                  <Label className="text-sm text-muted-foreground">Link Code:</Label>
+                                  <div className="flex items-center gap-2">
+                                    <code className="bg-muted px-1 py-0.5 rounded text-sm">
+                                      {parent.linkCode}
+                                    </code>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 p-0"
+                                      onClick={() => copyToClipboard(parent.linkCode)}
+                                    >
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="text-xs h-7"
+                                      onClick={() => regenerateLinkCodeMutation.mutate(parent.id)}
+                                    >
+                                      Regenerate
+                                    </Button>
+                                  </div>
+                                </div>
+                              </>
+                            )}
                           </div>
-                          <div>
-                            <Label className="text-sm text-muted-foreground">Link Code:</Label>
-                            <div className="flex items-center gap-2">
-                              <code className="bg-muted px-1 py-0.5 rounded text-sm">
-                                {parent.linkCode}
-                              </code>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 p-0"
-                                onClick={() => copyToClipboard(parent.linkCode)}
-                              >
-                                <Copy className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-7"
-                                onClick={() => regenerateLinkCodeMutation.mutate(parent.id)}
-                              >
-                                Regenerate
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </>
               )}
             </div>

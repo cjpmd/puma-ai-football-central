@@ -10,6 +10,7 @@ import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Trash2, Mail, Phone, Users, Link, Edit, Check, X } from 'lucide-react';
+import { playersService } from '@/services/playersService';
 
 interface PlayerParentsModalProps {
   player: Player;
@@ -23,8 +24,12 @@ interface Parent {
   name: string;
   email: string;
   phone?: string;
-  link_code: string;
-  player_id: string;
+  linkCode: string;
+  playerId: string;
+  isLinked?: boolean;
+  userId?: string;
+  subscriptionType?: string;
+  subscriptionStatus?: string;
 }
 
 export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
@@ -58,13 +63,8 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
   const loadParents = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('parents')
-        .select('*')
-        .eq('player_id', player.id);
-
-      if (error) throw error;
-      setParents(data || []);
+      const parentData = await playersService.getParentsByPlayerId(player.id);
+      setParents(parentData);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -101,7 +101,17 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
 
       if (error) throw error;
 
-      setParents(prev => [...prev, data]);
+      // Transform database result to match our interface
+      const transformedParent: Parent = {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        linkCode: data.link_code,
+        playerId: data.player_id,
+        isLinked: false
+      };
+      setParents(prev => [...prev, transformedParent]);
       setNewParent({ name: '', email: '', phone: '' });
       
       toast({
@@ -120,8 +130,22 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
   };
 
   const handleUpdateParent = async (parentId: string, updatedData: { name: string; email: string; phone: string }) => {
+    const parent = parents.find(p => p.id === parentId);
+    if (!parent) return;
+
     try {
       setSaving(true);
+
+      if (parent.isLinked) {
+        toast({
+          title: 'Info',
+          description: 'Linked parent details must be updated from their user profile',
+          variant: 'default'
+        });
+        setEditingParent(null);
+        return;
+      }
+
       const { error } = await supabase
         .from('parents')
         .update({
@@ -164,12 +188,18 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
     }
 
     try {
-      const { error } = await supabase
-        .from('parents')
-        .delete()
-        .eq('id', parentId);
+      if (parent.isLinked && parent.userId) {
+        // Remove linked parent
+        await playersService.removeLinkedParent(player.id, parent.userId);
+      } else {
+        // Remove regular parent
+        const { error } = await supabase
+          .from('parents')
+          .delete()
+          .eq('id', parentId);
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       setParents(prev => prev.filter(p => p.id !== parentId));
       toast({
@@ -195,7 +225,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
           role: 'parent',
           teamId: player.teamId,
           playerId: player.id,
-          invitationCode: parent.link_code
+          invitationCode: parent.linkCode
         }
       });
 
@@ -336,16 +366,18 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                             </>
                           ) : (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingParent(parent.id);
-                                  setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
+                              {!parent.isLinked && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingParent(parent.id);
+                                    setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -391,35 +423,46 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
 
                       {!isEditing && (
                         <>
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Link className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-xs font-medium">Link Code:</span>
-                              <Badge variant="outline" className="text-xs">
-                                {parent.link_code}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => copyLinkCode(parent.link_code)}
-                                className="h-6 px-2"
-                              >
-                                Copy
-                              </Button>
-                            </div>
-                          </div>
+                          {!parent.isLinked && (
+                            <>
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Link className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-xs font-medium">Link Code:</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {parent.linkCode}
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => copyLinkCode(parent.linkCode)}
+                                    className="h-6 px-2"
+                                  >
+                                    Copy
+                                  </Button>
+                                </div>
+                              </div>
 
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSendInvite(parent)}
-                              className="flex-1"
-                            >
-                              <Mail className="h-4 w-4 mr-2" />
-                              Send Invite
-                            </Button>
-                          </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleSendInvite(parent)}
+                                  className="flex-1"
+                                >
+                                  <Mail className="h-4 w-4 mr-2" />
+                                  Send Invite
+                                </Button>
+                              </div>
+                            </>
+                          )}
+                          {parent.isLinked && (
+                            <div className="mt-2">
+                              <Badge variant="secondary" className="text-xs">
+                                Linked Account
+                              </Badge>
+                            </div>
+                          )}
                         </>
                       )}
                     </CardContent>
