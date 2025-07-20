@@ -4,10 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { PlayerKitDetails } from '@/components/players/PlayerKitDetails';
+import { PlayerKitTracking } from '@/components/players/PlayerKitTracking';
 
 interface EditPlayerModalProps {
   player: Player;
@@ -85,72 +88,101 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
           <SheetTitle>Edit Player</SheetTitle>
         </SheetHeader>
         
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Player Name</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter player name"
+        <div className="flex-1 overflow-y-auto p-6">
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="kit">Kit Details</TabsTrigger>
+              <TabsTrigger value="issued">Kit Issued</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="basic" className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Player Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="Enter player name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="squadNumber">Squad Number</Label>
+                <Input
+                  id="squadNumber"
+                  type="number"
+                  value={formData.squadNumber}
+                  onChange={(e) => setFormData(prev => ({ ...prev, squadNumber: parseInt(e.target.value) || 0 }))}
+                  placeholder="Enter squad number"
+                  disabled={!canEditSquadNumber}
+                />
+                {!canEditSquadNumber && (
+                  <p className="text-xs text-muted-foreground">
+                    Only managers and admins can edit squad numbers
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="type">Player Type</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as 'goalkeeper' | 'outfield' }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="outfield">Outfield</SelectItem>
+                    <SelectItem value="goalkeeper">Goalkeeper</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="availability">Availability</Label>
+                <Select value={formData.availability} onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value as 'green' | 'amber' | 'red' }))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="green">Available</SelectItem>
+                    <SelectItem value="amber">Limited</SelectItem>
+                    <SelectItem value="red">Unavailable</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="kit" className="space-y-4">
+              <PlayerKitDetails 
+                player={{
+                  id: player.id,
+                  team_id: player.teamId,
+                  kit_sizes: player.kit_sizes
+                }}
+                onUpdate={() => {}}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="squadNumber">Squad Number</Label>
-              <Input
-                id="squadNumber"
-                type="number"
-                value={formData.squadNumber}
-                onChange={(e) => setFormData(prev => ({ ...prev, squadNumber: parseInt(e.target.value) || 0 }))}
-                placeholder="Enter squad number"
-                disabled={!canEditSquadNumber}
+            </TabsContent>
+            
+            <TabsContent value="issued" className="space-y-4">
+              <PlayerKitTracking 
+                player={{
+                  id: player.id,
+                  name: player.name,
+                  team_id: player.teamId
+                }}
               />
-              {!canEditSquadNumber && (
-                <p className="text-xs text-muted-foreground">
-                  Only managers and admins can edit squad numbers
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dateOfBirth">Date of Birth</Label>
-              <Input
-                id="dateOfBirth"
-                type="date"
-                value={formData.dateOfBirth}
-                onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="type">Player Type</Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData(prev => ({ ...prev, type: value as 'goalkeeper' | 'outfield' }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="outfield">Outfield</SelectItem>
-                  <SelectItem value="goalkeeper">Goalkeeper</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="availability">Availability</Label>
-              <Select value={formData.availability} onValueChange={(value) => setFormData(prev => ({ ...prev, availability: value as 'green' | 'amber' | 'red' }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="green">Available</SelectItem>
-                  <SelectItem value="amber">Limited</SelectItem>
-                  <SelectItem value="red">Unavailable</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="border-t p-6 flex gap-3">

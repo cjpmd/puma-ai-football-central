@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Trash2, Mail, Phone, Users, Link } from 'lucide-react';
+import { Plus, Trash2, Mail, Phone, Users, Link, Edit, Check, X } from 'lucide-react';
 
 interface PlayerParentsModalProps {
   player: Player;
@@ -37,6 +37,7 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [parents, setParents] = useState<Parent[]>([]);
+  const [editingParent, setEditingParent] = useState<string | null>(null);
   const [newParent, setNewParent] = useState({
     name: '',
     email: '',
@@ -106,6 +107,42 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
       toast({
         title: 'Error',
         description: error.message || 'Failed to add parent',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdateParent = async (parentId: string, updatedData: { name: string; email: string; phone: string }) => {
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('parents')
+        .update({
+          name: updatedData.name.trim(),
+          email: updatedData.email.trim(),
+          phone: updatedData.phone.trim() || null
+        })
+        .eq('id', parentId);
+
+      if (error) throw error;
+
+      setParents(prev => prev.map(p => 
+        p.id === parentId 
+          ? { ...p, name: updatedData.name, email: updatedData.email, phone: updatedData.phone }
+          : p
+      ));
+      setEditingParent(null);
+      
+      toast({
+        title: 'Success',
+        description: 'Parent updated successfully'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update parent',
         variant: 'destructive'
       });
     } finally {
@@ -251,69 +288,144 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
             </div>
           ) : parents.length > 0 ? (
             <div className="space-y-4">
-              {parents.map(parent => (
-                <Card key={parent.id}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <CardTitle className="text-sm">{parent.name}</CardTitle>
+              {parents.map(parent => {
+                const isEditing = editingParent === parent.id;
+                const [editData, setEditData] = useState({
+                  name: parent.name,
+                  email: parent.email,
+                  phone: parent.phone || ''
+                });
+
+                return (
+                  <Card key={parent.id}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                          {isEditing ? (
+                            <Input
+                              value={editData.name}
+                              onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
+                              className="text-sm font-medium"
+                            />
+                          ) : (
+                            <CardTitle className="text-sm">{parent.name}</CardTitle>
+                          )}
+                        </div>
+                        <div className="flex gap-1">
+                          {isEditing ? (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleUpdateParent(parent.id, editData)}
+                                disabled={saving}
+                              >
+                                <Check className="h-4 w-4 text-green-500" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingParent(null);
+                                  setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                }}
+                              >
+                                <X className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingParent(parent.id);
+                                  setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRemoveParent(parent.id)}
+                              >
+                                <Trash2 className="h-4 w-4 text-red-500" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleRemoveParent(parent.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">{parent.email}</span>
-                      </div>
-                      {parent.phone && (
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {isEditing ? (
+                            <Input
+                              type="email"
+                              value={editData.email}
+                              onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
+                              className="text-sm"
+                            />
+                          ) : (
+                            <span className="text-sm">{parent.email}</span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2">
                           <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{parent.phone}</span>
+                          {isEditing ? (
+                            <Input
+                              type="tel"
+                              value={editData.phone}
+                              onChange={(e) => setEditData(prev => ({ ...prev, phone: e.target.value }))}
+                              placeholder="Phone number"
+                              className="text-sm"
+                            />
+                          ) : (
+                            <span className="text-sm">{parent.phone || 'No phone'}</span>
+                          )}
                         </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Link className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-xs font-medium">Link Code:</span>
-                        <Badge variant="outline" className="text-xs">
-                          {parent.link_code}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyLinkCode(parent.link_code)}
-                          className="h-6 px-2"
-                        >
-                          Copy
-                        </Button>
                       </div>
-                    </div>
 
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSendInvite(parent)}
-                        className="flex-1"
-                      >
-                        <Mail className="h-4 w-4 mr-2" />
-                        Send Invite
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      {!isEditing && (
+                        <>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Link className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs font-medium">Link Code:</span>
+                              <Badge variant="outline" className="text-xs">
+                                {parent.link_code}
+                              </Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => copyLinkCode(parent.link_code)}
+                                className="h-6 px-2"
+                              >
+                                Copy
+                              </Button>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSendInvite(parent)}
+                              className="flex-1"
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Send Invite
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           ) : (
             <Card>
