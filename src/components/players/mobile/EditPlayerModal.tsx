@@ -83,7 +83,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[90vh]">
+      <SheetContent side="bottom" className="h-[90vh] flex flex-col">
         <SheetHeader className="border-b pb-4">
           <SheetTitle>Edit Player</SheetTitle>
         </SheetHeader>

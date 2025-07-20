@@ -146,6 +146,17 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
         return;
       }
 
+      // Don't try to update linked parents with invalid UUID format
+      if (parentId.startsWith('linked_')) {
+        toast({
+          title: 'Info',
+          description: 'Linked parent details cannot be edited here',
+          variant: 'default'
+        });
+        setEditingParent(null);
+        return;
+      }
+
       const { error } = await supabase
         .from('parents')
         .update({

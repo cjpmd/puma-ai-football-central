@@ -161,6 +161,20 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
   };
 
   const handleUpdateParent = (parentId: string) => {
+    const parent = parents.find(p => p.id === parentId);
+    if (!parent) return;
+
+    // Don't try to update linked parents with invalid UUID format
+    if (parentId.startsWith('linked_') || parent.isLinked) {
+      toast({
+        title: 'Info',
+        description: 'Linked parent details cannot be edited here',
+        variant: 'default'
+      });
+      setEditingParent(null);
+      return;
+    }
+
     updateParentMutation.mutate({ 
       id: parentId, 
       data: { 
@@ -362,27 +376,29 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                                 </Button>
                               </>
                             ) : (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingParent(parent.id);
-                                    setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleDelete(parent.id)}
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
+                               <>
+                                 {!parent.isLinked && (
+                                   <Button
+                                     size="sm"
+                                     variant="ghost"
+                                     onClick={() => {
+                                       setEditingParent(parent.id);
+                                       setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                     }}
+                                     className="h-8 w-8 p-0"
+                                   >
+                                     <Edit className="h-4 w-4" />
+                                   </Button>
+                                 )}
+                                 <Button
+                                   size="sm"
+                                   variant="ghost"
+                                   onClick={() => handleDelete(parent.id)}
+                                   className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                 >
+                                   <X className="h-4 w-4" />
+                                 </Button>
+                               </>
                             )}
                           </div>
                           <div className="space-y-2">
