@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Player, Parent } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { playersService } from '@/services/playersService';
+import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PlusCircle, Copy, User, X, Edit, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -100,6 +101,39 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     },
   });
 
+  const updateLinkedParentMutation = useMutation({
+    mutationFn: async ({ userId, data }: { userId: string; data: { name: string; email: string; phone: string } }) => {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          name: data.name,
+          email: data.email,
+          phone: data.phone
+        })
+        .eq('id', userId);
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      if (player?.id) {
+        queryClient.invalidateQueries({ queryKey: ['parents', player.id] });
+      }
+      setEditingParent(null);
+      toast({
+        title: 'Linked Parent Updated',
+        description: 'The linked parent\'s profile has been updated.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update linked parent profile',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const deleteParentMutation = useMutation({
     mutationFn: playersService.deleteParent,
     onSuccess: () => {
@@ -177,17 +211,32 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
     const parent = parents.find(p => p.id === parentId);
     if (!parent) return;
 
-    // Don't try to update linked parents with invalid UUID format
+    // Handle linked parents differently - update their user profile
     if (parentId.startsWith('linked_') || parent.isLinked) {
-      toast({
-        title: 'Info',
-        description: 'Linked parent details cannot be edited here',
-        variant: 'default'
+      const userId = parentId.startsWith('linked_') ? parentId.replace('linked_', '') : parent.userId;
+      
+      if (!userId) {
+        toast({
+          title: 'Error',
+          description: 'Cannot find user ID for linked parent',
+          variant: 'destructive'
+        });
+        setEditingParent(null);
+        return;
+      }
+
+      updateLinkedParentMutation.mutate({ 
+        userId, 
+        data: { 
+          name: editData.name, 
+          email: editData.email, 
+          phone: editData.phone 
+        } 
       });
-      setEditingParent(null);
       return;
     }
 
+    // Handle regular parents
     updateParentMutation.mutate({ 
       id: parentId, 
       data: { 
@@ -401,20 +450,18 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                                 </>
                               ) : (
                                 <>
-                                  {!isLinked && (
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      onClick={() => {
-                                        setEditingParent(parent.id);
-                                        setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
-                                      }}
-                                      className="h-8 w-8 p-0"
-                                      title="Edit parent details"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingParent(parent.id);
+                                      setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                    }}
+                                    className="h-8 w-8 p-0"
+                                    title={isLinked ? "Edit linked parent profile" : "Edit parent details"}
+                                  >
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
                                   <Button
                                     size="sm"
                                     variant="ghost"
@@ -430,6 +477,14 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                           </div>
                           
                           <div className="space-y-3">
+                            {isLinked && isEditing && (
+                              <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                <p className="text-sm text-blue-700">
+                                  <strong>Note:</strong> Editing this linked parent will update their user profile across the entire system.
+                                </p>
+                              </div>
+                            )}
+                            
                             <div>
                               <Label className="text-sm text-muted-foreground">Name:</Label>
                               {isEditing ? (

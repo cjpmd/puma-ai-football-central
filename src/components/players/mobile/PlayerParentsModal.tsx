@@ -136,27 +136,46 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
     try {
       setSaving(true);
 
-      if (parent.isLinked) {
-        toast({
-          title: 'Info',
-          description: 'Linked parent details must be updated from their user profile',
-          variant: 'default'
-        });
+      // Handle linked parents differently - update their user profile
+      if (parent.isLinked || parentId.startsWith('linked_')) {
+        const userId = parentId.startsWith('linked_') ? parentId.replace('linked_', '') : parent.userId;
+        
+        if (!userId) {
+          toast({
+            title: 'Error',
+            description: 'Cannot find user ID for linked parent',
+            variant: 'destructive'
+          });
+          setEditingParent(null);
+          return;
+        }
+
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            name: updatedData.name.trim(),
+            email: updatedData.email.trim(),
+            phone: updatedData.phone.trim() || null
+          })
+          .eq('id', userId);
+
+        if (error) throw error;
+
+        setParents(prev => prev.map(p => 
+          p.id === parentId 
+            ? { ...p, name: updatedData.name, email: updatedData.email, phone: updatedData.phone }
+            : p
+        ));
         setEditingParent(null);
+        
+        toast({
+          title: 'Success',
+          description: 'Linked parent profile updated successfully'
+        });
         return;
       }
 
-      // Don't try to update linked parents with invalid UUID format
-      if (parentId.startsWith('linked_')) {
-        toast({
-          title: 'Info',
-          description: 'Linked parent details cannot be edited here',
-          variant: 'default'
-        });
-        setEditingParent(null);
-        return;
-      }
-
+      // Handle regular parents
       const { error } = await supabase
         .from('parents')
         .update({
@@ -377,22 +396,22 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                             </>
                           ) : (
                             <>
-                              {!parent.isLinked && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingParent(parent.id);
-                                    setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              )}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingParent(parent.id);
+                                  setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                }}
+                                title={parent.isLinked ? "Edit linked parent profile" : "Edit parent details"}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveParent(parent.id)}
+                                title={parent.isLinked ? "Cannot delete linked account" : "Remove parent"}
                               >
                                 <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
@@ -402,6 +421,14 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      {parent.isLinked && isEditing && (
+                        <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                          <p className="text-xs text-blue-700">
+                            <strong>Note:</strong> Editing this linked parent will update their user profile.
+                          </p>
+                        </div>
+                      )}
+                      
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Mail className="h-4 w-4 text-muted-foreground" />
