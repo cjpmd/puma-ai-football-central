@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,7 +11,14 @@ import { Team } from '@/types';
 
 const PlayerManagementPage = () => {
   const { teams } = useAuth();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  // Update selectedTeamId when teams load
+  useEffect(() => {
+    if (teams.length > 0 && !selectedTeamId) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams, selectedTeamId]);
 
   const handleTeamChange = (teamId: string) => {
     setSelectedTeamId(teamId);

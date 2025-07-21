@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,14 @@ import { ResultsSummary } from '@/components/analytics/ResultsSummary';
 
 const Analytics = () => {
   const { teams } = useAuth();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  // Update selectedTeamId when teams load
+  useEffect(() => {
+    if (teams.length > 0 && !selectedTeamId) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams, selectedTeamId]);
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({

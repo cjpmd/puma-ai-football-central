@@ -33,7 +33,14 @@ const PlayerManagementTab = () => {
   const { teams } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedTeamId, setSelectedTeamId] = useState<string>(teams[0]?.id || '');
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
+
+  // Update selectedTeamId when teams load
+  useEffect(() => {
+    if (teams.length > 0 && !selectedTeamId) {
+      setSelectedTeamId(teams[0].id);
+    }
+  }, [teams, selectedTeamId]);
   const [searchTerm, setSearchTerm] = useState('');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
