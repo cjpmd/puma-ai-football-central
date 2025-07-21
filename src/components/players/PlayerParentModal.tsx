@@ -155,6 +155,19 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
   };
 
   const handleDelete = (parentId: string) => {
+    const parent = parents.find(p => p.id === parentId);
+    if (!parent) return;
+
+    // Don't allow deletion of linked parents
+    if (parentId.startsWith('linked_') || parent.isLinked) {
+      toast({
+        title: 'Cannot Delete',
+        description: 'Linked parent accounts cannot be deleted from here. They must unlink themselves from their account.',
+        variant: 'default'
+      });
+      return;
+    }
+
     if (window.confirm('Are you sure you want to remove this parent?')) {
       deleteParentMutation.mutate(parentId);
     }
@@ -348,71 +361,89 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
 
                   {parents.map((parent) => {
                     const isEditing = editingParent === parent.id;
+                    const isLinked = parent.isLinked || parent.id.startsWith('linked_');
                     
                     return (
-                      <Card key={parent.id}>
+                      <Card key={parent.id} className="relative">
                         <CardContent className="pt-6">
-                          <div className="absolute top-2 right-2 flex gap-1">
-                            {isEditing ? (
-                              <>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleUpdateParent(parent.id)}
-                                  className="h-8 w-8 p-0 text-green-500 hover:text-green-700"
-                                >
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => {
-                                    setEditingParent(null);
-                                    setEditData({ name: '', email: '', phone: '' });
-                                  }}
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : (
-                               <>
-                                 {!parent.isLinked && (
-                                   <Button
-                                     size="sm"
-                                     variant="ghost"
-                                     onClick={() => {
-                                       setEditingParent(parent.id);
-                                       setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
-                                     }}
-                                     className="h-8 w-8 p-0"
-                                   >
-                                     <Edit className="h-4 w-4" />
-                                   </Button>
-                                 )}
-                                 <Button
-                                   size="sm"
-                                   variant="ghost"
-                                   onClick={() => handleDelete(parent.id)}
-                                   className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                 >
-                                   <X className="h-4 w-4" />
-                                 </Button>
-                               </>
-                            )}
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1">
+                              {isLinked && (
+                                <div className="mb-2">
+                                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    Linked Account
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              {isEditing ? (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleUpdateParent(parent.id)}
+                                    className="h-8 w-8 p-0 text-green-500 hover:text-green-700"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingParent(null);
+                                      setEditData({ name: '', email: '', phone: '' });
+                                    }}
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <>
+                                  {!isLinked && (
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingParent(parent.id);
+                                        setEditData({ name: parent.name, email: parent.email, phone: parent.phone || '' });
+                                      }}
+                                      className="h-8 w-8 p-0"
+                                      title="Edit parent details"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => handleDelete(parent.id)}
+                                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                    title={isLinked ? "Cannot delete linked account" : "Remove parent"}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <div className="flex justify-between">
+                          
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-sm text-muted-foreground">Name:</Label>
                               {isEditing ? (
                                 <Input
                                   value={editData.name}
                                   onChange={(e) => setEditData(prev => ({ ...prev, name: e.target.value }))}
-                                  className="font-bold mr-20"
+                                  className="mt-1"
+                                  placeholder="Parent's name"
                                 />
                               ) : (
-                                <Label className="font-bold">{parent.name}</Label>
+                                <div className="font-medium">{parent.name}</div>
                               )}
                             </div>
+                            
                             <div>
                               <Label className="text-sm text-muted-foreground">Email:</Label>
                               {isEditing ? (
@@ -421,11 +452,13 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                                   value={editData.email}
                                   onChange={(e) => setEditData(prev => ({ ...prev, email: e.target.value }))}
                                   className="mt-1"
+                                  placeholder="parent@example.com"
                                 />
                               ) : (
                                 <div>{parent.email}</div>
                               )}
                             </div>
+                            
                             <div>
                               <Label className="text-sm text-muted-foreground">Phone:</Label>
                               {isEditing ? (
@@ -437,9 +470,10 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                                   className="mt-1"
                                 />
                               ) : (
-                                <div>{parent.phone || 'No phone'}</div>
+                                <div>{parent.phone || 'No phone number'}</div>
                               )}
                             </div>
+                            
                             {!isEditing && (
                               <>
                                 <div>
@@ -450,30 +484,37 @@ export const PlayerParentModal: React.FC<PlayerParentModalProps> = ({
                                     <span className="capitalize">{parent.subscriptionStatus}</span>
                                   </div>
                                 </div>
-                                <div>
-                                  <Label className="text-sm text-muted-foreground">Link Code:</Label>
-                                  <div className="flex items-center gap-2">
-                                    <code className="bg-muted px-1 py-0.5 rounded text-sm">
-                                      {parent.linkCode}
-                                    </code>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-8 p-0"
-                                      onClick={() => copyToClipboard(parent.linkCode)}
-                                    >
-                                      <Copy className="h-3.5 w-3.5" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="text-xs h-7"
-                                      onClick={() => regenerateLinkCodeMutation.mutate(parent.id)}
-                                    >
-                                      Regenerate
-                                    </Button>
+                                
+                                {parent.linkCode && (
+                                  <div>
+                                    <Label className="text-sm text-muted-foreground">Link Code:</Label>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <code className="bg-muted px-2 py-1 rounded text-sm font-mono">
+                                        {parent.linkCode}
+                                      </code>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0"
+                                        onClick={() => copyToClipboard(parent.linkCode)}
+                                        title="Copy link code"
+                                      >
+                                        <Copy className="h-3.5 w-3.5" />
+                                      </Button>
+                                      {!isLinked && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          className="text-xs h-7"
+                                          onClick={() => regenerateLinkCodeMutation.mutate(parent.id)}
+                                          title="Generate new link code"
+                                        >
+                                          Regenerate
+                                        </Button>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
+                                )}
                               </>
                             )}
                           </div>
