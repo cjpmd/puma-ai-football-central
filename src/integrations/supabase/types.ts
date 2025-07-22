@@ -2187,6 +2187,14 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_event_roles: {
+        Args: { p_user_id: string; p_event_id: string }
+        Returns: {
+          role: string
+          source_id: string
+          source_type: string
+        }[]
+      }
       regenerate_all_event_player_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
