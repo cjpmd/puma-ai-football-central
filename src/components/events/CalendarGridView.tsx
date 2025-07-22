@@ -11,7 +11,7 @@ import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
-import { QuickAvailabilityControls } from './QuickAvailabilityControls';
+import { StaffAvailabilityControls } from './StaffAvailabilityControls';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
 interface CalendarGridViewProps {
@@ -413,11 +413,10 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                           {/* Availability Controls */}
                           {showAvailabilityControls && (
                             <div className="mt-1">
-                              <QuickAvailabilityControls
+                              <StaffAvailabilityControls
                                 eventId={event.id}
-                                currentStatus={availabilityStatus}
+                                teamId={event.team_id}
                                 size="sm"
-                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
                               />
                             </div>
                           )}

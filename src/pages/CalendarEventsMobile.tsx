@@ -19,7 +19,7 @@ import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus } from '
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
-import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
+import { StaffAvailabilityControls } from '@/components/events/StaffAvailabilityControls';
 import { eventsService } from '@/services/eventsService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { EditProfileModal } from '@/components/users/EditProfileModal';
@@ -706,15 +706,13 @@ export default function CalendarEventsMobile() {
                             </div>
                           )}
 
-                          {/* Availability Controls - Now at bottom */}
-                          {showAvailabilityControls && availabilityStatus && (
-                            <div className="flex justify-center pt-2 border-t">
-                              <AvailabilityStatusBadge 
+                          {/* Staff Availability Controls */}
+                          {shouldShowAvailabilityControls(event) && (
+                            <div className="pt-2 border-t">
+                              <StaffAvailabilityControls
                                 eventId={event.id}
-                                status={availabilityStatus} 
-                                size="sm" 
-                                interactive={true}
-                                onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                                teamId={event.team_id}
+                                size="sm"
                               />
                             </div>
                           )}
