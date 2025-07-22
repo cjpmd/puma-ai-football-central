@@ -13,7 +13,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
-import { PlusCircle, Settings, UserPlus, Users, QrCode } from 'lucide-react';
+import { PlusCircle, Settings, UserPlus, Users, QrCode, Link } from 'lucide-react';
+import { StaffManagementButton } from '@/components/teams/StaffManagementButton';
 
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData, user } = useAuth();
@@ -382,6 +383,12 @@ const TeamManagement = () => {
           <UserPlus className="mr-2 h-4 w-4" />
           Staff {isLinked ? '(View)' : ''}
         </Button>
+        {!isLinked && (
+          <StaffManagementButton 
+            teamId={team.id} 
+            teamName={team.name}
+          />
+        )}
         <Button 
           size="sm" 
           onClick={() => openTeamSettingsModal(team, isLinked)}

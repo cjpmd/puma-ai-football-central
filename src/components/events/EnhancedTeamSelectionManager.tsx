@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2 } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus } from 'lucide-react';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
 import { getFormationsByFormat } from '@/utils/formationUtils';
+import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
 
 // Helper function to create a default period with the first available formation
 const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): FormationPeriod => {
@@ -43,6 +44,7 @@ interface TeamSelection {
   periods: FormationPeriod[];
   globalCaptainId?: string;
   performanceCategory?: string;
+  selectedStaff?: string[];
 }
 
 interface EnhancedTeamSelectionManagerProps {
@@ -66,6 +68,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('squad');
   const [showMatchDayPack, setShowMatchDayPack] = useState(false);
+
+  // Helper function to extract staff IDs from staff_selection
+  const extractStaffIds = (staffSelection: any[]): string[] => {
+    if (!Array.isArray(staffSelection)) return [];
+    return staffSelection.map(staff => staff.staffId || staff.id).filter(Boolean);
+  };
 
   // Load performance categories for the team
   const { data: performanceCategories = [] } = useQuery({
@@ -129,7 +137,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           squadPlayers: [],
           periods: [],
           globalCaptainId: undefined,
-          performanceCategory: 'none'
+          performanceCategory: 'none',
+          selectedStaff: []
         });
       }
 
@@ -182,7 +191,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 ...initialTeamSelections[teamIndex],
                 periods,
                 globalCaptainId: periods[0]?.captainId,
-                performanceCategory: selections[0]?.performance_category_id || 'none'
+                performanceCategory: selections[0]?.performance_category_id || 'none',
+                selectedStaff: extractStaffIds(selections[0]?.staff_selection) || []
               };
             }
           }
@@ -223,7 +233,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       squadPlayers: [],
       periods: [defaultPeriod],
       globalCaptainId: undefined,
-      performanceCategory: 'none'
+      performanceCategory: 'none',
+      selectedStaff: []
     };
     
     console.log('Adding new team:', newTeam);
@@ -377,6 +388,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     updateCurrentTeam({ squadPlayers: newSquadPlayers });
   };
 
+  const handleStaffChange = (staffIds: string[]) => {
+    console.log('Staff changed for team', currentTeamIndex + 1, ':', staffIds);
+    updateCurrentTeam({ selectedStaff: staffIds });
+  };
+
   const handlePerformanceCategoryChange = async (categoryId: string) => {
     const actualCategoryId = categoryId === 'none' ? null : categoryId;
     const teamNumber = currentTeamIndex + 1;
@@ -520,7 +536,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             performance_category_id: team.performanceCategory === 'none' ? null : team.performanceCategory,
             player_positions: playerPositions,
             substitute_players: period.substitutes,
-            staff_selection: []
+            staff_selection: (team.selectedStaff || []).map(staffId => ({ staffId }))
           });
         }
       }
@@ -582,7 +598,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     {teamSelections.length} team(s)
                   </Badge>
                   <Badge variant="outline" className="text-xs">
-                    {currentTeam?.squadPlayers.length || 0} in squad
+                    {currentTeam?.squadPlayers.length || 0} players
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    {(currentTeam?.selectedStaff || []).length} staff
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     {currentTeam?.periods.length || 0} period(s)
@@ -691,10 +710,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
         <div className="flex-1 overflow-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
             <div className={`${isMobile ? 'p-2' : 'p-6'} space-y-4`}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
                   <Users className="h-3 w-3" />
                   Squad
+                </TabsTrigger>
+                <TabsTrigger value="staff" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                  <UserPlus className="h-3 w-3" />
+                  Staff
                 </TabsTrigger>
                 <TabsTrigger value="formation" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
                   <Gamepad2 className="h-3 w-3" />
@@ -716,6 +739,17 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     }}
                     allTeamSelections={teamSelections}
                     currentTeamIndex={currentTeamIndex}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="staff" className="h-full mt-0">
+                {currentTeam && (
+                  <EventStaffAssignmentSection
+                    eventId={event.id}
+                    teamId={teamId}
+                    selectedStaff={currentTeam.selectedStaff || []}
+                    onStaffChange={handleStaffChange}
                   />
                 )}
               </TabsContent>
