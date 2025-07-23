@@ -29,7 +29,7 @@ export const useStaffAvailability = (eventId?: string, userId?: string) => {
     loadData();
   }, [eventId, userId]);
 
-  const updateAvailability = async (role: 'player' | 'parent' | 'staff', status: 'available' | 'unavailable') => {
+  const updateAvailability = async (role: 'player' | 'staff', status: 'available' | 'unavailable') => {
     if (!eventId || !userId) return;
     
     try {
@@ -41,7 +41,7 @@ export const useStaffAvailability = (eventId?: string, userId?: string) => {
     }
   };
 
-  const getRoleStatus = (role: 'player' | 'parent' | 'staff'): 'pending' | 'available' | 'unavailable' | null => {
+  const getRoleStatus = (role: 'player' | 'staff'): 'pending' | 'available' | 'unavailable' | null => {
     const status = availabilityStatuses.find(s => s.role === role);
     return status?.status || null;
   };

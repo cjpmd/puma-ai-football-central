@@ -1,15 +1,17 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UserRole {
-  role: 'player' | 'parent' | 'staff';
+  role: 'player' | 'staff';
   sourceId: string;
   sourceType: string;
+  playerName?: string; // For parent-linked players
 }
 
 export interface AvailabilityStatus {
-  role: 'player' | 'parent' | 'staff';
+  role: 'player' | 'staff';
   status: 'pending' | 'available' | 'unavailable';
   sourceId: string;
+  playerName?: string; // For parent-linked players
 }
 
 export const multiRoleAvailabilityService = {
@@ -21,11 +23,28 @@ export const multiRoleAvailabilityService = {
 
     if (error) throw error;
 
-    return data.map((row: any) => ({
-      role: row.role,
-      sourceId: row.source_id,
-      sourceType: row.source_type
+    // Get player names for parent-linked players
+    const rolesWithNames = await Promise.all(data.map(async (row: any) => {
+      let playerName = undefined;
+      
+      if (row.role === 'player' && row.source_type === 'player_link') {
+        const { data: player } = await supabase
+          .from('players')
+          .select('name')
+          .eq('id', row.source_id)
+          .single();
+        playerName = player?.name;
+      }
+
+      return {
+        role: row.role,
+        sourceId: row.source_id,
+        sourceType: row.source_type,
+        playerName
+      };
     }));
+
+    return rolesWithNames;
   },
 
   async getUserAvailabilityStatuses(eventId: string, userId: string): Promise<AvailabilityStatus[]> {
@@ -37,17 +56,38 @@ export const multiRoleAvailabilityService = {
 
     if (error) throw error;
 
-    return data.map((row: any) => ({
-      role: row.role,
-      status: row.status,
-      sourceId: userId
+    // Get player names for player role records (these might be parent-linked players)
+    const statusesWithNames = await Promise.all(data.map(async (row: any) => {
+      let playerName = undefined;
+      
+      if (row.role === 'player') {
+        // Try to find the player this availability record is for
+        const { data: userPlayer } = await supabase
+          .from('user_players')
+          .select('player_id, players(name)')
+          .eq('user_id', userId)
+          .single();
+        
+        if (userPlayer?.players) {
+          playerName = userPlayer.players.name;
+        }
+      }
+
+      return {
+        role: row.role,
+        status: row.status,
+        sourceId: userId,
+        playerName
+      };
     }));
+
+    return statusesWithNames;
   },
 
   async updateRoleAvailability(
     eventId: string,
     userId: string,
-    role: 'player' | 'parent' | 'staff',
+    role: 'player' | 'staff',
     status: 'available' | 'unavailable' | 'pending'
   ): Promise<void> {
     const { error } = await supabase
@@ -68,7 +108,7 @@ export const multiRoleAvailabilityService = {
   async createStaffAvailabilityRecord(
     eventId: string,
     userId: string,
-    role: 'player' | 'parent' | 'staff' = 'staff'
+    role: 'player' | 'staff' = 'staff'
   ): Promise<void> {
     const { error } = await supabase
       .from('event_availability')

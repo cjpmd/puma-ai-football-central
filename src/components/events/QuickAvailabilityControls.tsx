@@ -28,7 +28,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     getRoleStatus 
   } = useStaffAvailability(eventId, user?.id);
 
-  const handleUpdateAvailability = async (role: 'player' | 'parent' | 'staff', status: 'available' | 'unavailable') => {
+  const handleUpdateAvailability = async (role: 'player' | 'staff', status: 'available' | 'unavailable') => {
     if (!user?.id || isUpdating) return;
 
     setIsUpdating(true);
@@ -44,7 +44,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     }
   };
 
-  const renderRoleAvailability = (role: 'player' | 'parent' | 'staff', roleLabel: string) => {
+  const renderRoleAvailability = (role: 'player' | 'staff', roleLabel: string) => {
     const status = getRoleStatus(role);
     const buttonSize = size === 'sm' ? 'h-6 w-12 px-2' : 'h-7 w-16 px-3';
     const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
@@ -130,10 +130,10 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     return (
       <div className="space-y-1">
         {userRoles.map((role) => {
-          const roleLabel = role.role === 'parent' ? 'Parent' : role.role === 'staff' ? 'Staff' : 'Player';
+          const roleLabel = role.role === 'staff' ? 'Staff' : role.playerName ? `Player: ${role.playerName}` : 'Player';
           return (
-            <div key={role.role}>
-              {renderRoleAvailability(role.role as 'player' | 'parent' | 'staff', roleLabel)}
+            <div key={`${role.role}-${role.sourceId}`}>
+              {renderRoleAvailability(role.role, roleLabel)}
             </div>
           );
         })}
@@ -142,7 +142,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   }
 
   // Single role - maintain existing behavior for backwards compatibility
-  const singleRole = userRoles[0]?.role as 'player' | 'parent' | 'staff' || 'player';
+  const singleRole = userRoles[0]?.role || 'player';
   const status = getRoleStatus(singleRole) || currentStatus;
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
