@@ -3,7 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Check, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { multiRoleAvailabilityService, type UserRole, type AvailabilityStatus } from '@/services/multiRoleAvailabilityService';
+import { supabase } from '@/integrations/supabase/client';
+
+interface EventAvailability {
+  id: string;
+  event_id: string;
+  user_id: string;
+  role: 'player' | 'staff';
+  status: 'pending' | 'available' | 'unavailable';
+  responded_at?: string;
+  notification_sent_at: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface MultiRoleAvailabilityControlsProps {
   eventId: string;
@@ -16,8 +28,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   size = 'md',
   onStatusChange
 }) => {
-  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
-  const [availabilityStatuses, setAvailabilityStatuses] = useState<AvailabilityStatus[]>([]);
+  const [availabilities, setAvailabilities] = useState<EventAvailability[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<Set<string>>(new Set());
   const { user } = useAuth();
@@ -35,18 +46,16 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
     setLoading(true);
     try {
-      const [roles, statuses] = await Promise.all([
-        multiRoleAvailabilityService.getUserRolesForEvent(eventId, user.id),
-        multiRoleAvailabilityService.getUserAvailabilityStatuses(eventId, user.id)
-      ]);
+      const { data, error } = await supabase
+        .from('event_availability')
+        .select('*')
+        .eq('event_id', eventId)
+        .eq('user_id', user.id);
 
-      console.log('DEBUG - Event ID:', eventId);
-      console.log('DEBUG - User ID:', user.id);
-      console.log('DEBUG - User Roles:', JSON.stringify(roles, null, 2));
-      console.log('DEBUG - Availability Statuses:', JSON.stringify(statuses, null, 2));
+      if (error) throw error;
 
-      setUserRoles(roles);
-      setAvailabilityStatuses(statuses);
+      console.log('DEBUG - Event Availability:', data);
+      setAvailabilities((data || []) as EventAvailability[]);
     } catch (error) {
       console.error('Error loading availability data:', error);
       toast.error('Failed to load availability data');
@@ -57,34 +66,38 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
   const handleUpdateAvailability = async (
     role: 'player' | 'staff',
-    status: 'available' | 'unavailable',
-    roleKey: string
+    status: 'available' | 'unavailable'
   ) => {
-    if (!user?.id || updating.has(roleKey)) return;
+    if (!user?.id || updating.has(role)) return;
 
-    setUpdating(prev => new Set([...prev, roleKey]));
+    setUpdating(prev => new Set([...prev, role]));
 
     try {
-      await multiRoleAvailabilityService.updateRoleAvailability(
-        eventId,
-        user.id,
-        role,
-        status
-      );
+      const { error } = await supabase
+        .from('event_availability')
+        .update({ 
+          status,
+          responded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('event_id', eventId)
+        .eq('user_id', user.id)
+        .eq('role', role);
+
+      if (error) throw error;
 
       // Update local state
-      setAvailabilityStatuses(prev => {
-        const existing = prev.find(s => s.role === role);
-        if (existing) {
-          return prev.map(s => s.role === role ? { ...s, status } : s);
-        } else {
-          return [...prev, { role, status, sourceId: user.id }];
-        }
-      });
+      setAvailabilities(prev => 
+        prev.map(availability => 
+          availability.role === role 
+            ? { ...availability, status, responded_at: new Date().toISOString() }
+            : availability
+        )
+      );
 
       onStatusChange?.(role, status);
       
-      const roleLabel = role === 'staff' ? 'Staff' : userRoles.find(r => r.role === 'player')?.playerName || 'Player';
+      const roleLabel = role === 'staff' ? 'Coach' : 'Player';
       toast.success(`${roleLabel} availability set to ${status}`);
     } catch (error) {
       console.error('Error updating availability:', error);
@@ -92,31 +105,21 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
     } finally {
       setUpdating(prev => {
         const next = new Set(prev);
-        next.delete(roleKey);
+        next.delete(role);
         return next;
       });
     }
   };
 
   const getRoleStatus = (role: 'player' | 'staff'): 'pending' | 'available' | 'unavailable' => {
-    const status = availabilityStatuses.find(s => s.role === role);
-    return status?.status || 'pending';
+    const availability = availabilities.find(a => a.role === role);
+    return availability?.status || 'pending';
   };
 
-  const renderRoleAvailability = (userRole: UserRole) => {
-    const roleKey = `${userRole.role}-${userRole.sourceId}`;
-    const isUpdating = updating.has(roleKey);
-    const status = getRoleStatus(userRole.role);
-    
-    // Create role label with names
-    let roleLabel = '';
-    if (userRole.role === 'staff') {
-      roleLabel = userRole.staffName ? `Staff: ${userRole.staffName}` : 'Staff Availability';
-    } else if (userRole.role === 'player' && userRole.playerName) {
-      roleLabel = `Player: ${userRole.playerName}`;
-    } else {
-      roleLabel = 'Player Availability';
-    }
+  const renderRoleAvailability = (role: 'player' | 'staff') => {
+    const isUpdating = updating.has(role);
+    const status = getRoleStatus(role);
+    const roleLabel = role === 'staff' ? 'Coach Availability' : 'Player Availability';
 
     // Show initial accept/decline buttons for pending status
     if (status === 'pending') {
@@ -127,7 +130,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
             <Button
               size="sm"
               className={`bg-green-600 hover:bg-green-700 text-white ${buttonSize}`}
-              onClick={() => handleUpdateAvailability(userRole.role, 'available', roleKey)}
+              onClick={() => handleUpdateAvailability(role, 'available')}
               disabled={isUpdating}
               title={`Mark as available`}
             >
@@ -137,7 +140,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
             <Button
               size="sm"
               className={`bg-red-600 hover:bg-red-700 text-white ${buttonSize}`}
-              onClick={() => handleUpdateAvailability(userRole.role, 'unavailable', roleKey)}
+              onClick={() => handleUpdateAvailability(role, 'unavailable')}
               disabled={isUpdating}
               title={`Mark as unavailable`}
             >
@@ -171,9 +174,8 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
                 : 'text-green-600 hover:text-green-700 hover:bg-green-50'
             } h-6 w-6 p-0`}
             onClick={() => handleUpdateAvailability(
-              userRole.role,
-              status === 'available' ? 'unavailable' : 'available',
-              roleKey
+              role,
+              status === 'available' ? 'unavailable' : 'available'
             )}
             disabled={isUpdating}
             title={`Change to ${status === 'available' ? 'unavailable' : 'available'}`}
@@ -189,15 +191,12 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
     return <div className={`${textSize} text-muted-foreground`}>Loading availability...</div>;
   }
 
-  if (userRoles.length === 0) {
+  if (availabilities.length === 0) {
     return (
       <div className={`${textSize} text-muted-foreground space-y-2`}>
-        <div>No roles found for this event</div>
-        <div className="text-xs opacity-75 space-y-1">
-          <div>This means you are not assigned to this event as either:</div>
-          <div>• Staff member (you need to be selected in team setup)</div>
-          <div>• Player (if you're a parent, your child needs to be in the squad)</div>
-          <div className="mt-2 font-mono text-xs">Debug: User {user?.id?.slice(-8)} | Event {eventId?.slice(-8)}</div>
+        <div>No availability requests found for this event</div>
+        <div className="text-xs opacity-75">
+          Availability requests are automatically created when events are added.
         </div>
       </div>
     );
@@ -205,9 +204,9 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
   return (
     <div className="space-y-2">
-      {userRoles.map((userRole) => (
-        <div key={`${userRole.role}-${userRole.sourceId}`}>
-          {renderRoleAvailability(userRole)}
+      {availabilities.map((availability) => (
+        <div key={`${availability.role}-${availability.id}`}>
+          {renderRoleAvailability(availability.role)}
         </div>
       ))}
     </div>
