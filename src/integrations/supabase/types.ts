@@ -2188,7 +2188,7 @@ export type Database = {
         Returns: string
       }
       get_user_event_roles: {
-        Args: { p_user_id: string; p_event_id: string }
+        Args: { p_event_id: string; p_user_id: string }
         Returns: {
           role: string
           source_id: string
