@@ -40,6 +40,11 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
         multiRoleAvailabilityService.getUserAvailabilityStatuses(eventId, user.id)
       ]);
 
+      console.log('DEBUG - User Roles:', roles);
+      console.log('DEBUG - Availability Statuses:', statuses);
+      console.log('DEBUG - User ID:', user.id);
+      console.log('DEBUG - Event ID:', eventId);
+
       setUserRoles(roles);
       setAvailabilityStatuses(statuses);
     } catch (error) {
@@ -103,12 +108,12 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
     const isUpdating = updating.has(roleKey);
     const status = getRoleStatus(userRole.role);
     
-    // Create role label
+    // Create role label with names
     let roleLabel = '';
     if (userRole.role === 'staff') {
-      roleLabel = 'Staff Availability';
+      roleLabel = userRole.staffName ? `Staff: ${userRole.staffName}` : 'Staff Availability';
     } else if (userRole.role === 'player' && userRole.playerName) {
-      roleLabel = `Player Availability: ${userRole.playerName}`;
+      roleLabel = `Player: ${userRole.playerName}`;
     } else {
       roleLabel = 'Player Availability';
     }

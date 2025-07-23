@@ -5,6 +5,7 @@ export interface UserRole {
   sourceId: string;
   sourceType: string;
   playerName?: string; // For parent-linked players
+  staffName?: string; // For staff members
 }
 
 export interface AvailabilityStatus {
@@ -23,9 +24,10 @@ export const multiRoleAvailabilityService = {
 
     if (error) throw error;
 
-    // Get player names for parent-linked players
+    // Get player names for parent-linked players and staff names
     const rolesWithNames = await Promise.all(data.map(async (row: any) => {
       let playerName = undefined;
+      let staffName = undefined;
       
       if (row.role === 'player' && row.source_type === 'player_link') {
         const { data: player } = await supabase
@@ -36,11 +38,21 @@ export const multiRoleAvailabilityService = {
         playerName = player?.name;
       }
 
+      if (row.role === 'staff' && row.source_type === 'staff_link') {
+        const { data: staff } = await supabase
+          .from('team_staff')
+          .select('name')
+          .eq('id', row.source_id)
+          .single();
+        staffName = staff?.name;
+      }
+
       return {
         role: row.role,
         sourceId: row.source_id,
         sourceType: row.source_type,
-        playerName
+        playerName,
+        staffName
       };
     }));
 
