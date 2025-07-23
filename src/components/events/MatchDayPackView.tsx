@@ -24,6 +24,7 @@ interface EventSelection {
   substitute_players: any[];
   captain_id: string | null;
   performance_category_id: string | null;
+  staff_selection: any[];
 }
 
 interface MatchDayPackViewProps {
@@ -84,9 +85,35 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
           : JSON.parse(selection.player_positions as string || '[]'),
         substitute_players: Array.isArray(selection.substitute_players)
           ? selection.substitute_players
-          : JSON.parse(selection.substitute_players as string || '[]')
+          : JSON.parse(selection.substitute_players as string || '[]'),
+        staff_selection: Array.isArray(selection.staff_selection)
+          ? selection.staff_selection
+          : JSON.parse(selection.staff_selection as string || '[]')
       })) as EventSelection[];
     }
+  });
+
+  // Load staff data for the event
+  const { data: assignedStaff = [] } = useQuery({
+    queryKey: ['assigned-staff', event.id],
+    queryFn: async () => {
+      // Get staff IDs from all event selections
+      const staffIds = eventSelections
+        .flatMap(selection => selection.staff_selection || [])
+        .map((staff: any) => staff.staffId)
+        .filter(Boolean);
+
+      if (staffIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('team_staff')
+        .select('*')
+        .in('id', staffIds);
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: eventSelections.length > 0
   });
 
   // Load squad players for each team
@@ -666,6 +693,31 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
                   </div>
                 ))}
               </div>
+
+              {/* Staff Section */}
+              {assignedStaff.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-xl font-bold mb-4">Assigned Staff</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {assignedStaff.map(staff => (
+                      <div key={staff.id} className="flex items-center gap-4 p-4 border rounded-lg bg-blue-50">
+                        <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center">
+                          <span className="text-lg font-bold text-blue-800">
+                            {staff.name.split(' ').map((n: string) => n[0]).join('')}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-bold text-lg">{staff.name}</div>
+                          <div className="text-gray-600">{staff.role || 'Staff'}</div>
+                          {staff.email && (
+                            <div className="text-sm text-gray-500">{staff.email}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Page 3: Formation & Selection - All Periods on One Page */}

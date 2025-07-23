@@ -191,10 +191,13 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
   if (userRoles.length === 0) {
     return (
-      <div className={`${textSize} text-muted-foreground space-y-1`}>
+      <div className={`${textSize} text-muted-foreground space-y-2`}>
         <div>No roles found for this event</div>
-        <div className="text-xs opacity-75">
-          User: {user?.id} | Event: {eventId}
+        <div className="text-xs opacity-75 space-y-1">
+          <div>This means you are not assigned to this event as either:</div>
+          <div>• Staff member (you need to be selected in team setup)</div>
+          <div>• Player (if you're a parent, your child needs to be in the squad)</div>
+          <div className="mt-2 font-mono text-xs">Debug: User {user?.id?.slice(-8)} | Event {eventId?.slice(-8)}</div>
         </div>
       </div>
     );
