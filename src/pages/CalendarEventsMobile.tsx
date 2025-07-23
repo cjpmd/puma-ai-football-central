@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,10 +19,12 @@ import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus } from '
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
-import { MultiRoleAvailabilityControls } from '@/components/events/MultiRoleAvailabilityControls';
+import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { eventsService } from '@/services/eventsService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { EditProfileModal } from '@/components/users/EditProfileModal';
+import { StaffAssignmentHelper } from '@/components/debug/StaffAssignmentHelper';
+import { MultiRoleAvailabilityControls } from '@/components/events/MultiRoleAvailabilityControls';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
@@ -709,10 +711,24 @@ export default function CalendarEventsMobile() {
                           {/* Multi-Role Availability Controls */}
                           {shouldShowAvailabilityControls(event) && (
                             <div className="pt-2 border-t">
-                              <MultiRoleAvailabilityControls
-                                eventId={event.id}
-                                size="sm"
-                              />
+                               <MultiRoleAvailabilityControls
+                                 eventId={event.id}
+                                 size="sm"
+                               />
+                               
+                               {/* Debug Helper - Only show for Chris McDonald when no staff role detected */}
+                               {user?.email === 'chrisjpmcdonald@gmail.com' && !getAvailabilityStatus(event.id) && (
+                                 <div className="mt-2 pt-2 border-t">
+                                   <StaffAssignmentHelper
+                                     eventId={event.id}
+                                     staffId="dbc26381-a72b-417a-92e0-061d9a552026"
+                                     onSuccess={() => {
+                                       // Refresh the page to reload roles
+                                       window.location.reload();
+                                     }}
+                                   />
+                                 </div>
+                               )}
                             </div>
                           )}
                         </div>
