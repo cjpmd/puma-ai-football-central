@@ -40,10 +40,10 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
         multiRoleAvailabilityService.getUserAvailabilityStatuses(eventId, user.id)
       ]);
 
-      console.log('DEBUG - User Roles:', roles);
-      console.log('DEBUG - Availability Statuses:', statuses);
-      console.log('DEBUG - User ID:', user.id);
       console.log('DEBUG - Event ID:', eventId);
+      console.log('DEBUG - User ID:', user.id);
+      console.log('DEBUG - User Roles:', JSON.stringify(roles, null, 2));
+      console.log('DEBUG - Availability Statuses:', JSON.stringify(statuses, null, 2));
 
       setUserRoles(roles);
       setAvailabilityStatuses(statuses);
@@ -190,7 +190,14 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   }
 
   if (userRoles.length === 0) {
-    return <div className={`${textSize} text-muted-foreground`}>No roles found for this event</div>;
+    return (
+      <div className={`${textSize} text-muted-foreground space-y-1`}>
+        <div>No roles found for this event</div>
+        <div className="text-xs opacity-75">
+          User: {user?.id} | Event: {eventId}
+        </div>
+      </div>
+    );
   }
 
   return (
