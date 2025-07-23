@@ -4,6 +4,7 @@ import { Check, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 
 interface EventAvailability {
   id: string;
@@ -46,6 +47,10 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
     setLoading(true);
     try {
+      // First ensure all role availability records exist for this user
+      await multiRoleAvailabilityService.ensureAllRoleAvailabilityRecords(eventId, user.id);
+      
+      // Then fetch the availability data
       const { data, error } = await supabase
         .from('event_availability')
         .select('*')

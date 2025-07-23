@@ -168,5 +168,29 @@ export const multiRoleAvailabilityService = {
 
       if (error) throw error;
     }
+  },
+
+  async ensureAllRoleAvailabilityRecords(eventId: string, userId: string): Promise<void> {
+    // Get all roles this user has for this event
+    const userRoles = await this.getUserRolesForEvent(eventId, userId);
+    
+    // Create availability records for each role the user has
+    const records = userRoles.map(role => ({
+      event_id: eventId,
+      user_id: userId,
+      role: role.role,
+      status: 'pending' as const,
+      notification_sent_at: new Date().toISOString()
+    }));
+
+    if (records.length > 0) {
+      const { error } = await supabase
+        .from('event_availability')
+        .upsert(records, {
+          onConflict: 'event_id,user_id,role'
+        });
+
+      if (error) throw error;
+    }
   }
 };
