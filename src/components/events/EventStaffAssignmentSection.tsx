@@ -7,6 +7,7 @@ import { Users, Check, X, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 import { toast } from 'sonner';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface StaffMember {
   id: string;
@@ -235,7 +236,11 @@ export const EventStaffAssignmentSection: React.FC<EventStaffAssignmentSectionPr
         ) : (
           <div className="space-y-3">
             {staff.map((staffMember) => (
-              <div key={staffMember.id} className="flex items-center justify-between p-3 border rounded-lg">
+              <div key={staffMember.id} className={`flex items-center justify-between p-3 border rounded-lg ${
+                staffMember.availabilityStatus === 'available' && selectedStaff.includes(staffMember.id) 
+                  ? 'bg-green-50 border-green-200' 
+                  : ''
+              }`}>
                 <div className="flex items-center gap-3">
                   <Checkbox
                     id={`staff-${staffMember.id}`}
@@ -248,7 +253,7 @@ export const EventStaffAssignmentSection: React.FC<EventStaffAssignmentSectionPr
                         htmlFor={`staff-${staffMember.id}`} 
                         className="font-medium cursor-pointer"
                       >
-                        {staffMember.name}
+                        {formatPlayerName(staffMember.name, 'firstName')}
                       </label>
                       <Badge variant="outline" className="text-xs">
                         {formatRole(staffMember.role)}

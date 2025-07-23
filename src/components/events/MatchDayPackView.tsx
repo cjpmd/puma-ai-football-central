@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { WeatherService } from '@/services/weatherService';
 import { toast } from '@/hooks/use-toast';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface EventSelection {
   id: string;
@@ -707,7 +708,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
                           </span>
                         </div>
                         <div>
-                          <div className="font-bold text-lg">{staff.name}</div>
+                          <div className="font-bold text-lg">{formatPlayerName(staff.name, 'firstName')}</div>
                           <div className="text-gray-600">{staff.role || 'Staff'}</div>
                           {staff.email && (
                             <div className="text-sm text-gray-500">{staff.email}</div>

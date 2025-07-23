@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface StaffMember {
   id: string;
@@ -140,7 +141,7 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
     if (!staffMember.userId) {
       return (
         <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{staffMember.name}</span>
+          <span className={`${textSize} font-medium`}>{formatPlayerName(staffMember.name, 'firstName')}:</span>
           <span className={`${textSize} text-muted-foreground italic`}>
             Account not linked
           </span>
@@ -152,7 +153,7 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
     if (status === 'pending') {
       return (
         <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{staffMember.name}</span>
+          <span className={`${textSize} font-medium`}>{formatPlayerName(staffMember.name, 'firstName')}:</span>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -181,8 +182,8 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
 
     // Show status with change option
     return (
-      <div className="flex items-center justify-between">
-        <span className={`${textSize} font-medium`}>{staffMember.name}</span>
+        <div className="flex items-center justify-between">
+          <span className={`${textSize} font-medium`}>{formatPlayerName(staffMember.name, 'firstName')}:</span>
         <div className="flex items-center gap-2">
           <div className={`flex items-center gap-1 ${
             status === 'available' ? 'text-green-600' : 'text-red-600'

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
+import { formatPlayerName } from '@/utils/nameUtils';
 
 interface EventAvailability {
   id: string;
@@ -124,13 +125,13 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   const renderRoleAvailability = (role: 'player' | 'staff') => {
     const isUpdating = updating.has(role);
     const status = getRoleStatus(role);
-    const roleLabel = role === 'staff' ? 'Coach Availability' : 'Player Availability';
+    const roleLabel = role === 'staff' ? 'Coach' : 'Player';
 
     // Show initial accept/decline buttons for pending status
     if (status === 'pending') {
       return (
         <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{roleLabel}</span>
+          <span className={`${textSize} font-medium`}>{roleLabel}:</span>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -159,8 +160,8 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
     // Show status with change option
     return (
-      <div className="flex items-center justify-between">
-        <span className={`${textSize} font-medium`}>{roleLabel}</span>
+        <div className="flex items-center justify-between">
+          <span className={`${textSize} font-medium`}>{roleLabel}:</span>
         <div className="flex items-center gap-2">
           <div className={`flex items-center gap-1 ${
             status === 'available' ? 'text-green-600' : 'text-red-600'
