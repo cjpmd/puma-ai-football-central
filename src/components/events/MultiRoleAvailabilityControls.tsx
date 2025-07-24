@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Check, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -19,6 +20,12 @@ interface EventAvailability {
   updated_at: string;
 }
 
+interface UserProfile {
+  id: string;
+  name: string;
+  photoUrl?: string;
+}
+
 interface MultiRoleAvailabilityControlsProps {
   eventId: string;
   size?: 'sm' | 'md';
@@ -31,6 +38,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   onStatusChange
 }) => {
   const [availabilities, setAvailabilities] = useState<EventAvailability[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<Set<string>>(new Set());
   const { user } = useAuth();
@@ -42,6 +50,15 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   useEffect(() => {
     loadAvailabilityData();
   }, [eventId, user?.id]);
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   const loadAvailabilityData = async () => {
     if (!user?.id || !eventId) return;
@@ -59,6 +76,42 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Get user profile information
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, name')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error loading profile:', profileError);
+      }
+
+      // Try to get photo from player or staff records
+      let photoUrl: string | null = null;
+      
+      // Check if user is linked to a player
+      const { data: playerData } = await supabase
+        .from('user_players')
+        .select('players(photo_url)')
+        .eq('user_id', user.id)
+        .single();
+
+      if (playerData?.players?.photo_url) {
+        photoUrl = playerData.players.photo_url;
+      } else {
+        // Check if user is linked to staff - team_staff doesn't have photo_url
+        // We'll just use profile name without photo for staff for now
+      }
+
+      if (profileData) {
+        setUserProfile({
+          id: profileData.id,
+          name: profileData.name,
+          photoUrl: photoUrl || undefined
+        });
+      }
 
       console.log('DEBUG - Event Availability:', data);
       setAvailabilities((data || []) as EventAvailability[]);
@@ -126,12 +179,26 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
     const isUpdating = updating.has(role);
     const status = getRoleStatus(role);
     const roleLabel = role === 'staff' ? 'Coach' : 'Player';
+    const displayName = userProfile ? formatPlayerName(userProfile.name, 'firstName') : 'User';
 
     // Show initial accept/decline buttons for pending status
     if (status === 'pending') {
       return (
-        <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{roleLabel}:</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <Avatar className="h-8 w-8">
+              {userProfile?.photoUrl && (
+                <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+              )}
+              <AvatarFallback className="text-xs">
+                {userProfile ? getInitials(userProfile.name) : 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className={`${textSize} font-medium`}>{displayName}</span>
+              <span className={`text-xs text-muted-foreground`}>{roleLabel}</span>
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -160,15 +227,28 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
     // Show status with change option
     return (
-        <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{roleLabel}:</span>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1">
+          <Avatar className="h-8 w-8">
+            {userProfile?.photoUrl && (
+              <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+            )}
+            <AvatarFallback className="text-xs">
+              {userProfile ? getInitials(userProfile.name) : 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className={`${textSize} font-medium`}>{displayName}</span>
+            <span className={`text-xs text-muted-foreground`}>{roleLabel}</span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <div className={`flex items-center gap-1 ${
             status === 'available' ? 'text-green-600' : 'text-red-600'
           }`}>
             {status === 'available' ? <Check className={iconSize} /> : <X className={iconSize} />}
             <span className={textSize}>
-              {status === 'available' ? 'Available' : 'Unavailable'}
+              {status === 'available' ? 'Going' : 'Not Going'}
             </span>
           </div>
           <Button

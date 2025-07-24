@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,6 +13,7 @@ interface StaffMember {
   name: string;
   role: string;
   userId?: string;
+  photoUrl?: string;
   availabilityStatus?: 'pending' | 'available' | 'unavailable';
 }
 
@@ -34,6 +36,15 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
   const buttonSize = size === 'sm' ? 'h-6 px-2' : 'h-7 px-3';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   useEffect(() => {
     loadStaffMembers();
@@ -83,6 +94,7 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
             name: staff.name,
             role: staff.role,
             userId,
+            photoUrl: undefined, // team_staff table doesn't have photo_url
             availabilityStatus
           };
         })
@@ -136,12 +148,28 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
   const renderStaffAvailability = (staffMember: StaffMember) => {
     const isUpdating = updating.has(staffMember.id);
     const status = staffMember.availabilityStatus;
+    const displayName = formatPlayerName(staffMember.name, 'firstName');
 
     // If staff member doesn't have a linked user account, show info message
     if (!staffMember.userId) {
       return (
-        <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{formatPlayerName(staffMember.name, 'firstName')}:</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <Avatar className="h-8 w-8">
+              {staffMember.photoUrl && (
+                <AvatarImage src={staffMember.photoUrl} alt={displayName} />
+              )}
+              <AvatarFallback className="text-xs">
+                {getInitials(staffMember.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className={`${textSize} font-medium`}>{displayName}</span>
+              <span className={`text-xs text-muted-foreground`}>
+                {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </span>
+            </div>
+          </div>
           <span className={`${textSize} text-muted-foreground italic`}>
             Account not linked
           </span>
@@ -152,8 +180,23 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
     // Show initial accept/decline buttons for pending status
     if (status === 'pending') {
       return (
-        <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{formatPlayerName(staffMember.name, 'firstName')}:</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-1">
+            <Avatar className="h-8 w-8">
+              {staffMember.photoUrl && (
+                <AvatarImage src={staffMember.photoUrl} alt={displayName} />
+              )}
+              <AvatarFallback className="text-xs">
+                {getInitials(staffMember.name)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className={`${textSize} font-medium`}>{displayName}</span>
+              <span className={`text-xs text-muted-foreground`}>
+                {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              </span>
+            </div>
+          </div>
           <div className="flex gap-2">
             <Button
               size="sm"
@@ -182,15 +225,30 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
 
     // Show status with change option
     return (
-        <div className="flex items-center justify-between">
-          <span className={`${textSize} font-medium`}>{formatPlayerName(staffMember.name, 'firstName')}:</span>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1">
+          <Avatar className="h-8 w-8">
+            {staffMember.photoUrl && (
+              <AvatarImage src={staffMember.photoUrl} alt={displayName} />
+            )}
+            <AvatarFallback className="text-xs">
+              {getInitials(staffMember.name)}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className={`${textSize} font-medium`}>{displayName}</span>
+            <span className={`text-xs text-muted-foreground`}>
+              {staffMember.role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+            </span>
+          </div>
+        </div>
         <div className="flex items-center gap-2">
           <div className={`flex items-center gap-1 ${
             status === 'available' ? 'text-green-600' : 'text-red-600'
           }`}>
             {status === 'available' ? <Check className={iconSize} /> : <X className={iconSize} />}
             <span className={textSize}>
-              {status === 'available' ? 'Available' : 'Unavailable'}
+              {status === 'available' ? 'Going' : 'Not Going'}
             </span>
           </div>
           <Button
