@@ -91,18 +91,20 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
       // Try to get photo from player or staff records
       let photoUrl: string | null = null;
       
-      // Check if user is linked to a player
-      const { data: playerData } = await supabase
+      // Check if user is linked to a player - get the specific player for this user
+      const { data: playerData, error: playerError } = await supabase
         .from('user_players')
         .select('players(photo_url)')
         .eq('user_id', user.id)
         .single();
 
+      if (playerError) {
+        console.log('No player record found for user:', user.id);
+      }
+
       if (playerData?.players?.photo_url) {
         photoUrl = playerData.players.photo_url;
-      } else {
-        // Check if user is linked to staff - team_staff doesn't have photo_url
-        // We'll just use profile name without photo for staff for now
+        console.log('Found player photo for user:', user.id, 'photo:', photoUrl.substring(0, 50));
       }
 
       if (profileData) {
@@ -110,6 +112,11 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
           id: profileData.id,
           name: profileData.name,
           photoUrl: photoUrl || undefined
+        });
+        console.log('Set user profile:', {
+          id: profileData.id,
+          name: profileData.name,
+          hasPhoto: !!photoUrl
         });
       }
 
