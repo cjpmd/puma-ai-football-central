@@ -13,6 +13,10 @@ interface UserProfile {
   id: string;
   name: string;
   photoUrl?: string;
+  linkedPlayer?: {
+    name: string;
+    photo_url?: string;
+  };
 }
 
 interface QuickAvailabilityControlsProps {
@@ -67,35 +71,32 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
         return;
       }
 
-      // Try to get photo from player records - get the specific player for this user
-      let photoUrl: string | null = null;
-      
-      // Check if user is linked to a player
+      // Get linked player information for player role
+      let linkedPlayerData = null;
       const { data: playerData, error: playerError } = await supabase
         .from('user_players')
-        .select('players(photo_url)')
+        .select('players(name, photo_url)')
         .eq('user_id', user.id)
         .single();
 
       if (playerError) {
         console.log('No player record found for user:', user.id);
-      }
-
-      if (playerData?.players?.photo_url) {
-        photoUrl = playerData.players.photo_url;
-        console.log('Found player photo for user:', user.id, 'photo:', photoUrl.substring(0, 50));
+      } else if (playerData?.players) {
+        linkedPlayerData = playerData.players;
+        console.log('Found linked player for user:', user.id, 'player:', linkedPlayerData.name);
       }
 
       if (profileData) {
         setUserProfile({
           id: profileData.id,
           name: profileData.name,
-          photoUrl: photoUrl || undefined
+          photoUrl: undefined, // Will be set per role in rendering
+          linkedPlayer: linkedPlayerData
         });
         console.log('QuickControls - Set user profile:', {
           id: profileData.id,
           name: profileData.name,
-          hasPhoto: !!photoUrl
+          hasLinkedPlayer: !!linkedPlayerData
         });
       }
     } catch (error) {
@@ -124,7 +125,24 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     const buttonSize = size === 'sm' ? 'h-6 w-12 px-2' : 'h-7 w-16 px-3';
     const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
     const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
-    const displayName = userProfile ? formatPlayerName(userProfile.name, 'firstName') : 'User';
+    
+    // For player role, show linked player name and photo if available
+    // For staff role, show user profile name with initials only
+    let displayName = 'User';
+    let photoUrl: string | undefined = undefined;
+    
+    if (userProfile) {
+      if (role === 'player' && userProfile.linkedPlayer) {
+        displayName = formatPlayerName(userProfile.linkedPlayer.name, 'firstName');
+        photoUrl = userProfile.linkedPlayer.photo_url || undefined;
+      } else if (role === 'staff') {
+        displayName = formatPlayerName(userProfile.name, 'firstName');
+        // No photo for staff role - use initials only
+        photoUrl = undefined;
+      } else {
+        displayName = formatPlayerName(userProfile.name, 'firstName');
+      }
+    }
 
     // Show initial accept/decline buttons for pending or no status
     if (!status || status === 'pending') {
@@ -132,11 +150,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 flex-1">
             <Avatar className="h-8 w-8">
-              {userProfile?.photoUrl && (
-                <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+              {photoUrl && (
+                <AvatarImage src={photoUrl} alt={displayName} />
               )}
               <AvatarFallback className="text-xs">
-                {userProfile ? getInitials(userProfile.name) : 'U'}
+                {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
@@ -174,11 +192,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 flex-1">
             <Avatar className="h-8 w-8">
-              {userProfile?.photoUrl && (
-                <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+              {photoUrl && (
+                <AvatarImage src={photoUrl} alt={displayName} />
               )}
               <AvatarFallback className="text-xs">
-                {userProfile ? getInitials(userProfile.name) : 'U'}
+                {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
@@ -212,11 +230,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 flex-1">
             <Avatar className="h-8 w-8">
-              {userProfile?.photoUrl && (
-                <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+              {photoUrl && (
+                <AvatarImage src={photoUrl} alt={displayName} />
               )}
               <AvatarFallback className="text-xs">
-                {userProfile ? getInitials(userProfile.name) : 'U'}
+                {getInitials(displayName)}
               </AvatarFallback>
             </Avatar>
             <div className="flex flex-col">
@@ -269,7 +287,25 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
-  const displayName = userProfile ? formatPlayerName(userProfile.name, 'firstName') : 'User';
+  
+  // For player role, show linked player name and photo if available
+  // For staff role, show user profile name with initials only
+  let displayName = 'User';
+  let photoUrl: string | undefined = undefined;
+  
+  if (userProfile) {
+    if (singleRole === 'player' && userProfile.linkedPlayer) {
+      displayName = formatPlayerName(userProfile.linkedPlayer.name, 'firstName');
+      photoUrl = userProfile.linkedPlayer.photo_url || undefined;
+    } else if (singleRole === 'staff') {
+      displayName = formatPlayerName(userProfile.name, 'firstName');
+      // No photo for staff role - use initials only
+      photoUrl = undefined;
+    } else {
+      displayName = formatPlayerName(userProfile.name, 'firstName');
+    }
+  }
+  
   const roleLabel = singleRole === 'staff' ? 'Coach' : 'Player';
 
   // Show initial accept/decline buttons for pending or no status
@@ -278,11 +314,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1">
           <Avatar className="h-8 w-8">
-            {userProfile?.photoUrl && (
-              <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+            {photoUrl && (
+              <AvatarImage src={photoUrl} alt={displayName} />
             )}
             <AvatarFallback className="text-xs">
-              {userProfile ? getInitials(userProfile.name) : 'U'}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
@@ -322,11 +358,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1">
           <Avatar className="h-8 w-8">
-            {userProfile?.photoUrl && (
-              <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+            {photoUrl && (
+              <AvatarImage src={photoUrl} alt={displayName} />
             )}
             <AvatarFallback className="text-xs">
-              {userProfile ? getInitials(userProfile.name) : 'U'}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
@@ -360,11 +396,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1">
           <Avatar className="h-8 w-8">
-            {userProfile?.photoUrl && (
-              <AvatarImage src={userProfile.photoUrl} alt={displayName} />
+            {photoUrl && (
+              <AvatarImage src={photoUrl} alt={displayName} />
             )}
             <AvatarFallback className="text-xs">
-              {userProfile ? getInitials(userProfile.name) : 'U'}
+              {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
           <div className="flex flex-col">
