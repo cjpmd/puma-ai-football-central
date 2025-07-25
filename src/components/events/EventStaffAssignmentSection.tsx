@@ -124,20 +124,37 @@ export const EventStaffAssignmentSection: React.FC<EventStaffAssignmentSectionPr
     
     onStaffChange(newSelectedStaff);
 
-    // Create availability record for newly selected staff
+    // Only create availability record for newly selected staff if they don't have one or it's not already responded to
     if (eventId && !selectedStaff.includes(staffId)) {
       const staffMember = staff.find(s => s.id === staffId);
       if (staffMember?.linkedUserId) {
         try {
-          await multiRoleAvailabilityService.createStaffAvailabilityRecord(
-            eventId, 
-            staffMember.linkedUserId, 
-            'staff'
-          );
-          
-          // Refresh availability status
-          await loadStaffAvailability();
-          toast.success(`Availability request sent to ${staffMember.name}`);
+          // Check if the staff member already has an availability record
+          const { data: existingAvailability, error: checkError } = await supabase
+            .from('event_availability')
+            .select('status')
+            .eq('event_id', eventId)
+            .eq('user_id', staffMember.linkedUserId)
+            .eq('role', 'staff')
+            .maybeSingle();
+
+          if (checkError) throw checkError;
+
+          // Only create a new record if none exists
+          if (!existingAvailability) {
+            await multiRoleAvailabilityService.createStaffAvailabilityRecord(
+              eventId, 
+              staffMember.linkedUserId, 
+              'staff'
+            );
+            
+            // Refresh availability status
+            await loadStaffAvailability();
+            toast.success(`Availability request sent to ${staffMember.name}`);
+          } else {
+            // Just refresh to show current status
+            await loadStaffAvailability();
+          }
         } catch (error) {
           console.error('Error creating staff availability record:', error);
         }
