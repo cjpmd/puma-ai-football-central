@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useStaffAvailability } from '@/hooks/useStaffAvailability';
 import { formatPlayerName } from '@/utils/nameUtils';
+import { useAvailabilityState } from '@/hooks/useAvailabilityState';
 
 interface UserProfile {
   id: string;
@@ -38,9 +39,10 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   const { 
     userRoles, 
     hasMultipleRoles, 
-    updateAvailability, 
-    getRoleStatus 
+    updateAvailability: updateStaffAvailability, 
+    getRoleStatus: getStaffRoleStatus 
   } = useStaffAvailability(eventId, user?.id);
+  const { updateAvailability: updatePersistentAvailability, getAvailabilityStatus } = useAvailabilityState(eventId);
 
   const getInitials = (name: string) => {
     return name
@@ -109,7 +111,10 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
     setIsUpdating(true);
     try {
-      await updateAvailability(role, status);
+      // Use the appropriate availability update based on user setup
+      if (user?.id) {
+        await updatePersistentAvailability(eventId, user.id, role, status);
+      }
       onStatusChange?.(status);
       toast.success(`${role} availability set to ${status}`);
     } catch (error) {
@@ -121,7 +126,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   };
 
   const renderRoleAvailability = (role: 'player' | 'staff', roleLabel: string) => {
-    const status = getRoleStatus(role);
+    const status = user?.id ? getAvailabilityStatus(eventId, user.id, role) || getStaffRoleStatus(role) : null;
     const buttonSize = size === 'sm' ? 'h-6 w-12 px-2' : 'h-7 w-16 px-3';
     const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
     const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
@@ -283,7 +288,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   // Single role - show with avatar and improved layout
   const singleRole = userRoles[0]?.role || 'player';
-  const status = getRoleStatus(singleRole) || currentStatus;
+  const status = user?.id ? (getAvailabilityStatus(eventId, user.id, singleRole) || getStaffRoleStatus(singleRole) || currentStatus) : currentStatus;
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';

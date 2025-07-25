@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 import { formatPlayerName } from '@/utils/nameUtils';
+import { useAvailabilityState } from '@/hooks/useAvailabilityState';
 
 interface EventAvailability {
   id: string;
@@ -46,6 +47,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<Set<string>>(new Set());
   const { user } = useAuth();
+  const { updateAvailability, getAvailabilityStatus, loadAvailabilityForEvent } = useAvailabilityState(eventId);
 
   const buttonSize = size === 'sm' ? 'h-6 px-2' : 'h-7 px-3';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
@@ -140,18 +142,8 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
     setUpdating(prev => new Set([...prev, role]));
 
     try {
-      const { error } = await supabase
-        .from('event_availability')
-        .update({ 
-          status,
-          responded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('event_id', eventId)
-        .eq('user_id', user.id)
-        .eq('role', role);
-
-      if (error) throw error;
+      // Use the persistent availability state
+      await updateAvailability(eventId, user.id, role, status);
 
       // Update local state
       setAvailabilities(prev => 
@@ -179,6 +171,15 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   };
 
   const getRoleStatus = (role: 'player' | 'staff'): 'pending' | 'available' | 'unavailable' => {
+    if (!user?.id) return 'pending';
+    
+    // Check persistent state first
+    const persistentStatus = getAvailabilityStatus(eventId, user.id, role);
+    if (persistentStatus) {
+      return persistentStatus;
+    }
+    
+    // Fallback to local state
     const availability = availabilities.find(a => a.role === role);
     return availability?.status || 'pending';
   };

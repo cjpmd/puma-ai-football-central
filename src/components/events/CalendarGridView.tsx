@@ -282,7 +282,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     return eventDate >= new Date() || isToday(eventDate);
   };
 
-  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
+  const handleAvailabilityChange = (eventId: string, role: string, status: 'available' | 'unavailable') => {
     // Update local state to reflect the change immediately
     setUserAvailability(prev => {
       const existing = prev.find(a => a.eventId === eventId);
