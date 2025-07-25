@@ -100,10 +100,12 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
                 // Find user relationships for this player
                 const userRelationships = userPlayerRelationships?.filter(rel => rel.player_id === player.id) || [];
                 
-                // Find availability records for users connected to this player
+                // Find availability records for users connected to this player (only check 'player' role)
                 let availabilityStatus: 'available' | 'unavailable' | 'pending' = 'pending';
                 for (const relationship of userRelationships) {
-                  const userAvailability = eventAvailability?.find(a => a.user_id === relationship.user_id);
+                  const userAvailability = eventAvailability?.find(a => 
+                    a.user_id === relationship.user_id && a.role === 'player'
+                  );
                   if (userAvailability) {
                     if (userAvailability.status === 'available') {
                       availabilityStatus = 'available';
