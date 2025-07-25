@@ -792,6 +792,36 @@ export type Database = {
           },
         ]
       }
+      kit_items: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          name: string
+          size_category: string
+          team_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          name: string
+          size_category: string
+          team_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          size_category?: string
+          team_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notification_logs: {
         Row: {
           created_at: string
@@ -1219,6 +1249,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limits: {
+        Row: {
+          action: string
+          attempt_count: number | null
+          blocked_until: string | null
+          created_at: string | null
+          id: string
+          ip_address: unknown | null
+          user_id: string | null
+          window_start: string | null
+        }
+        Insert: {
+          action: string
+          attempt_count?: number | null
+          blocked_until?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Update: {
+          action?: string
+          attempt_count?: number | null
+          blocked_until?: string | null
+          created_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string | null
+          window_start?: string | null
+        }
+        Relationships: []
+      }
       staff_certifications: {
         Row: {
           awarded_by: string | null
@@ -1428,13 +1491,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "team_kit_issues_kit_item_id_fkey"
-            columns: ["kit_item_id"]
-            isOneToOne: false
-            referencedRelation: "kit_items_with_sizes"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "team_kit_issues_kit_item_id_fkey"
             columns: ["kit_item_id"]
@@ -2199,6 +2255,10 @@ export type Database = {
           backup_created_at: string
         }[]
       }
+      check_password_strength: {
+        Args: { password: string }
+        Returns: boolean
+      }
       clean_and_regenerate_player_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2230,6 +2290,22 @@ export type Database = {
           source_id: string
           source_type: string
         }[]
+      }
+      is_club_member: {
+        Args: { club_uuid: string; required_roles?: string[] }
+        Returns: boolean
+      }
+      is_global_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { team_uuid: string; required_roles?: string[] }
+        Returns: boolean
+      }
+      log_security_event: {
+        Args: { event_type: string; details?: Json; risk_level?: string }
+        Returns: undefined
       }
       regenerate_all_event_player_stats: {
         Args: Record<PropertyKey, never>
