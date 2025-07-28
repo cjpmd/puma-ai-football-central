@@ -365,7 +365,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                               {completed && matchType && teamScores.length > 0 && (
                                 <div className="flex gap-1">
                                   {teamScores.map((score) => (
-                                    <span key={score.teamNumber} className="text-sm">
+                                    <span key={score.teamNumber} className="text-lg">
                                       {score.outcomeIcon}
                                     </span>
                                   ))}
@@ -421,17 +421,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                           )}
                           
                           {/* Location and weather */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex gap-1">
-                              {/* Outcome icons for completed matches */}
-                              {completed && teamScores.length > 0 && (
-                                <div className="flex gap-1">
-                                  {teamScores.map((score, index) => (
-                                    <span key={index} className="text-lg">{score.outcomeIcon}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
+                          <div className="flex items-center justify-end">
                             {weather && (
                               <img 
                                 src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
