@@ -257,10 +257,10 @@ export const availabilityService = {
       .from('event_availability')
       .select(`
         *,
-        events!inner(id, title, date, event_type, opponent, team_id)
+        events!event_availability_event_id_fkey(id, title, date, event_type, opponent, team_id)
       `)
       .in('user_id', userIds)
-      .order('events.date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (availabilityError) {
       console.error('Error fetching availability history:', availabilityError);
