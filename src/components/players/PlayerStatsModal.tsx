@@ -648,9 +648,9 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             <TabsContent value="availability" className="space-y-4 py-4">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Event Availability History</CardTitle>
+                  <CardTitle className="text-lg">Event Availability Summary</CardTitle>
                   <CardDescription>
-                    Player's availability status across all events
+                    Player's availability status breakdown by event type
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -660,74 +660,132 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       <p className="mt-2 text-sm text-muted-foreground">Loading availability history...</p>
                     </div>
                   ) : availabilityHistory.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Event</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Opponent</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Response</TableHead>
-                          <TableHead>Source</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {availabilityHistory.map((item, index) => (
-                          <TableRow key={`${item.id}-${index}`}>
-                            <TableCell>
-                              <div className="font-medium">
-                                {formatDate(item.eventDate, 'dd MMM yyyy')}
+                    <div className="space-y-6">
+                      {/* Summary Statistics */}
+                      <div className="space-y-4">
+                        <h3 className="text-md font-semibold">Summary by Event Type</h3>
+                        {(() => {
+                          // Calculate percentages by event type
+                          const eventTypeStats = availabilityHistory.reduce((acc, item) => {
+                            const eventType = item.eventType || 'Unknown';
+                            if (!acc[eventType]) {
+                              acc[eventType] = { total: 0, available: 0, unavailable: 0, pending: 0 };
+                            }
+                            acc[eventType].total++;
+                            acc[eventType][item.status as 'available' | 'unavailable' | 'pending']++;
+                            return acc;
+                          }, {} as Record<string, { total: number; available: number; unavailable: number; pending: number }>);
+
+                          return Object.entries(eventTypeStats).map(([eventType, stats]) => {
+                            const typedStats = stats as { total: number; available: number; unavailable: number; pending: number };
+                            return (
+                              <div key={eventType} className="border rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="font-medium">{eventType}</h4>
+                                  <Badge variant="outline">{typedStats.total} events</Badge>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                  <div className="text-center">
+                                    <div className="text-2xl font-bold text-green-600">
+                                      {typedStats.total > 0 ? Math.round((typedStats.available / typedStats.total) * 100) : 0}%
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">Available</div>
+                                    <div className="text-xs text-muted-foreground">({typedStats.available})</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-2xl font-bold text-red-600">
+                                      {typedStats.total > 0 ? Math.round((typedStats.unavailable / typedStats.total) * 100) : 0}%
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">Unavailable</div>
+                                    <div className="text-xs text-muted-foreground">({typedStats.unavailable})</div>
+                                  </div>
+                                  <div className="text-center">
+                                    <div className="text-2xl font-bold text-amber-600">
+                                      {typedStats.total > 0 ? Math.round((typedStats.pending / typedStats.total) * 100) : 0}%
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">Pending</div>
+                                    <div className="text-xs text-muted-foreground">({typedStats.pending})</div>
+                                  </div>
+                                </div>
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium">
-                                {item.eventTitle || 'Untitled Event'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {item.eventType}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-sm">
-                                {item.opponent || 'N/A'}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={
-                                  item.status === 'available' ? 'default' :
-                                  item.status === 'unavailable' ? 'destructive' :
-                                  'secondary'
-                                }
-                                className={`text-xs ${
-                                  item.status === 'available' ? 'bg-green-500 hover:bg-green-600' :
-                                  item.status === 'unavailable' ? 'bg-red-500 hover:bg-red-600' :
-                                  'bg-amber-500 hover:bg-amber-600'
-                                }`}
-                              >
-                                {item.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="text-xs text-muted-foreground">
-                                {item.respondedAt ? 
-                                  formatDate(item.respondedAt, 'dd MMM HH:mm') : 
-                                  'No response'
-                                }
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-xs">
-                                {item.relationship || item.role}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                            );
+                          });
+                        })()}
+                      </div>
+                      
+                      {/* Detailed History Table */}
+                      <div className="space-y-2">
+                        <h3 className="text-md font-semibold">Detailed History</h3>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Date</TableHead>
+                              <TableHead>Event</TableHead>
+                              <TableHead>Type</TableHead>
+                              <TableHead>Opponent</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Response</TableHead>
+                              <TableHead>Source</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {availabilityHistory.map((item, index) => (
+                              <TableRow key={`${item.id}-${index}`}>
+                                <TableCell>
+                                  <div className="font-medium">
+                                    {formatDate(item.eventDate, 'dd MMM yyyy')}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="font-medium">
+                                    {item.eventTitle || 'Untitled Event'}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">
+                                    {item.eventType}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-sm">
+                                    {item.opponent || 'N/A'}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant={
+                                      item.status === 'available' ? 'default' :
+                                      item.status === 'unavailable' ? 'destructive' :
+                                      'secondary'
+                                    }
+                                    className={`text-xs ${
+                                      item.status === 'available' ? 'bg-green-500 hover:bg-green-600' :
+                                      item.status === 'unavailable' ? 'bg-red-500 hover:bg-red-600' :
+                                      'bg-amber-500 hover:bg-amber-600'
+                                    }`}
+                                  >
+                                    {item.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="text-xs text-muted-foreground">
+                                    {item.respondedAt ? 
+                                      formatDate(item.respondedAt, 'dd MMM HH:mm') : 
+                                      'No response'
+                                    }
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="outline" className="text-xs">
+                                    {item.relationship || item.role}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       No availability history found for this player.
