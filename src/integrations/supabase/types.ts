@@ -2303,6 +2303,10 @@ export type Database = {
         Args: { team_uuid: string; required_roles?: string[] }
         Returns: boolean
       }
+      is_user_club_admin: {
+        Args: { p_club_id: string; p_user_id: string }
+        Returns: boolean
+      }
       log_security_event: {
         Args: { event_type: string; details?: Json; risk_level?: string }
         Returns: undefined
