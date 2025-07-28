@@ -4,7 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
-import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3, TrendingUp, History } from 'lucide-react';
+import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3, TrendingUp, History, CheckCircle } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { availabilityService } from '@/services/availabilityService';
+import { format as formatDate } from 'date-fns';
 
 interface PlayerStatsModalProps {
   player: Player;
@@ -26,6 +29,10 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const recentGames = stats.recentGames || [];
   const performanceCategoryStats = stats.performanceCategoryStats || {};
 
+  // Availability state
+  const [availabilityHistory, setAvailabilityHistory] = useState<any[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
+
   const topPositions = Object.entries(minutesByPosition)
     .filter(([pos]) => pos !== 'SUB' && pos !== 'TBD')
     .sort(([,a], [,b]) => (b as number) - (a as number))
@@ -36,6 +43,24 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     .sort(([,a], [,b]) => (b as number) - (a as number));
 
   const averageMinutes = totalGames > 0 ? Math.round(totalMinutes / totalGames) : 0;
+
+  // Load availability data when modal opens
+  useEffect(() => {
+    if (isOpen && player.id) {
+      setLoadingAvailability(true);
+      availabilityService.getPlayerAvailabilityHistory(player.id)
+        .then((data) => {
+          setAvailabilityHistory(data);
+        })
+        .catch((error) => {
+          console.error('Error loading availability history:', error);
+          setAvailabilityHistory([]);
+        })
+        .finally(() => {
+          setLoadingAvailability(false);
+        });
+    }
+  }, [isOpen, player.id]);
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -49,20 +74,24 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
         </SheetHeader>
         
         <Tabs defaultValue="summary" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-4 mx-6 mt-4">
-            <TabsTrigger value="summary" className="flex items-center gap-1">
+          <TabsList className="grid w-full grid-cols-5 mx-4 mt-4 h-12">
+            <TabsTrigger value="summary" className="flex flex-col items-center gap-0.5 px-2">
               <Target className="h-3 w-3" />
               <span className="text-xs">Sum</span>
             </TabsTrigger>
-            <TabsTrigger value="positions" className="flex items-center gap-1">
+            <TabsTrigger value="positions" className="flex flex-col items-center gap-0.5 px-2">
               <MapPin className="h-3 w-3" />
               <span className="text-xs">Pos</span>
             </TabsTrigger>
-            <TabsTrigger value="performance" className="flex items-center gap-1">
+            <TabsTrigger value="performance" className="flex flex-col items-center gap-0.5 px-2">
               <TrendingUp className="h-3 w-3" />
               <span className="text-xs">Perf</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex items-center gap-1">
+            <TabsTrigger value="availability" className="flex flex-col items-center gap-0.5 px-2">
+              <CheckCircle className="h-3 w-3" />
+              <span className="text-xs">Avail</span>
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex flex-col items-center gap-0.5 px-2">
               <History className="h-3 w-3" />
               <span className="text-xs">Hist</span>
             </TabsTrigger>
@@ -253,6 +282,136 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
               </ScrollArea>
             </TabsContent>
 
+            <TabsContent value="availability" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
+              <ScrollArea className="flex-1 px-6">
+                <div className="space-y-4 py-4">
+                  {loadingAvailability ? (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                        <p className="mt-2 text-sm text-muted-foreground">Loading availability...</p>
+                      </CardContent>
+                    </Card>
+                  ) : availabilityHistory.length > 0 ? (
+                    <>
+                      {/* Summary Stats */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <CheckCircle className="h-4 w-4" />
+                            Availability Summary
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          {(() => {
+                            const eventTypeStats = availabilityHistory.reduce((acc, item) => {
+                              const eventType = item.eventType || 'Unknown';
+                              if (!acc[eventType]) {
+                                acc[eventType] = { total: 0, available: 0, unavailable: 0, pending: 0 };
+                              }
+                              acc[eventType].total++;
+                              acc[eventType][item.status as 'available' | 'unavailable' | 'pending']++;
+                              return acc;
+                            }, {} as Record<string, { total: number; available: number; unavailable: number; pending: number }>);
+
+                            return (
+                              <div className="space-y-3">
+                                {Object.entries(eventTypeStats).map(([eventType, stats]) => {
+                                  const typedStats = stats as { total: number; available: number; unavailable: number; pending: number };
+                                  return (
+                                  <div key={eventType} className="p-3 bg-muted/30 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="font-medium text-sm">{eventType}</h4>
+                                      <Badge variant="outline" className="text-xs">
+                                        {typedStats.total} events
+                                      </Badge>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                      <div className="text-center">
+                                        <div className="text-lg font-bold text-green-600">
+                                          {typedStats.total > 0 ? Math.round((typedStats.available / typedStats.total) * 100) : 0}%
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">Available</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-lg font-bold text-red-600">
+                                          {typedStats.total > 0 ? Math.round((typedStats.unavailable / typedStats.total) * 100) : 0}%
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">Unavailable</div>
+                                      </div>
+                                      <div className="text-center">
+                                        <div className="text-lg font-bold text-amber-600">
+                                          {typedStats.total > 0 ? Math.round((typedStats.pending / typedStats.total) * 100) : 0}%
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">Pending</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </CardContent>
+                      </Card>
+
+                      {/* Recent Availability */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm flex items-center gap-2">
+                            <Calendar className="h-4 w-4" />
+                            Recent Events
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            {availabilityHistory.slice(0, 8).map((item, index) => (
+                              <div key={`${item.id}-${index}`} className="flex items-center justify-between p-2 bg-muted/30 rounded-lg">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {item.eventType}
+                                    </Badge>
+                                    <Badge 
+                                      variant={
+                                        item.status === 'available' ? 'default' :
+                                        item.status === 'unavailable' ? 'destructive' :
+                                        'secondary'
+                                      }
+                                      className={`text-xs ${
+                                        item.status === 'available' ? 'bg-green-500 hover:bg-green-600' :
+                                        item.status === 'unavailable' ? 'bg-red-500 hover:bg-red-600' :
+                                        'bg-amber-500 hover:bg-amber-600'
+                                      }`}
+                                    >
+                                      {item.status}
+                                    </Badge>
+                                  </div>
+                                  <div className="text-xs font-medium">
+                                    {item.eventTitle || 'Untitled Event'}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatDate(item.eventDate, 'dd MMM yyyy')}
+                                    {item.opponent && ` vs ${item.opponent}`}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </>
+                  ) : (
+                    <Card>
+                      <CardContent className="py-8 text-center">
+                        <p className="text-muted-foreground">No availability history found</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
             <TabsContent value="history" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
               <ScrollArea className="flex-1 px-6">
                 <div className="space-y-4 py-4">
@@ -299,11 +458,11 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                                     {pos}: {Number(mins)}min
                                   </Badge>
                                 ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                               </div>
+                             </div>
+                           )}
+                         </div>
+                       ))}
                     </div>
                     ) : (
                       <p className="text-muted-foreground text-center py-8">No match history available</p>
