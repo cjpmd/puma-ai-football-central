@@ -37,10 +37,21 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [activeModal, setActiveModal] = useState<string | null>(null);
 
   // Fetch active players
-  const { data: players = [], isLoading } = useQuery({
+  const { data: players = [], isLoading, error } = useQuery({
     queryKey: ['active-players', team.id],
-    queryFn: () => playersService.getActivePlayersByTeamId(team.id),
+    queryFn: () => {
+      console.log('PlayerManagement: Fetching players for team:', team.id);
+      return playersService.getActivePlayersByTeamId(team.id);
+    },
   });
+
+  // Debug logging
+  useEffect(() => {
+    console.log('PlayerManagement: Team:', team);
+    console.log('PlayerManagement: Players data:', players);
+    console.log('PlayerManagement: Loading state:', isLoading);
+    console.log('PlayerManagement: Error:', error);
+  }, [team, players, isLoading, error]);
 
   // Create player mutation
   const createPlayerMutation = useMutation({
@@ -316,6 +327,28 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     console.log(`[PlayerManagement] handleLeaveTeam for player: ${player.name}`);
     handleModalOpen('leave', player);
   };
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center text-red-600">
+              <h3 className="font-semibold">Error loading players</h3>
+              <p className="text-sm mt-2">{error.message}</p>
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="mt-4"
+                variant="outline"
+              >
+                Retry
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

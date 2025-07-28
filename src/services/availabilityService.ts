@@ -229,5 +229,59 @@ export const availabilityService = {
     }
     
     console.log('Test availability record created:', data);
+  },
+
+  async getPlayerAvailabilityHistory(playerId: string): Promise<any[]> {
+    console.log('Getting availability history for player:', playerId);
+    
+    // Get user links for this player
+    const { data: userPlayers, error: userPlayersError } = await supabase
+      .from('user_players')
+      .select('user_id, relationship')
+      .eq('player_id', playerId);
+
+    if (userPlayersError) {
+      console.error('Error fetching user-player relationships:', userPlayersError);
+      return [];
+    }
+
+    if (!userPlayers || userPlayers.length === 0) {
+      console.log('No user-player relationships found for player:', playerId);
+      return [];
+    }
+
+    const userIds = userPlayers.map(up => up.user_id);
+
+    // Get availability records for these users across all events
+    const { data: availability, error: availabilityError } = await supabase
+      .from('event_availability')
+      .select(`
+        *,
+        events!inner(id, title, date, event_type, opponent, team_id)
+      `)
+      .in('user_id', userIds)
+      .order('events.date', { ascending: false });
+
+    if (availabilityError) {
+      console.error('Error fetching availability history:', availabilityError);
+      return [];
+    }
+
+    // Process the data to include event details and player info
+    const processedAvailability = (availability || []).map(item => ({
+      id: item.id,
+      eventId: item.event_id,
+      eventTitle: item.events?.title,
+      eventDate: item.events?.date,
+      eventType: item.events?.event_type,
+      opponent: item.events?.opponent,
+      status: item.status,
+      role: item.role,
+      respondedAt: item.responded_at,
+      relationship: userPlayers.find(up => up.user_id === item.user_id)?.relationship
+    }));
+
+    console.log('Found availability history:', processedAvailability.length, 'records');
+    return processedAvailability;
   }
 };

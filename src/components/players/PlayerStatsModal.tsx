@@ -15,7 +15,8 @@ import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown, Users, Timer, Award } from 'lucide-react';
 import { playerStatsService } from '@/services/playerStatsService';
-import { useState } from 'react';
+import { availabilityService } from '@/services/availabilityService';
+import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -37,8 +38,30 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
 }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [availabilityHistory, setAvailabilityHistory] = useState<any[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(false);
   const queryClient = useQueryClient();
   const { isGlobalAdmin } = useAuthorization();
+
+  // Load availability history when modal opens
+  useEffect(() => {
+    if (isOpen && player) {
+      loadAvailabilityHistory();
+    }
+  }, [isOpen, player]);
+
+  const loadAvailabilityHistory = async () => {
+    setLoadingAvailability(true);
+    try {
+      const history = await availabilityService.getPlayerAvailabilityHistory(player.id);
+      setAvailabilityHistory(history);
+    } catch (error) {
+      console.error('Error loading availability history:', error);
+      toast.error('Failed to load availability history');
+    } finally {
+      setLoadingAvailability(false);
+    }
+  };
 
   // Don't render the modal if there's no player
   if (!player) {
@@ -489,10 +512,11 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           </DialogHeader>
           
           <Tabs defaultValue="summary" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="summary">Summary</TabsTrigger>
               <TabsTrigger value="positions">Positions</TabsTrigger>
               <TabsTrigger value="categories">Performance Categories</TabsTrigger>
+              <TabsTrigger value="availability">Availability</TabsTrigger>
               <TabsTrigger value="recent">Match History</TabsTrigger>
             </TabsList>
             
@@ -615,6 +639,101 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       No performance category data available.
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="availability" className="space-y-4 py-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Event Availability History</CardTitle>
+                  <CardDescription>
+                    Player's availability status across all events
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {loadingAvailability ? (
+                    <div className="text-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                      <p className="mt-2 text-sm text-muted-foreground">Loading availability history...</p>
+                    </div>
+                  ) : availabilityHistory.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Event</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Opponent</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Response</TableHead>
+                          <TableHead>Source</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {availabilityHistory.map((item, index) => (
+                          <TableRow key={`${item.id}-${index}`}>
+                            <TableCell>
+                              <div className="font-medium">
+                                {formatDate(item.eventDate, 'dd MMM yyyy')}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-medium">
+                                {item.eventTitle || 'Untitled Event'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {item.eventType}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                {item.opponent || 'N/A'}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant={
+                                  item.status === 'available' ? 'default' :
+                                  item.status === 'unavailable' ? 'destructive' :
+                                  'secondary'
+                                }
+                                className={`text-xs ${
+                                  item.status === 'available' ? 'bg-green-500 hover:bg-green-600' :
+                                  item.status === 'unavailable' ? 'bg-red-500 hover:bg-red-600' :
+                                  'bg-amber-500 hover:bg-amber-600'
+                                }`}
+                              >
+                                {item.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs text-muted-foreground">
+                                {item.respondedAt ? 
+                                  formatDate(item.respondedAt, 'dd MMM HH:mm') : 
+                                  'No response'
+                                }
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-xs">
+                                {item.relationship || item.role}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No availability history found for this player.
+                      <p className="text-sm mt-2">
+                        The player may not have a linked user account or hasn't responded to any event availability requests.
+                      </p>
                     </div>
                   )}
                 </CardContent>
