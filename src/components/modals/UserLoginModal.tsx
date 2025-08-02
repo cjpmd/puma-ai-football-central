@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { validateEmail, sanitizeText, isRateLimited } from "@/utils/inputValidation";
+import { securityService } from "@/services/securityService";
 
 interface UserLoginModalProps {
   isOpen: boolean;
@@ -24,49 +25,73 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Client-side rate limiting
-    if (isRateLimited('login_attempts', 5, 15 * 60 * 1000)) {
-      toast.error("Too many attempts", {
-        description: "Please wait 15 minutes before trying again."
-      });
-      return;
-    }
-
-    // Input validation
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      toast.error("Invalid email", {
-        description: emailValidation.error
-      });
-      return;
-    }
-
-    if (!password || password.length === 0) {
-      toast.error("Password required", {
-        description: "Please enter your password."
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
+      // Enhanced security validation
+      const validation = await securityService.validateAuthInput(email, password, 'login');
+      
+      if (!validation.isValid) {
+        toast.error("Authentication failed", {
+          description: validation.errors.join(". ")
+        });
+        return;
+      }
+
+      // Log potential security issues
+      if (validation.riskLevel === 'high' || validation.riskLevel === 'critical') {
+        await securityService.logSecurityEvent({
+          eventType: 'HIGH_RISK_LOGIN_ATTEMPT',
+          details: { email: email.substring(0, 3) + '***', riskLevel: validation.riskLevel },
+          riskLevel: validation.riskLevel
+        });
+      }
+
       // Sanitize inputs
-      const sanitizedEmail = sanitizeText(email.toLowerCase().trim());
+      const sanitizedEmail = securityService.sanitizeInput(email.toLowerCase().trim(), 254);
       
       const { error } = await signIn(sanitizedEmail, password);
       
       if (error) {
+        // Log failed login attempt
+        await securityService.logSecurityEvent({
+          eventType: 'LOGIN_FAILED',
+          details: { 
+            email: sanitizedEmail.substring(0, 3) + '***', 
+            error: error.message,
+            userAgent: navigator.userAgent 
+          },
+          riskLevel: 'medium'
+        });
+        
         toast.error("Login failed", {
           description: error.message
         });
       } else {
+        // Log successful login
+        await securityService.logSecurityEvent({
+          eventType: 'LOGIN_SUCCESS',
+          details: { email: sanitizedEmail.substring(0, 3) + '***' },
+          riskLevel: 'low'
+        });
+        
         toast.success("Welcome back!", {
           description: "You've successfully logged in."
         });
         onLogin();
       }
     } catch (error) {
+      console.error('Login error:', error);
+      
+      await securityService.logSecurityEvent({
+        eventType: 'LOGIN_ERROR',
+        details: { 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userAgent: navigator.userAgent 
+        },
+        riskLevel: 'high'
+      });
+      
       toast.error("Something went wrong", {
         description: "Please try again later."
       });

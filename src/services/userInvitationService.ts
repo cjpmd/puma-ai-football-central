@@ -29,13 +29,31 @@ export interface UserInvitation {
 }
 
 export const userInvitationService = {
-  generateSecureCode(): string {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 12; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
+  async generateSecureCode(): Promise<string> {
+    try {
+      // Use database function for cryptographically secure codes
+      const { data, error } = await supabase.rpc('generate_secure_invitation_code');
+      
+      if (error) {
+        console.error('Error generating secure code:', error);
+        // Fallback to client-side generation with improved security
+        const array = new Uint8Array(12);
+        crypto.getRandomValues(array);
+        return Array.from(array, byte => 
+          'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[byte % 36]
+        ).join('');
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to generate secure code:', error);
+      // Enhanced fallback
+      const array = new Uint8Array(12);
+      crypto.getRandomValues(array);
+      return Array.from(array, byte => 
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[byte % 36]
+      ).join('');
     }
-    return result;
   },
   async inviteUser(inviteData: InviteUserData): Promise<UserInvitation> {
     console.log('Inviting user:', inviteData);
@@ -69,7 +87,7 @@ export const userInvitationService = {
     localStorage.setItem(windowKey, (attempts + 1).toString());
 
     // Generate secure invitation code
-    const invitationCode = this.generateSecureCode();
+    const invitationCode = await this.generateSecureCode();
 
     // Set expiration to 24 hours from now (improved security)
     const expiresAt = new Date();

@@ -2427,6 +2427,16 @@ export type Database = {
         Args: { event_type: string; details?: Json; risk_level?: string }
         Returns: undefined
       }
+      log_security_event_enhanced: {
+        Args: {
+          event_type: string
+          details?: Json
+          risk_level?: string
+          ip_address?: unknown
+          user_agent?: string
+        }
+        Returns: undefined
+      }
       regenerate_all_event_player_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2471,6 +2481,10 @@ export type Database = {
       user_is_global_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      validate_authentication_input: {
+        Args: { email?: string; password?: string; action_type?: string }
+        Returns: Json
       }
       validate_password_strength: {
         Args: { password: string }

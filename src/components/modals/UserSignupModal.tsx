@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { validatePasswordStrength, validateEmail, validateName, sanitizeText, isRateLimited } from "@/utils/inputValidation";
+import { securityService } from "@/services/securityService";
 import { PasswordStrength } from "@/components/ui/password-strength";
 
 interface UserSignupModalProps {
@@ -26,74 +27,107 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Client-side rate limiting
-    if (isRateLimited('signup_attempts', 3, 60 * 60 * 1000)) {
-      toast.error("Too many attempts", {
-        description: "Please wait 1 hour before trying again."
-      });
-      return;
-    }
-
-    // Input validation
-    const nameValidation = validateName(name);
-    if (!nameValidation.isValid) {
-      toast.error("Invalid name", {
-        description: nameValidation.error
-      });
-      return;
-    }
-
-    const emailValidation = validateEmail(email);
-    if (!emailValidation.isValid) {
-      toast.error("Invalid email", {
-        description: emailValidation.error
-      });
-      return;
-    }
-
-    const passwordValidation = validatePasswordStrength(password);
-    if (!passwordValidation.isValid) {
-      toast.error("Password too weak", {
-        description: passwordValidation.errors.join(", ")
-      });
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      toast.error("Passwords don't match", {
-        description: "Please make sure your passwords match"
-      });
-      return;
-    }
     
     setIsLoading(true);
 
     try {
-      // Sanitize inputs
-      const sanitizedName = sanitizeText(name.trim());
-      const sanitizedEmail = sanitizeText(email.toLowerCase().trim());
+      // Enhanced security validation
+      const validation = await securityService.validateAuthInput(email, password, 'signup');
+      
+      if (!validation.isValid) {
+        toast.error("Registration failed", {
+          description: validation.errors.join(". ")
+        });
+        return;
+      }
+
+      // Additional client-side validation
+      const nameValidation = validateName(name);
+      if (!nameValidation.isValid) {
+        toast.error("Invalid name", {
+          description: nameValidation.error
+        });
+        return;
+      }
+      
+      if (password !== confirmPassword) {
+        toast.error("Passwords don't match", {
+          description: "Please make sure your passwords match"
+        });
+        return;
+      }
+
+      // Log potential security issues
+      if (validation.riskLevel === 'high' || validation.riskLevel === 'critical') {
+        await securityService.logSecurityEvent({
+          eventType: 'HIGH_RISK_SIGNUP_ATTEMPT',
+          details: { 
+            email: email.substring(0, 3) + '***', 
+            riskLevel: validation.riskLevel,
+            userAgent: navigator.userAgent 
+          },
+          riskLevel: validation.riskLevel
+        });
+      }
+
+      // Sanitize inputs with enhanced security
+      const sanitizedName = securityService.sanitizeInput(name.trim(), 100);
+      const sanitizedEmail = securityService.sanitizeInput(email.toLowerCase().trim(), 254);
       
       const { data, error } = await signUp(sanitizedEmail, password, sanitizedName);
       
       if (error) {
+        // Log failed signup attempt
+        await securityService.logSecurityEvent({
+          eventType: 'SIGNUP_FAILED',
+          details: { 
+            email: sanitizedEmail.substring(0, 3) + '***', 
+            error: error.message,
+            userAgent: navigator.userAgent 
+          },
+          riskLevel: 'medium'
+        });
+        
         toast.error("Registration failed", {
           description: error.message
         });
       } else if (data.session) {
-        // User was auto-logged in (if email confirmation is disabled in Supabase)
+        // User was auto-logged in
+        await securityService.logSecurityEvent({
+          eventType: 'SIGNUP_SUCCESS_AUTO_LOGIN',
+          details: { email: sanitizedEmail.substring(0, 3) + '***' },
+          riskLevel: 'low'
+        });
+        
         toast.success("Welcome to Puma-AI!", {
           description: "Your account has been created and you are now logged in."
         });
         onSignup();
       } else {
         // Email confirmation is required
+        await securityService.logSecurityEvent({
+          eventType: 'SIGNUP_SUCCESS_PENDING_CONFIRMATION',
+          details: { email: sanitizedEmail.substring(0, 3) + '***' },
+          riskLevel: 'low'
+        });
+        
         toast.success("Account created", {
           description: "Please check your email to confirm your account."
         });
         onClose();
       }
     } catch (error) {
+      console.error('Signup error:', error);
+      
+      await securityService.logSecurityEvent({
+        eventType: 'SIGNUP_ERROR',
+        details: { 
+          error: error instanceof Error ? error.message : 'Unknown error',
+          userAgent: navigator.userAgent 
+        },
+        riskLevel: 'high'
+      });
+      
       toast.error("Something went wrong", {
         description: "Please try again later."
       });
