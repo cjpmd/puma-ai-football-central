@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { validateEmail, sanitizeText, isRateLimited } from "@/utils/inputValidation";
 
 interface UserLoginModalProps {
   isOpen: boolean;
@@ -22,10 +23,38 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side rate limiting
+    if (isRateLimited('login_attempts', 5, 15 * 60 * 1000)) {
+      toast.error("Too many attempts", {
+        description: "Please wait 15 minutes before trying again."
+      });
+      return;
+    }
+
+    // Input validation
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      toast.error("Invalid email", {
+        description: emailValidation.error
+      });
+      return;
+    }
+
+    if (!password || password.length === 0) {
+      toast.error("Password required", {
+        description: "Please enter your password."
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      // Sanitize inputs
+      const sanitizedEmail = sanitizeText(email.toLowerCase().trim());
+      
+      const { error } = await signIn(sanitizedEmail, password);
       
       if (error) {
         toast.error("Login failed", {
@@ -71,7 +100,8 @@ export function UserLoginModal({ isOpen, onClose, onLogin, onSwitchToSignup }: U
               type="email"
               placeholder="your@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(sanitizeText(e.target.value))}
+              maxLength={254}
               required
             />
           </div>

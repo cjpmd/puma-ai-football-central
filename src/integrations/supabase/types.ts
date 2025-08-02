@@ -2195,6 +2195,24 @@ export type Database = {
           size_category: string | null
           team_id: string | null
         }
+        Insert: {
+          available_size_ids?: never
+          available_size_names?: never
+          category?: string | null
+          id?: string | null
+          name?: string | null
+          size_category?: string | null
+          team_id?: string | null
+        }
+        Update: {
+          available_size_ids?: never
+          available_size_names?: never
+          category?: string | null
+          id?: string | null
+          name?: string | null
+          size_category?: string | null
+          team_id?: string | null
+        }
         Relationships: []
       }
       linked_teams: {
@@ -2354,6 +2372,10 @@ export type Database = {
       }
       user_is_global_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      validate_password_strength: {
+        Args: { password: string }
         Returns: boolean
       }
     }

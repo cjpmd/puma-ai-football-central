@@ -1,5 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
+import { validateEmail, validateName, sanitizeText } from '@/utils/inputValidation';
 
 export interface InviteUserData {
   email: string;
@@ -28,19 +29,64 @@ export interface UserInvitation {
 }
 
 export const userInvitationService = {
+  generateSecureCode(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 12; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  },
   async inviteUser(inviteData: InviteUserData): Promise<UserInvitation> {
     console.log('Inviting user:', inviteData);
+
+    // Validate input data
+    const emailValidation = validateEmail(inviteData.email);
+    if (!emailValidation.isValid) {
+      throw new Error(emailValidation.error || 'Invalid email address');
+    }
+
+    const nameValidation = validateName(inviteData.name);
+    if (!nameValidation.isValid) {
+      throw new Error(nameValidation.error || 'Invalid name');
+    }
+
+    // Get current user
+    const currentUser = await supabase.auth.getUser();
+    if (!currentUser.data.user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Simple client-side rate limiting check (can be enhanced with database)
+    const now = Date.now();
+    const windowKey = `invite_${currentUser.data.user.id}_${inviteData.email}_${Math.floor(now / (60 * 60 * 1000))}`;
+    const attempts = parseInt(localStorage.getItem(windowKey) || '0');
+    
+    if (attempts >= 5) {
+      throw new Error('Rate limit exceeded. Please wait before sending more invitations to this email.');
+    }
+    
+    localStorage.setItem(windowKey, (attempts + 1).toString());
+
+    // Generate secure invitation code
+    const invitationCode = this.generateSecureCode();
+
+    // Set expiration to 24 hours from now (improved security)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24);
     
     const { data, error } = await supabase
       .from('user_invitations')
       .insert([{
-        email: inviteData.email,
-        name: inviteData.name,
+        email: sanitizeText(inviteData.email.toLowerCase().trim()),
+        name: sanitizeText(inviteData.name.trim()),
         role: inviteData.role,
         team_id: inviteData.teamId,
         player_id: inviteData.playerId,
         staff_id: inviteData.staffId,
-        invited_by: (await supabase.auth.getUser()).data.user?.id
+        invitation_code: invitationCode,
+        expires_at: expiresAt.toISOString(),
+        invited_by: currentUser.data.user.id
       }])
       .select()
       .single();

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { validatePasswordStrength, validateEmail, validateName, sanitizeText, isRateLimited } from "@/utils/inputValidation";
+import { PasswordStrength } from "@/components/ui/password-strength";
 
 interface UserSignupModalProps {
   isOpen: boolean;
@@ -24,6 +26,39 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Client-side rate limiting
+    if (isRateLimited('signup_attempts', 3, 60 * 60 * 1000)) {
+      toast.error("Too many attempts", {
+        description: "Please wait 1 hour before trying again."
+      });
+      return;
+    }
+
+    // Input validation
+    const nameValidation = validateName(name);
+    if (!nameValidation.isValid) {
+      toast.error("Invalid name", {
+        description: nameValidation.error
+      });
+      return;
+    }
+
+    const emailValidation = validateEmail(email);
+    if (!emailValidation.isValid) {
+      toast.error("Invalid email", {
+        description: emailValidation.error
+      });
+      return;
+    }
+
+    const passwordValidation = validatePasswordStrength(password);
+    if (!passwordValidation.isValid) {
+      toast.error("Password too weak", {
+        description: passwordValidation.errors.join(", ")
+      });
+      return;
+    }
     
     if (password !== confirmPassword) {
       toast.error("Passwords don't match", {
@@ -35,7 +70,11 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
     setIsLoading(true);
 
     try {
-      const { data, error } = await signUp(email, password, name);
+      // Sanitize inputs
+      const sanitizedName = sanitizeText(name.trim());
+      const sanitizedEmail = sanitizeText(email.toLowerCase().trim());
+      
+      const { data, error } = await signUp(sanitizedEmail, password, sanitizedName);
       
       if (error) {
         toast.error("Registration failed", {
@@ -87,7 +126,8 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
               id="name"
               placeholder="John Smith"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName(sanitizeText(e.target.value))}
+              maxLength={100}
               required
             />
           </div>
@@ -98,7 +138,8 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
               type="email"
               placeholder="your@email.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => setEmail(sanitizeText(e.target.value))}
+              maxLength={254}
               required
             />
           </div>
@@ -111,6 +152,7 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <PasswordStrength password={password} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password</Label>
