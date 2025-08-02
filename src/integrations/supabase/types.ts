@@ -1249,6 +1249,39 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_violations: {
+        Row: {
+          action_type: string
+          blocked_until: string | null
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          user_id: string | null
+          violation_count: number
+          window_start: string
+        }
+        Insert: {
+          action_type: string
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string | null
+          violation_count?: number
+          window_start?: string
+        }
+        Update: {
+          action_type?: string
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string | null
+          violation_count?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           action: string
@@ -1279,6 +1312,51 @@ export type Database = {
           ip_address?: unknown | null
           user_id?: string | null
           window_start?: string | null
+        }
+        Relationships: []
+      }
+      security_audit_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          metadata: Json | null
+          new_data: Json | null
+          old_data: Json | null
+          record_id: string | null
+          risk_level: string
+          table_name: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          risk_level?: string
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          new_data?: Json | null
+          old_data?: Json | null
+          record_id?: string | null
+          risk_level?: string
+          table_name?: string | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -2293,6 +2371,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      generate_secure_invitation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_team_join_code: {
         Args: { team_name: string }
         Returns: string
@@ -2313,7 +2395,15 @@ export type Database = {
         Args: { club_uuid: string; required_roles?: string[] }
         Returns: boolean
       }
+      is_club_member_secure: {
+        Args: { club_uuid: string; required_roles?: string[] }
+        Returns: boolean
+      }
       is_global_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_global_admin_secure: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
@@ -2321,7 +2411,15 @@ export type Database = {
         Args: { team_uuid: string; required_roles?: string[] }
         Returns: boolean
       }
+      is_team_member_secure: {
+        Args: { team_uuid: string; required_roles?: string[] }
+        Returns: boolean
+      }
       is_user_club_admin: {
+        Args: { p_club_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_user_club_admin_secure: {
         Args: { p_club_id: string; p_user_id: string }
         Returns: boolean
       }
@@ -2377,6 +2475,10 @@ export type Database = {
       validate_password_strength: {
         Args: { password: string }
         Returns: boolean
+      }
+      validate_password_strength_enhanced: {
+        Args: { password: string; user_email?: string }
+        Returns: Json
       }
     }
     Enums: {
