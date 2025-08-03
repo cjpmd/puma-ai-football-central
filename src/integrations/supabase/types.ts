@@ -2557,6 +2557,15 @@ export type Database = {
         Args: { email?: string; password?: string; action_type?: string }
         Returns: Json
       }
+      validate_invitation_data: {
+        Args: {
+          p_email: string
+          p_team_name: string
+          p_user_name: string
+          p_role?: string
+        }
+        Returns: Json
+      }
       validate_password_strength: {
         Args: { password: string }
         Returns: boolean
@@ -2571,6 +2580,10 @@ export type Database = {
           p_ip_address?: unknown
           p_user_agent?: string
         }
+        Returns: Json
+      }
+      validate_user_permissions: {
+        Args: { p_user_id: string }
         Returns: Json
       }
       validate_user_role_access: {

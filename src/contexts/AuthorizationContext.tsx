@@ -3,6 +3,13 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+interface UserPermissionData {
+  user_roles: string[];
+  team_memberships: Array<{ team_id: string; role: string }>;
+  club_memberships: Array<{ club_id: string; role: string }>;
+  is_global_admin: boolean;
+}
+
 interface Permission {
   resource: string;
   action: string;
@@ -44,15 +51,31 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
     try {
       setLoading(true);
       
-      // Start with base permissions from user roles
+      if (!user?.id) {
+        setUserPermissions([]);
+        return;
+      }
+
+      // Use server-side validation function for security
+      const { data: permissionData, error } = await supabase
+        .rpc('validate_user_permissions', { p_user_id: user.id });
+
+      if (error) {
+        console.error('Error loading user permissions:', error);
+        setUserPermissions([]);
+        return;
+      }
+
+      // Build permissions based on server-validated data
       const basePermissions = new Set<string>();
+      const userData = permissionData as unknown as UserPermissionData;
       
-      if (profile?.roles) {
-        profile.roles.forEach(role => {
+      if (userData?.is_global_admin) {
+        basePermissions.add('*:*'); // Global admin can do everything
+      } else {
+        // Add role-based permissions
+        userData?.user_roles?.forEach((role: string) => {
           switch (role) {
-            case 'global_admin':
-              basePermissions.add('*:*'); // Global admin can do everything
-              break;
             case 'club_admin':
               basePermissions.add('users:invite');
               basePermissions.add('users:manage');
@@ -67,7 +90,12 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
               basePermissions.add('staff:manage');
               basePermissions.add('analytics:view');
               break;
-            case 'coach':
+            case 'team_assistant_manager':
+              basePermissions.add('teams:manage');
+              basePermissions.add('players:manage');
+              basePermissions.add('staff:manage');
+              break;
+            case 'team_coach':
               basePermissions.add('players:view');
               basePermissions.add('events:manage');
               basePermissions.add('analytics:view');
@@ -86,22 +114,27 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
               break;
           }
         });
+
+        // Add team-specific permissions based on server data
+        userData?.team_memberships?.forEach((membership) => {
+          const { team_id, role } = membership;
+          if (role === 'team_manager' || role === 'team_assistant_manager') {
+            basePermissions.add(`teams:manage:${team_id}`);
+            basePermissions.add(`players:manage:${team_id}`);
+            basePermissions.add(`staff:manage:${team_id}`);
+            basePermissions.add(`events:manage:${team_id}`);
+          }
+        });
+
+        // Add club-specific permissions based on server data
+        userData?.club_memberships?.forEach((membership) => {
+          const { club_id, role } = membership;
+          if (role === 'club_admin' || role === 'club_chair') {
+            basePermissions.add(`clubs:manage:${club_id}`);
+            basePermissions.add(`teams:view:${club_id}`);
+          }
+        });
       }
-
-      // Add team-specific permissions
-      teams.forEach(team => {
-        // Team managers have full control over their teams
-        basePermissions.add(`teams:manage:${team.id}`);
-        basePermissions.add(`players:manage:${team.id}`);
-        basePermissions.add(`staff:manage:${team.id}`);
-        basePermissions.add(`events:manage:${team.id}`);
-      });
-
-      // Add club-specific permissions
-      clubs.forEach(club => {
-        basePermissions.add(`clubs:manage:${club.id}`);
-        basePermissions.add(`teams:view:${club.id}`);
-      });
 
       setUserPermissions(Array.from(basePermissions));
     } catch (error) {

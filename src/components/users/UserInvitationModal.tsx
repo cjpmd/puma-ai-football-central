@@ -7,7 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { userInvitationService, InviteUserData } from '@/services/userInvitationService';
+import { supabase } from '@/integrations/supabase/client';
+import { sanitizeText, validateEmail, validateName } from '@/utils/inputValidation';
 import { toast } from 'sonner';
+
+interface ValidationResult {
+  is_valid: boolean;
+  errors: string[];
+}
 
 interface UserInvitationModalProps {
   isOpen: boolean;
@@ -41,9 +48,52 @@ export const UserInvitationModal: React.FC<UserInvitationModalProps> = ({
     setIsLoading(true);
 
     try {
+      // Client-side validation
+      const emailValidation = validateEmail(formData.email);
+      if (!emailValidation.isValid) {
+        toast.error(emailValidation.error);
+        return;
+      }
+
+      const nameValidation = validateName(formData.name);
+      if (!nameValidation.isValid) {
+        toast.error(nameValidation.error);
+        return;
+      }
+
+      // Sanitize inputs
+      const sanitizedName = sanitizeText(formData.name);
+      const sanitizedEmail = formData.email.trim().toLowerCase();
+
+      // Get team name for validation
+      const selectedTeam = teams.find(t => t.id === formData.teamId);
+      const teamName = selectedTeam?.name || '';
+
+      // Server-side validation using secure function
+      const { data: validationResult, error: validationError } = await supabase
+        .rpc('validate_invitation_data', {
+          p_email: sanitizedEmail,
+          p_team_name: teamName,
+          p_user_name: sanitizedName,
+          p_role: formData.role
+        });
+
+      if (validationError) {
+        console.error('Validation error:', validationError);
+        toast.error('Validation failed. Please try again.');
+        return;
+      }
+
+      const validation = validationResult as unknown as ValidationResult;
+      if (!validation?.is_valid) {
+        const errors = validation?.errors || ['Validation failed'];
+        toast.error(errors[0]);
+        return;
+      }
+
       const inviteData: InviteUserData = {
-        email: formData.email,
-        name: formData.name,
+        email: sanitizedEmail,
+        name: sanitizedName,
         role: formData.role,
         teamId: formData.teamId || undefined,
         playerId: prefilledData?.playerId,
