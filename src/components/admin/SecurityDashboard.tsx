@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, AlertTriangle, Eye, RefreshCw } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Shield, AlertTriangle, Eye, RefreshCw, Lock, Users, Clock, Activity } from "lucide-react";
 import { securityService } from "@/services/securityService";
 import { toast } from "sonner";
 
@@ -24,17 +26,23 @@ export function SecurityDashboard() {
     patterns: string[];
     riskLevel: 'low' | 'medium' | 'high' | 'critical';
   } | null>(null);
+  const [sessionSecurity, setSessionSecurity] = useState<any>(null);
+  const [rateLimitStatus, setRateLimitStatus] = useState<any>(null);
 
   const loadSecurityData = async () => {
     setLoading(true);
     try {
-      const [auditLogs, activityCheck] = await Promise.all([
+      const [auditLogs, activityCheck, sessionValidation, rateLimitCheck] = await Promise.all([
         securityService.getSecurityAuditLogs(50),
-        securityService.detectSuspiciousActivity()
+        securityService.detectSuspiciousActivity(),
+        securityService.validateSessionSecurity(),
+        securityService.checkServerRateLimit('auth_attempt')
       ]);
 
       setLogs(auditLogs);
       setSuspiciousActivity(activityCheck);
+      setSessionSecurity(sessionValidation);
+      setRateLimitStatus(rateLimitCheck);
     } catch (error) {
       console.error('Error loading security data:', error);
       toast.error('Failed to load security data');
@@ -84,38 +92,83 @@ export function SecurityDashboard() {
         </Button>
       </div>
 
-      {/* Risk Level Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Enhanced Security Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Critical Events</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              <AlertTriangle className="h-4 w-4 mr-2" />
+              Critical Events
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{riskCounts.critical}</div>
+            <p className="text-xs text-muted-foreground">Immediate attention required</p>
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">High Risk Events</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Users className="h-4 w-4 mr-2" />
+              Session Security
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{riskCounts.high}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {sessionSecurity?.sessionCount || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {sessionSecurity?.suspicious ? 'Suspicious activity detected' : 'Normal activity'}
+            </p>
+            {sessionSecurity?.suspicious && (
+              <Badge variant="destructive" className="mt-1">Suspicious</Badge>
+            )}
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Medium Risk Events</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Lock className="h-4 w-4 mr-2" />
+              Rate Limiting
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{riskCounts.medium}</div>
+            <div className="text-2xl font-bold text-orange-600">
+              {rateLimitStatus?.violationCount || 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {rateLimitStatus?.isBlocked ? 'Currently blocked' : 'Within limits'}
+            </p>
+            {rateLimitStatus?.isBlocked && (
+              <Badge variant="destructive" className="mt-1">Blocked</Badge>
+            )}
           </CardContent>
         </Card>
+        
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Low Risk Events</CardTitle>
+            <CardTitle className="text-sm font-medium flex items-center">
+              <Activity className="h-4 w-4 mr-2" />
+              Risk Score
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{riskCounts.low}</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {suspiciousActivity?.riskLevel?.toUpperCase() || 'LOW'}
+            </div>
+            <p className="text-xs text-muted-foreground">Overall security risk</p>
+            <div className="mt-2">
+              <Progress 
+                value={
+                  suspiciousActivity?.riskLevel === 'critical' ? 100 :
+                  suspiciousActivity?.riskLevel === 'high' ? 75 :
+                  suspiciousActivity?.riskLevel === 'medium' ? 50 : 25
+                }
+                className="h-2"
+              />
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Team, Club, Profile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
+import { securityService } from '@/services/securityService';
 
 interface ConnectedPlayer {
   id: string;
@@ -66,6 +67,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               console.log('User session found, setting user data...');
               setUser(session.user);
               setSession(session);
+              
+              // Enhanced security: Track session and validate security
+              setTimeout(() => {
+                if (mounted) {
+                  securityService.trackSession().catch(error => {
+                    console.error('Session tracking error:', error);
+                  });
+                }
+              }, 100);
               
               // Load user data without blocking
               setTimeout(() => {

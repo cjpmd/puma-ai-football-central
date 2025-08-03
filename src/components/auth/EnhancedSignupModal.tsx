@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { userInvitationService } from '@/services/userInvitationService';
+import { securityService } from '@/services/securityService';
+import { PasswordStrength } from '@/components/ui/password-strength';
 
 interface EnhancedSignupModalProps {
   isOpen: boolean;
@@ -77,6 +79,18 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Enhanced security validation
+    const validationResult = await securityService.validateAuthInput(email, password, 'signup');
+    if (!validationResult.isValid) {
+      toast({
+        title: 'Validation Failed',
+        description: validationResult.errors.join(' '),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!email || !password || !name) {
       toast({
         title: 'Missing Information',
@@ -99,6 +113,13 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
 
     try {
       console.log('Starting signup process for:', email);
+      
+      // Log security event
+      await securityService.logSecurityEvent({
+        eventType: 'SIGNUP_ATTEMPT',
+        details: { email: email.substring(0, 3) + '***', invitation_code: invitationCode },
+        riskLevel: 'low'
+      });
       
       // Create the auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -220,6 +241,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
               placeholder="Enter your password"
               required
             />
+            <PasswordStrength password={password} />
           </div>
 
           <Button
