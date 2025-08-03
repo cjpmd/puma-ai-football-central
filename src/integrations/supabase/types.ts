@@ -1282,6 +1282,33 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limiting_config: {
+        Row: {
+          action_type: string
+          block_duration_minutes: number
+          created_at: string | null
+          id: string
+          max_attempts: number
+          window_minutes: number
+        }
+        Insert: {
+          action_type: string
+          block_duration_minutes?: number
+          created_at?: string | null
+          id?: string
+          max_attempts?: number
+          window_minutes?: number
+        }
+        Update: {
+          action_type?: string
+          block_duration_minutes?: number
+          created_at?: string | null
+          id?: string
+          max_attempts?: number
+          window_minutes?: number
+        }
+        Relationships: []
+      }
       rate_limits: {
         Row: {
           action: string
@@ -2124,6 +2151,42 @@ export type Database = {
           },
         ]
       }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          ip_address: unknown | null
+          is_admin_session: boolean | null
+          last_activity: string | null
+          session_token: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          is_admin_session?: boolean | null
+          last_activity?: string | null
+          session_token: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          ip_address?: unknown | null
+          is_admin_session?: boolean | null
+          last_activity?: string | null
+          session_token?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_staff: {
         Row: {
           created_at: string | null
@@ -2355,6 +2418,14 @@ export type Database = {
         Args: { password: string }
         Returns: boolean
       }
+      check_rate_limit_enhanced: {
+        Args: {
+          p_action_type: string
+          p_user_id?: string
+          p_ip_address?: unknown
+        }
+        Returns: Json
+      }
       clean_and_regenerate_player_stats: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2492,6 +2563,23 @@ export type Database = {
       }
       validate_password_strength_enhanced: {
         Args: { password: string; user_email?: string }
+        Returns: Json
+      }
+      validate_session_security: {
+        Args: {
+          p_user_id: string
+          p_ip_address?: unknown
+          p_user_agent?: string
+        }
+        Returns: Json
+      }
+      validate_user_role_access: {
+        Args: {
+          p_user_id: string
+          p_required_role: string
+          p_resource_type?: string
+          p_resource_id?: string
+        }
         Returns: Json
       }
     }
