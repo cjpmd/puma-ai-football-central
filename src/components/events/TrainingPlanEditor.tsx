@@ -333,12 +333,12 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
                       className="w-full"
                     />
                   </div>
-                  <Select value={selectedTags.join(',')} onValueChange={(value) => setSelectedTags(value ? value.split(',') : [])}>
+                  <Select value={selectedTags.length > 0 ? selectedTags.join(',') : 'all'} onValueChange={(value) => setSelectedTags(value === 'all' ? [] : value.split(','))}>
                     <SelectTrigger className="w-48">
                       <SelectValue placeholder="Filter by tags" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All tags</SelectItem>
+                      <SelectItem value="all">All tags</SelectItem>
                       {drillTags.map((tag) => (
                         <SelectItem key={tag.id} value={tag.id}>
                           <div className="flex items-center gap-2">
