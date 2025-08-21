@@ -3,14 +3,16 @@ import { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { Users } from 'lucide-react';
+import { Users, BookOpen } from 'lucide-react';
 import { PlayerManagement } from '@/components/players/PlayerManagement';
+import { IndividualTrainingDashboard } from '@/components/individual-training/IndividualTrainingDashboard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Team } from '@/types';
 
 const PlayerManagementPage = () => {
-  const { teams } = useAuth();
+  const { teams, user, connectedPlayers } = useAuth();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   // Update selectedTeamId when teams load
@@ -25,6 +27,13 @@ const PlayerManagementPage = () => {
   };
 
   const selectedTeam = teams.find(team => team.id === selectedTeamId);
+
+  // Convert connected players to the format expected by the dashboard
+  const userPlayers = connectedPlayers?.map(cp => ({
+    id: cp.id,
+    name: cp.name,
+    team_id: cp.team?.id || ''
+  })) || [];
 
   return (
     <DashboardLayout>
@@ -74,7 +83,29 @@ const PlayerManagementPage = () => {
             </CardContent>
           </Card>
         ) : selectedTeam ? (
-          <PlayerManagement team={selectedTeam} />
+          <Tabs defaultValue="players" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="players" className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Players
+              </TabsTrigger>
+              <TabsTrigger value="training" className="flex items-center gap-2">
+                <BookOpen className="h-4 w-4" />
+                Training Plans
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="players" className="mt-6">
+              <PlayerManagement team={selectedTeam} />
+            </TabsContent>
+            
+            <TabsContent value="training" className="mt-6">
+              <IndividualTrainingDashboard 
+                userId={user?.id || ''} 
+                userPlayers={userPlayers.filter(p => p.team_id === selectedTeamId)}
+              />
+            </TabsContent>
+          </Tabs>
         ) : (
           <div className="text-center py-8">
             Please select a team to manage players.

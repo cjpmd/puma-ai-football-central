@@ -28,6 +28,8 @@ import StaffManagement from "./pages/StaffManagement";
 import StaffManagementMobile from "./pages/StaffManagementMobile";
 import Training from "./pages/Training";
 import TrainingMobile from "./pages/TrainingMobile";
+import IndividualTraining from "./pages/IndividualTraining";
+import IndividualTrainingMobile from "./pages/IndividualTrainingMobile";
 import UserManagement from "./pages/UserManagement";
 import UserManagementMobile from "./pages/UserManagementMobile";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
@@ -137,7 +139,18 @@ const App = () => (
                 }
               />
               <Route 
-                path="/users" 
+                path="/individual-training" 
+                element={
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<IndividualTraining />}
+                      mobileComponent={<IndividualTrainingMobile />}
+                    />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/users"
                 element={
                   <ProtectedRoute>
                     <ResponsiveRoute

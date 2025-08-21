@@ -20,7 +20,8 @@ import {
   UserCog,
   UserPlus,
   CreditCard,
-  Dumbbell
+  Dumbbell,
+  Target
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -33,6 +34,7 @@ const navigation = [
   { name: 'Players', href: '/players', icon: Users },
   { name: 'Calendar & Events', href: '/calendar', icon: Calendar },
   { name: 'Training', href: '/training', icon: Dumbbell },
+  { name: 'Individual Training', href: '/individual-training', icon: Target },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Player Management', href: '/player-management', icon: UserCheck },
   { name: 'Teams', href: '/teams', icon: Trophy },

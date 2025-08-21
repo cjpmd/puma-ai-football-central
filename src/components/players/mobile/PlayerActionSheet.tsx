@@ -15,7 +15,8 @@ import {
   ArrowRightLeft, 
   UserMinus,
   Shield,
-  ShieldCheck
+  ShieldCheck,
+  BookOpen
 } from 'lucide-react';
 
 interface PlayerActionSheetProps {
@@ -29,6 +30,7 @@ interface PlayerActionSheetProps {
   onManageComments: (player: Player) => void;
   onViewStats: (player: Player) => void;
   onViewHistory: (player: Player) => void;
+  onViewTrainingPlans?: (player: Player) => void;
   onTransferPlayer: (player: Player) => void;
   onLeaveTeam: (player: Player) => void;
 }
@@ -44,6 +46,7 @@ export const PlayerActionSheet: React.FC<PlayerActionSheetProps> = ({
   onManageComments,
   onViewStats,
   onViewHistory,
+  onViewTrainingPlans,
   onTransferPlayer,
   onLeaveTeam
 }) => {
@@ -98,7 +101,13 @@ export const PlayerActionSheet: React.FC<PlayerActionSheetProps> = ({
       label: 'View History',
       action: () => handleAction(onViewHistory),
       category: 'analytics'
-    }
+    },
+    ...(onViewTrainingPlans ? [{
+      icon: BookOpen,
+      label: 'Training Plans',
+      action: () => handleAction(onViewTrainingPlans),
+      category: 'development'
+    }] : [])
   ];
 
   const restrictedActions = [

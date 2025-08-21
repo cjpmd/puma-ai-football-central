@@ -19,6 +19,7 @@ import { PlayerObjectivesModal } from '@/components/players/mobile/PlayerObjecti
 import { PlayerCommentsModal } from '@/components/players/mobile/PlayerCommentsModal';
 import { PlayerHistoryModal } from '@/components/players/mobile/PlayerHistoryModal';
 import { PlayerParentsModal } from '@/components/players/mobile/PlayerParentsModal';
+import { PlayerTrainingPlansModal } from '@/components/players/PlayerTrainingPlansModal';
 
 // Use the actual database player type
 type DatabasePlayerRow = {
@@ -67,6 +68,7 @@ export default function PlayerManagementMobile() {
   const [commentsModalOpen, setCommentsModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [parentsModalOpen, setParentsModalOpen] = useState(false);
+  const [trainingPlansModalOpen, setTrainingPlansModalOpen] = useState(false);
 
   useEffect(() => {
     loadPlayers();
@@ -374,6 +376,12 @@ export default function PlayerManagementMobile() {
     setActionSheetOpen(false);
   };
 
+  const handleViewTrainingPlans = (player: Player) => {
+    setSelectedPlayer(player);
+    setTrainingPlansModalOpen(true);
+    setActionSheetOpen(false);
+  };
+
   const handleTransferPlayer = (player: Player) => {
     setActionSheetOpen(false);
     toast({ 
@@ -506,6 +514,7 @@ export default function PlayerManagementMobile() {
             onManageComments={handleManageComments}
             onViewStats={handleViewStats}
             onViewHistory={handleViewHistory}
+            onViewTrainingPlans={handleViewTrainingPlans}
             onTransferPlayer={handleTransferPlayer}
             onLeaveTeam={handleLeaveTeam}
           />
@@ -570,6 +579,12 @@ export default function PlayerManagementMobile() {
               loadPlayers();
               setParentsModalOpen(false);
             }}
+          />
+
+          <PlayerTrainingPlansModal
+            player={selectedPlayer}
+            isOpen={trainingPlansModalOpen}
+            onClose={() => setTrainingPlansModalOpen(false)}
           />
         </>
       )}

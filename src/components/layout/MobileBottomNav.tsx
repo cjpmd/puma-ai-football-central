@@ -9,7 +9,8 @@ import {
   Building2,
   UserCog,
   Menu,
-  Dumbbell
+  Dumbbell,
+  Target
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ const navItems = [
   { name: 'Players', href: '/players', icon: Users },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Training', href: '/training', icon: Dumbbell },
-  { name: 'More', href: '/more', icon: Menu },
+  { name: 'Individual', href: '/individual-training', icon: Target },
 ];
 
 export function MobileBottomNav() {
