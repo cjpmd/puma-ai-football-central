@@ -94,15 +94,24 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         Object.values(groupedSelections).forEach(team => {
           const allPlayerIds = new Set();
           team.periods.forEach(period => {
-            if (period.player_positions) {
-              period.player_positions.forEach((pos: any) => {
-                if (pos.playerId) allPlayerIds.add(pos.playerId);
+            // For training events, check selected_players array
+            if (event.event_type === 'training' && period.selected_players) {
+              period.selected_players.forEach((playerId: string) => {
+                if (playerId) allPlayerIds.add(playerId);
               });
             }
-            if (period.substitute_players) {
-              period.substitute_players.forEach((playerId: string) => {
-                allPlayerIds.add(playerId);
-              });
+            // For match events, check player_positions and substitute_players
+            if (event.event_type !== 'training') {
+              if (period.player_positions) {
+                period.player_positions.forEach((pos: any) => {
+                  if (pos.playerId) allPlayerIds.add(pos.playerId);
+                });
+              }
+              if (period.substitute_players) {
+                period.substitute_players.forEach((playerId: string) => {
+                  allPlayerIds.add(playerId);
+                });
+              }
             }
           });
           team.squadPlayers = allPlayerIds.size;
@@ -211,9 +220,9 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          <h3 className="font-medium">
-            {event.event_type === 'training' ? 'Training Plan' : 'Team Selection'}
-          </h3>
+            <h3 className="font-medium">
+              {event.event_type === 'training' ? 'Training Plan' : 'Group Selection'}
+            </h3>
           <div className="w-16" /> {/* Spacer for center alignment */}
         </div>
       )}
