@@ -42,6 +42,7 @@ interface TrainingSessionDrill {
   notes?: string;
   drill?: Drill;
   subgroups?: DrillSubgroup[];
+  selected_tags?: DrillTag[];
 }
 
 interface DrillSubgroup {
@@ -81,6 +82,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   const [showDrillLibrary, setShowDrillLibrary] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [expandedDrills, setExpandedDrills] = useState<Set<string>>(new Set());
 
   // Load drill tags
   const { data: drillTags = [] } = useQuery({
@@ -203,10 +205,12 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
       custom_drill_description: '',
       sequence_order: sessionDrills.length + 1,
       duration_minutes: 10,
-      subgroups: []
+      subgroups: [],
+      selected_tags: []
     };
 
     setSessionDrills([...sessionDrills, newDrill]);
+    setExpandedDrills(prev => new Set([...prev, newDrill.id]));
   };
 
   const updateDrill = (drillId: string, updates: Partial<TrainingSessionDrill>) => {
@@ -283,6 +287,23 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
 
   const getTotalDuration = () => {
     return sessionDrills.reduce((total, drill) => total + drill.duration_minutes, 0);
+  };
+
+  const toggleDrillExpanded = (drillId: string) => {
+    setExpandedDrills(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(drillId)) {
+        newSet.delete(drillId);
+      } else {
+        newSet.add(drillId);
+      }
+      return newSet;
+    });
+  };
+
+  const getPrimaryTagColor = (drill: TrainingSessionDrill) => {
+    const tags = drill.drill?.tags || drill.selected_tags || [];
+    return tags.length > 0 ? tags[0].color : '#94a3b8'; // Default gray
   };
 
   const handleSave = async () => {
@@ -403,146 +424,262 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
         </div>
       </div>
 
-      {/* Drill Sequence */}
-      <div className="space-y-4">
-        {sessionDrills.map((drill, index) => (
-          <Card key={drill.id}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">#{index + 1}</Badge>
-                  <div>
-                    <Input
-                      value={drill.drill?.name || drill.custom_drill_name || ''}
-                      onChange={(e) => updateDrill(drill.id, { 
-                        custom_drill_name: drill.drill ? undefined : e.target.value 
-                      })}
-                      className="font-medium border-none p-0 h-auto shadow-none focus-visible:ring-0"
-                      placeholder="Drill name"
-                      disabled={!!drill.drill}
-                    />
+      {/* Drill Sequence - Grid Layout */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {sessionDrills.map((drill, index) => {
+          const isExpanded = expandedDrills.has(drill.id);
+          const primaryColor = getPrimaryTagColor(drill);
+          const tags = drill.drill?.tags || drill.selected_tags || [];
+          
+          return (
+            <Card 
+              key={drill.id}
+              className="relative overflow-hidden transition-all duration-200 hover:shadow-lg"
+              style={{
+                borderLeftColor: primaryColor,
+                borderLeftWidth: '4px',
+                boxShadow: `0 4px 6px -1px ${primaryColor}20, 0 2px 4px -1px ${primaryColor}10`
+              }}
+            >
+              {/* Compact Header */}
+              <CardHeader className="pb-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <Badge variant="outline" className="text-xs">#{index + 1}</Badge>
+                  <div className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    <span className="text-xs font-medium">{drill.duration_minutes}m</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
+                
+                <div className="space-y-1">
+                  <h4 className="font-medium text-sm leading-tight">
+                    {drill.drill?.name || drill.custom_drill_name || 'Untitled Drill'}
+                  </h4>
+                  
+                  {/* Tags */}
+                  {tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {tags.slice(0, 2).map((tag) => (
+                        <Badge 
+                          key={tag.id} 
+                          variant="secondary" 
+                          className="text-xs px-1.5 py-0.5"
+                          style={{ backgroundColor: `${tag.color}20`, color: tag.color }}
+                        >
+                          <div className="w-1.5 h-1.5 rounded-full mr-1" style={{ backgroundColor: tag.color }} />
+                          {tag.name}
+                        </Badge>
+                      ))}
+                      {tags.length > 2 && (
+                        <Badge variant="outline" className="text-xs px-1.5 py-0.5">
+                          +{tags.length - 2}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Description Preview */}
+                  {(drill.drill?.description || drill.custom_drill_description) && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {drill.drill?.description || drill.custom_drill_description}
+                    </p>
+                  )}
+                  
+                  {/* Player Count */}
+                  {drill.subgroups && drill.subgroups.length > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Users className="w-3 h-3" />
+                      <span className="text-xs text-muted-foreground">
+                        {drill.subgroups.length} groups
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardHeader>
+
+              {/* Action Buttons */}
+              <div className="px-4 pb-3 flex items-center justify-between">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => toggleDrillExpanded(drill.id)}
+                  className="h-6 px-2 text-xs"
+                >
+                  <Edit className="w-3 h-3 mr-1" />
+                  {isExpanded ? 'Collapse' : 'Edit'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => removeDrill(drill.id)}
+                  className="h-6 px-2 text-xs hover:text-destructive"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </Button>
+              </div>
+
+              {/* Expanded Details */}
+              {isExpanded && (
+                <CardContent className="pt-0 space-y-3 border-t">
+                  {/* Name Input for Custom Drills */}
+                  {!drill.drill && (
+                    <div>
+                      <Label className="text-xs font-medium">Name</Label>
+                      <Input
+                        value={drill.custom_drill_name || ''}
+                        onChange={(e) => updateDrill(drill.id, { custom_drill_name: e.target.value })}
+                        className="h-8 text-sm"
+                        placeholder="Drill name"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Duration */}
+                  <div>
+                    <Label className="text-xs font-medium">Duration (minutes)</Label>
                     <Input
                       type="number"
                       value={drill.duration_minutes}
                       onChange={(e) => updateDrill(drill.id, { duration_minutes: parseInt(e.target.value) || 0 })}
-                      className="w-16 h-8"
+                      className="h-8 text-sm"
                       min="1"
                     />
-                    <span className="text-sm text-muted-foreground">min</span>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => removeDrill(drill.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Description */}
-              {!drill.drill && (
-                <Textarea
-                  placeholder="Drill description..."
-                  value={drill.custom_drill_description || ''}
-                  onChange={(e) => updateDrill(drill.id, { custom_drill_description: e.target.value })}
-                  rows={2}
-                />
-              )}
-              
-              {drill.drill?.description && (
-                <p className="text-sm text-muted-foreground">{drill.drill.description}</p>
-              )}
 
-              {/* Notes */}
-              <div>
-                <Label className="text-sm font-medium">Notes</Label>
-                <Textarea
-                  placeholder="Additional notes for this drill..."
-                  value={drill.notes || ''}
-                  onChange={(e) => updateDrill(drill.id, { notes: e.target.value })}
-                  rows={2}
-                />
-              </div>
-
-              {/* Subgroups */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-medium">Player Groups</Label>
-                  <Button variant="outline" size="sm" onClick={() => addSubgroup(drill.id)}>
-                    <Plus className="w-3 h-3 mr-1" />
-                    Add Group
-                  </Button>
-                </div>
-                
-                {drill.subgroups && drill.subgroups.length > 0 ? (
-                  <div className="space-y-2">
-                    {drill.subgroups.map((subgroup) => (
-                      <div key={subgroup.id} className="border rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Input
-                            value={subgroup.subgroup_name}
-                            onChange={(e) => updateSubgroup(drill.id, subgroup.id, { subgroup_name: e.target.value })}
-                            className="flex-1 h-8"
-                            placeholder="Group name"
-                          />
-                          <Badge variant="outline">
-                            {subgroup.players?.length || 0} players
-                          </Badge>
-                        </div>
-                        
-                        {/* Player selection for subgroup */}
-                        <div className="flex flex-wrap gap-1">
-                          {squadPlayers.map((player) => (
-                            <Badge
-                              key={player.id}
-                              variant={subgroup.players?.includes(player.id) ? "default" : "outline"}
-                              className="cursor-pointer"
-                              onClick={() => {
-                                const isSelected = subgroup.players?.includes(player.id);
-                                const newPlayers = isSelected
-                                  ? subgroup.players?.filter(id => id !== player.id) || []
-                                  : [...(subgroup.players || []), player.id];
-                                updateSubgroup(drill.id, subgroup.id, { players: newPlayers });
-                              }}
-                            >
-                              {player.name}
-                            </Badge>
+                  {/* Tag Selection for Custom Drills */}
+                  {!drill.drill && (
+                    <div>
+                      <Label className="text-xs font-medium">Tags</Label>
+                      <Select 
+                        value={drill.selected_tags?.map(t => t.id).join(',') || ''} 
+                        onValueChange={(value) => {
+                          const selectedTagIds = value ? value.split(',') : [];
+                          const selectedTagObjects = drillTags.filter(tag => selectedTagIds.includes(tag.id));
+                          updateDrill(drill.id, { selected_tags: selectedTagObjects });
+                        }}
+                      >
+                        <SelectTrigger className="h-8 text-sm">
+                          <SelectValue placeholder="Select tags" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">No tags</SelectItem>
+                          {drillTags.map((tag) => (
+                            <SelectItem key={tag.id} value={tag.id}>
+                              <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                                {tag.name}
+                              </div>
+                            </SelectItem>
                           ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No groups created. All squad players will participate together.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-        {sessionDrills.length === 0 && (
-          <Card className="text-center py-8">
-            <CardContent>
-              <Play className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-semibold mb-2">No Drills Added</h3>
-              <p className="text-muted-foreground mb-4">
-                Start building your training plan by adding drills from the library or creating custom drills.
-              </p>
-              <div className="flex justify-center gap-2">
-                <Button onClick={() => setShowDrillLibrary(true)} variant="outline">
-                  Browse Library
-                </Button>
-                <Button onClick={addCustomDrill}>
-                  Add Custom Drill
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  {/* Description for Custom Drills */}
+                  {!drill.drill && (
+                    <div>
+                      <Label className="text-xs font-medium">Description</Label>
+                      <Textarea
+                        placeholder="Drill description..."
+                        value={drill.custom_drill_description || ''}
+                        onChange={(e) => updateDrill(drill.id, { custom_drill_description: e.target.value })}
+                        rows={2}
+                        className="text-sm"
+                      />
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  <div>
+                    <Label className="text-xs font-medium">Notes</Label>
+                    <Textarea
+                      placeholder="Additional notes..."
+                      value={drill.notes || ''}
+                      onChange={(e) => updateDrill(drill.id, { notes: e.target.value })}
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+
+                  {/* Subgroups */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Label className="text-xs font-medium">Player Groups</Label>
+                      <Button variant="outline" size="sm" onClick={() => addSubgroup(drill.id)} className="h-6 px-2 text-xs">
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add Group
+                      </Button>
+                    </div>
+                    
+                    {drill.subgroups && drill.subgroups.length > 0 ? (
+                      <div className="space-y-2">
+                        {drill.subgroups.map((subgroup) => (
+                          <div key={subgroup.id} className="border rounded-lg p-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Input
+                                value={subgroup.subgroup_name}
+                                onChange={(e) => updateSubgroup(drill.id, subgroup.id, { subgroup_name: e.target.value })}
+                                className="flex-1 h-6 text-xs"
+                                placeholder="Group name"
+                              />
+                              <Badge variant="outline" className="text-xs">
+                                {subgroup.players?.length || 0} players
+                              </Badge>
+                            </div>
+                            
+                            {/* Player selection */}
+                            <div className="flex flex-wrap gap-1">
+                              {squadPlayers.map((player) => (
+                                <Badge
+                                  key={player.id}
+                                  variant={subgroup.players?.includes(player.id) ? "default" : "outline"}
+                                  className="cursor-pointer text-xs"
+                                  onClick={() => {
+                                    const isSelected = subgroup.players?.includes(player.id);
+                                    const newPlayers = isSelected
+                                      ? subgroup.players?.filter(id => id !== player.id) || []
+                                      : [...(subgroup.players || []), player.id];
+                                    updateSubgroup(drill.id, subgroup.id, { players: newPlayers });
+                                  }}
+                                >
+                                  {player.name}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">No groups created. All squad players will participate together.</p>
+                    )}
+                  </div>
+                </CardContent>
+              )}
+            </Card>
+          );
+        })}
       </div>
+
+      {sessionDrills.length === 0 && (
+        <Card className="text-center py-8">
+          <CardContent>
+            <Play className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="font-semibold mb-2">No Drills Added</h3>
+            <p className="text-muted-foreground mb-4">
+              Start building your training plan by adding drills from the library or creating custom drills.
+            </p>
+            <div className="flex justify-center gap-2">
+              <Button onClick={() => setShowDrillLibrary(true)} variant="outline">
+                Browse Library
+              </Button>
+              <Button onClick={addCustomDrill}>
+                Add Custom Drill
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Equipment */}
       <Card>
