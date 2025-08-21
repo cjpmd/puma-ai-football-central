@@ -742,6 +742,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                     }}
                     allTeamSelections={teamSelections}
                     currentTeamIndex={currentTeamIndex}
+                    eventType={event.event_type}
                   />
                 )}
               </TabsContent>
@@ -794,6 +795,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                       onPeriodsChange={handlePeriodsChange}
                       onCaptainChange={handleCaptainChange}
                       gameDuration={event.game_duration || 50}
+                      eventType={event.event_type}
                     />
                   )}
                 </TabsContent>

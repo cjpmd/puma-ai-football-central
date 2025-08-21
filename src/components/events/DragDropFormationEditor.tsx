@@ -34,6 +34,7 @@ interface DragDropFormationEditorProps {
   onPeriodsChange: (periods: FormationPeriod[]) => void;
   onCaptainChange: (captainId: string) => void;
   gameDuration?: number;
+  eventType?: string;
 }
 
 // Map team setting values to PlayerIcon expected values
@@ -50,7 +51,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   nameDisplayOption = 'surname',
   onPeriodsChange,
   onCaptainChange,
-  gameDuration = 50
+  gameDuration = 50,
+  eventType
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
   const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
@@ -667,7 +669,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           <div className="relative h-full">
             {period.positions.map((position, index) => {
               const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
-              const isCaptain = position.playerId === globalCaptainId;
+              const isCaptain = !eventType || eventType !== 'training' ? position.playerId === globalCaptainId : false;
               const positionGroupColor = getPositionGroupColor(position.positionName);
               
               return (
@@ -716,7 +718,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         <SubstituteBench
           id={`substitutes-${period.id}`}
           substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-          globalCaptainId={globalCaptainId}
+          globalCaptainId={eventType === 'training' ? undefined : globalCaptainId}
           nameDisplayOption={mappedNameDisplayOption}
         />
       </CardContent>
@@ -768,7 +770,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                         <PlayerIcon
                           key={player.id}
                           player={player}
-                          isCaptain={player.id === globalCaptainId}
+                          isCaptain={eventType === 'training' ? false : player.id === globalCaptainId}
                           nameDisplayOption={mappedNameDisplayOption}
                           isCircular={false}
                           dragId={player.id}
@@ -850,7 +852,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         {draggedPlayer && (
           <PlayerIcon
             player={draggedPlayer}
-            isCaptain={draggedPlayer.id === globalCaptainId}
+            isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
             nameDisplayOption={mappedNameDisplayOption}
             isCircular={true}
             isDragging={true}

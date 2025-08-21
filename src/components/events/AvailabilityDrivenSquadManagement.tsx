@@ -20,6 +20,7 @@ interface AvailabilityDrivenSquadManagementProps {
   allTeamSelections?: any[];
   currentTeamIndex?: number;
   initialSquadPlayers?: SquadPlayer[];
+  eventType?: string;
 }
 
 export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquadManagementProps> = ({
@@ -30,6 +31,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
   onCaptainChange,
   allTeamSelections = [],
   currentTeamIndex = 0,
+  eventType,
 }) => {
   const {
     availablePlayers,
@@ -186,6 +188,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
     return status === 'available' || status === 'pending';
   };
 
+  const isTrainingEvent = eventType === 'training';
+
   if (loading) {
     return (
       <Card>
@@ -213,23 +217,25 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         <CardContent>
           {squadPlayers.length > 0 ? (
             <div className="space-y-4">
-              {/* Captain Selection */}
-              <div className="pb-4 border-b">
-                <label className="text-sm font-medium mb-2 block">Select Captain:</label>
-                <Select value={localCaptainId || 'no-captain'} onValueChange={handleCaptainChange}>
-                  <SelectTrigger className="w-full max-w-xs">
-                    <SelectValue placeholder="Choose captain..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="no-captain">No Captain</SelectItem>
-                    {squadPlayers.map((player) => (
-                      <SelectItem key={player.id} value={player.id}>
-                        {player.name} (#{player.squadNumber})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Captain Selection - Hidden for training events */}
+              {!isTrainingEvent && (
+                <div className="pb-4 border-b">
+                  <label className="text-sm font-medium mb-2 block">Select Captain:</label>
+                  <Select value={localCaptainId || 'no-captain'} onValueChange={handleCaptainChange}>
+                    <SelectTrigger className="w-full max-w-xs">
+                      <SelectValue placeholder="Choose captain..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no-captain">No Captain</SelectItem>
+                      {squadPlayers.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          {player.name} (#{player.squadNumber})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {/* Squad Players List */}
               <div className="space-y-3">
@@ -258,7 +264,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{player.name}</span>
                           <Badge variant="secondary">#{player.squadNumber}</Badge>
-                          {player.id === localCaptainId && (
+                          {!isTrainingEvent && player.id === localCaptainId && (
                             <Badge className="bg-yellow-500 text-white">
                               <Crown className="h-3 w-3 mr-1" />
                               Captain
