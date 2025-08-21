@@ -2811,6 +2811,10 @@ export type Database = {
         Args: { p_player_id: string; p_player_name?: string }
         Returns: undefined
       }
+      format_file_size: {
+        Args: { size_bytes: number }
+        Returns: string
+      }
       generate_club_serial: {
         Args: Record<PropertyKey, never>
         Returns: string
