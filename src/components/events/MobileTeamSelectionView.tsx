@@ -225,7 +225,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                   )}
                 </div>
 
-                {currentTeam.periods[0]?.captain_id && (
+                {event.event_type !== 'training' && currentTeam.periods[0]?.captain_id && (
                   <div className="text-sm">
                     <h4 className="font-medium mb-2 flex items-center gap-1 text-sm">
                       <Star className="h-3 w-3" />
