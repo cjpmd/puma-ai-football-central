@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target } from 'lucide-react';
+import { RecommendedDrillsPanel } from '@/components/training/RecommendedDrillsPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
@@ -426,8 +427,21 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
         </div>
       </div>
 
-      {/* Drill Sequence - Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Main Content Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Recommendations Panel */}
+        <div className="lg:col-span-1">
+          <RecommendedDrillsPanel 
+            teamId={teamId}
+            onAddDrill={addDrillFromLibrary}
+            className="sticky top-4"
+          />
+        </div>
+
+        {/* Drill Sequence */}
+        <div className="lg:col-span-3">
+          <h4 className="text-md font-medium mb-4">Training Session Drills</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {sessionDrills.map((drill, index) => {
           const isExpanded = expandedDrills.has(drill.id);
           const primaryColor = getPrimaryTagColor(drill);
@@ -738,6 +752,8 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           )}
         </CardContent>
       </Card>
+        </div>
+      </div>
     </div>
   );
 };
