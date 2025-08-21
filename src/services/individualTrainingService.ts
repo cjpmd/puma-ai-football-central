@@ -30,7 +30,13 @@ export class IndividualTrainingService {
       .order('created_at', { ascending: false });
     
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      plan_type: item.plan_type as 'self' | 'coach' | 'ai',
+      status: item.status as 'draft' | 'active' | 'completed' | 'archived',
+      visibility: item.visibility as 'private' | 'coach' | 'teamStaff',
+      accountability: item.accountability as Record<string, any>
+    })) as IndividualTrainingPlan[];
   }
 
   static async createPlan(planData: PlanCreationData & { player_id: string; coach_id?: string }): Promise<IndividualTrainingPlan> {
@@ -68,7 +74,13 @@ export class IndividualTrainingService {
       .single();
     
     if (error) throw error;
-    return data as IndividualTrainingSession;
+    return {
+      ...data,
+      plan_type: data.plan_type as 'self' | 'coach' | 'ai',
+      status: data.status as 'draft' | 'active' | 'completed' | 'archived',
+      visibility: data.visibility as 'private' | 'coach' | 'teamStaff',
+      accountability: data.accountability as Record<string, any>
+    } as IndividualTrainingPlan;
   }
 
   static async deletePlan(planId: string): Promise<void> {
@@ -89,7 +101,10 @@ export class IndividualTrainingService {
       .order('session_order');
     
     if (error) throw error;
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      location: item.location as 'home' | 'pitch' | 'gym'
+    })) as IndividualTrainingSession[];
   }
 
   static async createSession(sessionData: Omit<IndividualTrainingSession, 'id' | 'created_at' | 'updated_at'>): Promise<IndividualTrainingSession> {
@@ -100,7 +115,10 @@ export class IndividualTrainingService {
       .single();
     
     if (error) throw error;
-    return (data || []) as IndividualTrainingSession[];
+    return {
+      ...data,
+      location: data.location as 'home' | 'pitch' | 'gym'
+    } as IndividualTrainingSession;
   }
 
   static async updateSession(sessionId: string, updates: Partial<IndividualTrainingSession>): Promise<IndividualTrainingSession> {
