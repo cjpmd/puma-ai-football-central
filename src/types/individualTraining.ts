@@ -94,6 +94,46 @@ export interface DrillWithTags {
   drill_tags?: Array<{ id: string; name: string; color: string }>;
 }
 
+// Phase 2: Coach Assignment & AI Integration Types
+export interface IndividualPlanAssignment {
+  id: string;
+  plan_id: string;
+  assigned_by: string;
+  assigned_at: string;
+  status: 'pending' | 'accepted' | 'declined' | 'completed';
+  coach_notes?: string;
+  player_feedback?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AITrainingRecommendation {
+  id: string;
+  player_id: string;
+  recommendation_data: Record<string, any>;
+  focus_areas: string[];
+  difficulty_level: number; // 1-5
+  recommended_drills: string[];
+  reasoning?: string;
+  confidence_score?: number; // 0-1
+  status: 'pending' | 'applied' | 'dismissed';
+  created_at: string;
+  expires_at: string;
+}
+
+export interface IndividualProgressMilestone {
+  id: string;
+  plan_id: string;
+  milestone_name: string;
+  target_value?: number;
+  current_value: number;
+  unit?: string; // 'minutes', 'repetitions', 'accuracy_percentage'
+  achieved_at?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PlanCreationData {
   title: string;
   objective_text?: string;

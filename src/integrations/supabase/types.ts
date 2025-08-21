@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_training_recommendations: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          difficulty_level: number
+          expires_at: string | null
+          focus_areas: string[] | null
+          id: string
+          player_id: string
+          reasoning: string | null
+          recommendation_data: Json
+          recommended_drills: string[] | null
+          status: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          difficulty_level?: number
+          expires_at?: string | null
+          focus_areas?: string[] | null
+          id?: string
+          player_id: string
+          reasoning?: string | null
+          recommendation_data?: Json
+          recommended_drills?: string[] | null
+          status?: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          difficulty_level?: number
+          expires_at?: string | null
+          focus_areas?: string[] | null
+          id?: string
+          player_id?: string
+          reasoning?: string | null
+          recommendation_data?: Json
+          recommended_drills?: string[] | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_training_recommendations_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_logs: {
         Row: {
           id: string
@@ -978,6 +1028,97 @@ export type Database = {
             columns: ["facility_id"]
             isOneToOne: false
             referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_plan_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          coach_notes: string | null
+          created_at: string
+          id: string
+          plan_id: string
+          player_feedback: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          coach_notes?: string | null
+          created_at?: string
+          id?: string
+          plan_id: string
+          player_feedback?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          coach_notes?: string | null
+          created_at?: string
+          id?: string
+          plan_id?: string
+          player_feedback?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_plan_assignments_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_progress_milestones: {
+        Row: {
+          achieved_at: string | null
+          created_at: string
+          current_value: number | null
+          id: string
+          milestone_name: string
+          notes: string | null
+          plan_id: string
+          target_value: number | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          milestone_name: string
+          notes?: string | null
+          plan_id: string
+          target_value?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          achieved_at?: string | null
+          created_at?: string
+          current_value?: number | null
+          id?: string
+          milestone_name?: string
+          notes?: string | null
+          plan_id?: string
+          target_value?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_progress_milestones_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_plans"
             referencedColumns: ["id"]
           },
         ]

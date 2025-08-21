@@ -5,7 +5,10 @@ import type {
   IndividualSessionDrill, 
   IndividualSessionCompletion,
   PlanCreationData,
-  DrillWithTags 
+  DrillWithTags,
+  IndividualPlanAssignment,
+  AITrainingRecommendation,
+  IndividualProgressMilestone
 } from '@/types/individualTraining';
 
 export class IndividualTrainingService {
@@ -291,33 +294,156 @@ export class IndividualTrainingService {
     }));
   }
 
-  // AI Recommendations
-  static async getPlayerRecommendations(playerId: string, focusAreas?: string[]): Promise<DrillWithTags[]> {
-    // For now, return popular public drills
-    // TODO: Integrate with AI recommendation service
+  // Phase 2: Coach Assignment & AI Integration Methods
+
+  // Plan Assignments
+  static async createPlanAssignment(planId: string, assignedBy: string, coachNotes?: string): Promise<IndividualPlanAssignment> {
     const { data, error } = await supabase
-      .from('drills')
-      .select(`
-        id,
-        name,
-        description,
-        duration_minutes,
-        difficulty_level,
-        is_public,
-        created_by,
-        drill_tags:drill_tag_assignments(
-          tag:drill_tags(*)
-        )
-      `)
-      .eq('is_public', true)
-      .limit(6)
+      .from('individual_plan_assignments')
+      .insert({
+        plan_id: planId,
+        assigned_by: assignedBy,
+        coach_notes: coachNotes
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as IndividualPlanAssignment;
+  }
+
+  static async getPlanAssignments(planId: string): Promise<IndividualPlanAssignment[]> {
+    const { data, error } = await supabase
+      .from('individual_plan_assignments')
+      .select('*')
+      .eq('plan_id', planId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
+    return (data || []) as IndividualPlanAssignment[];
+  }
+
+  static async updateAssignmentStatus(assignmentId: string, status: 'pending' | 'accepted' | 'declined' | 'completed', feedback?: string): Promise<IndividualPlanAssignment> {
+    const { data, error } = await supabase
+      .from('individual_plan_assignments')
+      .update({
+        status,
+        player_feedback: feedback
+      })
+      .eq('id', assignmentId)
+      .select()
+      .single();
     
-    return (data || []).map(drill => ({
-      ...drill,
-      drill_tags: drill.drill_tags?.map((dt: any) => dt.tag).filter(Boolean) || []
-    }));
+    if (error) throw error;
+    return data as IndividualPlanAssignment;
+  }
+
+  // AI Recommendations
+  static async createAIRecommendation(playerId: string, recommendationData: {
+    focus_areas: string[];
+    difficulty_level: number;
+    recommended_drills: string[];
+    reasoning?: string;
+    confidence_score?: number;
+  }): Promise<AITrainingRecommendation> {
+    const { data, error } = await supabase
+      .from('ai_training_recommendations')
+      .insert({
+        player_id: playerId,
+        recommendation_data: recommendationData,
+        focus_areas: recommendationData.focus_areas,
+        difficulty_level: recommendationData.difficulty_level,
+        recommended_drills: recommendationData.recommended_drills,
+        reasoning: recommendationData.reasoning,
+        confidence_score: recommendationData.confidence_score
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as AITrainingRecommendation;
+  }
+
+  static async getPlayerRecommendationsAI(playerId: string): Promise<AITrainingRecommendation[]> {
+    const { data, error } = await supabase
+      .from('ai_training_recommendations')
+      .select('*')
+      .eq('player_id', playerId)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as AITrainingRecommendation[];
+  }
+
+  static async updateRecommendationStatus(recommendationId: string, status: 'pending' | 'applied' | 'dismissed'): Promise<AITrainingRecommendation> {
+    const { data, error } = await supabase
+      .from('ai_training_recommendations')
+      .update({ status })
+      .eq('id', recommendationId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as AITrainingRecommendation;
+  }
+
+  // Progress Milestones
+  static async createMilestone(planId: string, milestoneData: {
+    milestone_name: string;
+    target_value?: number;
+    unit?: string;
+    notes?: string;
+  }): Promise<IndividualProgressMilestone> {
+    const { data, error } = await supabase
+      .from('individual_progress_milestones')
+      .insert({
+        plan_id: planId,
+        ...milestoneData
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as IndividualProgressMilestone;
+  }
+
+  static async getPlanMilestones(planId: string): Promise<IndividualProgressMilestone[]> {
+    const { data, error } = await supabase
+      .from('individual_progress_milestones')
+      .select('*')
+      .eq('plan_id', planId)
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as IndividualProgressMilestone[];
+  }
+
+  static async updateMilestoneProgress(milestoneId: string, currentValue: number, notes?: string): Promise<IndividualProgressMilestone> {
+    const updateData: any = { current_value: currentValue };
+    
+    // Check if milestone is achieved
+    const { data: milestone } = await supabase
+      .from('individual_progress_milestones')
+      .select('target_value')
+      .eq('id', milestoneId)
+      .single();
+    
+    if (milestone?.target_value && currentValue >= milestone.target_value) {
+      updateData.achieved_at = new Date().toISOString();
+    }
+    
+    if (notes) updateData.notes = notes;
+
+    const { data, error } = await supabase
+      .from('individual_progress_milestones')
+      .update(updateData)
+      .eq('id', milestoneId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as IndividualProgressMilestone;
   }
 }
