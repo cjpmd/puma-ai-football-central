@@ -591,14 +591,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
             <div>
               <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>{event.title}</h2>
               <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                {event.date} • {event.game_format} • Team Selection
+                {event.date} • {event.game_format} • {isTrainingEvent ? 'Group Selection' : 'Team Selection'}
               </p>
             </div>
             <div className="flex items-center gap-1">
               {!isMobile && (
                 <>
                   <Badge variant="outline" className="text-xs">
-                    {teamSelections.length} team(s)
+                    {teamSelections.length} {isTrainingEvent ? (teamSelections.length === 1 ? 'group' : 'groups') : (teamSelections.length === 1 ? 'team' : 'teams')}
                   </Badge>
                   <Badge variant="outline" className="text-xs">
                     {currentTeam?.squadPlayers.length || 0} players

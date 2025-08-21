@@ -8,12 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit } from 'lucide-react';
+import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { SquadPlayer } from '@/types/teamSelection';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
+import { useTrainingSession } from '@/hooks/useTrainingSession';
 
 interface Drill {
   id: string;
@@ -62,6 +63,7 @@ interface TrainingPlanEditorProps {
   squadPlayers: SquadPlayer[];
   teamNumber: number;
   performanceCategoryId?: string;
+  onSave?: () => Promise<void>;
 }
 
 export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
@@ -69,9 +71,11 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   eventId,
   squadPlayers,
   teamNumber,
-  performanceCategoryId
+  performanceCategoryId,
+  onSave
 }) => {
   const isMobile = useMobileDetection();
+  const { saveTrainingSession, saving } = useTrainingSession();
   const [sessionDrills, setSessionDrills] = useState<TrainingSessionDrill[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [showDrillLibrary, setShowDrillLibrary] = useState(false);
@@ -281,6 +285,13 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
     return sessionDrills.reduce((total, drill) => total + drill.duration_minutes, 0);
   };
 
+  const handleSave = async () => {
+    const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment);
+    if (success && onSave) {
+      await onSave();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Training Plan Overview */}
@@ -292,6 +303,14 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           </p>
         </div>
         <div className="flex gap-2">
+          <Button 
+            onClick={handleSave} 
+            disabled={saving} 
+            size="sm"
+            className="flex items-center gap-1"
+          >
+            {saving ? 'Saving...' : 'Save Plan'}
+          </Button>
           <Dialog open={showDrillLibrary} onOpenChange={setShowDrillLibrary}>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
