@@ -11,7 +11,8 @@ import {
   FileText, 
   X, 
   Download,
-  ExternalLink
+  ExternalLink,
+  Image
 } from 'lucide-react';
 
 interface DrillMedia {
@@ -43,6 +44,12 @@ export function DrillMediaManager({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const acceptedTypes = {
+    // Images
+    'image/jpeg': '.jpg,.jpeg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+    'image/svg+xml': '.svg',
     // Documents
     'application/pdf': '.pdf',
     'application/vnd.ms-powerpoint': '.ppt',
@@ -59,7 +66,9 @@ export function DrillMediaManager({
   const maxFileSize = 50 * 1024 * 1024; // 50MB
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.startsWith('video/')) {
+    if (fileType.startsWith('image/')) {
+      return <Image className="w-4 h-4 text-green-500" />;
+    } else if (fileType.startsWith('video/')) {
       return <Video className="w-4 h-4" />;
     } else if (fileType.includes('pdf')) {
       return <FileText className="w-4 h-4 text-red-500" />;
@@ -86,7 +95,7 @@ export function DrillMediaManager({
 
     // Validate file type
     if (!Object.keys(acceptedTypes).includes(file.type)) {
-      toast.error('Unsupported file type. Please upload PDF, PowerPoint, Word documents, or videos.');
+      toast.error('Unsupported file type. Please upload images, PDF, PowerPoint, Word documents, or videos.');
       return;
     }
 
@@ -287,7 +296,7 @@ export function DrillMediaManager({
       )}
 
       <div className="text-xs text-muted-foreground">
-        Supported formats: PDF, PowerPoint (.ppt, .pptx), Word (.doc, .docx), Videos (.mp4, .webm, .mov, .avi)
+        Supported formats: Images (.jpg, .png, .gif, .webp, .svg), PDF, PowerPoint (.ppt, .pptx), Word (.doc, .docx), Videos (.mp4, .webm, .mov, .avi)
         <br />
         Maximum file size: 50MB
       </div>
