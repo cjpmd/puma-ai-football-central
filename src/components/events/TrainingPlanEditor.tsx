@@ -551,18 +551,22 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
                     <div>
                       <Label className="text-xs font-medium">Tags</Label>
                       <Select 
-                        value={drill.selected_tags?.map(t => t.id).join(',') || ''} 
+                        value={drill.selected_tags?.map(t => t.id).join(',') || 'none'} 
                         onValueChange={(value) => {
-                          const selectedTagIds = value ? value.split(',') : [];
-                          const selectedTagObjects = drillTags.filter(tag => selectedTagIds.includes(tag.id));
-                          updateDrill(drill.id, { selected_tags: selectedTagObjects });
+                          if (value === 'none') {
+                            updateDrill(drill.id, { selected_tags: [] });
+                          } else {
+                            const selectedTagIds = value.split(',');
+                            const selectedTagObjects = drillTags.filter(tag => selectedTagIds.includes(tag.id));
+                            updateDrill(drill.id, { selected_tags: selectedTagObjects });
+                          }
                         }}
                       >
                         <SelectTrigger className="h-8 text-sm">
                           <SelectValue placeholder="Select tags" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">No tags</SelectItem>
+                          <SelectItem value="none">No tags</SelectItem>
                           {drillTags.map((tag) => (
                             <SelectItem key={tag.id} value={tag.id}>
                               <div className="flex items-center gap-2">
