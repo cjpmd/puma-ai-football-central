@@ -307,7 +307,9 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   };
 
   const handleSave = async () => {
+    console.log('🚀 Training Plan Save Button Clicked!', { eventId, teamId, drillsCount: sessionDrills.length, equipmentCount: equipment.length });
     const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment);
+    console.log('💾 Save result:', success);
     if (success && onSave) {
       await onSave();
     }
