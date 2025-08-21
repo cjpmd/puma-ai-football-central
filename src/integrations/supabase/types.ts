@@ -2835,6 +2835,60 @@ export type Database = {
           },
         ]
       }
+      training_plan_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          duration_weeks: number
+          focus_areas: string[]
+          id: string
+          intensity_level: number
+          is_public: boolean
+          location_preference: string
+          name: string
+          tags: string[]
+          team_id: string | null
+          updated_at: string
+          visibility: string
+          weekly_sessions: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number
+          focus_areas?: string[]
+          id?: string
+          intensity_level?: number
+          is_public?: boolean
+          location_preference?: string
+          name: string
+          tags?: string[]
+          team_id?: string | null
+          updated_at?: string
+          visibility?: string
+          weekly_sessions?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          duration_weeks?: number
+          focus_areas?: string[]
+          id?: string
+          intensity_level?: number
+          is_public?: boolean
+          location_preference?: string
+          name?: string
+          tags?: string[]
+          team_id?: string | null
+          updated_at?: string
+          visibility?: string
+          weekly_sessions?: number
+        }
+        Relationships: []
+      }
       training_session_drills: {
         Row: {
           created_at: string | null
