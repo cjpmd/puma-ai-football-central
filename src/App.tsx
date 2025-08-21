@@ -26,6 +26,8 @@ import ClubManagement from "./pages/ClubManagement";
 import ClubManagementMobile from "./pages/ClubManagementMobile";
 import StaffManagement from "./pages/StaffManagement";
 import StaffManagementMobile from "./pages/StaffManagementMobile";
+import Training from "./pages/Training";
+import TrainingMobile from "./pages/TrainingMobile";
 import UserManagement from "./pages/UserManagement";
 import UserManagementMobile from "./pages/UserManagementMobile";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
@@ -119,6 +121,17 @@ const App = () => (
                     <ResponsiveRoute
                       desktopComponent={<StaffManagement />}
                       mobileComponent={<StaffManagementMobile />}
+                    />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/training" 
+                element={
+                  <ProtectedRoute>
+                    <ResponsiveRoute
+                      desktopComponent={<Training />}
+                      mobileComponent={<TrainingMobile />}
                     />
                   </ProtectedRoute>
                 }

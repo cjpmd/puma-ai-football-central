@@ -8,7 +8,8 @@ import {
   Trophy,
   Building2,
   UserCog,
-  Menu
+  Menu,
+  Dumbbell
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,7 +17,7 @@ const navItems = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Players', href: '/players', icon: Users },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Training', href: '/training', icon: Dumbbell },
   { name: 'More', href: '/more', icon: Menu },
 ];
 
