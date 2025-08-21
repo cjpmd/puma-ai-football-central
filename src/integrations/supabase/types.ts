@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -265,6 +265,196 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      drill_media: {
+        Row: {
+          created_at: string | null
+          drill_id: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          drill_id?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          drill_id?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_media_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "drills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drill_subgroup_players: {
+        Row: {
+          created_at: string | null
+          drill_subgroup_id: string | null
+          id: string
+          player_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          drill_subgroup_id?: string | null
+          id?: string
+          player_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          drill_subgroup_id?: string | null
+          id?: string
+          player_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_subgroup_players_drill_subgroup_id_fkey"
+            columns: ["drill_subgroup_id"]
+            isOneToOne: false
+            referencedRelation: "drill_subgroups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_subgroup_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drill_subgroups: {
+        Row: {
+          created_at: string | null
+          id: string
+          subgroup_name: string
+          training_session_drill_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          subgroup_name: string
+          training_session_drill_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          subgroup_name?: string
+          training_session_drill_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_subgroups_training_session_drill_id_fkey"
+            columns: ["training_session_drill_id"]
+            isOneToOne: false
+            referencedRelation: "training_session_drills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drill_tag_assignments: {
+        Row: {
+          drill_id: string
+          tag_id: string
+        }
+        Insert: {
+          drill_id: string
+          tag_id: string
+        }
+        Update: {
+          drill_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "drill_tag_assignments_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "drills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "drill_tag_assignments_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "drill_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      drill_tags: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      drills: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          difficulty_level: string | null
+          duration_minutes: number | null
+          id: string
+          is_public: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_public?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty_level?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_public?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       event_attendees: {
         Row: {
@@ -1984,6 +2174,193 @@ export type Database = {
           },
         ]
       }
+      training_groups: {
+        Row: {
+          created_at: string | null
+          group_name: string | null
+          group_number: number
+          id: string
+          performance_category_id: string | null
+          training_session_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          group_name?: string | null
+          group_number: number
+          id?: string
+          performance_category_id?: string | null
+          training_session_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          group_name?: string | null
+          group_number?: number
+          id?: string
+          performance_category_id?: string | null
+          training_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_groups_performance_category_id_fkey"
+            columns: ["performance_category_id"]
+            isOneToOne: false
+            referencedRelation: "performance_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_groups_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_session_drills: {
+        Row: {
+          created_at: string | null
+          custom_drill_description: string | null
+          custom_drill_name: string | null
+          drill_id: string | null
+          duration_minutes: number
+          id: string
+          notes: string | null
+          sequence_order: number
+          training_session_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_drill_description?: string | null
+          custom_drill_name?: string | null
+          drill_id?: string | null
+          duration_minutes: number
+          id?: string
+          notes?: string | null
+          sequence_order: number
+          training_session_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_drill_description?: string | null
+          custom_drill_name?: string | null
+          drill_id?: string | null
+          duration_minutes?: number
+          id?: string
+          notes?: string | null
+          sequence_order?: number
+          training_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_session_drills_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "drills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_session_drills_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_session_equipment: {
+        Row: {
+          created_at: string | null
+          custom_equipment_name: string | null
+          equipment_id: string | null
+          id: string
+          notes: string | null
+          quantity_needed: number | null
+          training_session_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_equipment_name?: string | null
+          equipment_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity_needed?: number | null
+          training_session_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_equipment_name?: string | null
+          equipment_id?: string | null
+          id?: string
+          notes?: string | null
+          quantity_needed?: number | null
+          training_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_session_equipment_equipment_id_fkey"
+            columns: ["equipment_id"]
+            isOneToOne: false
+            referencedRelation: "team_equipment"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_session_equipment_training_session_id_fkey"
+            columns: ["training_session_id"]
+            isOneToOne: false
+            referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_sessions: {
+        Row: {
+          created_at: string | null
+          event_id: string | null
+          id: string
+          team_id: string | null
+          total_duration_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          team_id?: string | null
+          total_duration_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          event_id?: string | null
+          id?: string
+          team_id?: string | null
+          total_duration_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_sessions_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_clubs: {
         Row: {
           club_id: string
@@ -2399,19 +2776,19 @@ export type Database = {
       backup_event_selections: {
         Args: Record<PropertyKey, never>
         Returns: {
+          backup_created_at: string
           backup_id: string
+          captain_id: string
+          duration_minutes: number
           event_id: string
+          formation: string
+          performance_category_id: string
+          period_number: number
+          player_positions: Json
+          staff_selection: Json
+          substitute_players: Json
           team_id: string
           team_number: number
-          period_number: number
-          formation: string
-          player_positions: Json
-          substitute_players: Json
-          captain_id: string
-          staff_selection: Json
-          duration_minutes: number
-          performance_category_id: string
-          backup_created_at: string
         }[]
       }
       check_password_strength: {
@@ -2421,8 +2798,8 @@ export type Database = {
       check_rate_limit_enhanced: {
         Args: {
           p_action_type: string
-          p_user_id?: string
           p_ip_address?: unknown
+          p_user_id?: string
         }
         Returns: Json
       }
@@ -2479,11 +2856,11 @@ export type Database = {
         Returns: boolean
       }
       is_team_member: {
-        Args: { team_uuid: string; required_roles?: string[] }
+        Args: { required_roles?: string[]; team_uuid: string }
         Returns: boolean
       }
       is_team_member_secure: {
-        Args: { team_uuid: string; required_roles?: string[] }
+        Args: { required_roles?: string[]; team_uuid: string }
         Returns: boolean
       }
       is_user_club_admin: {
@@ -2495,15 +2872,15 @@ export type Database = {
         Returns: boolean
       }
       log_security_event: {
-        Args: { event_type: string; details?: Json; risk_level?: string }
+        Args: { details?: Json; event_type: string; risk_level?: string }
         Returns: undefined
       }
       log_security_event_enhanced: {
         Args: {
-          event_type: string
           details?: Json
-          risk_level?: string
+          event_type: string
           ip_address?: unknown
+          risk_level?: string
           user_agent?: string
         }
         Returns: undefined
@@ -2531,9 +2908,9 @@ export type Database = {
       update_availability_status: {
         Args: {
           p_event_id: string
-          p_user_id: string
           p_role: string
           p_status: string
+          p_user_id: string
         }
         Returns: undefined
       }
@@ -2554,15 +2931,15 @@ export type Database = {
         Returns: boolean
       }
       validate_authentication_input: {
-        Args: { email?: string; password?: string; action_type?: string }
+        Args: { action_type?: string; email?: string; password?: string }
         Returns: Json
       }
       validate_invitation_data: {
         Args: {
           p_email: string
+          p_role?: string
           p_team_name: string
           p_user_name: string
-          p_role?: string
         }
         Returns: Json
       }
@@ -2576,9 +2953,9 @@ export type Database = {
       }
       validate_session_security: {
         Args: {
-          p_user_id: string
           p_ip_address?: unknown
           p_user_agent?: string
+          p_user_id: string
         }
         Returns: Json
       }
@@ -2588,10 +2965,10 @@ export type Database = {
       }
       validate_user_role_access: {
         Args: {
-          p_user_id: string
           p_required_role: string
-          p_resource_type?: string
           p_resource_id?: string
+          p_resource_type?: string
+          p_user_id: string
         }
         Returns: Json
       }

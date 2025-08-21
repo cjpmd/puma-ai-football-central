@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus } from 'lucide-react';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
+import { TrainingPlanEditor } from './TrainingPlanEditor';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
@@ -351,6 +352,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     }
   };
 
+  const isTrainingEvent = event?.event_type === 'training';
+
   const getCurrentTeam = (): TeamSelection | null => {
     return teamSelections[currentTeamIndex] || null;
   };
@@ -640,7 +643,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           {/* Team Selection */}
           <div className={`flex flex-col gap-2 ${isMobile ? 'mt-2' : 'mt-4'}`}>
             <div className="flex items-center gap-2 flex-wrap">
-              <Label className="text-xs font-medium">Teams:</Label>
+              <Label className="text-xs font-medium">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
                <div className="flex gap-1 flex-wrap">
                  {teamSelections.map((team, index) => (
                    <div key={team.teamNumber} className="flex items-center">
@@ -654,7 +657,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                        }}
                        className="text-xs px-2 py-1 rounded-r-none border-r-0"
                      >
-                       Team {team.teamNumber}
+                       {isTrainingEvent ? 'Group' : 'Team'} {team.teamNumber}
                        {team.squadPlayers.length > 0 && (
                          <Badge variant="secondary" className="ml-1 text-xs">
                            {team.squadPlayers.length}
@@ -719,9 +722,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   <UserPlus className="h-3 w-3" />
                   Staff
                 </TabsTrigger>
-                <TabsTrigger value="formation" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                <TabsTrigger value={isTrainingEvent ? "training-plan" : "formation"} className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
                   <Gamepad2 className="h-3 w-3" />
-                  Formation
+                  {isTrainingEvent ? "Training Plan" : "Formation"}
                 </TabsTrigger>
               </TabsList>
 
@@ -754,33 +757,47 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 )}
               </TabsContent>
 
-              <TabsContent value="formation" className="h-full mt-0">
-                {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
-                  <Card>
-                    <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
-                      <Users className={`mx-auto text-gray-400 mb-2 ${isMobile ? 'h-8 w-8' : 'h-12 w-12'}`} />
-                      <h3 className={`font-semibold mb-2 ${isMobile ? 'text-sm' : 'text-lg'}`}>No Squad Selected</h3>
-                      <p className={`text-muted-foreground mb-4 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                        Please add players to your squad first before creating formations.
-                      </p>
-                      <Button onClick={() => setActiveTab('squad')} size={isMobile ? "sm" : "default"}>
-                        Go to Squad Management
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <DragDropFormationEditor
-                    squadPlayers={currentTeam.squadPlayers}
-                    periods={currentTeam.periods}
-                    gameFormat={event.game_format || '7-a-side'}
-                    globalCaptainId={currentTeam.globalCaptainId}
-                    nameDisplayOption={nameDisplayOption as any}
-                    onPeriodsChange={handlePeriodsChange}
-                    onCaptainChange={handleCaptainChange}
-                    gameDuration={event.game_duration || 50}
-                  />
-                )}
-              </TabsContent>
+              {isTrainingEvent ? (
+                <TabsContent value="training-plan" className="h-full mt-0">
+                  {currentTeam && (
+                    <TrainingPlanEditor
+                      teamId={teamId}
+                      eventId={event.id}
+                      squadPlayers={currentTeam.squadPlayers}
+                      teamNumber={currentTeam.teamNumber}
+                      performanceCategoryId={currentTeam.performanceCategory}
+                    />
+                  )}
+                </TabsContent>
+              ) : (
+                <TabsContent value="formation" className="h-full mt-0">
+                  {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
+                    <Card>
+                      <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
+                        <Users className={`mx-auto text-gray-400 mb-2 ${isMobile ? 'h-8 w-8' : 'h-12 w-12'}`} />
+                        <h3 className={`font-semibold mb-2 ${isMobile ? 'text-sm' : 'text-lg'}`}>No Squad Selected</h3>
+                        <p className={`text-muted-foreground mb-4 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+                          Please add players to your squad first before creating formations.
+                        </p>
+                        <Button onClick={() => setActiveTab('squad')} size={isMobile ? "sm" : "default"}>
+                          Go to Squad Management
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ) : (
+                    <DragDropFormationEditor
+                      squadPlayers={currentTeam.squadPlayers}
+                      periods={currentTeam.periods}
+                      gameFormat={event.game_format || '7-a-side'}
+                      globalCaptainId={currentTeam.globalCaptainId}
+                      nameDisplayOption={nameDisplayOption as any}
+                      onPeriodsChange={handlePeriodsChange}
+                      onCaptainChange={handleCaptainChange}
+                      gameDuration={event.game_duration || 50}
+                    />
+                  )}
+                </TabsContent>
+              )}
             </div>
           </Tabs>
         </div>
