@@ -361,14 +361,55 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                               {kitDesign && (
                                 <EnhancedKitAvatar design={kitDesign} size="xs" />
                               )}
-                              {/* Show outcome icons for completed matches */}
-                              {completed && matchType && teamScores.length > 0 && (
+                              {/* Show outcome icons for matches with scores */}
+                              {matchType && event.scores && (
                                 <div className="flex gap-1">
-                                  {teamScores.map((score) => (
-                                    <span key={score.teamNumber} className="text-lg">
-                                      {score.outcomeIcon}
-                                    </span>
-                                  ))}
+                                  {(() => {
+                                    const scores = event.scores as any;
+                                    const icons = [];
+                                    
+                                    // Check for team_1, team_2, etc. scores
+                                    let teamNumber = 1;
+                                    while (scores[`team_${teamNumber}`] !== undefined) {
+                                      const ourScore = scores[`team_${teamNumber}`];
+                                      const opponentScore = scores[`opponent_${teamNumber}`];
+                                      
+                                      let outcomeIcon = '🤝'; // draw
+                                      if (ourScore > opponentScore) {
+                                        outcomeIcon = '🏆'; // win
+                                      } else if (ourScore < opponentScore) {
+                                        outcomeIcon = '❌'; // loss
+                                      }
+                                      
+                                      icons.push(
+                                        <span key={teamNumber} className="text-sm">
+                                          {outcomeIcon}
+                                        </span>
+                                      );
+                                      teamNumber++;
+                                    }
+                                    
+                                    // Fallback to home/away scores if no team scores
+                                    if (icons.length === 0 && scores.home !== undefined && scores.away !== undefined) {
+                                      const ourScore = event.is_home ? scores.home : scores.away;
+                                      const opponentScore = event.is_home ? scores.away : scores.home;
+                                      
+                                      let outcomeIcon = '🤝'; // draw
+                                      if (ourScore > opponentScore) {
+                                        outcomeIcon = '🏆'; // win
+                                      } else if (ourScore < opponentScore) {
+                                        outcomeIcon = '❌'; // loss
+                                      }
+                                      
+                                      icons.push(
+                                        <span key="main" className="text-sm">
+                                          {outcomeIcon}
+                                        </span>
+                                      );
+                                    }
+                                    
+                                    return icons;
+                                  })()}
                                 </div>
                               )}
                             </div>
