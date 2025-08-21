@@ -982,6 +982,260 @@ export type Database = {
           },
         ]
       }
+      individual_session_completions: {
+        Row: {
+          actual_duration_minutes: number | null
+          completed: boolean
+          completed_date: string
+          created_at: string
+          drill_results: Json
+          id: string
+          notes: string | null
+          player_id: string
+          rpe: number | null
+          session_id: string
+          updated_at: string
+          video_evidence_urls: string[]
+        }
+        Insert: {
+          actual_duration_minutes?: number | null
+          completed?: boolean
+          completed_date?: string
+          created_at?: string
+          drill_results?: Json
+          id?: string
+          notes?: string | null
+          player_id: string
+          rpe?: number | null
+          session_id: string
+          updated_at?: string
+          video_evidence_urls?: string[]
+        }
+        Update: {
+          actual_duration_minutes?: number | null
+          completed?: boolean
+          completed_date?: string
+          created_at?: string
+          drill_results?: Json
+          id?: string
+          notes?: string | null
+          player_id?: string
+          rpe?: number | null
+          session_id?: string
+          updated_at?: string
+          video_evidence_urls?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_session_completions_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "individual_session_completions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_session_drills: {
+        Row: {
+          created_at: string
+          custom_drill_description: string | null
+          custom_drill_name: string | null
+          drill_id: string | null
+          id: string
+          notes: string | null
+          progression_level: number
+          sequence_order: number
+          session_id: string
+          target_duration_minutes: number | null
+          target_metrics: Json
+          target_repetitions: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          custom_drill_description?: string | null
+          custom_drill_name?: string | null
+          drill_id?: string | null
+          id?: string
+          notes?: string | null
+          progression_level?: number
+          sequence_order?: number
+          session_id: string
+          target_duration_minutes?: number | null
+          target_metrics?: Json
+          target_repetitions?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          custom_drill_description?: string | null
+          custom_drill_name?: string | null
+          drill_id?: string | null
+          id?: string
+          notes?: string | null
+          progression_level?: number
+          sequence_order?: number
+          session_id?: string
+          target_duration_minutes?: number | null
+          target_metrics?: Json
+          target_repetitions?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_session_drills_drill_id_fkey"
+            columns: ["drill_id"]
+            isOneToOne: false
+            referencedRelation: "drills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "individual_session_drills_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_training_plans: {
+        Row: {
+          accountability: Json
+          coach_id: string | null
+          created_at: string
+          created_by: string | null
+          end_date: string
+          focus_areas: string[] | null
+          id: string
+          objective_text: string | null
+          plan_type: string
+          player_id: string
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+          visibility: string
+          weekly_sessions: number | null
+        }
+        Insert: {
+          accountability?: Json
+          coach_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date: string
+          focus_areas?: string[] | null
+          id?: string
+          objective_text?: string | null
+          plan_type?: string
+          player_id: string
+          start_date: string
+          status?: string
+          title: string
+          updated_at?: string
+          visibility?: string
+          weekly_sessions?: number | null
+        }
+        Update: {
+          accountability?: Json
+          coach_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          end_date?: string
+          focus_areas?: string[] | null
+          id?: string
+          objective_text?: string | null
+          plan_type?: string
+          player_id?: string
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          visibility?: string
+          weekly_sessions?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_training_plans_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "individual_training_plans_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_training_sessions: {
+        Row: {
+          cooldown_drill_ids: string[]
+          created_at: string
+          day_of_week: number | null
+          description: string | null
+          id: string
+          intensity: number
+          location: string
+          plan_id: string
+          planned_date: string | null
+          session_order: number | null
+          target_duration_minutes: number | null
+          title: string
+          updated_at: string
+          warmup_drill_ids: string[]
+        }
+        Insert: {
+          cooldown_drill_ids?: string[]
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          id?: string
+          intensity?: number
+          location?: string
+          plan_id: string
+          planned_date?: string | null
+          session_order?: number | null
+          target_duration_minutes?: number | null
+          title: string
+          updated_at?: string
+          warmup_drill_ids?: string[]
+        }
+        Update: {
+          cooldown_drill_ids?: string[]
+          created_at?: string
+          day_of_week?: number | null
+          description?: string | null
+          id?: string
+          intensity?: number
+          location?: string
+          plan_id?: string
+          planned_date?: string | null
+          session_order?: number | null
+          target_duration_minutes?: number | null
+          title?: string
+          updated_at?: string
+          warmup_drill_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_training_sessions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kit_items: {
         Row: {
           category: string
