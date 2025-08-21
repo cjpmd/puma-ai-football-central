@@ -94,46 +94,36 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         Object.values(groupedSelections).forEach(team => {
           const allPlayerIds = new Set();
           team.periods.forEach(period => {
-            console.log('Period data for team:', team.teamNumber, period);
-            console.log('Event type:', event.event_type);
-            console.log('Available fields:', Object.keys(period));
-            
-            // For training events, check all possible player arrays
+            // For training events, players are stored in player_positions
             if (event.event_type === 'training') {
-              if (period.selected_players) {
-                console.log('selected_players:', period.selected_players);
-                period.selected_players.forEach((playerId: string) => {
-                  if (playerId) allPlayerIds.add(playerId);
-                });
-              }
-              if (period.player_positions) {
-                console.log('player_positions:', period.player_positions);
+              if (period.player_positions && Array.isArray(period.player_positions)) {
                 period.player_positions.forEach((pos: any) => {
-                  if (pos.playerId) allPlayerIds.add(pos.playerId);
+                  if (pos.playerId) {
+                    allPlayerIds.add(pos.playerId);
+                  }
                 });
               }
-              if (period.substitute_players) {
-                console.log('substitute_players:', period.substitute_players);
+              if (period.substitute_players && Array.isArray(period.substitute_players)) {
                 period.substitute_players.forEach((playerId: string) => {
-                  allPlayerIds.add(playerId);
+                  if (playerId) {
+                    allPlayerIds.add(playerId);
+                  }
                 });
               }
-            }
-            // For match events, check player_positions and substitute_players
-            if (event.event_type !== 'training') {
-              if (period.player_positions) {
+            } else {
+              // For match events, check player_positions and substitute_players
+              if (period.player_positions && Array.isArray(period.player_positions)) {
                 period.player_positions.forEach((pos: any) => {
                   if (pos.playerId) allPlayerIds.add(pos.playerId);
                 });
               }
-              if (period.substitute_players) {
+              if (period.substitute_players && Array.isArray(period.substitute_players)) {
                 period.substitute_players.forEach((playerId: string) => {
                   allPlayerIds.add(playerId);
                 });
               }
             }
           });
-          console.log('Total unique players found:', allPlayerIds.size);
           team.squadPlayers = allPlayerIds.size;
         });
 
