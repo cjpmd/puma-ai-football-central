@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { DrillMediaManager } from './DrillMediaManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Plus, X } from 'lucide-react';
@@ -29,6 +30,14 @@ interface DrillTag {
   color: string;
 }
 
+interface DrillMedia {
+  id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number | null;
+  file_url: string;
+}
+
 export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -38,6 +47,7 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
     is_public: false,
   });
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<DrillMedia[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const queryClient = useQueryClient();
@@ -58,8 +68,8 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
 
   // Create drill mutation
   const createDrillMutation = useMutation({
-    mutationFn: async (drillData: typeof formData & { selectedTags: string[] }) => {
-      const { selectedTags: tagIds, ...drill } = drillData;
+    mutationFn: async (drillData: typeof formData & { selectedTags: string[]; mediaFiles: DrillMedia[] }) => {
+      const { selectedTags: tagIds, mediaFiles: media, ...drill } = drillData;
       
       // Create the drill
       const { data: newDrill, error: drillError } = await supabase
@@ -88,6 +98,23 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
         if (tagError) throw tagError;
       }
 
+      // Create media records
+      if (media.length > 0) {
+        const mediaRecords = media.map(mediaItem => ({
+          drill_id: newDrill.id,
+          file_name: mediaItem.file_name,
+          file_type: mediaItem.file_type,
+          file_size: mediaItem.file_size,
+          file_url: mediaItem.file_url
+        }));
+
+        const { error: mediaError } = await supabase
+          .from('drill_media')
+          .insert(mediaRecords);
+
+        if (mediaError) throw mediaError;
+      }
+
       return newDrill;
     },
     onSuccess: () => {
@@ -111,6 +138,7 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
       is_public: false,
     });
     setSelectedTags([]);
+    setMediaFiles([]);
     setIsSubmitting(false);
   };
 
@@ -127,6 +155,7 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
     createDrillMutation.mutate({
       ...formData,
       selectedTags,
+      mediaFiles,
     });
   };
 
@@ -239,6 +268,12 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
               </SelectContent>
             </Select>
           </div>
+
+          <DrillMediaManager
+            mediaFiles={mediaFiles}
+            onMediaChange={setMediaFiles}
+            disabled={isSubmitting}
+          />
 
           <div className="flex items-center space-x-2">
             <Switch

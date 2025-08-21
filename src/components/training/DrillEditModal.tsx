@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { DrillMediaManager } from './DrillMediaManager';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
@@ -26,6 +27,7 @@ interface Drill {
   difficulty_level: string | null;
   is_public: boolean;
   drill_tags?: Array<{ id: string; name: string; color: string }>;
+  drill_media?: Array<{ id: string; file_name: string; file_type: string; file_size: number | null; file_url: string }>;
 }
 
 interface DrillEditModalProps {
@@ -250,6 +252,12 @@ export function DrillEditModal({ drill, open, onOpenChange }: DrillEditModalProp
               </SelectContent>
             </Select>
           </div>
+
+          <DrillMediaManager
+            drillId={drill.id}
+            existingMedia={drill.drill_media}
+            disabled={isSubmitting}
+          />
 
           <div className="flex items-center space-x-2">
             <Switch

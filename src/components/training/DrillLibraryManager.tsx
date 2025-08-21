@@ -16,7 +16,8 @@ import {
   Clock, 
   Users, 
   Play,
-  Filter
+  Filter,
+  Paperclip
 } from 'lucide-react';
 import {
   Select,
@@ -47,6 +48,7 @@ interface Drill {
   created_by: string;
   created_at: string;
   drill_tags?: Array<{ id: string; name: string; color: string }>;
+  drill_media?: Array<{ id: string; file_name: string; file_type: string; file_size: number | null; file_url: string }>;
 }
 
 export function DrillLibraryManager() {
@@ -67,7 +69,8 @@ export function DrillLibraryManager() {
           *,
           drill_tags:drill_tag_assignments(
             tag:drill_tags(*)
-          )
+          ),
+          drill_media(*)
         `)
         .order('created_at', { ascending: false });
 
@@ -85,7 +88,8 @@ export function DrillLibraryManager() {
       // Transform the data to flatten drill_tags
       return data?.map(drill => ({
         ...drill,
-        drill_tags: drill.drill_tags?.map((dt: any) => dt.tag).filter(Boolean) || []
+        drill_tags: drill.drill_tags?.map((dt: any) => dt.tag).filter(Boolean) || [],
+        drill_media: drill.drill_media || []
       })) || [];
     },
   });
@@ -252,6 +256,13 @@ export function DrillLibraryManager() {
                     <Badge variant="outline" className="flex items-center gap-1">
                       <Users className="w-3 h-3" />
                       Public
+                    </Badge>
+                  )}
+
+                  {drill.drill_media && drill.drill_media.length > 0 && (
+                    <Badge variant="outline" className="flex items-center gap-1">
+                      <Paperclip className="w-3 h-3" />
+                      {drill.drill_media.length} file{drill.drill_media.length > 1 ? 's' : ''}
                     </Badge>
                   )}
 
