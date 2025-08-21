@@ -22,7 +22,6 @@ export class IndividualTrainingService {
     const { data, error } = await supabase
       .from('individual_training_plans')
       .select('*')
-      .or(`coach_id.eq.${userId},player_id.in.(select player_id from user_players where user_id = '${userId}')`)
       .order('created_at', { ascending: false });
     
     if (error) throw error;

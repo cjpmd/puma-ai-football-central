@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -7,20 +7,52 @@ import { DrillCreator } from '@/components/training/DrillCreator';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { CoachTrainingDashboard } from '@/components/training/CoachTrainingDashboard';
 import { useAuth } from '@/contexts/AuthContext';
+import { playersService } from '@/services/playersService';
 import { Plus, BookOpen, Users, Calendar } from 'lucide-react';
-
 export default function Training() {
   const [activeTab, setActiveTab] = useState('library');
   const [showCreateDrill, setShowCreateDrill] = useState(false);
-  const { user, connectedPlayers } = useAuth();
+  const { user, connectedPlayers, teams } = useAuth();
+  // Team players for coach/staff roles
+  const [coachPlayers, setCoachPlayers] = useState<Array<{ id: string; name: string; team_id: string }>>([]);
 
-  // Convert connected players to the format expected by the dashboard
-  const userPlayers = connectedPlayers?.map(cp => ({
+  useEffect(() => {
+    const loadTeamPlayers = async () => {
+      if (!teams || teams.length === 0) {
+        setCoachPlayers([]);
+        return;
+      }
+      try {
+        const teamIds = Array.from(new Set(teams.map(t => t.id)));
+        const results = await Promise.all(teamIds.map(id => playersService.getActivePlayersByTeamId(id)));
+        const flat = results.flat();
+        // Map to minimal shape and dedupe by id
+        const mapped = flat.map(p => ({ id: (p as any).id, name: (p as any).name, team_id: (p as any).teamId || (p as any).team_id }));
+        const map = new Map<string, { id: string; name: string; team_id: string }>();
+        mapped.forEach(p => map.set(p.id, p));
+        setCoachPlayers(Array.from(map.values()));
+      } catch (e) {
+        console.error('Failed to load team players for coach:', e);
+        setCoachPlayers([]);
+      }
+    };
+    loadTeamPlayers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams, user?.id]);
+
+  // Connected players (parent links)
+  const parentLinkedPlayers = connectedPlayers?.map(cp => ({
     id: cp.id,
     name: cp.name,
     team_id: cp.team?.id || ''
   })) || [];
 
+  // Combine coach team players and parent-linked players
+  const combinedPlayers = (() => {
+    const map = new Map<string, { id: string; name: string; team_id: string }>();
+    [...coachPlayers, ...parentLinkedPlayers].forEach(p => map.set(p.id, p));
+    return Array.from(map.values());
+  })();
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -70,7 +102,7 @@ export default function Training() {
           <TabsContent value="plans" className="space-y-4">
             <CoachTrainingDashboard 
               userId={user?.id || ''} 
-              userPlayers={userPlayers}
+              userPlayers={combinedPlayers}
             />
           </TabsContent>
 
