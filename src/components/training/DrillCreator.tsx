@@ -69,23 +69,40 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
   // Create drill mutation
   const createDrillMutation = useMutation({
     mutationFn: async (drillData: typeof formData & { selectedTags: string[]; mediaFiles: DrillMedia[] }) => {
+      console.log('Creating drill with data:', drillData);
       const { selectedTags: tagIds, mediaFiles: media, ...drill } = drillData;
       
+      console.log('Getting current user...');
+      const userResult = await supabase.auth.getUser();
+      console.log('Current user:', userResult.data.user?.id);
+      
       // Create the drill
+      const drillToInsert = {
+        ...drill,
+        duration_minutes: drill.duration_minutes ? parseInt(drill.duration_minutes) : null,
+        created_by: userResult.data.user?.id,
+      };
+      
+      console.log('Inserting drill:', drillToInsert);
+      
       const { data: newDrill, error: drillError } = await supabase
         .from('drills')
-        .insert({
-          ...drill,
-          duration_minutes: drill.duration_minutes ? parseInt(drill.duration_minutes) : null,
-          created_by: (await supabase.auth.getUser()).data.user?.id,
-        })
+        .insert(drillToInsert)
         .select()
         .single();
 
-      if (drillError) throw drillError;
+      console.log('Drill creation result:', { newDrill, drillError });
+
+      if (drillError) {
+        console.error('Drill creation failed:', drillError);
+        throw drillError;
+      }
+
+      console.log('Successfully created drill:', newDrill);
 
       // Create tag assignments
       if (tagIds.length > 0) {
+        console.log('Creating tag assignments for tags:', tagIds);
         const tagAssignments = tagIds.map(tagId => ({
           drill_id: newDrill.id,
           tag_id: tagId,
@@ -95,11 +112,16 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
           .from('drill_tag_assignments')
           .insert(tagAssignments);
 
-        if (tagError) throw tagError;
+        if (tagError) {
+          console.error('Tag assignment failed:', tagError);
+          throw tagError;
+        }
+        console.log('Tag assignments created successfully');
       }
 
       // Create media records
       if (media.length > 0) {
+        console.log('Creating media records:', media);
         const mediaRecords = media.map(mediaItem => ({
           drill_id: newDrill.id,
           file_name: mediaItem.file_name,
@@ -112,20 +134,26 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
           .from('drill_media')
           .insert(mediaRecords);
 
-        if (mediaError) throw mediaError;
+        if (mediaError) {
+          console.error('Media creation failed:', mediaError);
+          throw mediaError;
+        }
+        console.log('Media records created successfully');
       }
 
       return newDrill;
     },
-    onSuccess: () => {
+    onSuccess: (newDrill) => {
+      console.log('Drill creation mutation succeeded:', newDrill);
       toast.success('Drill created successfully');
       queryClient.invalidateQueries({ queryKey: ['drills'] });
       onOpenChange(false);
       resetForm();
     },
     onError: (error) => {
-      toast.error('Failed to create drill');
-      console.error('Error creating drill:', error);
+      console.error('Drill creation mutation failed:', error);
+      toast.error('Failed to create drill: ' + (error.message || 'Unknown error'));
+      setIsSubmitting(false);
     },
   });
 
@@ -146,11 +174,19 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
     e.preventDefault();
     setIsSubmitting(true);
 
+    console.log('Starting drill creation with data:', formData);
+
     if (!formData.name.trim()) {
       toast.error('Drill name is required');
       setIsSubmitting(false);
       return;
     }
+
+    console.log('Calling createDrillMutation with:', {
+      ...formData,
+      selectedTags,
+      mediaFiles,
+    });
 
     createDrillMutation.mutate({
       ...formData,
