@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Gamepad2, User, Star, X, ChevronLeft } from 'lucide-react';
+import { Users, Gamepad2, User, Star, X, ChevronLeft, Timer } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,13 @@ interface TeamSelection {
   squadPlayers: number;
 }
 
+interface TrainingDrill {
+  id: string;
+  name: string;
+  duration_minutes: number;
+  order_index: number;
+}
+
 export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = ({
   event,
   teamId,
@@ -33,6 +40,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
 }) => {
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
+  const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
 
   // Load performance categories for display names
   const { data: performanceCategories = [] } = useQuery({
@@ -107,7 +115,58 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
     };
 
     loadTeamSelections();
+    
+    // Load training drills for training events
+    if (event.event_type === 'training') {
+      loadTrainingDrills();
+    }
   }, [event.id, teamId]);
+
+  // Load training drills
+  const loadTrainingDrills = async () => {
+    try {
+      // First check if training session exists
+      const { data: session, error: sessionError } = await supabase
+        .from('training_sessions')
+        .select('id')
+        .eq('event_id', event.id)
+        .eq('team_id', teamId)
+        .maybeSingle();
+
+      if (sessionError || !session) {
+        console.log('No training session found for event:', event.id);
+        setTrainingDrills([]);
+        return;
+      }
+
+      const { data: drills, error } = await supabase
+        .from('training_session_drills')
+        .select(`
+          id,
+          duration_minutes,
+          drills!inner(
+            id,
+            name
+          )
+        `)
+        .eq('training_session_id', session.id)
+        .order('created_at');
+
+      if (error) throw error;
+
+      const formattedDrills = drills?.map((drill, index) => ({
+        id: drill.id,
+        name: drill.drills?.name || 'Unnamed Drill',
+        duration_minutes: drill.duration_minutes || 0,
+        order_index: index + 1
+      })) || [];
+
+      setTrainingDrills(formattedDrills);
+    } catch (error) {
+      console.error('Error loading training drills:', error);
+      setTrainingDrills([]);
+    }
+  };
 
   const currentTeam = teamSelections[currentTeamIndex];
 
@@ -125,12 +184,17 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         <Card className="w-full">
           <CardContent className="py-6 text-center">
             <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-            <h3 className="font-medium mb-2">No Team Selection</h3>
+            <h3 className="font-medium mb-2">
+              {event.event_type === 'training' ? 'No Training Plan' : 'No Team Selection'}
+            </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              No squad has been selected for this event yet.
+              {event.event_type === 'training' 
+                ? 'No training plan has been created for this session yet.'
+                : 'No squad has been selected for this event yet.'
+              }
             </p>
             <Button onClick={onOpenFullManager} size="sm" className="w-full">
-              Set Up Team
+              {event.event_type === 'training' ? 'Create Training Plan' : 'Set Up Team'}
             </Button>
           </CardContent>
         </Card>
@@ -147,7 +211,9 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          <h3 className="font-medium">Team Selection</h3>
+          <h3 className="font-medium">
+            {event.event_type === 'training' ? 'Training Plan' : 'Team Selection'}
+          </h3>
           <div className="w-16" /> {/* Spacer for center alignment */}
         </div>
       )}
@@ -163,7 +229,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               onClick={() => setCurrentTeamIndex(index)}
               className="flex-shrink-0 text-xs px-2 py-1"
             >
-              Team {team.teamNumber}
+              {event.event_type === 'training' ? `Group ${team.teamNumber}` : `Team ${team.teamNumber}`}
             </Button>
           ))}
         </div>
@@ -173,7 +239,9 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
         <Card className="w-full">
           <CardHeader className="pb-2 px-3 pt-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base">Team {currentTeam.teamNumber}</CardTitle>
+              <CardTitle className="text-base">
+                {event.event_type === 'training' ? `Group ${currentTeam.teamNumber}` : `Team ${currentTeam.teamNumber}`}
+              </CardTitle>
               {!isExpanded && (
                 <Button variant="outline" size="sm" onClick={onOpenFullManager} className="text-xs px-2 py-1">
                   Edit
@@ -185,10 +253,12 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 <Users className="h-3 w-3 mr-1" />
                 {currentTeam.squadPlayers} players
               </Badge>
-              <Badge variant="outline" className="text-xs">
-                <Gamepad2 className="h-3 w-3 mr-1" />
-                {currentTeam.periods.length} period{currentTeam.periods.length !== 1 ? 's' : ''}
-              </Badge>
+              {event.event_type !== 'training' && (
+                <Badge variant="outline" className="text-xs">
+                  <Gamepad2 className="h-3 w-3 mr-1" />
+                  {currentTeam.periods.length} period{currentTeam.periods.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
               {currentTeam.performanceCategory !== 'No category' && (
                 <Badge variant="secondary" className="text-xs">
                   {currentTeam.performanceCategory}
@@ -199,74 +269,105 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
 
           <CardContent className="space-y-3 px-3 pb-3">
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-8">
-                <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-                <TabsTrigger value="periods" className="text-xs">Periods</TabsTrigger>
-              </TabsList>
+              {event.event_type === 'training' ? (
+                <TabsList className="grid w-full grid-cols-1 h-8">
+                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                </TabsList>
+              ) : (
+                <TabsList className="grid w-full grid-cols-2 h-8">
+                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                  <TabsTrigger value="periods" className="text-xs">Periods</TabsTrigger>
+                </TabsList>
+              )}
 
               <TabsContent value="overview" className="space-y-3 mt-3">
-                <div className="text-sm">
-                  <h4 className="font-medium mb-2 text-sm">Formation Summary</h4>
-                  {currentTeam.periods.length > 0 ? (
-                    <div className="space-y-2">
-                      {currentTeam.periods.map((period, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
-                          <span className="font-medium">Period {period.period_number}</span>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span>{period.formation}</span>
-                            <span>•</span>
-                            <span>{period.duration_minutes}min</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-xs">No periods configured</p>
-                  )}
-                </div>
-
-                {event.event_type !== 'training' && currentTeam.periods[0]?.captain_id && (
+                {event.event_type === 'training' ? (
                   <div className="text-sm">
-                    <h4 className="font-medium mb-2 flex items-center gap-1 text-sm">
-                      <Star className="h-3 w-3" />
-                      Captain Selected
+                    <h4 className="font-medium mb-2 text-sm flex items-center gap-1">
+                      <Timer className="h-3 w-3" />
+                      Training Drills
                     </h4>
-                    <p className="text-muted-foreground text-xs">Team captain has been assigned</p>
+                    {trainingDrills.length > 0 ? (
+                      <div className="space-y-2">
+                        {trainingDrills.map((drill, index) => (
+                          <div key={drill.id} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
+                            <span className="font-medium">{drill.name}</span>
+                            <span className="text-muted-foreground">{drill.duration_minutes}min</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-xs">No drills added yet</p>
+                    )}
                   </div>
+                ) : (
+                  <>
+                    <div className="text-sm">
+                      <h4 className="font-medium mb-2 text-sm">Formation Summary</h4>
+                      {currentTeam.periods.length > 0 ? (
+                        <div className="space-y-2">
+                          {currentTeam.periods.map((period, index) => (
+                            <div key={index} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
+                              <span className="font-medium">Period {period.period_number}</span>
+                              <div className="flex items-center gap-2 text-xs">
+                                <span>{period.formation}</span>
+                                <span>•</span>
+                                <span>{period.duration_minutes}min</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">No periods configured</p>
+                      )}
+                    </div>
+
+                    {currentTeam.periods[0]?.captain_id && (
+                      <div className="text-sm">
+                        <h4 className="font-medium mb-2 flex items-center gap-1 text-sm">
+                          <Star className="h-3 w-3" />
+                          Captain Selected
+                        </h4>
+                        <p className="text-muted-foreground text-xs">Team captain has been assigned</p>
+                      </div>
+                    )}
+                  </>
                 )}
               </TabsContent>
 
-              <TabsContent value="periods" className="space-y-2 mt-3">
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {currentTeam.periods.map((period, index) => (
-                    <Card key={index} className="w-full">
-                      <CardContent className="p-2">
-                        <div className="flex justify-between items-start mb-2">
-                          <h5 className="font-medium text-xs">Period {period.period_number}</h5>
-                          <Badge variant="outline" className="text-xs">
-                            {period.formation}
-                          </Badge>
-                        </div>
-                        
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <div className="flex justify-between">
-                            <span>Duration:</span>
-                            <span>{period.duration_minutes} minutes</span>
+              {event.event_type !== 'training' && (
+                <TabsContent value="periods" className="space-y-2 mt-3">
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {currentTeam.periods.map((period, index) => (
+                      <Card key={index} className="w-full">
+                        <CardContent className="p-2">
+                          <div className="flex justify-between items-start mb-2">
+                            <h5 className="font-medium text-xs">Period {period.period_number}</h5>
+                            <Badge variant="outline" className="text-xs">
+                              {period.formation}
+                            </Badge>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Starting XI:</span>
-                            <span>{period.player_positions?.length || 0} players</span>
+                          
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div className="flex justify-between">
+                              <span>Duration:</span>
+                              <span>{period.duration_minutes} minutes</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Starting XI:</span>
+                              <span>{period.player_positions?.length || 0} players</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Substitutes:</span>
+                              <span>{period.substitute_players?.length || 0} players</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Substitutes:</span>
-                            <span>{period.substitute_players?.length || 0} players</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </TabsContent>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </TabsContent>
+              )}
             </Tabs>
 
             <Button 
@@ -276,7 +377,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               size="sm"
             >
               <Gamepad2 className="h-4 w-4 mr-2" />
-              Open Team Manager
+              {event.event_type === 'training' ? 'Open Training Plan' : 'Open Team Manager'}
             </Button>
           </CardContent>
         </Card>
