@@ -134,6 +134,64 @@ export interface IndividualProgressMilestone {
   updated_at: string;
 }
 
+// Phase 3: Team Integration & Analytics Types
+export interface TeamIndividualTrainingOverview {
+  id: string;
+  team_id: string;
+  coach_id: string;
+  analytics_summary: Record<string, any>;
+  team_goals: string[];
+  focus_areas_summary: Record<string, any>;
+  last_updated: string;
+  created_at: string;
+}
+
+export interface IndividualTrainingAnalytics {
+  id: string;
+  player_id: string;
+  plan_id?: string;
+  analytics_period_start: string;
+  analytics_period_end: string;
+  total_sessions_planned: number;
+  total_sessions_completed: number;
+  completion_rate: number;
+  average_session_duration: number; // minutes
+  improvement_metrics: Record<string, any>;
+  focus_area_progress: Record<string, any>;
+  coach_rating?: number; // 1.00 to 5.00
+  self_assessment: Record<string, any>;
+  recommendations_applied: number;
+  milestones_achieved: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TeamCoachingInsight {
+  id: string;
+  team_id: string;
+  coach_id: string;
+  insight_type: 'player_progress' | 'team_trends' | 'focus_area_analysis' | 'recommendation';
+  insight_data: Record<string, any>;
+  priority_level: 'low' | 'medium' | 'high' | 'critical';
+  action_required: boolean;
+  addressed_at?: string;
+  expires_at: string;
+  created_at: string;
+}
+
+export interface IndividualPerformanceCorrelation {
+  id: string;
+  player_id: string;
+  training_period_start: string;
+  training_period_end: string;
+  match_performance_data: Record<string, any>;
+  training_metrics: Record<string, any>;
+  correlation_scores: Record<string, number>; // e.g., {"ball_control": 0.75, "fitness": 0.82}
+  improvement_areas: string[];
+  confidence_level: number;
+  created_at: string;
+}
+
 export interface PlanCreationData {
   title: string;
   objective_text?: string;

@@ -1032,6 +1032,53 @@ export type Database = {
           },
         ]
       }
+      individual_performance_correlations: {
+        Row: {
+          confidence_level: number | null
+          correlation_scores: Json
+          created_at: string
+          id: string
+          improvement_areas: string[] | null
+          match_performance_data: Json
+          player_id: string
+          training_metrics: Json
+          training_period_end: string
+          training_period_start: string
+        }
+        Insert: {
+          confidence_level?: number | null
+          correlation_scores?: Json
+          created_at?: string
+          id?: string
+          improvement_areas?: string[] | null
+          match_performance_data?: Json
+          player_id: string
+          training_metrics?: Json
+          training_period_end: string
+          training_period_start: string
+        }
+        Update: {
+          confidence_level?: number | null
+          correlation_scores?: Json
+          created_at?: string
+          id?: string
+          improvement_areas?: string[] | null
+          match_performance_data?: Json
+          player_id?: string
+          training_metrics?: Json
+          training_period_end?: string
+          training_period_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_performance_correlations_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       individual_plan_assignments: {
         Row: {
           assigned_at: string
@@ -1242,6 +1289,81 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "individual_training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      individual_training_analytics: {
+        Row: {
+          analytics_period_end: string
+          analytics_period_start: string
+          average_session_duration: number | null
+          coach_rating: number | null
+          completion_rate: number | null
+          created_at: string
+          focus_area_progress: Json
+          id: string
+          improvement_metrics: Json
+          milestones_achieved: number | null
+          plan_id: string | null
+          player_id: string
+          recommendations_applied: number | null
+          self_assessment: Json
+          total_sessions_completed: number
+          total_sessions_planned: number
+          updated_at: string
+        }
+        Insert: {
+          analytics_period_end: string
+          analytics_period_start: string
+          average_session_duration?: number | null
+          coach_rating?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          focus_area_progress?: Json
+          id?: string
+          improvement_metrics?: Json
+          milestones_achieved?: number | null
+          plan_id?: string | null
+          player_id: string
+          recommendations_applied?: number | null
+          self_assessment?: Json
+          total_sessions_completed?: number
+          total_sessions_planned?: number
+          updated_at?: string
+        }
+        Update: {
+          analytics_period_end?: string
+          analytics_period_start?: string
+          average_session_duration?: number | null
+          coach_rating?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          focus_area_progress?: Json
+          id?: string
+          improvement_metrics?: Json
+          milestones_achieved?: number | null
+          plan_id?: string | null
+          player_id?: string
+          recommendations_applied?: number | null
+          self_assessment?: Json
+          total_sessions_completed?: number
+          total_sessions_planned?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "individual_training_analytics_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "individual_training_analytics_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id"]
           },
         ]
@@ -2049,6 +2171,60 @@ export type Database = {
         }
         Relationships: []
       }
+      team_coaching_insights: {
+        Row: {
+          action_required: boolean
+          addressed_at: string | null
+          coach_id: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          insight_data: Json
+          insight_type: string
+          priority_level: string
+          team_id: string
+        }
+        Insert: {
+          action_required?: boolean
+          addressed_at?: string | null
+          coach_id: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          insight_data?: Json
+          insight_type: string
+          priority_level?: string
+          team_id: string
+        }
+        Update: {
+          action_required?: boolean
+          addressed_at?: string | null
+          coach_id?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          insight_data?: Json
+          insight_type?: string
+          priority_level?: string
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_coaching_insights_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_coaching_insights_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_code_usage: {
         Row: {
           code_used: string
@@ -2139,6 +2315,54 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      team_individual_training_overview: {
+        Row: {
+          analytics_summary: Json
+          coach_id: string
+          created_at: string
+          focus_areas_summary: Json
+          id: string
+          last_updated: string
+          team_goals: string[] | null
+          team_id: string
+        }
+        Insert: {
+          analytics_summary?: Json
+          coach_id: string
+          created_at?: string
+          focus_areas_summary?: Json
+          id?: string
+          last_updated?: string
+          team_goals?: string[] | null
+          team_id: string
+        }
+        Update: {
+          analytics_summary?: Json
+          coach_id?: string
+          created_at?: string
+          focus_areas_summary?: Json
+          id?: string
+          last_updated?: string
+          team_goals?: string[] | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_individual_training_overview_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_individual_training_overview_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       team_kit_issues: {
         Row: {

@@ -8,7 +8,11 @@ import type {
   DrillWithTags,
   IndividualPlanAssignment,
   AITrainingRecommendation,
-  IndividualProgressMilestone
+  IndividualProgressMilestone,
+  TeamIndividualTrainingOverview,
+  IndividualTrainingAnalytics,
+  TeamCoachingInsight,
+  IndividualPerformanceCorrelation
 } from '@/types/individualTraining';
 
 export class IndividualTrainingService {
@@ -445,5 +449,193 @@ export class IndividualTrainingService {
     
     if (error) throw error;
     return data as IndividualProgressMilestone;
+  }
+
+  // Phase 3: Team Integration & Analytics Methods
+
+  // Team Overview
+  static async getTeamTrainingOverview(teamId: string): Promise<TeamIndividualTrainingOverview | null> {
+    const { data, error } = await supabase
+      .from('team_individual_training_overview')
+      .select('*')
+      .eq('team_id', teamId)
+      .maybeSingle();
+    
+    if (error) throw error;
+    return data as TeamIndividualTrainingOverview | null;
+  }
+
+  static async createOrUpdateTeamOverview(teamId: string, coachId: string, overviewData: {
+    analytics_summary: Record<string, any>;
+    team_goals: string[];
+    focus_areas_summary: Record<string, any>;
+  }): Promise<TeamIndividualTrainingOverview> {
+    const { data, error } = await supabase
+      .from('team_individual_training_overview')
+      .upsert({
+        team_id: teamId,
+        coach_id: coachId,
+        ...overviewData,
+        last_updated: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as TeamIndividualTrainingOverview;
+  }
+
+  // Training Analytics
+  static async getPlayerAnalytics(playerId: string, startDate?: string, endDate?: string): Promise<IndividualTrainingAnalytics[]> {
+    let query = supabase
+      .from('individual_training_analytics')
+      .select('*')
+      .eq('player_id', playerId)
+      .order('analytics_period_start', { ascending: false });
+
+    if (startDate && endDate) {
+      query = query
+        .gte('analytics_period_start', startDate)
+        .lte('analytics_period_end', endDate);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as IndividualTrainingAnalytics[];
+  }
+
+  static async getTeamAnalytics(teamId: string, startDate?: string, endDate?: string): Promise<IndividualTrainingAnalytics[]> {
+    const { data: teamPlayers } = await supabase
+      .from('players')
+      .select('id')
+      .eq('team_id', teamId);
+
+    if (!teamPlayers || teamPlayers.length === 0) return [];
+
+    const playerIds = teamPlayers.map(p => p.id);
+
+    let query = supabase
+      .from('individual_training_analytics')
+      .select('*')
+      .in('player_id', playerIds)
+      .order('analytics_period_start', { ascending: false });
+
+    if (startDate && endDate) {
+      query = query
+        .gte('analytics_period_start', startDate)
+        .lte('analytics_period_end', endDate);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as IndividualTrainingAnalytics[];
+  }
+
+  static async createAnalyticsRecord(analyticsData: Omit<IndividualTrainingAnalytics, 'id' | 'created_at' | 'updated_at'>): Promise<IndividualTrainingAnalytics> {
+    const { data, error } = await supabase
+      .from('individual_training_analytics')
+      .insert(analyticsData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as IndividualTrainingAnalytics;
+  }
+
+  // Coaching Insights
+  static async getTeamCoachingInsights(teamId: string, coachId?: string): Promise<TeamCoachingInsight[]> {
+    let query = supabase
+      .from('team_coaching_insights')
+      .select('*')
+      .eq('team_id', teamId)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false });
+
+    if (coachId) {
+      query = query.eq('coach_id', coachId);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as TeamCoachingInsight[];
+  }
+
+  static async createCoachingInsight(insightData: Omit<TeamCoachingInsight, 'id' | 'created_at'>): Promise<TeamCoachingInsight> {
+    const { data, error } = await supabase
+      .from('team_coaching_insights')
+      .insert(insightData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as TeamCoachingInsight;
+  }
+
+  static async markInsightAddressed(insightId: string): Promise<TeamCoachingInsight> {
+    const { data, error } = await supabase
+      .from('team_coaching_insights')
+      .update({ 
+        addressed_at: new Date().toISOString(),
+        action_required: false
+      })
+      .eq('id', insightId)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as TeamCoachingInsight;
+  }
+
+  // Performance Correlations
+  static async getPlayerPerformanceCorrelations(playerId: string): Promise<IndividualPerformanceCorrelation[]> {
+    const { data, error } = await supabase
+      .from('individual_performance_correlations')
+      .select('*')
+      .eq('player_id', playerId)
+      .order('training_period_start', { ascending: false });
+    
+    if (error) throw error;
+    return (data || []) as IndividualPerformanceCorrelation[];
+  }
+
+  static async createPerformanceCorrelation(correlationData: Omit<IndividualPerformanceCorrelation, 'id' | 'created_at'>): Promise<IndividualPerformanceCorrelation> {
+    const { data, error } = await supabase
+      .from('individual_performance_correlations')
+      .insert(correlationData)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data as IndividualPerformanceCorrelation;
+  }
+
+  // Team Dashboard Analytics
+  static async generateTeamAnalyticsSummary(teamId: string): Promise<Record<string, any>> {
+    const [teamAnalytics, teamInsights] = await Promise.all([
+      this.getTeamAnalytics(teamId),
+      this.getTeamCoachingInsights(teamId)
+    ]);
+
+    // Calculate team-wide metrics
+    const totalPlayers = new Set(teamAnalytics.map(a => a.player_id)).size;
+    const avgCompletionRate = teamAnalytics.reduce((sum, a) => sum + a.completion_rate, 0) / teamAnalytics.length || 0;
+    const totalSessionsCompleted = teamAnalytics.reduce((sum, a) => sum + a.total_sessions_completed, 0);
+    const avgSessionDuration = teamAnalytics.reduce((sum, a) => sum + a.average_session_duration, 0) / teamAnalytics.length || 0;
+
+    // Group insights by priority
+    const insightsByPriority = teamInsights.reduce((acc, insight) => {
+      acc[insight.priority_level] = (acc[insight.priority_level] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      totalPlayers,
+      avgCompletionRate: Math.round(avgCompletionRate * 100) / 100,
+      totalSessionsCompleted,
+      avgSessionDuration: Math.round(avgSessionDuration),
+      insightsByPriority,
+      actionItemsCount: teamInsights.filter(i => i.action_required).length,
+      lastUpdated: new Date().toISOString()
+    };
   }
 }
