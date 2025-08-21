@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 import type { 
   IndividualTrainingPlan, 
   IndividualTrainingSession, 
@@ -68,7 +69,64 @@ export class IndividualTrainingService {
       .single();
     
     if (error) throw error;
-    return data as IndividualTrainingPlan;
+    
+    // Auto-create a player objective for this training plan
+    const plan = data as IndividualTrainingPlan;
+    await this.createObjectiveForPlan(plan);
+    
+    return plan;
+  }
+
+  // Helper method to create an objective for a training plan
+  private static async createObjectiveForPlan(plan: IndividualTrainingPlan): Promise<void> {
+    try {
+      // Get current player objectives
+      const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .select('objectives')
+        .eq('id', plan.player_id)
+        .single();
+
+      if (playerError) {
+        console.warn('Could not fetch player objectives:', playerError);
+        return;
+      }
+
+      const currentObjectives = playerData?.objectives || [];
+      const objectiveId = `obj-${Date.now()}`;
+      
+      // Create summary from plan details
+      const focusAreasArray = Array.isArray(plan.focus_areas) ? plan.focus_areas : [];
+      const focusAreasText = focusAreasArray.length > 0 ? ` Focus areas: ${focusAreasArray.join(', ')}.` : '';
+      const sessionsText = plan.weekly_sessions ? ` ${plan.weekly_sessions} sessions per week.` : '';
+      const objectiveDescription = `${plan.objective_text || 'Training plan objective'}${focusAreasText}${sessionsText}`;
+
+      const newObjective = {
+        id: objectiveId,
+        title: `Training Plan: ${plan.title}`,
+        description: objectiveDescription,
+        difficultyRating: 3, // Default difficulty
+        reviewDate: plan.end_date || format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
+        status: 'ongoing' as const,
+        createdAt: new Date().toISOString(),
+        createdBy: 'Training Plan Auto-Generated'
+      };
+
+      // Update player with new objective
+      const currentObjectivesArray = Array.isArray(currentObjectives) ? currentObjectives : [];
+      const updatedObjectives = [...currentObjectivesArray, newObjective];
+      
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ objectives: updatedObjectives })
+        .eq('id', plan.player_id);
+
+      if (updateError) {
+        console.warn('Could not create objective for training plan:', updateError);
+      }
+    } catch (err) {
+      console.warn('Failed to create objective for training plan:', err);
+    }
   }
 
   static async updatePlan(planId: string, updates: Partial<IndividualTrainingPlan>): Promise<IndividualTrainingPlan> {
