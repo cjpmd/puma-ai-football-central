@@ -158,7 +158,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
           `)
           .eq('event_id', eventId)
           .eq('team_id', teamId)
-          .single();
+          .maybeSingle();
 
         if (session) {
           setSessionDrills(session.training_session_drills?.map((drill: any) => ({
