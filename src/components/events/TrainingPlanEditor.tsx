@@ -200,6 +200,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   };
 
   const addCustomDrill = () => {
+    console.log('➕ Adding custom drill...');
     const newDrill: TrainingSessionDrill = {
       id: `temp-${Date.now()}`,
       custom_drill_name: 'New Custom Drill',
@@ -212,6 +213,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
 
     setSessionDrills([...sessionDrills, newDrill]);
     setExpandedDrills(prev => new Set([...prev, newDrill.id]));
+    console.log('✅ Custom drill added. Total drills:', sessionDrills.length + 1);
   };
 
   const updateDrill = (drillId: string, updates: Partial<TrainingSessionDrill>) => {
@@ -308,7 +310,21 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   };
 
   const handleSave = async () => {
-    console.log('🚀 Training Plan Save Button Clicked!', { eventId, teamId, drillsCount: sessionDrills.length, equipmentCount: equipment.length });
+    console.log('🚀 Training Plan Save Button Clicked!', { 
+      eventId, 
+      teamId, 
+      drillsCount: sessionDrills.length, 
+      equipmentCount: equipment.length,
+      drills: sessionDrills,
+      equipment: equipment 
+    });
+    
+    if (!eventId || !teamId) {
+      console.error('❌ Missing required IDs for save:', { eventId, teamId });
+      toast.error('Cannot save: Missing event or team information');
+      return;
+    }
+    
     const success = await saveTrainingSession(eventId, teamId, sessionDrills, equipment);
     console.log('💾 Save result:', success);
     if (success && onSave) {
