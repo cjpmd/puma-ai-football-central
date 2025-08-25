@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ interface SessionCreatorProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   planId: string;
+  planTitle?: string;
   dayOfWeek: number;
   onSessionCreated?: () => void;
 }
@@ -23,17 +24,25 @@ export function SessionCreator({
   open, 
   onOpenChange, 
   planId, 
+  planTitle,
   dayOfWeek,
   onSessionCreated 
 }: SessionCreatorProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    title: '',
+    title: planTitle || '',
     description: '',
     target_duration_minutes: 30,
     intensity: 3,
     location: 'home' as 'home' | 'pitch' | 'gym'
   });
+
+  // Update title when planTitle becomes available
+  useEffect(() => {
+    if (planTitle && formData.title === '') {
+      setFormData(prev => ({ ...prev, title: planTitle }));
+    }
+  }, [planTitle, formData.title]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,7 +69,7 @@ export function SessionCreator({
       
       // Reset form
       setFormData({
-        title: '',
+        title: planTitle || '',
         description: '',
         target_duration_minutes: 30,
         intensity: 3,

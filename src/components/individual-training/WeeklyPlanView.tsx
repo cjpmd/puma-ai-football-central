@@ -278,6 +278,7 @@ export function WeeklyPlanView({
           open={showSessionCreator}
           onOpenChange={setShowSessionCreator}
           planId={planId}
+          planTitle={plan?.title}
           dayOfWeek={selectedDay}
           onSessionCreated={() => {
             queryClient.invalidateQueries({ queryKey: ['individual-training-sessions', planId] });
