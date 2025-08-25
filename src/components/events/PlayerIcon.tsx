@@ -96,23 +96,20 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
           </div>
         )}
         
-        {/* Content inside circle - position abbreviation, name, squad number */}
+        {/* Content inside circle - position abbreviation OR name, squad number */}
         <div className="flex flex-col items-center justify-center text-center leading-none">
-          {/* Position abbreviation above name if provided and different from name */}
-          {showPositionLabel && positionAbbreviation && positionAbbreviation !== getDisplayName() && (
+          {/* Show position abbreviation if provided, otherwise show player name */}
+          {showPositionLabel && positionAbbreviation ? (
             <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-blue-600 mb-0.5`}>
               {positionAbbreviation}
             </div>
-          )}
-          
-          {/* Player name in center - only show if no position abbreviation or if different */}
-          {(!showPositionLabel || !positionAbbreviation || positionAbbreviation === getDisplayName()) && (
+          ) : (
             <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium leading-tight`}>
               {getDisplayName()}
             </div>
           )}
           
-          {/* Squad number below name */}
+          {/* Squad number below */}
           <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-gray-600 mt-0.5`}>
             #{player.squadNumber}
           </div>
