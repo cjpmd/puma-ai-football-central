@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -55,13 +55,13 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
   };
 
   return (
-    <Sheet open={true} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[75vh] max-h-[500px] pb-safe">
-        <SheetHeader className="pb-4">
-          <SheetTitle className="text-left capitalize">{title}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader className="pb-3">
+          <DialogTitle className="text-left capitalize">{title}</DialogTitle>
+        </DialogHeader>
         
-        <div className="space-y-3 h-full flex flex-col overflow-hidden pb-4">
+        <div className="space-y-3 flex-1 flex flex-col overflow-hidden min-h-0">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -94,8 +94,8 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </div>
 
           {/* Tag Grid */}
-          <div className="flex-1 overflow-y-auto pb-2 min-h-0">
-            <div className="grid grid-cols-2 gap-2 px-1 pb-4">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="grid grid-cols-2 gap-2">
               {filteredTags.map((tag) => {
                 const isSelected = localSelection.includes(tag.id);
                 return (
@@ -132,16 +132,16 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-3 border-t bg-background sticky bottom-0">
-            <Button variant="outline" onClick={onClose} className="flex-1 h-10">
+          <div className="flex gap-3 pt-4 border-t mt-4">
+            <Button variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button onClick={handleSave} className="flex-1 h-10">
+            <Button onClick={handleSave} className="flex-1">
               Save ({localSelection.length})
             </Button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 };
