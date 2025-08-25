@@ -756,4 +756,106 @@ export class IndividualTrainingService {
       lastUpdated: new Date().toISOString()
     };
   }
+
+  // Calendar Integration
+  static async getCalendarTrainingSessions(userPlayers: { id: string }[], startDate: string, endDate: string): Promise<any[]> {
+    if (!userPlayers || userPlayers.length === 0) return [];
+
+    const playerIds = userPlayers.map(p => p.id);
+    
+    // Get all active plans for these players
+    const { data: plans, error: plansError } = await supabase
+      .from('individual_training_plans')
+      .select(`
+        id,
+        title,
+        player_id,
+        start_date,
+        end_date,
+        status,
+        individual_training_sessions (
+          id,
+          title,
+          day_of_week,
+          target_duration_minutes,
+          planned_time,
+          location,
+          description,
+          intensity
+        )
+      `)
+      .in('player_id', playerIds)
+      .eq('status', 'active')
+      .gte('end_date', startDate)
+      .lte('start_date', endDate);
+
+    if (plansError) throw plansError;
+
+    // Convert to calendar events
+    const calendarEvents = [];
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+
+    for (const plan of plans || []) {
+      const planStartDate = new Date(plan.start_date);
+      const planEndDate = new Date(plan.end_date);
+      
+      // Get actual date range for this plan within the requested period
+      const actualStartDate = new Date(Math.max(planStartDate.getTime(), startDateObj.getTime()));
+      const actualEndDate = new Date(Math.min(planEndDate.getTime(), endDateObj.getTime()));
+
+      // Generate sessions for each week within the date range
+      for (const session of plan.individual_training_sessions || []) {
+        // Calculate all dates for this day of week within the range
+        const sessionDates = this.getSessionDatesInRange(session.day_of_week, actualStartDate, actualEndDate);
+        
+        for (const sessionDate of sessionDates) {
+          calendarEvents.push({
+            id: `individual-${session.id}-${sessionDate.toISOString().split('T')[0]}`,
+            type: 'individual_training',
+            title: session.title,
+            date: sessionDate.toISOString().split('T')[0],
+            start_time: session.planned_time || null,
+            end_time: session.planned_time ? this.calculateEndTime(session.planned_time, session.target_duration_minutes) : null,
+            location: session.location,
+            description: session.description,
+            intensity: session.intensity,
+            duration_minutes: session.target_duration_minutes,
+            plan_title: plan.title,
+            player_id: plan.player_id,
+            session_id: session.id,
+            plan_id: plan.id
+          });
+        }
+      }
+    }
+
+    return calendarEvents;
+  }
+
+  private static getSessionDatesInRange(dayOfWeek: number, startDate: Date, endDate: Date): Date[] {
+    const dates = [];
+    const current = new Date(startDate);
+    
+    // Find the first occurrence of the target day of week
+    while (current.getDay() !== dayOfWeek && current <= endDate) {
+      current.setDate(current.getDate() + 1);
+    }
+    
+    // Add all occurrences of this day within the range
+    while (current <= endDate) {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 7); // Move to next week
+    }
+    
+    return dates;
+  }
+
+  private static calculateEndTime(startTime: string, durationMinutes: number): string {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60) % 24;
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  }
 }

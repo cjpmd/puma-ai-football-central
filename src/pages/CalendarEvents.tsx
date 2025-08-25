@@ -18,12 +18,15 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { eventsService } from '@/services/eventsService';
+import { IndividualTrainingService } from '@/services/individualTrainingService';
 
 type ViewMode = 'grid' | 'calendar' | 'list';
 
 export default function CalendarEvents() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
+  const [individualTrainingSessions, setIndividualTrainingSessions] = useState<any[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<DatabaseEvent[]>([]);
+  const [filteredIndividualSessions, setFilteredIndividualSessions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
@@ -33,15 +36,16 @@ export default function CalendarEvents() {
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const { toast } = useToast();
-  const { teams } = useAuth();
+  const { teams, connectedPlayers } = useAuth();
 
   useEffect(() => {
     loadEvents();
-  }, [teams]);
+    loadIndividualTrainingSessions();
+  }, [teams, connectedPlayers]);
 
   useEffect(() => {
     filterEvents();
-  }, [events, selectedTeam, selectedEventType]);
+  }, [events, individualTrainingSessions, selectedTeam, selectedEventType]);
 
   const loadEvents = async () => {
     try {
@@ -87,6 +91,32 @@ export default function CalendarEvents() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadIndividualTrainingSessions = async () => {
+    try {
+      if (!connectedPlayers || connectedPlayers.length === 0) {
+        setIndividualTrainingSessions([]);
+        return;
+      }
+
+      // Get sessions for the current month and next month
+      const currentDate = new Date();
+      const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
+
+      const sessions = await IndividualTrainingService.getCalendarTrainingSessions(
+        connectedPlayers.map(p => ({ id: p.id })),
+        startDate.toISOString().split('T')[0],
+        endDate.toISOString().split('T')[0]
+      );
+
+      console.log('Loaded individual training sessions:', sessions.length);
+      setIndividualTrainingSessions(sessions);
+    } catch (error: any) {
+      console.error('Error loading individual training sessions:', error);
+      // Don't show error toast for individual training sessions as they're supplementary
     }
   };
 
@@ -238,7 +268,7 @@ export default function CalendarEvents() {
     );
   }
 
-  const eventTypes = Array.from(new Set(events.map(e => e.event_type)));
+  const eventTypes = Array.from(new Set([...events.map(e => e.event_type), 'individual_training']));
 
   return (
     <DashboardLayout>
@@ -320,7 +350,7 @@ export default function CalendarEvents() {
                     <SelectItem value="all">All Types</SelectItem>
                     {eventTypes.map((type) => (
                       <SelectItem key={type} value={type}>
-                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                        {type === 'individual_training' ? 'Individual Training' : type.charAt(0).toUpperCase() + type.slice(1)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -340,13 +370,13 @@ export default function CalendarEvents() {
         </Card>
 
         {/* Events Display */}
-        {filteredEvents.length === 0 ? (
+        {filteredEvents.length === 0 && filteredIndividualSessions.length === 0 ? (
           <Card>
             <CardContent className="py-8 text-center">
               <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-semibold mb-2">No Events Found</h3>
               <p className="text-muted-foreground mb-4">
-                {events.length === 0 
+                {events.length === 0 && individualTrainingSessions.length === 0
                   ? "You haven't created any events yet. Get started by adding your first event!"
                   : "No events match your current filters. Try adjusting your search criteria."
                 }
@@ -362,6 +392,7 @@ export default function CalendarEvents() {
             {viewMode === 'grid' && (
               <EventsGridView
                 events={filteredEvents}
+                individualTrainingSessions={filteredIndividualSessions}
                 onEditEvent={handleEditEvent}
                 onTeamSelection={handleTeamSelection}
                 onPostGameEdit={handlePostGameEdit}
@@ -373,6 +404,7 @@ export default function CalendarEvents() {
             {viewMode === 'calendar' && (
               <CalendarGridView
                 events={filteredEvents}
+                individualTrainingSessions={filteredIndividualSessions}
                 onEditEvent={handleEditEvent}
                 onTeamSelection={handleTeamSelection}
                 onPostGameEdit={handlePostGameEdit}
