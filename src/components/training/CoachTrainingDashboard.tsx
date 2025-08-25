@@ -158,22 +158,52 @@ export const CoachTrainingDashboard: React.FC<CoachTrainingDashboardProps> = ({
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {plans.slice(0, 5).map((plan) => {
-                    const player = userPlayers.find(p => p.id === plan.player_id);
-                    return (
-                      <div key={plan.id} className="flex items-center justify-between p-4 border rounded-lg">
-                        <div>
-                          <h4 className="font-medium">{plan.title}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            Player: {player?.name || 'Unknown'} • {plan.status}
+                  {(() => {
+                    // Group plans by title, start_date, and group status
+                    const groupedPlans = plans.reduce((acc, plan) => {
+                      const key = `${plan.title}-${plan.start_date}-${plan.is_group_plan || false}`;
+                      if (!acc[key]) {
+                        acc[key] = {
+                          ...plan,
+                          playerIds: [],
+                          players: [],
+                          playerCount: 0
+                        };
+                      }
+                      acc[key].playerIds.push(plan.player_id);
+                      const player = userPlayers.find(p => p.id === plan.player_id);
+                      if (player) {
+                        acc[key].players.push(player);
+                      }
+                      acc[key].playerCount = acc[key].playerIds.length;
+                      return acc;
+                    }, {} as Record<string, any>);
+
+                    return Object.values(groupedPlans).slice(0, 5).map((groupedPlan: any) => (
+                      <div key={`${groupedPlan.title}-${groupedPlan.start_date}`} className="flex items-center justify-between p-4 border rounded-lg">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{groupedPlan.title}</h4>
+                            {groupedPlan.playerCount > 1 && (
+                              <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded-full">
+                                <Users className="w-3 h-3" />
+                                {groupedPlan.playerCount} Players
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {groupedPlan.playerCount === 1 
+                              ? `Player: ${groupedPlan.players[0]?.name || 'Unknown'}`
+                              : `Players: ${groupedPlan.players.map(p => p.name).join(', ')}`
+                            } • {groupedPlan.status}
                           </p>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {new Date(plan.start_date).toLocaleDateString()}
+                          {new Date(groupedPlan.start_date).toLocaleDateString()}
                         </div>
                       </div>
-                    );
-                  })}
+                    ));
+                  })()}
                 </div>
               )}
             </CardContent>
