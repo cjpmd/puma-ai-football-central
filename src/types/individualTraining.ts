@@ -1,6 +1,7 @@
 export interface IndividualTrainingPlan {
   id: string;
-  player_id: string;
+  player_id?: string; // Optional for group plans
+  player_ids?: string[]; // For group plans
   coach_id?: string;
   title: string;
   objective_text?: string;
@@ -12,9 +13,20 @@ export interface IndividualTrainingPlan {
   weekly_sessions: number;
   focus_areas: string[];
   accountability: Record<string, any>;
+  is_group_plan: boolean;
   created_by?: string;
   created_at: string;
   updated_at: string;
+}
+
+// Extended interface for group plans display
+export interface GroupTrainingPlan extends IndividualTrainingPlan {
+  players: Array<{
+    id: string;
+    name: string;
+    squad_number?: number;
+  }>;
+  player_count: number;
 }
 
 export interface IndividualTrainingSession {
@@ -203,4 +215,6 @@ export interface PlanCreationData {
   visibility: 'private' | 'coach' | 'teamStaff';
   location_preference: 'home' | 'pitch' | 'gym';
   intensity_preference: number;
+  is_group_plan?: boolean;
+  player_ids?: string[]; // For group plans
 }
