@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { EntityHeader } from '@/components/shared/EntityHeader';
 import { 
   Home, 
@@ -30,23 +31,24 @@ interface DashboardLayoutProps {
 }
 
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Players', href: '/players', icon: Users },
-  { name: 'Calendar & Events', href: '/calendar', icon: Calendar },
-  { name: 'Training', href: '/training', icon: Dumbbell },
-  { name: 'Individual Training', href: '/individual-training', icon: Target },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Player Management', href: '/player-management', icon: UserCheck },
-  { name: 'Teams', href: '/teams', icon: Trophy },
-  { name: 'Clubs', href: '/clubs', icon: Building2 },
-  { name: 'Staff Management', href: '/staff', icon: UserCog },
-  { name: 'User Management', href: '/users', icon: UserPlus },
-  { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard },
+  { name: 'Dashboard', href: '/dashboard', icon: Home, permission: null },
+  { name: 'Players', href: '/players', icon: Users, permission: null }, // Basic access for all team members
+  { name: 'Calendar & Events', href: '/calendar', icon: Calendar, permission: null }, // Basic access for all team members
+  { name: 'Training', href: '/training', icon: Dumbbell, permission: null }, // Allow all team members to view training
+  { name: 'Individual Training', href: '/individual-training', icon: Target, permission: null }, // Allow all team members
+  { name: 'Analytics', href: '/analytics', icon: BarChart3, permission: { resource: 'analytics', action: 'view' } },
+  { name: 'Player Management', href: '/player-management', icon: UserCheck, permission: { resource: 'players', action: 'manage' } },
+  { name: 'Teams', href: '/teams', icon: Trophy, permission: { resource: 'teams', action: 'manage' } },
+  { name: 'Clubs', href: '/clubs', icon: Building2, permission: { resource: 'clubs', action: 'manage' } },
+  { name: 'Staff Management', href: '/staff', icon: UserCog, permission: { resource: 'staff', action: 'manage' } },
+  { name: 'User Management', href: '/users', icon: UserPlus, permission: { resource: 'users', action: 'manage' } },
+  { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard, permission: { resource: 'teams', action: 'manage' } },
 ];
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut, teams, clubs } = useAuth();
+  const { hasPermission } = useAuthorization();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -73,25 +75,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
       <ScrollArea className="flex-1">
         <nav className="flex flex-col gap-1 p-4">
-          {navigation.map((item) => {
-            const isActive = location.pathname === item.href;
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.name}
-              </Link>
-            );
-          })}
+          {navigation
+            .filter((item) => {
+              // Show item if no permission required or user has permission
+              if (!item.permission) return true;
+              return hasPermission(item.permission);
+            })
+            .map((item) => {
+              const isActive = location.pathname === item.href;
+              return (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-accent text-accent-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  )}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <item.icon className="h-5 w-5" />
+                  {item.name}
+                </Link>
+              );
+            })}
         </nav>
       </ScrollArea>
       <div className="border-t p-4">
