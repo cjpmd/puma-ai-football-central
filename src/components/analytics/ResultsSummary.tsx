@@ -136,8 +136,8 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
         // Process multi-team format
         let teamNumber = 1;
         while (scoresData[`team_${teamNumber}`] !== undefined) {
-          const ourScore = scoresData[`team_${teamNumber}`] || 0;
-          const opponentScore = scoresData[`opponent_${teamNumber}`] || 0;
+          const ourScore = parseInt(scoresData[`team_${teamNumber}`]) || 0;
+          const opponentScore = parseInt(scoresData[`opponent_${teamNumber}`]) || 0;
           const rawOutcome = scoresData[`outcome_${teamNumber}`];
           const teamName = eventCategories[teamNumber.toString()] || `Team ${teamNumber}`;
           
@@ -168,8 +168,8 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
 
         // Process simple home/away format if no multi-team data
         if (teams.length === 0 && scoresData.home !== undefined && scoresData.away !== undefined) {
-          const ourScore = scoresData.home;
-          const opponentScore = scoresData.away;
+          const ourScore = parseInt(scoresData.home) || 0;
+          const opponentScore = parseInt(scoresData.away) || 0;
           
           let outcomeIcon = '';
           if (ourScore > opponentScore) outcomeIcon = '🏆';
