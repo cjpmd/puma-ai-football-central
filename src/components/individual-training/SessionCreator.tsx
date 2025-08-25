@@ -34,7 +34,8 @@ export function SessionCreator({
     description: '',
     target_duration_minutes: 30,
     intensity: 3,
-    location: 'home' as 'home' | 'pitch' | 'gym'
+    location: 'home' as 'home' | 'pitch' | 'gym',
+    planned_time: ''
   });
 
   // Update title when planTitle becomes available
@@ -73,7 +74,8 @@ export function SessionCreator({
         description: '',
         target_duration_minutes: 30,
         intensity: 3,
-        location: 'home' as 'home' | 'pitch' | 'gym'
+        location: 'home' as 'home' | 'pitch' | 'gym',
+        planned_time: ''
       });
     } catch (error) {
       console.error('Error creating session:', error);
@@ -160,6 +162,23 @@ export function SessionCreator({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="planned_time" className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              Planned Time (Optional)
+            </Label>
+            <Input
+              id="planned_time"
+              type="time"
+              value={formData.planned_time}
+              onChange={(e) => setFormData(prev => ({ ...prev, planned_time: e.target.value }))}
+              placeholder="e.g., 18:00"
+            />
+            <p className="text-xs text-muted-foreground">
+              When do you plan to do this training session?
+            </p>
           </div>
 
           <div className="space-y-2">

@@ -47,7 +47,7 @@ export function SessionExecutionMode({
   const queryClient = useQueryClient();
 
   // Get session details
-  const { data: session } = useQuery({
+  const { data: session, isLoading: sessionLoading, error: sessionError } = useQuery({
     queryKey: ['individual-training-session', sessionId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -63,7 +63,7 @@ export function SessionExecutionMode({
   });
 
   // Get session drills
-  const { data: drills = [] } = useQuery({
+  const { data: drills = [], isLoading: drillsLoading } = useQuery({
     queryKey: ['individual-session-drills', sessionId],
     queryFn: () => IndividualTrainingService.getSessionDrills(sessionId),
     enabled: open && !!sessionId,
@@ -188,7 +188,26 @@ export function SessionExecutionMode({
   const currentDrill = drills[currentDrillIndex];
   const progress = drills.length > 0 ? ((currentDrillIndex + 1) / drills.length) * 100 : 0;
 
-  if (!session || drills.length === 0) {
+  // Handle loading and error states
+  if (sessionError) {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Error Loading Session</DialogTitle>
+          </DialogHeader>
+          <div className="text-center py-8">
+            <p className="text-red-500 mb-4">Failed to load training session</p>
+            <Button onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  if (sessionLoading || drillsLoading || !session) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent>
@@ -198,6 +217,13 @@ export function SessionExecutionMode({
           <div className="text-center py-8">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <p>Loading training session details...</p>
+            <Button 
+              variant="outline" 
+              onClick={() => onOpenChange(false)}
+              className="mt-4"
+            >
+              Cancel
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
