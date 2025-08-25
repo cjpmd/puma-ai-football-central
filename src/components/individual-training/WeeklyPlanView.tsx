@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IndividualTrainingService } from '@/services/individualTrainingService';
+import { SessionCreator } from './SessionCreator';
 import { format, startOfWeek, addDays, isSameDay, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -44,6 +45,9 @@ export function WeeklyPlanView({
   onExecuteSession 
 }: WeeklyPlanViewProps) {
   const [currentWeek, setCurrentWeek] = useState(new Date());
+  const [showSessionCreator, setShowSessionCreator] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number>(0);
+  const queryClient = useQueryClient();
 
   // Fetch the plan
   const { data: plan } = useQuery({
@@ -235,8 +239,8 @@ export function WeeklyPlanView({
                           size="sm"
                           className="w-full h-8 text-xs"
                           onClick={() => {
-                            // TODO: Implement add session functionality
-                            console.log('Add session for day:', day.key);
+                            setSelectedDay(day.key);
+                            setShowSessionCreator(true);
                           }}
                         >
                           <Plus className="w-3 h-3 mr-1" />
@@ -269,6 +273,16 @@ export function WeeklyPlanView({
             Close
           </Button>
         </div>
+        {/* Session Creator Modal */}
+        <SessionCreator
+          open={showSessionCreator}
+          onOpenChange={setShowSessionCreator}
+          planId={planId}
+          dayOfWeek={selectedDay}
+          onSessionCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ['individual-training-sessions', planId] });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
