@@ -98,7 +98,7 @@ export function WeeklyPlanView({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden flex flex-col p-4 md:p-6">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
@@ -124,130 +124,262 @@ export function WeeklyPlanView({
             </div>
 
             {/* Week Navigation */}
-            <div className="flex justify-between items-center">
-              <Button
-                variant="outline"
-                onClick={() => setCurrentWeek(addDays(currentWeek, -7))}
-              >
-                Previous Week
-              </Button>
-              <h3 className="font-semibold">
-                Week of {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="flex gap-2 order-2 sm:order-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentWeek(addDays(currentWeek, -7))}
+                  className="flex items-center gap-1"
+                >
+                  <span className="text-xs">←</span>
+                  <span className="hidden sm:inline">Previous</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentWeek(addDays(currentWeek, 7))}
+                  className="flex items-center gap-1"
+                >
+                  <span className="hidden sm:inline">Next</span>
+                  <span className="text-xs">→</span>
+                </Button>
+              </div>
+              <h3 className="font-semibold text-center order-1 sm:order-2">
+                <span className="hidden sm:inline">Week of </span>
+                {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
               </h3>
-              <Button
-                variant="outline"
-                onClick={() => setCurrentWeek(addDays(currentWeek, 7))}
-              >
-                Next Week
-              </Button>
             </div>
 
             {/* Weekly Calendar Grid */}
             <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-7 gap-2 min-h-[400px]">
+              {/* Desktop Grid View */}
+              <div className="hidden md:block">
+                <div className="grid grid-cols-7 gap-2 min-h-[400px]">
+                  {DAYS_OF_WEEK.map((day, index) => {
+                    const dayDate = weekDates[index];
+                    const isToday = isSameDay(dayDate, new Date());
+                    const daySessions = sessionsByDay[day.key] || [];
+                    
+                    return (
+                      <div
+                        key={day.key}
+                        className={cn(
+                          "border rounded-lg p-3 space-y-2",
+                          isToday && "ring-2 ring-primary bg-primary/5"
+                        )}
+                      >
+                        {/* Day Header */}
+                        <div className="text-center">
+                          <div className="font-medium text-sm">{day.label}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {format(dayDate, 'MMM d')}
+                          </div>
+                        </div>
+
+                        {/* Sessions */}
+                        <div className="space-y-2">
+                          {daySessions.length === 0 ? (
+                            <div className="text-center py-4">
+                              <div className="text-xs text-muted-foreground">No sessions</div>
+                            </div>
+                          ) : (
+                            daySessions.map((session) => (
+                              <Card 
+                                key={session.id} 
+                                className="cursor-pointer hover:shadow-md transition-shadow"
+                                onClick={() => onExecuteSession?.(session.id)}
+                              >
+                                <CardHeader className="p-3 pb-2">
+                                  <CardTitle className="text-sm">{session.title}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-3 pt-0 space-y-2">
+                                  <div className="flex flex-wrap gap-1">
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-xs flex items-center gap-1"
+                                    >
+                                      <Clock className="w-3 h-3" />
+                                      {session.target_duration_minutes}min
+                                    </Badge>
+                                    
+                                    <Badge 
+                                      className={cn("text-xs flex items-center gap-1", getIntensityColor(session.intensity))}
+                                    >
+                                      <Zap className="w-3 h-3" />
+                                      {session.intensity}/5
+                                    </Badge>
+                                    
+                                    <Badge 
+                                      variant="outline" 
+                                      className="text-xs flex items-center gap-1"
+                                    >
+                                      {getLocationIcon(session.location)}
+                                      {session.location}
+                                    </Badge>
+                                  </div>
+
+                                  {session.description && (
+                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                      {session.description}
+                                    </p>
+                                  )}
+
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs flex-1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onExecuteSession?.(session.id);
+                                      }}
+                                    >
+                                      <Play className="w-3 h-3 mr-1" />
+                                      Start
+                                    </Button>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))
+                          )}
+                          
+                          {/* Add Session Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full h-8 text-xs"
+                            onClick={() => {
+                              setSelectedDay(day.key);
+                              setShowSessionCreator(true);
+                            }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Session
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Mobile List View */}
+              <div className="md:hidden space-y-4">
                 {DAYS_OF_WEEK.map((day, index) => {
                   const dayDate = weekDates[index];
                   const isToday = isSameDay(dayDate, new Date());
                   const daySessions = sessionsByDay[day.key] || [];
                   
                   return (
-                    <div
+                    <Card 
                       key={day.key}
                       className={cn(
-                        "border rounded-lg p-3 space-y-2",
+                        "overflow-hidden",
                         isToday && "ring-2 ring-primary bg-primary/5"
                       )}
                     >
-                      {/* Day Header */}
-                      <div className="text-center">
-                        <div className="font-medium text-sm">{day.label}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {format(dayDate, 'MMM d')}
+                      {/* Mobile Day Header */}
+                      <CardHeader className="pb-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle className="text-base">{day.label}</CardTitle>
+                            <p className="text-sm text-muted-foreground">
+                              {format(dayDate, 'MMMM d, yyyy')}
+                            </p>
+                          </div>
+                          {isToday && (
+                            <Badge variant="default" className="text-xs">
+                              Today
+                            </Badge>
+                          )}
                         </div>
-                      </div>
-
-                      {/* Sessions */}
-                      <div className="space-y-2">
+                      </CardHeader>
+                      
+                      <CardContent className="space-y-3">
+                        {/* Sessions */}
                         {daySessions.length === 0 ? (
-                          <div className="text-center py-4">
-                            <div className="text-xs text-muted-foreground">No sessions</div>
+                          <div className="text-center py-6 text-muted-foreground">
+                            <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm">No sessions planned</p>
                           </div>
                         ) : (
-                          daySessions.map((session) => (
-                            <Card 
-                              key={session.id} 
-                              className="cursor-pointer hover:shadow-md transition-shadow"
-                              onClick={() => onExecuteSession?.(session.id)}
-                            >
-                              <CardHeader className="p-3 pb-2">
-                                <CardTitle className="text-sm">{session.title}</CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-3 pt-0 space-y-2">
-                                <div className="flex flex-wrap gap-1">
-                                  <Badge 
-                                    variant="outline" 
-                                    className="text-xs flex items-center gap-1"
-                                  >
-                                    <Clock className="w-3 h-3" />
-                                    {session.target_duration_minutes}min
-                                  </Badge>
-                                  
-                                  <Badge 
-                                    className={cn("text-xs flex items-center gap-1", getIntensityColor(session.intensity))}
-                                  >
-                                    <Zap className="w-3 h-3" />
-                                    {session.intensity}/5
-                                  </Badge>
-                                  
-                                  <Badge 
-                                    variant="outline" 
-                                    className="text-xs flex items-center gap-1"
-                                  >
-                                    {getLocationIcon(session.location)}
-                                    {session.location}
-                                  </Badge>
-                                </div>
-
-                                {session.description && (
-                                  <p className="text-xs text-muted-foreground line-clamp-2">
-                                    {session.description}
-                                  </p>
-                                )}
-
-                                <div className="flex gap-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-7 text-xs flex-1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onExecuteSession?.(session.id);
-                                    }}
-                                  >
-                                    <Play className="w-3 h-3 mr-1" />
-                                    Start
-                                  </Button>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          ))
+                          <div className="space-y-3">
+                            {daySessions.map((session) => (
+                              <Card 
+                                key={session.id}
+                                className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-primary"
+                                onClick={() => onExecuteSession?.(session.id)}
+                              >
+                                <CardContent className="p-4">
+                                  <div className="space-y-3">
+                                    <div className="flex items-start justify-between">
+                                      <h4 className="font-medium leading-none">{session.title}</h4>
+                                      <Button
+                                        size="sm"
+                                        className="h-8 px-3"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onExecuteSession?.(session.id);
+                                        }}
+                                      >
+                                        <Play className="w-3 h-3 mr-1" />
+                                        Start
+                                      </Button>
+                                    </div>
+                                    
+                                    {session.description && (
+                                      <p className="text-sm text-muted-foreground line-clamp-2">
+                                        {session.description}
+                                      </p>
+                                    )}
+                                    
+                                    <div className="flex flex-wrap gap-2">
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-xs flex items-center gap-1"
+                                      >
+                                        <Clock className="w-3 h-3" />
+                                        {session.target_duration_minutes}min
+                                      </Badge>
+                                      
+                                      <Badge 
+                                        className={cn("text-xs flex items-center gap-1", getIntensityColor(session.intensity))}
+                                      >
+                                        <Zap className="w-3 h-3" />
+                                        Intensity {session.intensity}/5
+                                      </Badge>
+                                      
+                                      <Badge 
+                                        variant="outline" 
+                                        className="text-xs flex items-center gap-1"
+                                      >
+                                        {getLocationIcon(session.location)}
+                                        {session.location}
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
                         )}
                         
-                        {/* Add Session Button */}
+                        {/* Mobile Add Session Button */}
                         <Button
-                          variant="ghost"
-                          size="sm"
-                          className="w-full h-8 text-xs"
+                          variant="outline"
+                          size="lg"
+                          className="w-full h-12"
                           onClick={() => {
                             setSelectedDay(day.key);
                             setShowSessionCreator(true);
                           }}
                         >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add Session
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add Session for {day.label}
                         </Button>
-                      </div>
-                    </div>
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>
