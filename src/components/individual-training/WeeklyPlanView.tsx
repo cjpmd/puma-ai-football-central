@@ -264,124 +264,113 @@ export function WeeklyPlanView({
                 </div>
               </div>
 
-              {/* Mobile List View */}
-              <div className="md:hidden space-y-4">
-                {DAYS_OF_WEEK.map((day, index) => {
-                  const dayDate = weekDates[index];
-                  const isToday = isSameDay(dayDate, new Date());
-                  const daySessions = sessionsByDay[day.key] || [];
-                  
-                  return (
-                    <Card 
-                      key={day.key}
-                      className={cn(
-                        "overflow-hidden",
-                        isToday && "ring-2 ring-primary bg-primary/5"
-                      )}
-                    >
-                      {/* Mobile Day Header */}
-                      <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle className="text-base">{day.label}</CardTitle>
-                            <p className="text-sm text-muted-foreground">
-                              {format(dayDate, 'MMMM d, yyyy')}
-                            </p>
-                          </div>
-                          {isToday && (
-                            <Badge variant="default" className="text-xs">
-                              Today
-                            </Badge>
-                          )}
-                        </div>
-                      </CardHeader>
-                      
-                      <CardContent className="space-y-3">
-                        {/* Sessions */}
-                        {daySessions.length === 0 ? (
-                          <div className="text-center py-6 text-muted-foreground">
-                            <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                            <p className="text-sm">No sessions planned</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {daySessions.map((session) => (
-                              <Card 
-                                key={session.id}
-                                className="cursor-pointer hover:shadow-md transition-shadow border-l-4 border-l-primary"
-                                onClick={() => onExecuteSession?.(session.id)}
-                              >
-                                <CardContent className="p-4">
-                                  <div className="space-y-3">
-                                    <div className="flex items-start justify-between">
-                                      <h4 className="font-medium leading-none">{session.title}</h4>
-                                      <Button
-                                        size="sm"
-                                        className="h-8 px-3"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onExecuteSession?.(session.id);
-                                        }}
-                                      >
-                                        <Play className="w-3 h-3 mr-1" />
-                                        Start
-                                      </Button>
-                                    </div>
-                                    
-                                    {session.description && (
-                                      <p className="text-sm text-muted-foreground line-clamp-2">
-                                        {session.description}
-                                      </p>
-                                    )}
-                                    
-                                    <div className="flex flex-wrap gap-2">
-                                      <Badge 
-                                        variant="outline" 
-                                        className="text-xs flex items-center gap-1"
-                                      >
-                                        <Clock className="w-3 h-3" />
-                                        {session.target_duration_minutes}min
-                                      </Badge>
-                                      
-                                      <Badge 
-                                        className={cn("text-xs flex items-center gap-1", getIntensityColor(session.intensity))}
-                                      >
-                                        <Zap className="w-3 h-3" />
-                                        Intensity {session.intensity}/5
-                                      </Badge>
-                                      
-                                      <Badge 
-                                        variant="outline" 
-                                        className="text-xs flex items-center gap-1"
-                                      >
-                                        {getLocationIcon(session.location)}
-                                        {session.location}
-                                      </Badge>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))}
-                          </div>
+              {/* Mobile Compact Grid View */}
+              <div className="md:hidden space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {DAYS_OF_WEEK.map((day, index) => {
+                    const dayDate = weekDates[index];
+                    const isToday = isSameDay(dayDate, new Date());
+                    const daySessions = sessionsByDay[day.key] || [];
+                    
+                    return (
+                      <Card 
+                        key={day.key}
+                        className={cn(
+                          "overflow-hidden transition-all",
+                          isToday && "ring-2 ring-primary bg-primary/5"
                         )}
+                      >
+                        {/* Compact Day Header */}
+                        <CardHeader className="pb-2 px-3 pt-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <CardTitle className="text-sm font-medium">{day.label}</CardTitle>
+                              <p className="text-xs text-muted-foreground">
+                                {format(dayDate, 'MMM d')}
+                              </p>
+                            </div>
+                            {isToday && (
+                              <Badge variant="default" className="text-xs px-2 py-0.5">
+                                Today
+                              </Badge>
+                            )}
+                          </div>
+                        </CardHeader>
                         
-                        {/* Mobile Add Session Button */}
-                        <Button
-                          variant="outline"
-                          size="lg"
-                          className="w-full h-12"
-                          onClick={() => {
-                            setSelectedDay(day.key);
-                            setShowSessionCreator(true);
-                          }}
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          Add Session for {day.label}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        <CardContent className="px-3 pb-3 space-y-2">
+                          {/* Compact Sessions */}
+                          {daySessions.length === 0 ? (
+                            <div className="text-center py-3 text-muted-foreground">
+                              <p className="text-xs">No sessions</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {daySessions.slice(0, 2).map((session) => (
+                                <div 
+                                  key={session.id}
+                                  className="p-2 bg-muted/30 rounded-md cursor-pointer hover:bg-muted/50 transition-colors border-l-2 border-l-primary"
+                                  onClick={() => onExecuteSession?.(session.id)}
+                                >
+                                  <div className="flex items-center justify-between mb-1">
+                                    <h5 className="text-xs font-medium truncate flex-1 mr-2">
+                                      {session.title}
+                                    </h5>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-6 px-2 text-xs"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onExecuteSession?.(session.id);
+                                      }}
+                                    >
+                                      <Play className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                  
+                                  <div className="flex gap-1">
+                                    <Badge variant="outline" className="text-xs px-1 py-0 h-4">
+                                      <Clock className="w-2 h-2 mr-0.5" />
+                                      {session.target_duration_minutes}m
+                                    </Badge>
+                                    <Badge 
+                                      className={cn("text-xs px-1 py-0 h-4", getIntensityColor(session.intensity))}
+                                    >
+                                      <Zap className="w-2 h-2 mr-0.5" />
+                                      {session.intensity}
+                                    </Badge>
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {daySessions.length > 2 && (
+                                <div className="text-center">
+                                  <Badge variant="secondary" className="text-xs">
+                                    +{daySessions.length - 2} more
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Compact Add Session Button */}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-full h-8 text-xs mt-2"
+                            onClick={() => {
+                              setSelectedDay(day.key);
+                              setShowSessionCreator(true);
+                            }}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add Session
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
