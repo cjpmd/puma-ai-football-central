@@ -1454,6 +1454,7 @@ export type Database = {
           location: string
           plan_id: string
           planned_date: string | null
+          planned_time: string | null
           session_order: number | null
           target_duration_minutes: number | null
           title: string
@@ -1470,6 +1471,7 @@ export type Database = {
           location?: string
           plan_id: string
           planned_date?: string | null
+          planned_time?: string | null
           session_order?: number | null
           target_duration_minutes?: number | null
           title: string
@@ -1486,6 +1488,7 @@ export type Database = {
           location?: string
           plan_id?: string
           planned_date?: string | null
+          planned_time?: string | null
           session_order?: number | null
           target_duration_minutes?: number | null
           title?: string

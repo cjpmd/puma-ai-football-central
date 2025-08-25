@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
+import { Edit, Users, Trophy, Trash2, Target, Clock } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay, isToday, isPast } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +14,7 @@ import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from 
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
+  individualTrainingSessions?: any[];
   onEditEvent: (event: DatabaseEvent) => void;
   onTeamSelection: (event: DatabaseEvent) => void;
   onPostGameEdit: (event: DatabaseEvent) => void;
@@ -34,6 +35,7 @@ interface UserAvailability {
 
 export const EventsGridView: React.FC<EventsGridViewProps> = ({
   events,
+  individualTrainingSessions = [],
   onEditEvent,
   onTeamSelection,
   onPostGameEdit,
@@ -275,13 +277,16 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     });
   };
 
-  const sortedEvents = [...events].sort((a, b) => 
-    new Date(a.date).getTime() - new Date(b.date).getTime()
-  );
+  // Combine and sort all events (team events + individual training sessions)
+  const allItems = [
+    ...events.map(event => ({ ...event, itemType: 'team_event' })),
+    ...individualTrainingSessions.map(session => ({ ...session, itemType: 'individual_training' }))
+  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {sortedEvents.map((event) => {
+      {/* Team Events */}
+      {events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((event) => {
         const completed = isEventCompleted(event);
         const matchType = isMatchType(event.event_type);
         const teamScores = getTeamScores(event);
@@ -450,6 +455,60 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
           </Card>
         );
       })}
+
+      {/* Individual Training Sessions */}
+      {individualTrainingSessions.map((session) => (
+        <Card key={session.id} className="flex flex-col border-l-purple-500 border-l-4 bg-purple-50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between mb-2">
+              <Badge className="text-xs bg-purple-500" variant="default">
+                Individual Training
+              </Badge>
+              <Target className="w-4 h-4 text-purple-600" />
+            </div>
+            <CardTitle className="text-base line-clamp-2 text-purple-800">
+              {session.title}
+            </CardTitle>
+          </CardHeader>
+          
+          <CardContent className="pt-0 flex-1 flex flex-col">
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-purple-700">
+                {format(new Date(session.date), 'MMM dd, yyyy')}
+              </p>
+              
+              {session.start_time && (
+                <p className="text-sm text-purple-600">
+                  🕐 {session.start_time}
+                </p>
+              )}
+              
+              {session.location && (
+                <p className="text-sm text-purple-600">
+                  📍 {session.location}
+                </p>
+              )}
+              
+              <div className="flex items-center gap-2 text-sm text-purple-600">
+                <Clock className="w-4 h-4" />
+                <span>{session.duration_minutes} minutes</span>
+                {session.intensity && (
+                  <>
+                    <Target className="w-4 h-4 ml-2" />
+                    <span>Intensity {session.intensity}/5</span>
+                  </>
+                )}
+              </div>
+              
+              {session.description && (
+                <p className="text-sm text-purple-600 line-clamp-2">
+                  {session.description}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 };

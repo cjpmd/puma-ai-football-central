@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Edit, Users, Trophy, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit, Users, Trophy, Trash2, Target, Clock, MapPin } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isPast } from 'date-fns';
 import { WeatherService } from '@/services/weatherService';
@@ -16,6 +16,7 @@ import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from 
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
+  individualTrainingSessions?: any[];
   onEditEvent: (event: DatabaseEvent) => void;
   onTeamSelection: (event: DatabaseEvent) => void;
   onPostGameEdit: (event: DatabaseEvent) => void;
@@ -30,6 +31,7 @@ interface WeatherData {
 
 export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   events,
+  individualTrainingSessions = [],
   onEditEvent,
   onTeamSelection,
   onPostGameEdit,
@@ -40,7 +42,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
-  const { teams, user } = useAuth();
+  const { teams, user, connectedPlayers } = useAuth();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -172,7 +174,11 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   };
 
   const getEventsForDay = (day: Date) => {
-    return events.filter(event => isSameDay(new Date(event.date), day));
+    const teamEvents = events.filter(event => isSameDay(new Date(event.date), day));
+    const individualSessions = individualTrainingSessions.filter(session => 
+      isSameDay(new Date(session.date), day)
+    );
+    return { teamEvents, individualSessions };
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
@@ -320,7 +326,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
 
         {/* Calendar Days */}
         {calendarDays.map(day => {
-          const dayEvents = getEventsForDay(day);
+          const { teamEvents, individualSessions } = getEventsForDay(day);
+          const allEvents = [...teamEvents, ...individualSessions];
           const isCurrentMonth = isSameMonth(day, currentDate);
           const isEventToday = isSameDay(day, new Date());
 
@@ -336,7 +343,8 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                   </div>
                   
                   <div className="flex-1 space-y-1 overflow-y-auto">
-                    {dayEvents.map(event => {
+                    {/* Team Events */}
+                    {teamEvents.map(event => {
                       const completed = isEventCompleted(event);
                       const matchType = isMatchType(event.event_type);
                       const teamScores = getTeamScores(event);
@@ -511,6 +519,57 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Individual Training Sessions */}
+                    {individualSessions.map(session => {
+                      // Get connected player from auth context
+                      const connectedPlayer = connectedPlayers?.find(p => p.id === session.player_id);
+                      
+                      return (
+                        <div key={session.id} className="space-y-1 p-1 rounded border-l-purple-500 border-l-2 bg-purple-50">
+                          {/* Individual Training Header */}
+                          <div className="flex items-center justify-between">
+                            <Badge className="text-xs bg-purple-500" variant="default">
+                              Individual
+                            </Badge>
+                            <div className="flex items-center gap-1">
+                              <Target className="w-3 h-3 text-purple-600" />
+                            </div>
+                          </div>
+                          
+                          {/* Session Title */}
+                          <div className="text-xs font-medium truncate text-purple-800" title={session.title}>
+                            {session.title}
+                          </div>
+                          
+                          {/* Player Name */}
+                          {connectedPlayer && (
+                            <div className="text-xs text-purple-600 truncate">
+                              {connectedPlayer.name}
+                            </div>
+                          )}
+                          
+                          {/* Time and Duration */}
+                          {session.start_time && (
+                            <div className="text-xs text-purple-600">
+                              {session.start_time}
+                            </div>
+                          )}
+                          
+                          {/* Session Details */}
+                          <div className="flex items-center gap-1 text-xs">
+                            <Clock className="w-2 h-2 text-purple-500" />
+                            <span className="text-purple-600">{session.duration_minutes}min</span>
+                            {session.location && (
+                              <>
+                                <MapPin className="w-2 h-2 text-purple-500 ml-1" />
+                                <span className="text-purple-600 truncate">{session.location}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       );
