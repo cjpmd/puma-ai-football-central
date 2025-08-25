@@ -177,6 +177,35 @@ export class IndividualTrainingService {
     } as IndividualTrainingPlan;
   }
 
+  // Auto-activate plan when sessions are scheduled
+  private static async autoActivatePlanIfNeeded(planId: string): Promise<void> {
+    // Check if plan is still in draft status
+    const { data: plan, error: planError } = await supabase
+      .from('individual_training_plans')
+      .select('status')
+      .eq('id', planId)
+      .single();
+    
+    if (planError || !plan || plan.status !== 'draft') {
+      return; // Plan not found or not in draft status
+    }
+    
+    // Check if any session now has a planned_date (is scheduled)
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('individual_training_sessions')
+      .select('planned_date')
+      .eq('plan_id', planId)
+      .not('planned_date', 'is', null)
+      .limit(1);
+    
+    if (sessionsError || !sessions?.length) {
+      return; // No scheduled sessions yet
+    }
+    
+    // Auto-activate the plan
+    await this.updatePlan(planId, { status: 'active' });
+  }
+
   static async deletePlan(planId: string): Promise<void> {
     const { error } = await supabase
       .from('individual_training_plans')
@@ -224,7 +253,16 @@ export class IndividualTrainingService {
       .single();
     
     if (error) throw error;
-    return data as IndividualTrainingSession;
+    
+    // Auto-activate plan when first session is scheduled
+    if (updates.planned_date) {
+      await this.autoActivatePlanIfNeeded(data.plan_id);
+    }
+    
+    return {
+      ...data,
+      location: data.location as 'home' | 'pitch' | 'gym'
+    } as IndividualTrainingSession;
   }
 
   static async deleteSession(sessionId: string): Promise<void> {
