@@ -35,6 +35,7 @@ interface DragDropFormationEditorProps {
   onCaptainChange: (captainId: string) => void;
   gameDuration?: number;
   eventType?: string;
+  isPositionsLocked?: boolean;
 }
 
 // Map team setting values to PlayerIcon expected values
@@ -52,6 +53,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   onPeriodsChange,
   onCaptainChange,
   gameDuration = 50,
+  isPositionsLocked = false,
   eventType
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
@@ -314,6 +316,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const handleDragStart = (event: DragStartEvent) => {
+    // Prevent drag if positions are locked
+    if (isPositionsLocked) {
+      return;
+    }
+    
     const dragId = event.active.id as string;
     console.log('Drag started with ID:', dragId);
     
@@ -335,6 +342,12 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    // Prevent drop if positions are locked
+    if (isPositionsLocked) {
+      setDraggedPlayer(null);
+      return;
+    }
+    
     const { active, over } = event;
     
     console.log('Drag ended:', { 
@@ -695,18 +708,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                         zIndex: 20,
                       }}
                     >
-                      <div className={`rounded-full border-2 ${positionGroupColor} p-1`}>
-                        <PlayerIcon
-                          player={player}
-                          isCaptain={isCaptain}
-                          nameDisplayOption={mappedNameDisplayOption}
-                          isCircular={true}
-                          dragId={`${period.id}|position|${player.id}`}
-                          positionAbbreviation={position.abbreviation}
-                          showPositionLabel={true}
-                          isLarger={true}
-                        />
-                      </div>
+                       <div className={`rounded-full border-2 ${positionGroupColor} p-1 ${isPositionsLocked ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                         <PlayerIcon
+                           player={player}
+                           isCaptain={isCaptain}
+                           nameDisplayOption={mappedNameDisplayOption}
+                           isCircular={true}
+                           dragId={isPositionsLocked ? undefined : `${period.id}|position|${player.id}`}
+                           positionAbbreviation={position.abbreviation}
+                           showPositionLabel={true}
+                           isLarger={true}
+                         />
+                       </div>
                     </div>
                   )}
                 </div>
@@ -766,16 +779,17 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {unusedPlayers.map((player) => (
-                        <PlayerIcon
-                          key={player.id}
-                          player={player}
-                          isCaptain={eventType === 'training' ? false : player.id === globalCaptainId}
-                          nameDisplayOption={mappedNameDisplayOption}
-                          isCircular={false}
-                          dragId={player.id}
-                        />
-                      ))}
+                       {unusedPlayers.map((player) => (
+                         <div key={player.id} className={isPositionsLocked ? 'opacity-60 cursor-not-allowed' : ''}>
+                           <PlayerIcon
+                             player={player}
+                             isCaptain={eventType === 'training' ? false : player.id === globalCaptainId}
+                             nameDisplayOption={mappedNameDisplayOption}
+                             isCircular={false}
+                             dragId={isPositionsLocked ? undefined : player.id}
+                           />
+                         </div>
+                       ))}
                     </div>
                   )}
                 </CardContent>

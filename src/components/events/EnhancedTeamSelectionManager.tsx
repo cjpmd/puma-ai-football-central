@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock } from 'lucide-react';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { TrainingPlanEditor } from './TrainingPlanEditor';
@@ -45,6 +45,7 @@ interface TeamSelection {
   periods: FormationPeriod[];
   globalCaptainId?: string;
   performanceCategory?: string;
+  isPositionsLocked?: boolean;
   selectedStaff?: string[];
 }
 
@@ -231,10 +232,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     
     const newTeam: TeamSelection = {
       teamNumber: newTeamNumber,
-      squadPlayers: [],
-      periods: [defaultPeriod],
-      globalCaptainId: undefined,
-      performanceCategory: 'none',
+          squadPlayers: [],
+          periods: [defaultPeriod],
+          globalCaptainId: undefined,
+          performanceCategory: 'none',
+          isPositionsLocked: false,
       selectedStaff: []
     };
     
@@ -356,6 +358,15 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   const getCurrentTeam = (): TeamSelection | null => {
     return teamSelections[currentTeamIndex] || null;
+  };
+
+  const handleTogglePositionsLock = () => {
+    const currentTeam = getCurrentTeam();
+    if (!currentTeam) return;
+    
+    const newLockedState = !currentTeam.isPositionsLocked;
+    updateCurrentTeam({ isPositionsLocked: newLockedState });
+    toast.success(newLockedState ? 'Player positions locked' : 'Player positions unlocked');
   };
 
   const updateCurrentTeam = (updates: Partial<TeamSelection>) => {
@@ -707,6 +718,34 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 </Select>
               </div>
             )}
+
+            {/* Position Lock Toggle */}
+            {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size={isMobile ? "sm" : "default"}
+                   onClick={handleTogglePositionsLock}
+                   className={`${isMobile ? 'h-8 px-2' : 'px-3'} ${
+                     currentTeam.isPositionsLocked 
+                       ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' 
+                       : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                   }`}
+                   title={currentTeam.isPositionsLocked ? 'Unlock player positions' : 'Lock player positions'}
+                 >
+                   {currentTeam.isPositionsLocked ? (
+                     <Lock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                   ) : (
+                     <Unlock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                   )}
+                   {!isMobile && (
+                     <span className="ml-1">
+                       {currentTeam.isPositionsLocked ? 'Locked' : 'Unlocked'}
+                     </span>
+                   )}
+                </Button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -795,6 +834,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                       onPeriodsChange={handlePeriodsChange}
                       onCaptainChange={handleCaptainChange}
                       gameDuration={event.game_duration || 50}
+                      isPositionsLocked={currentTeam.isPositionsLocked || false}
                       eventType={event.event_type}
                     />
                   )}
