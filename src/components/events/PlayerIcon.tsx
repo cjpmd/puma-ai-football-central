@@ -96,8 +96,15 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
           </div>
         )}
         
-        {/* Content inside circle - always show player name for formation view */}
+        {/* Content inside circle - position abbreviation AND player name */}
         <div className="flex flex-col items-center justify-center text-center leading-none">
+          {/* Position abbreviation above name if provided */}
+          {showPositionLabel && positionAbbreviation && (
+            <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-blue-600 mb-0.5`}>
+              {positionAbbreviation}
+            </div>
+          )}
+          
           {/* Player name */}
           <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium leading-tight`}>
             {getDisplayName()}
