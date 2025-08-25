@@ -72,6 +72,16 @@ export function WeeklyPlanView({
     enabled: open && !!planId,
   });
 
+  // Fetch session completions for the current user/player
+  const { data: completions = {} } = useQuery({
+    queryKey: ['individual-session-completions', planId, plan?.player_id],
+    queryFn: () => {
+      if (!plan?.player_id) return {};
+      return IndividualTrainingService.getPlanSessionCompletions(planId, plan.player_id);
+    },
+    enabled: open && !!planId && !!plan?.player_id,
+  });
+
   // Get week start and dates
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Start on Monday
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -94,6 +104,10 @@ export function WeeklyPlanView({
 
   const getLocationIcon = (location: string) => {
     return <MapPin className="w-3 h-3" />;
+  };
+
+  const isSessionCompleted = (sessionId: string) => {
+    return !!completions[sessionId];
   };
 
   return (
@@ -184,15 +198,26 @@ export function WeeklyPlanView({
                               <div className="text-xs text-muted-foreground">No sessions</div>
                             </div>
                           ) : (
-                            daySessions.map((session) => (
-                              <Card 
-                                key={session.id} 
-                                className="cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={() => onExecuteSession?.(session.id)}
-                              >
-                                <CardHeader className="p-3 pb-2">
-                                  <CardTitle className="text-sm">{session.title}</CardTitle>
-                                </CardHeader>
+                             daySessions.map((session) => {
+                               const isCompleted = isSessionCompleted(session.id);
+                               return (
+                               <Card 
+                                 key={session.id} 
+                                 className={cn(
+                                   "cursor-pointer hover:shadow-md transition-shadow",
+                                   isCompleted && "bg-green-50 border-green-200"
+                                 )}
+                                 onClick={() => onExecuteSession?.(session.id)}
+                               >
+                                 <CardHeader className="p-3 pb-2">
+                                   <CardTitle className={cn(
+                                     "text-sm flex items-center gap-2",
+                                     isCompleted && "text-green-800"
+                                   )}>
+                                     {session.title}
+                                     {isCompleted && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+                                   </CardTitle>
+                                 </CardHeader>
                                 <CardContent className="p-3 pt-0 space-y-2">
                                   <div className="flex flex-wrap gap-1">
                                     <Badge 
@@ -225,23 +250,31 @@ export function WeeklyPlanView({
                                     </p>
                                   )}
 
-                                  <div className="flex gap-1">
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="h-7 text-xs flex-1"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onExecuteSession?.(session.id);
-                                      }}
-                                    >
-                                      <Play className="w-3 h-3 mr-1" />
-                                      Start
-                                    </Button>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            ))
+                                   <div className="flex gap-1">
+                                     {isCompleted ? (
+                                       <Badge variant="outline" className="h-7 text-xs flex-1 bg-green-100 text-green-800 border-green-300">
+                                         <CheckCircle2 className="w-3 h-3 mr-1" />
+                                         Completed
+                                       </Badge>
+                                     ) : (
+                                       <Button
+                                         size="sm"
+                                         variant="outline"
+                                         className="h-7 text-xs flex-1"
+                                         onClick={(e) => {
+                                           e.stopPropagation();
+                                           onExecuteSession?.(session.id);
+                                         }}
+                                       >
+                                         <Play className="w-3 h-3 mr-1" />
+                                         Start
+                                       </Button>
+                                     )}
+                                   </div>
+                                 </CardContent>
+                               </Card>
+                               );
+                             })
                           )}
                           
                           {/* Add Session Button */}
@@ -269,33 +302,39 @@ export function WeeklyPlanView({
                 {/* Week Grid - All 7 days visible */}
                 <div className="grid grid-cols-7 gap-1 mb-4">
                   {DAYS_OF_WEEK.map((day, index) => {
-                    const dayDate = weekDates[index];
-                    const isToday = isSameDay(dayDate, new Date());
-                    const daySessions = sessionsByDay[day.key] || [];
+                     const dayDate = weekDates[index];
+                     const isToday = isSameDay(dayDate, new Date());
+                     const daySessions = sessionsByDay[day.key] || [];
+                     const completedSessions = daySessions.filter(s => isSessionCompleted(s.id)).length;
+                     const hasCompletedSessions = completedSessions > 0;
                     
                     return (
                       <Button
                         key={day.key}
                         variant={isToday ? "default" : "outline"}
                         size="sm"
-                        className={cn(
-                          "h-16 p-1 flex flex-col items-center justify-center text-xs relative",
-                          selectedDay === day.key && "ring-2 ring-primary",
-                          daySessions.length > 0 && "bg-blue-50 hover:bg-blue-100"
-                        )}
-                        onClick={() => setSelectedDay(day.key)}
-                      >
-                        <div className="font-medium truncate w-full text-center">
-                          {day.label.slice(0, 3)}
-                        </div>
-                        <div className="text-xs opacity-70">
-                          {format(dayDate, 'd')}
-                        </div>
-                        {daySessions.length > 0 && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white rounded-full flex items-center justify-center text-xs font-bold">
-                            {daySessions.length}
-                          </div>
-                        )}
+                         className={cn(
+                           "h-16 p-1 flex flex-col items-center justify-center text-xs relative",
+                           selectedDay === day.key && "ring-2 ring-primary",
+                           daySessions.length > 0 && !hasCompletedSessions && "bg-blue-50 hover:bg-blue-100",
+                           hasCompletedSessions && "bg-green-50 hover:bg-green-100"
+                         )}
+                         onClick={() => setSelectedDay(day.key)}
+                       >
+                         <div className="font-medium truncate w-full text-center">
+                           {day.label.slice(0, 3)}
+                         </div>
+                         <div className="text-xs opacity-70">
+                           {format(dayDate, 'd')}
+                         </div>
+                         {daySessions.length > 0 && (
+                           <div className={cn(
+                             "absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-xs font-bold text-white",
+                             hasCompletedSessions ? "bg-green-600" : "bg-primary"
+                           )}>
+                             {completedSessions > 0 ? completedSessions : daySessions.length}
+                           </div>
+                         )}
                       </Button>
                     );
                   })}
@@ -325,28 +364,44 @@ export function WeeklyPlanView({
                           <p className="text-sm">No sessions planned</p>
                         </div>
                       ) : (
-                        sessionsByDay[selectedDay]?.map((session) => (
-                          <div 
-                            key={session.id}
-                            className="p-3 bg-muted/30 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors border-l-3 border-l-primary"
-                            onClick={() => onExecuteSession?.(session.id)}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <h5 className="font-medium text-sm truncate flex-1 mr-2">
-                                {session.title}
-                              </h5>
-                              <Button
-                                size="sm"
-                                className="h-7 px-3 text-xs"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  onExecuteSession?.(session.id);
-                                }}
-                              >
-                                <Play className="w-3 h-3 mr-1" />
-                                Start
-                              </Button>
-                            </div>
+                         sessionsByDay[selectedDay]?.map((session) => {
+                           const isCompleted = isSessionCompleted(session.id);
+                           return (
+                           <div 
+                             key={session.id}
+                             className={cn(
+                               "p-3 rounded-lg cursor-pointer hover:bg-muted/50 transition-colors border-l-3",
+                               isCompleted ? "bg-green-50 border-l-green-600" : "bg-muted/30 border-l-primary"
+                             )}
+                             onClick={() => onExecuteSession?.(session.id)}
+                           >
+                             <div className="flex items-center justify-between mb-2">
+                               <h5 className={cn(
+                                 "font-medium text-sm truncate flex-1 mr-2 flex items-center gap-2",
+                                 isCompleted && "text-green-800"
+                               )}>
+                                 {session.title}
+                                 {isCompleted && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+                               </h5>
+                               {isCompleted ? (
+                                 <Badge variant="outline" className="h-7 px-3 text-xs bg-green-100 text-green-800 border-green-300">
+                                   <CheckCircle2 className="w-3 h-3 mr-1" />
+                                   Done
+                                 </Badge>
+                               ) : (
+                                 <Button
+                                   size="sm"
+                                   className="h-7 px-3 text-xs"
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     onExecuteSession?.(session.id);
+                                   }}
+                                 >
+                                   <Play className="w-3 h-3 mr-1" />
+                                   Start
+                                 </Button>
+                               )}
+                             </div>
                             
                             {session.description && (
                               <p className="text-xs text-muted-foreground mb-2 line-clamp-1">
@@ -369,9 +424,10 @@ export function WeeklyPlanView({
                                 {getLocationIcon(session.location)}
                                 {session.location}
                               </Badge>
-                            </div>
-                          </div>
-                        ))
+                             </div>
+                           </div>
+                           );
+                         })
                       )}
                     </CardContent>
                   </Card>
@@ -409,6 +465,7 @@ export function WeeklyPlanView({
             dayOfWeek={selectedDay}
             onSessionCreated={() => {
               queryClient.invalidateQueries({ queryKey: ['individual-training-sessions', planId] });
+              queryClient.invalidateQueries({ queryKey: ['individual-session-completions', planId, plan?.player_id] });
             }}
           />
         )}

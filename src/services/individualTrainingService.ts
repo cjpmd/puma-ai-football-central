@@ -338,6 +338,37 @@ export class IndividualTrainingService {
     return { ...data, drill_results: data.drill_results as Record<string, any> } as IndividualSessionCompletion;
   }
 
+  static async getPlanSessionCompletions(planId: string, playerId: string): Promise<Record<string, IndividualSessionCompletion>> {
+    // First get all sessions for this plan
+    const { data: sessions, error: sessionsError } = await supabase
+      .from('individual_training_sessions')
+      .select('id')
+      .eq('plan_id', planId);
+    
+    if (sessionsError) throw sessionsError;
+    
+    if (!sessions?.length) return {};
+    
+    // Then get completions for all sessions
+    const sessionIds = sessions.map(s => s.id);
+    const { data: completions, error: completionsError } = await supabase
+      .from('individual_session_completions')
+      .select('*')
+      .in('session_id', sessionIds)
+      .eq('player_id', playerId);
+    
+    if (completionsError) throw completionsError;
+    
+    // Return as a map of session_id -> completion
+    return (completions || []).reduce((acc, completion) => {
+      acc[completion.session_id] = {
+        ...completion,
+        drill_results: completion.drill_results as Record<string, any>
+      } as IndividualSessionCompletion;
+      return acc;
+    }, {} as Record<string, IndividualSessionCompletion>);
+  }
+
   // Drill Library for Players
   static async getAvailableDrills(searchTerm?: string, tags?: string[], difficulty?: string): Promise<DrillWithTags[]> {
     let query = supabase
