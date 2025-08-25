@@ -1,6 +1,5 @@
 
 import { useDroppable } from '@dnd-kit/core';
-import { PlayerIcon } from './PlayerIcon';
 import { SquadPlayer, PositionSlot as PositionSlotType } from '@/types/teamSelection';
 
 interface PositionSlotProps {
@@ -54,7 +53,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         ${isLarger ? 'w-16 h-16' : 'w-14 h-14'}
         rounded-full border-2 border-dashed
         ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 scale-110 shadow-lg animate-pulse' : 
-          player ? positionGroupColor : 'border-white/60 bg-white/20 hover:border-white/80 hover:bg-white/30'}
+          (player ? 'border-transparent bg-transparent' : 'border-white/60 bg-white/20 hover:border-white/80 hover:bg-white/30')}
         transition-all duration-300 ease-out backdrop-blur-sm
       `}
       style={{
@@ -63,31 +62,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         transform: 'translate(-50%, -50%)',
       }}
     >
-      {player ? (
-        <div className="flex flex-col items-center justify-center text-center relative">
-          {/* Captain indicator */}
-          {isCaptain && (
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-black">C</span>
-            </div>
-          )}
-          
-          {/* Position abbreviation above player name */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-gray-700 mb-0.5`}>
-            {position.abbreviation || position.positionName?.substring(0, 2) || ''}
-          </div>
-          
-          {/* Player name */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium text-center leading-tight`}>
-            {player.name}
-          </div>
-          
-          {/* Squad number below */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-gray-600 mt-0.5`}>
-            #{player.squadNumber}
-          </div>
-        </div>
-      ) : (
+      {player ? null : (
         <div className="flex flex-col items-center justify-center text-center">
           <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-white/80 mb-1`}>
             {position.abbreviation}
