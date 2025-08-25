@@ -56,12 +56,12 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
 
   return (
     <Sheet open={true} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[80vh]">
+      <SheetContent side="bottom" className="h-[85vh] max-h-[600px]">
         <SheetHeader className="pb-4">
           <SheetTitle className="text-left capitalize">{title}</SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-4 h-full flex flex-col">
+        <div className="space-y-3 h-full flex flex-col overflow-hidden">
           {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -94,8 +94,8 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
           </div>
 
           {/* Tag Grid */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="flex-1 overflow-y-auto pb-4">
+            <div className="grid grid-cols-2 gap-2 px-1">
               {filteredTags.map((tag) => {
                 const isSelected = localSelection.includes(tag.id);
                 return (
@@ -103,26 +103,26 @@ export const TagSelector: React.FC<TagSelectorProps> = ({
                     key={tag.id}
                     onClick={() => toggleTag(tag.id)}
                     className={`
-                      relative p-3 rounded-lg border-2 transition-all
+                      relative p-2 rounded-lg border-2 transition-all text-left
                       ${isSelected 
                         ? 'border-primary bg-primary/10' 
                         : 'border-muted hover:border-muted-foreground/50'
                       }
                     `}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <div 
-                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0" 
                         style={{ backgroundColor: tag.color }}
                       />
-                      <span className="text-sm font-medium text-left truncate">
+                      <span className="text-xs font-medium truncate">
                         {tag.name}
                       </span>
                     </div>
                     
                     {isSelected && (
-                      <div className="absolute top-1 right-1">
-                        <Check className="h-4 w-4 text-primary" />
+                      <div className="absolute -top-1 -right-1">
+                        <Check className="h-3 w-3 text-primary bg-background rounded-full" />
                       </div>
                     )}
                   </button>

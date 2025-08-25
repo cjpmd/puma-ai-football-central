@@ -7,6 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trophy, Calendar, Users, Filter, BarChart3 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { PerformanceAnalytics } from './PerformanceAnalytics';
+import { TrainingRecommendationsCard } from './TrainingRecommendationsCard';
+import { PostGameAnalysisService } from '@/services/postGameAnalysisService';
 
 interface ResultsSummaryProps {
   selectedTeamId: string;
@@ -55,6 +58,14 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [eventTypeStats, setEventTypeStats] = useState<{ [eventType: string]: EventTypeStats }>({});
+  const [performanceData, setPerformanceData] = useState<{
+    improvingAreas: string[];
+    persistentChallenges: string[];
+    recentPositives: string[];
+    recentGamesCount: number;
+  } | null>(null);
+  const [trainingRecommendations, setTrainingRecommendations] = useState<any[]>([]);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   useEffect(() => {
     if (selectedTeamId) {
@@ -64,6 +75,9 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
 
   useEffect(() => {
     calculateStats();
+    if (results.length > 0) {
+      loadPerformanceAnalytics();
+    }
   }, [results]);
 
   const loadResults = async () => {
@@ -189,6 +203,35 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
       console.error('Error loading results:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPerformanceAnalytics = async () => {
+    try {
+      setAnalyticsLoading(true);
+      
+      // Load performance trends
+      const trends = await PostGameAnalysisService.getPerformanceTrends(selectedTeamId, 60);
+      
+      // Count recent games with performance data
+      const recentPerformance = await PostGameAnalysisService.getTeamPerformanceHistory(selectedTeamId, 30);
+      
+      setPerformanceData({
+        ...trends,
+        recentGamesCount: recentPerformance.length
+      });
+
+      // Load training recommendations
+      const recommendations = await PostGameAnalysisService.getRecommendedDrillsFromChallenges(
+        selectedTeamId,
+        { recentGames: 3, maxRecommendations: 8 }
+      );
+      setTrainingRecommendations(recommendations);
+
+    } catch (error) {
+      console.error('Error loading performance analytics:', error);
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -331,6 +374,27 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
 
   return (
     <div className="space-y-6">
+      {/* Performance Analytics */}
+      {(performanceData || trainingRecommendations.length > 0) && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Performance Insights</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <PerformanceAnalytics 
+              teamId={selectedTeamId} 
+              data={performanceData || undefined} 
+            />
+            <TrainingRecommendationsCard 
+              recommendations={trainingRecommendations}
+              loading={analyticsLoading}
+              onCreateTrainingSession={() => {
+                // Navigate to training page or open training creator
+                window.location.href = '/training';
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <Card>
         <CardHeader>
