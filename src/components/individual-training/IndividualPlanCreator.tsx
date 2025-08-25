@@ -46,8 +46,8 @@ export function IndividualPlanCreator({
   userPlayers = [],
   selectedPlayerId 
 }: IndividualPlanCreatorProps) {
-  const [formData, setFormData] = useState<PlanCreationData & { player_id: string }>({
-    player_id: selectedPlayerId || '',
+  const [formData, setFormData] = useState<PlanCreationData & { player_ids: string[] }>({
+    player_ids: selectedPlayerId ? [selectedPlayerId] : [],
     title: '',
     objective_text: '',
     plan_type: 'self',
@@ -66,7 +66,7 @@ export function IndividualPlanCreator({
   const queryClient = useQueryClient();
 
   const createPlanMutation = useMutation({
-    mutationFn: async (data: PlanCreationData & { player_id: string }) => {
+    mutationFn: async (data: PlanCreationData & { player_ids: string[] }) => {
       return IndividualTrainingService.createPlan(data);
     },
     onSuccess: () => {
@@ -83,7 +83,7 @@ export function IndividualPlanCreator({
 
   const resetForm = () => {
     setFormData({
-      player_id: selectedPlayerId || '',
+      player_ids: selectedPlayerId ? [selectedPlayerId] : [],
       title: '',
       objective_text: '',
       plan_type: 'self',
@@ -102,8 +102,8 @@ export function IndividualPlanCreator({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.player_id) {
-      toast.error('Please select a player');
+    if (!formData.player_ids || formData.player_ids.length === 0) {
+      toast.error('Please select at least one player');
       return;
     }
     
@@ -142,22 +142,41 @@ export function IndividualPlanCreator({
           {/* Player Selection */}
           {userPlayers.length > 0 && (
             <div className="space-y-2">
-              <Label htmlFor="player">Player *</Label>
-              <Select 
-                value={formData.player_id} 
-                onValueChange={(value) => setFormData(prev => ({ ...prev, player_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a player" />
-                </SelectTrigger>
-                <SelectContent>
-                  {userPlayers.map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
+              <Label htmlFor="players">Players *</Label>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {userPlayers.map((player) => (
+                  <div key={player.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={player.id}
+                      checked={formData.player_ids.includes(player.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setFormData(prev => ({
+                            ...prev,
+                            player_ids: [...prev.player_ids, player.id]
+                          }));
+                        } else {
+                          setFormData(prev => ({
+                            ...prev,
+                            player_ids: prev.player_ids.filter(id => id !== player.id)
+                          }));
+                        }
+                      }}
+                    />
+                    <Label htmlFor={player.id} className="text-sm font-normal cursor-pointer">
                       {player.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {formData.player_ids.length > 0 && (
+                <div className="text-sm text-muted-foreground">
+                  {formData.player_ids.length} player{formData.player_ids.length > 1 ? 's' : ''} selected
+                  {formData.player_ids.length > 1 && (
+                    <Badge variant="secondary" className="ml-2">Group Plan</Badge>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

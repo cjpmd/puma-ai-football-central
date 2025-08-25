@@ -17,7 +17,8 @@ import {
   TrendingUp,
   BookOpen,
   Play,
-  CheckCircle2
+  CheckCircle2,
+  Users
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -166,67 +167,93 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
               </Card>
             ) : (
               <div className="grid gap-4">
-                {activePlans.map((plan) => (
-                  <Card key={plan.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="flex items-center gap-2">
-                            {plan.title}
-                            <Badge variant={plan.plan_type === 'ai' ? 'default' : 'secondary'}>
-                              {plan.plan_type === 'ai' ? 'AI Generated' : plan.plan_type === 'coach' ? 'Coach Assigned' : 'Self Created'}
-                            </Badge>
-                          </CardTitle>
-                          {plan.objective_text && (
-                            <CardDescription className="mt-1">
-                              {plan.objective_text}
-                            </CardDescription>
+                {activePlans.map((plan: any) => {
+                  // Check if it's a group plan by looking at training_plan_players
+                  const isGroupPlan = plan.is_group_plan || (plan.training_plan_players && plan.training_plan_players.length > 1);
+                  const playerCount = plan.training_plan_players ? plan.training_plan_players.length : 1;
+                  
+                  return (
+                    <Card key={plan.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader>
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <CardTitle className="flex items-center gap-2">
+                              {plan.title}
+                              <Badge variant={plan.plan_type === 'ai' ? 'default' : 'secondary'}>
+                                {plan.plan_type === 'ai' ? 'AI Generated' : plan.plan_type === 'coach' ? 'Coach Assigned' : 'Self Created'}
+                              </Badge>
+                              {isGroupPlan && (
+                                <Badge variant="outline" className="text-blue-600 border-blue-600">
+                                  <Users className="w-3 h-3 mr-1" />
+                                  {playerCount} Players
+                                </Badge>
+                              )}
+                            </CardTitle>
+                            {plan.objective_text && (
+                              <CardDescription className="mt-1">
+                                {plan.objective_text}
+                              </CardDescription>
+                            )}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setSelectedPlanId(plan.id)}
+                          >
+                            View Plan
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          {/* Players in the plan (for group plans) */}
+                          {isGroupPlan && plan.training_plan_players && (
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium text-muted-foreground">Players</h4>
+                              <div className="flex flex-wrap gap-1">
+                                {plan.training_plan_players.map((tpp: any) => (
+                                  <Badge key={tpp.players.id} variant="outline" className="text-xs">
+                                    {tpp.players.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
                           )}
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setSelectedPlanId(plan.id)}
-                        >
-                          View Plan
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap gap-2">
-                          {plan.focus_areas.map((area) => (
-                            <Badge key={area} variant="outline">
-                              {area}
-                            </Badge>
-                          ))}
-                        </div>
-                        
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
-                              {new Date(plan.start_date).toLocaleDateString()} - {new Date(plan.end_date).toLocaleDateString()}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {plan.weekly_sessions} sessions/week
+                          
+                          <div className="flex flex-wrap gap-2">
+                            {plan.focus_areas.map((area) => (
+                              <Badge key={area} variant="outline">
+                                {area}
+                              </Badge>
+                            ))}
+                          </div>
+                          
+                          <div className="flex items-center justify-between text-sm text-muted-foreground">
+                            <div className="flex items-center gap-4">
+                              <div className="flex items-center gap-1">
+                                <Calendar className="w-4 h-4" />
+                                {new Date(plan.start_date).toLocaleDateString()} - {new Date(plan.end_date).toLocaleDateString()}
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-4 h-4" />
+                                {plan.weekly_sessions} sessions/week
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        {/* Progress bar placeholder */}
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span>Progress</span>
-                            <span>65%</span>
+                          
+                          {/* Progress bar placeholder */}
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span>Progress</span>
+                              <span>65%</span>
+                            </div>
+                            <Progress value={65} className="w-full" />
                           </div>
-                          <Progress value={65} className="w-full" />
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

@@ -1377,6 +1377,7 @@ export type Database = {
           end_date: string
           focus_areas: string[] | null
           id: string
+          is_group_plan: boolean | null
           objective_text: string | null
           plan_type: string
           player_id: string
@@ -1395,6 +1396,7 @@ export type Database = {
           end_date: string
           focus_areas?: string[] | null
           id?: string
+          is_group_plan?: boolean | null
           objective_text?: string | null
           plan_type?: string
           player_id: string
@@ -1413,6 +1415,7 @@ export type Database = {
           end_date?: string
           focus_areas?: string[] | null
           id?: string
+          is_group_plan?: boolean | null
           objective_text?: string | null
           plan_type?: string
           player_id?: string
@@ -2831,6 +2834,42 @@ export type Database = {
             columns: ["training_session_id"]
             isOneToOne: false
             referencedRelation: "training_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_plan_players: {
+        Row: {
+          created_at: string | null
+          id: string
+          plan_id: string
+          player_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          plan_id: string
+          player_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          plan_id?: string
+          player_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_plan_players_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "individual_training_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_plan_players_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id"]
           },
         ]

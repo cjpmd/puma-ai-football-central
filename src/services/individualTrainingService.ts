@@ -18,11 +18,17 @@ import type {
 
 export class IndividualTrainingService {
   
-  // Plans
+  // Plans - Updated to support group plans
   static async getUserPlans(userId: string): Promise<IndividualTrainingPlan[]> {
     const { data, error } = await supabase
       .from('individual_training_plans')
-      .select('*')
+      .select(`
+        *,
+        training_plan_players(
+          player_id,
+          players(id, name, squad_number)
+        )
+      `)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -32,8 +38,11 @@ export class IndividualTrainingService {
   static async getPlayerPlans(playerId: string): Promise<IndividualTrainingPlan[]> {
     const { data, error } = await supabase
       .from('individual_training_plans')
-      .select('*')
-      .eq('player_id', playerId)
+      .select(`
+        *,
+        training_plan_players!inner(player_id)
+      `)
+      .eq('training_plan_players.player_id', playerId)
       .order('created_at', { ascending: false });
     
     if (error) throw error;
@@ -46,11 +55,13 @@ export class IndividualTrainingService {
     })) as IndividualTrainingPlan[];
   }
 
-  static async createPlan(planData: PlanCreationData & { player_id: string; coach_id?: string }): Promise<IndividualTrainingPlan> {
+  static async createPlan(planData: PlanCreationData & { player_id?: string; player_ids?: string[]; coach_id?: string }): Promise<IndividualTrainingPlan> {
+    const isGroupPlan = !!(planData.player_ids && planData.player_ids.length > 1);
+    
     const { data, error } = await supabase
       .from('individual_training_plans')
       .insert({
-        player_id: planData.player_id,
+        player_id: isGroupPlan ? null : planData.player_id,
         coach_id: planData.coach_id,
         title: planData.title,
         objective_text: planData.objective_text,
@@ -60,6 +71,7 @@ export class IndividualTrainingService {
         weekly_sessions: planData.weekly_sessions,
         focus_areas: planData.focus_areas,
         visibility: planData.visibility,
+        is_group_plan: isGroupPlan,
         accountability: {
           location_preference: planData.location_preference,
           intensity_preference: planData.intensity_preference
@@ -70,21 +82,39 @@ export class IndividualTrainingService {
     
     if (error) throw error;
     
-    // Auto-create a player objective for this training plan
     const plan = data as IndividualTrainingPlan;
-    await this.createObjectiveForPlan(plan);
+    
+    // Create player assignments
+    const playerIds = planData.player_ids || (planData.player_id ? [planData.player_id] : []);
+    if (playerIds.length > 0) {
+      const playerAssignments = playerIds.map(playerId => ({
+        plan_id: plan.id,
+        player_id: playerId
+      }));
+
+      const { error: assignmentError } = await supabase
+        .from('training_plan_players')
+        .insert(playerAssignments);
+      
+      if (assignmentError) throw assignmentError;
+      
+      // Auto-create objectives for each player
+      for (const playerId of playerIds) {
+        await this.createObjectiveForPlayer(plan, playerId);
+      }
+    }
     
     return plan;
   }
 
-  // Helper method to create an objective for a training plan
-  private static async createObjectiveForPlan(plan: IndividualTrainingPlan): Promise<void> {
+  // Helper method to create an objective for a specific player
+  private static async createObjectiveForPlayer(plan: IndividualTrainingPlan, playerId: string): Promise<void> {
     try {
       // Get current player objectives
       const { data: playerData, error: playerError } = await supabase
         .from('players')
         .select('objectives')
-        .eq('id', plan.player_id)
+        .eq('id', playerId)
         .single();
 
       if (playerError) {
@@ -119,7 +149,7 @@ export class IndividualTrainingService {
       const { error: updateError } = await supabase
         .from('players')
         .update({ objectives: updatedObjectives })
-        .eq('id', plan.player_id);
+        .eq('id', playerId);
 
       if (updateError) {
         console.warn('Could not create objective for training plan:', updateError);
