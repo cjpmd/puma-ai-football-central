@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { PerformanceAnalysisSection } from './PerformanceAnalysisSection';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface PostGameEditorProps {
   eventId: string;
@@ -41,9 +43,25 @@ interface TeamSelection {
 }
 
 interface Scores {
-  [key: string]: string;
+  [key: string]: string | any;
   home?: string;
   away?: string;
+  performance_analysis?: {
+    positives: {
+      on_ball: string[];
+      off_ball: string[];
+    };
+    challenges: {
+      on_ball: string[];
+      off_ball: string[];
+    };
+  };
+}
+
+interface DrillTag {
+  id: string;
+  name: string;
+  color: string;
 }
 
 export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen, onClose }) => {
@@ -53,14 +71,21 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const [scores, setScores] = useState<Scores>({});
   const [coachNotes, setCoachNotes] = useState('');
   const [staffNotes, setStaffNotes] = useState('');
+  const [performanceAnalysis, setPerformanceAnalysis] = useState({
+    positives: { on_ball: [], off_ball: [] },
+    challenges: { on_ball: [], off_ball: [] }
+  });
+  const [drillTags, setDrillTags] = useState<DrillTag[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { hasPermission } = useAuthorization();
 
   useEffect(() => {
     if (eventId && isOpen) {
       loadEventData();
       loadTeamSelections();
+      loadDrillTags();
     }
   }, [eventId, isOpen]);
 
@@ -102,6 +127,16 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       
       setCoachNotes(eventData?.coach_notes || '');
       setStaffNotes(eventData?.staff_notes || '');
+      
+      // Load performance analysis from scores
+      if (scoresData?.performance_analysis) {
+        setPerformanceAnalysis(scoresData.performance_analysis);
+      } else {
+        setPerformanceAnalysis({
+          positives: { on_ball: [], off_ball: [] },
+          challenges: { on_ball: [], off_ball: [] }
+        });
+      }
     } catch (error: any) {
       console.error('Error loading event data:', error);
       toast({
@@ -200,6 +235,20 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     }
   };
 
+  const loadDrillTags = async () => {
+    try {
+      const { data: tags, error } = await supabase
+        .from('drill_tags')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setDrillTags(tags || []);
+    } catch (error) {
+      console.error('Error loading drill tags:', error);
+    }
+  };
+
   const handleScoreChange = (field: string, value: string) => {
     setScores(prev => ({ ...prev, [field]: value }));
   };
@@ -217,13 +266,16 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       console.log('Saving scores:', scores);
       console.log('Saving POTM by team:', playerOfMatchByTeam);
 
-      // Prepare scores data with POTM for each team
+      // Prepare scores data with POTM for each team and performance analysis
       const updatedScores = { ...scores };
       Object.entries(playerOfMatchByTeam).forEach(([teamNumber, playerId]) => {
         if (playerId) {
           updatedScores[`potm_team_${teamNumber}`] = playerId;
         }
       });
+      
+      // Add performance analysis to scores
+      updatedScores.performance_analysis = performanceAnalysis;
 
       const { error } = await supabase
         .from('events')
@@ -387,6 +439,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
         <div className="text-center py-4 text-muted-foreground">
           No team selections found for this event. Please set up team selections to enter match results.
         </div>
+      )}
+
+      {/* Performance Analysis - Only visible to coaches */}
+      {teamSelections.length > 0 && hasPermission({ resource: 'events', action: 'manage' }) && (
+        <PerformanceAnalysisSection
+          analysis={performanceAnalysis}
+          onAnalysisChange={setPerformanceAnalysis}
+          tags={drillTags}
+        />
       )}
 
       {/* Notes */}
