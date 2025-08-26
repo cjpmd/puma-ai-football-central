@@ -24,6 +24,9 @@ import TeamManagement from "./pages/TeamManagement";
 import TeamManagementMobile from "./pages/TeamManagementMobile";
 import ClubManagement from "./pages/ClubManagement";
 import ClubManagementMobile from "./pages/ClubManagementMobile";
+import DataRecovery from "./pages/DataRecovery";
+import EmailTestPage from "./pages/EmailTestPage";
+import AvailabilityConfirmation from "./pages/AvailabilityConfirmation";
 import StaffManagement from "./pages/StaffManagement";
 import StaffManagementMobile from "./pages/StaffManagementMobile";
 import Training from "./pages/Training";
@@ -169,9 +172,12 @@ const App = () => (
                       mobileComponent={<SubscriptionManagementMobile />}
                     />
                   </ProtectedRoute>
-                }
-              />
-              <Route path="*" element={<NotFound />} />
+                 }
+               />
+               <Route path="/data-recovery" element={<DataRecovery />} />
+               <Route path="/email-test" element={<EmailTestPage />} />
+               <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
+               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthorizationProvider>
         </AuthProvider>

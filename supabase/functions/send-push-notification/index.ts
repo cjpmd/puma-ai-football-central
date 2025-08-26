@@ -135,6 +135,8 @@ serve(async (req) => {
         .insert({
           user_id: profile.id,
           event_id: eventId,
+          title: title,
+          body: body,
           notification_type: 'availability_request',
           method: 'push',
           status: response.ok ? 'sent' : 'failed',

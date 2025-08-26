@@ -38,14 +38,16 @@ export const NotificationPermissionManager: React.FC = () => {
 
   const loadNotificationPreferences = async () => {
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('notification_preferences')
         .eq('id', user?.id)
         .single();
 
-      if (data?.notification_preferences) {
-        setPreferences({ ...preferences, ...data.notification_preferences });
+      if (error) throw error;
+
+      if (data?.notification_preferences && typeof data.notification_preferences === 'object') {
+        setPreferences({ ...preferences, ...(data.notification_preferences as Partial<NotificationPreferences>) });
       }
     } catch (error) {
       console.error('Error loading notification preferences:', error);

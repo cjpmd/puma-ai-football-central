@@ -1931,6 +1931,7 @@ export type Database = {
           fa_id: string | null
           id: string
           name: string | null
+          notification_preferences: Json | null
           phone: string | null
           push_token: string | null
           roles: string[] | null
@@ -1943,6 +1944,7 @@ export type Database = {
           fa_id?: string | null
           id: string
           name?: string | null
+          notification_preferences?: Json | null
           phone?: string | null
           push_token?: string | null
           roles?: string[] | null
@@ -1955,6 +1957,7 @@ export type Database = {
           fa_id?: string | null
           id?: string
           name?: string | null
+          notification_preferences?: Json | null
           phone?: string | null
           push_token?: string | null
           roles?: string[] | null

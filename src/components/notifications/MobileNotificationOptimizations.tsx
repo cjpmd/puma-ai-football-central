@@ -21,6 +21,8 @@ import { Device } from '@capacitor/device';
 import { App } from '@capacitor/app';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface DeviceInfo {
   platform: string;
@@ -39,6 +41,7 @@ interface NotificationSettings {
 }
 
 export const MobileNotificationOptimizations: React.FC = () => {
+  const { user } = useAuth();
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
     badgeCount: 0,
@@ -227,21 +230,16 @@ export const MobileNotificationOptimizations: React.FC = () => {
   const testNotificationDelivery = async () => {
     try {
       // Send a test notification to verify delivery
-      const response = await fetch('/api/test-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const { error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
           title: 'Delivery Test',
           body: `Test sent at ${new Date().toLocaleTimeString()}`,
-          priority: 'high'
-        })
+          userIds: [user?.id] // Send to current user only
+        }
       });
 
-      if (response.ok) {
-        toast.success('Test notification sent - check if you received it');
-      } else {
-        toast.error('Failed to send test notification');
-      }
+      if (error) throw error;
+      toast.success('Test notification sent - check if you received it');
     } catch (error) {
       console.error('Error testing notification delivery:', error);
       toast.error('Error testing notifications');
