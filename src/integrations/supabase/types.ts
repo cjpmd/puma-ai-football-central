@@ -1538,39 +1538,51 @@ export type Database = {
       notification_logs: {
         Row: {
           created_at: string
+          deep_link_token: string | null
           delivered_at: string | null
           event_id: string | null
           id: string
           metadata: Json | null
           method: string
+          notification_category: string | null
           notification_type: string
           opened_at: string | null
+          quick_actions: Json | null
+          scheduled_notification_id: string | null
           sent_at: string
           status: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          deep_link_token?: string | null
           delivered_at?: string | null
           event_id?: string | null
           id?: string
           metadata?: Json | null
           method: string
+          notification_category?: string | null
           notification_type: string
           opened_at?: string | null
+          quick_actions?: Json | null
+          scheduled_notification_id?: string | null
           sent_at?: string
           status?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          deep_link_token?: string | null
           delivered_at?: string | null
           event_id?: string | null
           id?: string
           metadata?: Json | null
           method?: string
+          notification_category?: string | null
           notification_type?: string
           opened_at?: string | null
+          quick_actions?: Json | null
+          scheduled_notification_id?: string | null
           sent_at?: string
           status?: string
           user_id?: string
@@ -1581,6 +1593,13 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_logs_scheduled_notification_id_fkey"
+            columns: ["scheduled_notification_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_notifications"
             referencedColumns: ["id"]
           },
         ]
@@ -2057,6 +2076,94 @@ export type Database = {
           window_start?: string | null
         }
         Relationships: []
+      }
+      scheduled_notifications: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          notification_data: Json
+          notification_type: string
+          scheduled_time: string
+          sent_at: string | null
+          status: string
+          target_users: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          notification_data?: Json
+          notification_type: string
+          scheduled_time: string
+          sent_at?: string | null
+          status?: string
+          target_users?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          notification_data?: Json
+          notification_type?: string
+          scheduled_time?: string
+          sent_at?: string | null
+          status?: string
+          target_users?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_notifications_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      secure_notification_tokens: {
+        Row: {
+          action_type: string | null
+          created_at: string
+          event_id: string
+          expires_at: string
+          id: string
+          token: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          action_type?: string | null
+          created_at?: string
+          event_id: string
+          expires_at?: string
+          id?: string
+          token: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          action_type?: string | null
+          created_at?: string
+          event_id?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "secure_notification_tokens_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       security_audit_logs: {
         Row: {
@@ -3525,6 +3632,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_expired_notification_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       debug_player_positions: {
         Args: { p_player_id: string; p_player_name?: string }
         Returns: undefined
@@ -3542,6 +3653,10 @@ export type Database = {
         Returns: string
       }
       generate_secure_invitation_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      generate_secure_notification_token: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -3613,6 +3728,10 @@ export type Database = {
       }
       regenerate_player_stats_batch_safe: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      schedule_event_reminders: {
+        Args: { p_event_id: string }
         Returns: undefined
       }
       send_availability_notifications: {
