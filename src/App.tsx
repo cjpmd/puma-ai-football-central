@@ -22,7 +22,7 @@ import Analytics from "./pages/Analytics";
 import AnalyticsMobile from "./pages/AnalyticsMobile";
 import TeamManagement from "./pages/TeamManagement";
 import TeamManagementMobile from "./pages/TeamManagementMobile";
-import ClubManagement from "./pages/ClubManagement";
+import { ClubManagement } from "./pages/ClubManagement";
 import ClubManagementMobile from "./pages/ClubManagementMobile";
 import DataRecovery from "./pages/DataRecovery";
 import EmailTestPage from "./pages/EmailTestPage";
