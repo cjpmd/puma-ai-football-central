@@ -15,7 +15,28 @@ const config: CapacitorConfig = {
   }),
   plugins: {
     PushNotifications: {
-      presentationOptions: ['badge', 'sound', 'alert']
+      presentationOptions: ['badge', 'sound', 'alert'],
+      // iOS specific configurations
+      ios: {
+        sound: 'default',
+        badge: true,
+        alert: true,
+        clearBadgeOnLaunch: true
+      },
+      // Android specific configurations  
+      android: {
+        channelId: 'availability_requests',
+        channelName: 'Team Availability Requests',
+        channelDescription: 'Notifications for team event availability requests',
+        importance: 4, // IMPORTANCE_HIGH
+        visibility: 1, // VISIBILITY_PUBLIC
+        sound: 'default',
+        lights: true,
+        vibration: true
+      }
+    },
+    App: {
+      handleDeepLinks: true
     }
   }
 };
