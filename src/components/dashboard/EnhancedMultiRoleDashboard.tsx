@@ -21,7 +21,9 @@ import {
   Building2,
   UserCog,
   UserPlus,
-  CreditCard
+  CreditCard,
+  Dumbbell,
+  Target
 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -34,6 +36,8 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Players', href: '/players', icon: Users },
   { name: 'Calendar & Events', href: '/calendar', icon: Calendar },
+  { name: 'Training', href: '/training', icon: Dumbbell },
+  { name: 'Individual Training', href: '/individual-training', icon: Target },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Player Management', href: '/player-management', icon: UserCheck },
   { name: 'Teams', href: '/teams', icon: Trophy },
