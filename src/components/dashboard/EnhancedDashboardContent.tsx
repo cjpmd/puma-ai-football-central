@@ -266,161 +266,190 @@ export const EnhancedDashboardContent = () => {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 p-6">
       {/* Push Notification Setup */}
       <PushNotificationSetup />
       
-      {/* Welcome Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-2xl">
-                Welcome back, {profile?.name || user?.email || 'Team Manager'}!
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                {/* Teams and Players Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Connected Teams */}
-                  {(allTeams?.length || teams?.length) && (
-                    <div className="space-y-3">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Trophy className="h-5 w-5" />
-                        Your Teams
-                      </h3>
-                      <div className="space-y-2">
-                        {(allTeams?.length ? allTeams : teams)?.map((team) => (
-                          <Card 
-                            key={team.id} 
-                            className="cursor-pointer hover:shadow-md transition-shadow"
-                            onClick={() => handleTeamNavigation(team.id)}
-                          >
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-3">
-                                {team.logoUrl ? (
-                                  <img 
-                                    src={team.logoUrl} 
-                                    alt={team.name}
-                                    className="w-10 h-10 rounded-full"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
-                                    {getInitials(team.name)}
-                                  </div>
-                                )}
-                                <div>
-                                  <span className="font-medium">{team.name}</span>
-                                  <p className="text-sm text-muted-foreground">
-                                    {team.ageGroup || 'Team'} • {team.gameFormat || 'Football'}
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Connected Players */}
-                  {connectedPlayers?.length > 0 && (
-                    <div className="space-y-3">
-                      <h3 className="text-lg font-semibold flex items-center gap-2">
-                        <Users className="h-5 w-5" />
-                        Your Players
-                      </h3>
-                      <div className="space-y-2">
-                        {connectedPlayers.map((player) => (
-                          <Card key={player.id} className="hover:shadow-md transition-shadow">
-                            <CardContent className="p-4">
-                              <div className="flex items-center gap-3">
-                                {player.photoUrl ? (
-                                  <img 
-                                    src={player.photoUrl} 
-                                    alt={player.name}
-                                    className="w-10 h-10 rounded-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
-                                    {getInitials(player.name)}
-                                  </div>
-                                )}
-                                <div>
-                                  <span className="font-medium">{player.name}</span>
-                                  <p className="text-sm text-muted-foreground">
-                                    Player
-                                  </p>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">
+          Welcome back, {profile?.name || user?.email || 'Team Manager'}!
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Here's what's happening with your teams today.
+        </p>
+      </div>
+
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Teams</p>
+                <p className="text-3xl font-bold text-primary">{(allTeams?.length || teams?.length || 0)}</p>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+              <div className="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center">
+                <Trophy className="h-6 w-6 text-primary" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Players</p>
+                <p className="text-3xl font-bold text-blue-600">{stats.playersCount}</p>
+              </div>
+              <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center">
+                <Users className="h-6 w-6 text-blue-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Live Statistics */}
-        <div className="space-y-4">
-          <h3 className="text-lg font-semibold">Overview</h3>
-          <div className="grid gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Calendar className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.eventsCount}</p>
-                    <p className="text-sm text-muted-foreground">Upcoming Events</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.playersCount}</p>
-                    <p className="text-sm text-muted-foreground">Total Players</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <Card className="bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Upcoming Events</p>
+                <p className="text-3xl font-bold text-green-600">{stats.eventsCount}</p>
+              </div>
+              <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-green-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Trophy className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{(allTeams?.length || teams?.length || 0)}</p>
-                    <p className="text-sm text-muted-foreground">Teams</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+        <Card className="bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Pending Requests</p>
+                <p className="text-3xl font-bold text-orange-600">{stats.pendingAvailability.length}</p>
+              </div>
+              <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center">
+                <AlertCircle className="h-6 w-6 text-orange-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Your Teams Section */}
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-primary" />
+              Your Teams
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(allTeams?.length || teams?.length) ? (
+              <div className="space-y-3">
+                {(allTeams?.length ? allTeams : teams)?.map((team) => (
+                  <Card 
+                    key={team.id} 
+                    className="cursor-pointer hover:shadow-md transition-all duration-200 hover:border-primary/50 bg-gradient-to-r from-background to-muted/20"
+                    onClick={() => handleTeamNavigation(team.id)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        {team.logoUrl ? (
+                          <img 
+                            src={team.logoUrl} 
+                            alt={team.name}
+                            className="w-12 h-12 rounded-xl object-cover border"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center text-sm font-bold text-primary border">
+                            {getInitials(team.name)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">{team.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {team.ageGroup || 'Team'} • {team.gameFormat || 'Football'}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No teams found</p>
+                {canManageTeam() && (
+                  <Button onClick={handleCreateTeam} variant="outline" className="mt-3">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Team
+                  </Button>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Your Players Section */}
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-600" />
+              Your Players
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {connectedPlayers?.length > 0 ? (
+              <div className="space-y-3">
+                {connectedPlayers.map((player) => (
+                  <Card key={player.id} className="hover:shadow-md transition-all duration-200 hover:border-blue-500/50 bg-gradient-to-r from-background to-blue-500/5">
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        {player.photoUrl ? (
+                          <img 
+                            src={player.photoUrl} 
+                            alt={player.name}
+                            className="w-12 h-12 rounded-xl object-cover border"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-sm font-bold text-blue-600 border">
+                            {getInitials(player.name)}
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold truncate">{player.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Player
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>No connected players</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Availability Requests */}
-      {stats.pendingAvailability.length > 0 ? (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
+      {stats.pendingAvailability.length > 0 && (
+        <Card className="bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
+          <CardHeader className="pb-4">
             <CardTitle className="text-xl flex items-center gap-2">
-              <AlertCircle className="h-6 w-6 text-orange-600" />
+              <AlertCircle className="h-5 w-5 text-orange-600" />
               Availability Requests
               <Badge variant="secondary" className="bg-orange-100 text-orange-700">
                 {stats.pendingAvailability.length}
@@ -430,35 +459,35 @@ export const EnhancedDashboardContent = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {stats.pendingAvailability.slice(0, 4).map((availability) => (
-                <Card key={availability.id} className="bg-white border border-orange-200">
+                <Card key={availability.id} className="bg-background/80 backdrop-blur-sm border hover:shadow-md transition-all duration-200">
                   <CardContent className="p-4">
                     <div className="space-y-3">
                       <div>
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2 mb-2">
                           {availability.events.team_context?.logo_url ? (
                             <img 
                               src={availability.events.team_context.logo_url} 
                               alt={availability.events.team_context.name}
-                              className="w-4 h-4 rounded-full"
+                              className="w-6 h-6 rounded-full border"
                             />
                           ) : (
-                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold border">
                               {availability.events.team_context?.name?.slice(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm font-medium text-muted-foreground">
                             {availability.events.team_context?.name}
                           </span>
                         </div>
-                        <div className="font-medium">
+                        <h4 className="font-semibold">
                           {availability.events.event_type === 'training' 
                             ? availability.events.title 
                             : `vs ${availability.events.opponent || 'TBD'}`}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
                           {new Date(availability.events.date).toLocaleDateString()}
                           {availability.events.start_time && `, ${availability.events.start_time}`}
-                        </div>
+                        </p>
                       </div>
                       <QuickAvailabilityControls 
                         eventId={availability.event_id}
@@ -473,60 +502,46 @@ export const EnhancedDashboardContent = () => {
             </div>
             {stats.pendingAvailability.length > 4 && (
               <p className="text-sm text-center text-muted-foreground">
-                +{stats.pendingAvailability.length - 4} more requests
+                +{stats.pendingAvailability.length - 4} more requests available
               </p>
             )}
             <Link to="/calendar">
               <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white">
-                Confirm All Availability ({stats.pendingAvailability.length})
+                View All Availability Requests ({stats.pendingAvailability.length})
               </Button>
             </Link>
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="p-6 text-center">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <div className="w-12 h-12 rounded-full bg-green-600 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <span className="text-green-800 font-semibold text-lg">All Caught Up!</span>
-                <p className="text-green-700">No availability requests pending</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Quick Actions */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <CardTitle className="text-xl">Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {canManageTeam() && (
               <>
                 <Button
                   onClick={() => setShowEventForm(true)}
-                  className="h-16 flex flex-col gap-2"
+                  className="h-20 flex flex-col gap-2 bg-primary hover:bg-primary/90"
                 >
-                  <Plus className="h-5 w-5" />
-                  <span>Create Event</span>
+                  <Plus className="h-6 w-6" />
+                  <span className="text-sm font-medium">Create Event</span>
                 </Button>
                 
-                <Link to="/player-management">
-                  <Button variant="outline" className="w-full h-16 flex flex-col gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    <span>Manage Players</span>
+                <Link to="/player-management" className="block">
+                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:bg-blue-500/10 hover:border-blue-500/50">
+                    <UserPlus className="h-6 w-6 text-blue-600" />
+                    <span className="text-sm font-medium">Manage Players</span>
                   </Button>
                 </Link>
                 
-                <Link to="/analytics">
-                  <Button variant="outline" className="w-full h-16 flex flex-col gap-2">
-                    <TrendingUp className="h-5 w-5" />
-                    <span>View Analytics</span>
+                <Link to="/analytics" className="block">
+                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:bg-green-500/10 hover:border-green-500/50">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                    <span className="text-sm font-medium">View Analytics</span>
                   </Button>
                 </Link>
               </>
@@ -535,104 +550,110 @@ export const EnhancedDashboardContent = () => {
             <Button
               variant="outline"
               onClick={() => setShowEditProfile(true)}
-              className="h-16 flex flex-col gap-2"
+              className="h-20 flex flex-col gap-2 hover:bg-purple-500/10 hover:border-purple-500/50"
             >
-              <User className="h-5 w-5" />
-              <span>Edit Profile</span>
+              <User className="h-6 w-6 text-purple-600" />
+              <span className="text-sm font-medium">Edit Profile</span>
             </Button>
             
             <Button
               variant="outline"
               onClick={() => setShowManageConnections(true)}
-              className="h-16 flex flex-col gap-2"
+              className="h-20 flex flex-col gap-2 hover:bg-indigo-500/10 hover:border-indigo-500/50"
             >
-              <Link2 className="h-5 w-5" />
-              <span>Manage Connections</span>
+              <Link2 className="h-6 w-6 text-indigo-600" />
+              <span className="text-sm font-medium">Connections</span>
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Upcoming Events & Recent Results */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Events */}
-        <div>
-          <UpcomingEvents />
-        </div>
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-green-600" />
+              Upcoming Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <UpcomingEvents />
+          </CardContent>
+        </Card>
 
         {/* Recent Results */}
-        <div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl flex items-center gap-2">
-                <Trophy className="h-6 w-6" />
-                Recent Results
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {stats.recentResults.length > 0 ? (
-                <div className="space-y-3">
-                  {stats.recentResults.map((event) => {
-                    const result = getResultFromScores(event.scores);
-                    return (
-                      <Card key={event.id} className="hover:shadow-md transition-shadow">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                {event.team_context?.logo_url ? (
-                                  <img 
-                                    src={event.team_context.logo_url} 
-                                    alt={event.team_context.name}
-                                    className="w-4 h-4 rounded-full"
-                                  />
-                                ) : (
-                                  <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                                    {event.team_context?.name?.slice(0, 2).toUpperCase()}
-                                  </div>
-                                )}
-                                <span className="text-sm text-muted-foreground">
-                                  {event.team_context?.name}
-                                </span>
-                              </div>
-                              <div className="font-medium">
-                                vs {event.opponent || 'Unknown'}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {new Date(event.date).toLocaleDateString()}
-                              </div>
-                              {event.scores && (
-                                <div className="text-sm font-medium">
-                                  Score: {event.scores.home} - {event.scores.away}
+        <Card className="h-fit">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-primary" />
+              Recent Results
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {stats.recentResults.length > 0 ? (
+              <div className="space-y-3">
+                {stats.recentResults.map((event) => {
+                  const result = getResultFromScores(event.scores);
+                  return (
+                    <Card key={event.id} className="hover:shadow-md transition-all duration-200 hover:border-primary/50 bg-gradient-to-r from-background to-muted/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              {event.team_context?.logo_url ? (
+                                <img 
+                                  src={event.team_context.logo_url} 
+                                  alt={event.team_context.name}
+                                  className="w-6 h-6 rounded-full border"
+                                />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold border">
+                                  {event.team_context?.name?.slice(0, 2).toUpperCase()}
                                 </div>
                               )}
+                              <span className="text-sm font-medium text-muted-foreground truncate">
+                                {event.team_context?.name}
+                              </span>
                             </div>
-                            {result && (
-                              <Badge 
-                                variant="secondary" 
-                                className={`${result.color} text-white`}
-                              >
-                                {result.result}
-                              </Badge>
+                            <h4 className="font-semibold truncate">
+                              vs {event.opponent || 'Unknown'}
+                            </h4>
+                            <p className="text-sm text-muted-foreground">
+                              {new Date(event.date).toLocaleDateString()}
+                            </p>
+                            {event.scores && (
+                              <p className="text-sm font-medium mt-1">
+                                Score: {event.scores.home} - {event.scores.away}
+                              </p>
                             )}
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium mb-2">No recent results</h3>
-                  <p className="text-muted-foreground">
-                    Results will appear here after completing matches.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                          {result && (
+                            <Badge 
+                              variant="secondary" 
+                              className={`ml-3 ${result.color} text-white font-medium`}
+                            >
+                              {result.result}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Trophy className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <h3 className="font-medium mb-2">No recent results</h3>
+                <p className="text-sm">
+                  Results will appear here after completing matches.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* No Teams Fallback */}
