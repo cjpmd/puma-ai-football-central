@@ -492,8 +492,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           )}
 
           <div className="p-4 h-full flex flex-col justify-end relative z-10">
-            {topPositions.length > 0 && ( // Changed condition from topPositions.length >= 3
-              <div className="absolute left-2 top-16 space-y-1">
+            {topPositions.length > 0 && ( 
+              <div className={`absolute left-2 space-y-1 ${hasAlerts ? 'top-16' : 'top-3'}`}>
                 {topPositions.map((pos) => (
                   <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
                     {pos.display}
@@ -534,6 +534,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <input
                       type="file"
                       accept="image/*"
+                      capture="environment"
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
@@ -820,8 +821,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         </div>
       </div>
 
-      {/* Play Styles Manager Modal */}
-      <PlayStylesManager />
     </div>
   );
 };

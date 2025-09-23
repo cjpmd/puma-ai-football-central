@@ -17,7 +17,9 @@ import { TeamPrivacySettings } from './settings/TeamPrivacySettings';
 import { TeamNameDisplaySettings } from './settings/TeamNameDisplaySettings';
 import { TeamHeaderSettings } from './settings/TeamHeaderSettings';
 import { TeamLogoSettings } from './settings/TeamLogoSettings';
-import { Settings, Trophy, Star, Wifi, Target, Package, Shield, Wrench, User, Monitor, Image } from 'lucide-react';
+import { Settings, Trophy, Star, Wifi, Target, Package, Shield, Wrench, User, Monitor, Image, Palette } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { PlayStylesManager } from '@/components/players/PlayStylesManager';
 
 interface TeamSettingsModalProps {
   team: Team;
@@ -34,6 +36,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('basic');
   const [isSaving, setIsSaving] = useState(false);
+  const { user } = useAuth();
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -116,6 +119,15 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
     }
   ];
 
+  // Add Play Styles tab only for the specific user
+  if (user?.email === 'chrisjpmcdonald@gmail.com') {
+    settingsTabs.push({
+      id: 'play-styles',
+      label: 'Play Styles',
+      icon: <Palette className="h-4 w-4" />,
+      component: <PlayStylesManager />
+    });
+  }
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[900px] h-[90vh] max-h-[800px] flex flex-col overflow-hidden">
@@ -127,7 +139,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className="grid w-full grid-cols-11 flex-shrink-0 mb-4">
+          <TabsList className={`grid w-full flex-shrink-0 mb-4 ${user?.email === 'chrisjpmcdonald@gmail.com' ? 'grid-cols-12' : 'grid-cols-11'}`}>
             {settingsTabs.map((tab) => (
               <TabsTrigger key={tab.id} value={tab.id} className="flex flex-col items-center gap-1 text-xs p-2">
                 {tab.icon}

@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +25,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
 }) => {
   const [comments, setComments] = useState<PlayerComment[]>(player?.comments || []);
   const [newComment, setNewComment] = useState('');
+  const { user, profile } = useAuth();
 
   // Don't render the modal if there's no player
   if (!player) {
@@ -36,7 +38,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
         id: `comment-${Date.now()}`,
         text: newComment,
         createdAt: new Date().toISOString(),
-        createdBy: 'Current User' // This would be replaced with actual user name
+        createdBy: profile?.name || user?.email || 'Current User'
       };
       
       setComments([...comments, comment]);
