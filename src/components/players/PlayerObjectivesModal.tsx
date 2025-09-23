@@ -219,7 +219,7 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
             <div className="space-y-4">
               {objectives.map((objective) => (
                 <Card key={objective.id}>
-                  <CardContent className="pt-6">
+                  <CardContent className="relative pt-6">
                     <div className="absolute top-3 right-3 flex space-x-1">
                       <Button
                         size="sm"
