@@ -10,6 +10,7 @@ import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award,
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { playStylesService } from '@/types/playStyles';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -87,24 +88,8 @@ const cardDesigns: Record<string, CardDesign> = {
   }
 };
 
-// Updated play styles with your preferred icons
-const playStylesWithIcons = [
-  { value: "finisher", label: "Finisher", icon: "🎯", category: "attacker" },
-  { value: "clinical", label: "Clinical", icon: "✅", category: "attacker" },
-  { value: "speedster", label: "Speedster", icon: "⚡", category: "attacker" },
-  { value: "trickster", label: "Trickster", icon: "🔮", category: "attacker" },
-  { value: "playmaker", label: "Playmaker", icon: "🎭", category: "midfielder" },
-  { value: "engine", label: "Engine", icon: "⚙️", category: "midfielder" },
-  { value: "maestro", label: "Maestro", icon: "🎩", category: "midfielder" },
-  { value: "workhorse", label: "Workhorse", icon: "💪", category: "midfielder" },
-  { value: "guardian", label: "Guardian", icon: "🛡️", category: "defender" },
-  { value: "interceptor", label: "Interceptor", icon: "⚔️", category: "defender" },
-  { value: "rock", label: "Rock", icon: "🗿", category: "defender" },
-  { value: "sweeper", label: "Sweeper", icon: "🧹", category: "defender" },
-  { value: "reflexes", label: "Reflexes", icon: "🥅", category: "goalkeeper" },
-  { value: "commander", label: "Commander", icon: "👑", category: "goalkeeper" },
-  { value: "wall", label: "Wall", icon: "🧱", category: "goalkeeper" }
-];
+// Get all available play styles (default + custom)
+const playStylesWithIcons = playStylesService.getAllPlayStyles();
 
 // Create a list of valid play style values for easier filtering
 const validPlayStyleValues = playStylesWithIcons.map(s => s.value);
@@ -231,7 +216,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     return age;
   };
 
-  // Get top 3 positions with minutes (excluding SUB and TBD)
+  // Get top 2 positions with minutes (excluding SUB and TBD)
   const getTopPositions = () => {
     const minutesByPosition = player.matchStats?.minutesByPosition || {};
     const filteredPositions = Object.entries(minutesByPosition)
@@ -242,14 +227,12 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       }))
       .filter(p => p.minutes > 0)
       .sort((a, b) => b.minutes - a.minutes)
-      .slice(0, 3);
+      .slice(0, 2);
 
-    // Add appropriate number of plus signs
+    // Add appropriate number of plus signs for top 2
     return filteredPositions.map((pos, index) => ({
       ...pos,
-      display: index === 0 ? `${pos.position}+++` : 
-               index === 1 ? `${pos.position}++` : 
-               `${pos.position}+`
+      display: index === 0 ? `${pos.position}+++` : `${pos.position}++`
     }));
   };
 
@@ -549,7 +532,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <input
                       type="file"
                       accept="image/*"
-                      capture="environment"
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />

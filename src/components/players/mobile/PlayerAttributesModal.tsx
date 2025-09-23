@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player, PlayerAttribute } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { DEFAULT_PLAYER_ATTRIBUTES } from '@/types/team';
+import { STANDARD_PLAYER_ATTRIBUTES } from '@/types/playerAttributes';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { Brain, Zap, Heart, Shield, Lock } from 'lucide-react';
 
@@ -46,7 +46,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
         
         if (player.type === 'goalkeeper') {
           defaultAttributes = [
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
+            ...STANDARD_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
               id: `gk-${index}`,
               name: attr.name,
               group: "goalkeeping" as const,
@@ -56,21 +56,21 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
           ];
         } else {
           defaultAttributes = [
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'technical').map((attr, index) => ({
+            ...STANDARD_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'technical').map((attr, index) => ({
               id: `tech-${index}`,
               name: attr.name,
               group: "technical" as const,
               value: 5,
               enabled: true
             })),
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'physical').map((attr, index) => ({
+            ...STANDARD_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'physical').map((attr, index) => ({
               id: `phys-${index}`,
               name: attr.name,
               group: "physical" as const,
               value: 5,
               enabled: true
             })),
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'mental').map((attr, index) => ({
+            ...STANDARD_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'mental').map((attr, index) => ({
               id: `ment-${index}`,
               name: attr.name,
               group: "mental" as const,
@@ -82,7 +82,7 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
           // Add goalkeeping attributes (disabled by default)
           defaultAttributes = [
             ...defaultAttributes,
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
+            ...STANDARD_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
               id: `gk-${index}`,
               name: attr.name,
               group: "goalkeeping" as const,

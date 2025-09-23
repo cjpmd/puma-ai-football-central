@@ -40,7 +40,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
         id: `comment-${Date.now()}`,
         text: newComment,
         createdAt: new Date().toISOString(),
-        createdBy: profile?.name || 'Current User'
+        createdBy: profile?.name || 'Unknown User'
       };
       
       setComments([...comments, comment]);

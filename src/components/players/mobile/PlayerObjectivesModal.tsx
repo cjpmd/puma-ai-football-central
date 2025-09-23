@@ -263,18 +263,18 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                 {objectives.map((objective) => (
                   <Card key={objective.id}>
                     <CardContent className="pt-6">
-                      {canEdit && (
-                        <div className="absolute top-3 right-3 flex space-x-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleRemoveObjective(objective.id)}
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                       {canEdit && (
+                         <div className="absolute top-3 right-3">
+                           <Button
+                             size="sm"
+                             variant="ghost"
+                             onClick={() => handleRemoveObjective(objective.id)}
+                             className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       )}
                       
                       <div className="space-y-3 pr-8">
                         <div className="flex items-center justify-between">

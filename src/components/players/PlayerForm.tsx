@@ -152,35 +152,23 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="green">Available</SelectItem>
-                <SelectItem value="amber">Limited</SelectItem>
-                <SelectItem value="red">Unavailable</SelectItem>
+                <SelectItem value="amber">Unavailable</SelectItem>
+                <SelectItem value="red">Injured</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="subscriptionType">Subscription Type</Label>
-            <Select value={formData.subscriptionType} onValueChange={(value) => setFormData({ ...formData, subscriptionType: value as any })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="full_squad">Full Squad</SelectItem>
-                <SelectItem value="training">Training Only</SelectItem>
-                <SelectItem value="trialist">Trialist (Free)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="nameOnShirt">Name on Shirt</Label>
             <Input
-              id="nameOnShirt"
-              value={formData.nameOnShirt}
-              onChange={(e) => setFormData({ ...formData, nameOnShirt: e.target.value })}
-              placeholder="Name to appear on shirt"
+              id="subscriptionType"
+              value={formData.subscriptionType === 'full_squad' ? 'Full Squad' : 
+                     formData.subscriptionType === 'training' ? 'Training Only' : 'Trialist (Free)'}
+              disabled
+              className="bg-muted"
             />
           </div>
+
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">

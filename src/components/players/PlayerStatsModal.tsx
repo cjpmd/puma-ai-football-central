@@ -24,6 +24,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
 import { positionDebuggingService } from '@/services/positionDebuggingService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface PlayerStatsModalProps {
   player: Player | null;
@@ -42,6 +43,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const [loadingAvailability, setLoadingAvailability] = useState(false);
   const queryClient = useQueryClient();
   const { isGlobalAdmin } = useAuthorization();
+  const { user } = useAuth();
 
   // Load availability history when modal opens
   useEffect(() => {
@@ -425,7 +427,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
               <span>Match Statistics - {player.name}</span>
-              {isGlobalAdmin && (
+              {(isGlobalAdmin || user?.email === 'chrisjpmcdonald@gmail.com') && (
                 <div className="flex gap-2">
                   <Button
                     variant="outline"

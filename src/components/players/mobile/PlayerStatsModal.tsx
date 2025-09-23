@@ -74,24 +74,24 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
         </SheetHeader>
         
         <Tabs defaultValue="summary" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-5 mx-4 mt-4 h-12">
-            <TabsTrigger value="summary" className="flex flex-col items-center gap-0.5 px-2">
+          <TabsList className="grid w-full grid-cols-5 mx-4 mt-4 h-12 text-xs">
+            <TabsTrigger value="summary" className="flex flex-col items-center gap-0.5 px-1">
               <Target className="h-3 w-3" />
               <span className="text-xs">Sum</span>
             </TabsTrigger>
-            <TabsTrigger value="positions" className="flex flex-col items-center gap-0.5 px-2">
+            <TabsTrigger value="positions" className="flex flex-col items-center gap-0.5 px-1">
               <MapPin className="h-3 w-3" />
               <span className="text-xs">Pos</span>
             </TabsTrigger>
-            <TabsTrigger value="performance" className="flex flex-col items-center gap-0.5 px-2">
+            <TabsTrigger value="performance" className="flex flex-col items-center gap-0.5 px-1">
               <TrendingUp className="h-3 w-3" />
-              <span className="text-xs">Perf</span>
+              <span className="text-xs">Perf Cat</span>
             </TabsTrigger>
-            <TabsTrigger value="availability" className="flex flex-col items-center gap-0.5 px-2">
+            <TabsTrigger value="availability" className="flex flex-col items-center gap-0.5 px-1">
               <CheckCircle className="h-3 w-3" />
               <span className="text-xs">Avail</span>
             </TabsTrigger>
-            <TabsTrigger value="history" className="flex flex-col items-center gap-0.5 px-2">
+            <TabsTrigger value="history" className="flex flex-col items-center gap-0.5 px-1">
               <History className="h-3 w-3" />
               <span className="text-xs">Hist</span>
             </TabsTrigger>
@@ -99,7 +99,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           
           <div className="flex-1 min-h-0 overflow-hidden">
             <TabsContent value="summary" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
+              <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-6 py-4">
               {/* Quick Stats */}
               <div className="grid grid-cols-2 gap-4">
@@ -197,7 +197,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </TabsContent>
 
             <TabsContent value="positions" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
+              <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-4 py-4">
                   <Card>
                 <CardHeader>
@@ -236,7 +236,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </TabsContent>
 
             <TabsContent value="performance" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
+              <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-4 py-4">
                   <Card>
                 <CardHeader>
@@ -283,7 +283,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </TabsContent>
 
             <TabsContent value="availability" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
+              <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-4 py-4">
                   {loadingAvailability ? (
                     <Card>
@@ -413,7 +413,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </TabsContent>
 
             <TabsContent value="history" className="h-full data-[state=active]:flex data-[state=active]:flex-col m-0 overflow-hidden">
-              <ScrollArea className="flex-1 px-6">
+              <ScrollArea className="flex-1 px-6 h-[60vh]">
                 <div className="space-y-4 py-4">
                   <Card>
                 <CardHeader>
