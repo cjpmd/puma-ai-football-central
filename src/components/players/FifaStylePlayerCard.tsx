@@ -156,6 +156,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const [selectedPlayStyles, setSelectedPlayStyles] = useState<string[]>(
     parsePlayStyles(player.playStyle)
   );
+  const [showPlayStylesManager, setShowPlayStylesManager] = useState(false);
 
   // useEffect to synchronize state with player prop changes
   useEffect(() => {
@@ -820,12 +821,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       </div>
 
       {/* Play Styles Manager Modal */}
-      {showPlayStylesManager && (
-        <PlayStylesManager 
-          isOpen={showPlayStylesManager}
-          onClose={() => setShowPlayStylesManager(false)}
-        />
-      )}
+      <PlayStylesManager />
     </div>
   );
 };

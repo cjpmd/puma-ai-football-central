@@ -13,7 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown, Users, Timer, Award } from 'lucide-react';
+import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown, Users, Timer, Award, BarChart3 } from 'lucide-react';
 import { playerStatsService } from '@/services/playerStatsService';
 import { availabilityService } from '@/services/availabilityService';
 import { useState, useEffect } from 'react';
@@ -75,7 +75,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     
     setIsRefreshing(true);
     try {
-      await playerStatsService.recalculatePlayerStats(player.id);
+      await playerStatsService.updatePlayerStats(player.id);
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player stats refreshed successfully');
     } catch (error) {
@@ -91,7 +91,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     
     setIsRegenerating(true);
     try {
-      await playerStatsService.regenerateAllPlayerStats(player.id);
+      await playerStatsService.regenerateAllPlayerStats();
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player stats regenerated successfully');
     } catch (error) {
@@ -107,7 +107,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     
     setIsRegenerating(true);
     try {
-      await positionDebuggingService.fixPlayerPositionsComprehensively(player.id);
+      await positionDebuggingService.fixMinutesAggregation();
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player positions fixed comprehensively');
     } catch (error) {
@@ -123,8 +123,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     
     setIsRegenerating(true);
     try {
-      // Implement clean rebuild logic here
-      await playerStatsService.cleanRebuildPlayerStats(player.id);
+      await playerStatsService.debugAndRegenerateForPlayer(player.id, 'PlayerStatsModal');
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Player stats clean rebuild completed');
     } catch (error) {
@@ -140,7 +139,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     
     setIsRegenerating(true);
     try {
-      await debugPlayerPositions(player.id);
+      // Use the correct debug function available in the service
+      await debugPlayerPositions(player.id, player.name);
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Debug completed for Andrew McDonald');
     } catch (error) {
@@ -155,35 +155,37 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     return null;
   }
 
-  // Filter out games with empty strings for key fields
-  const filteredRecentGames = (player.recentGames || []).filter(game => {
+  // Filter out games with empty strings for key fields - use matchStats.recentGames
+  const filteredRecentGames = (player.matchStats?.recentGames || []).filter(game => {
     return game.opponent && game.opponent.trim() !== '' && 
            game.date && game.date.trim() !== '' &&
            game.id && game.id.trim() !== '';
   });
 
   const stats = player.matchStats || {
-    gamesPlayed: 0,
-    minutesPlayed: 0,
-    goals: 0,
-    assists: 0,
-    cleanSheets: 0,
+    totalGames: 0,
+    totalMinutes: 0,
     captainGames: 0,
     playerOfTheMatchCount: 0,
-    averageRating: 0,
-    positions: {},
-    performanceCategories: {}
+    minutesByPosition: {},
+    performanceCategoryStats: {}
   };
 
-  // Process positions data
-  const positionsArray = Object.entries(stats.positions || {})
-    .map(([position, count]) => ({ position, count: Number(count) }))
+  // Process positions data from minutesByPosition
+  const positionsArray = Object.entries(stats.minutesByPosition || {})
+    .map(([position, minutes]) => ({ 
+      position, 
+      count: Math.round(Number(minutes) / 90) || 1 // Estimate games from minutes
+    }))
     .filter(p => p.count > 0)
     .sort((a, b) => b.count - a.count);
 
   // Process performance categories data
-  const performanceCategoriesArray = Object.entries(stats.performanceCategories || {})
-    .map(([category, count]) => ({ category, count: Number(count) }))
+  const performanceCategoriesArray = Object.entries(stats.performanceCategoryStats || {})
+    .map(([category, data]) => ({ 
+      category, 
+      count: typeof data === 'object' ? data.totalGames || 0 : Number(data) || 0
+    }))
     .filter(p => p.count > 0)
     .sort((a, b) => b.count - a.count);
 
@@ -303,7 +305,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.gamesPlayed || 0}</div>
+                    <div className="text-2xl font-bold">{stats.totalGames || 0}</div>
                   </CardContent>
                 </Card>
 
@@ -315,7 +317,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.minutesPlayed || 0}</div>
+                    <div className="text-2xl font-bold">{stats.totalMinutes || 0}</div>
                   </CardContent>
                 </Card>
 
@@ -327,7 +329,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.goals || 0}</div>
+                    <div className="text-2xl font-bold">0</div>
                   </CardContent>
                 </Card>
 
@@ -339,7 +341,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.assists || 0}</div>
+                    <div className="text-2xl font-bold">0</div>
                   </CardContent>
                 </Card>
 
@@ -373,7 +375,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.cleanSheets || 0}</div>
+                    <div className="text-2xl font-bold">0</div>
                   </CardContent>
                 </Card>
 
@@ -384,9 +386,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">
-                      {stats.averageRating ? Number(stats.averageRating).toFixed(1) : 'N/A'}
-                    </div>
+                    <div className="text-2xl font-bold">N/A</div>
                   </CardContent>
                 </Card>
               </div>
@@ -406,7 +406,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       <TableHeader>
                         <TableRow>
                           <TableHead>Position</TableHead>
-                          <TableHead>Games</TableHead>
+                          <TableHead>Estimated Games</TableHead>
                           <TableHead>Percentage</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -416,8 +416,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <TableCell className="font-medium">{pos.position}</TableCell>
                             <TableCell>{pos.count}</TableCell>
                             <TableCell>
-                              {stats.gamesPlayed > 0 ? 
-                                `${Math.round((pos.count / stats.gamesPlayed) * 100)}%` : 
+                              {stats.totalGames > 0 ? 
+                                `${Math.round((pos.count / stats.totalGames) * 100)}%` : 
                                 '0%'
                               }
                             </TableCell>
@@ -463,8 +463,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             </TableCell>
                             <TableCell>{cat.count}</TableCell>
                             <TableCell>
-                              {stats.gamesPlayed > 0 ? 
-                                `${Math.round((cat.count / stats.gamesPlayed) * 100)}%` : 
+                              {stats.totalGames > 0 ? 
+                                `${Math.round((cat.count / stats.totalGames) * 100)}%` : 
                                 '0%'
                               }
                             </TableCell>
@@ -672,13 +672,13 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 <Timer className="h-3 w-3 text-muted-foreground" />
-                                <span>{game.minutesPlayed || 0}'</span>
+                                <span>{game.minutes || 0}'</span>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1">
-                                {game.positions && game.positions.length > 0 ? (
-                                  game.positions.map((pos, posIndex) => (
+                                {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 ? (
+                                  Object.keys(game.minutesByPosition).map((pos, posIndex) => (
                                     <Badge key={posIndex} variant="outline" className="text-xs">
                                       {pos}
                                     </Badge>
@@ -690,13 +690,13 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                {game.isCaptain && (
-                                  <Crown className="h-3 w-3 text-yellow-500" title="Captain" />
+                                {game.captain && (
+                                  <Crown className="h-3 w-3 text-yellow-500" />
                                 )}
-                                {game.isPlayerOfTheMatch && (
-                                  <Trophy className="h-3 w-3 text-blue-500" title="Player of the Match" />
+                                {game.playerOfTheMatch && (
+                                  <Trophy className="h-3 w-3 text-blue-500" />
                                 )}
-                                {!game.isCaptain && !game.isPlayerOfTheMatch && (
+                                {!game.captain && !game.playerOfTheMatch && (
                                   <span className="text-muted-foreground text-xs">-</span>
                                 )}
                               </div>
