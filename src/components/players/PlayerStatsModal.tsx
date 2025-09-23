@@ -13,7 +13,18 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Trophy, Clock, MapPin, RotateCcw, ArrowUpDown, Users, Timer, Award, BarChart3 } from 'lucide-react';
+import { 
+  Crown, 
+  Trophy, 
+  Clock, 
+  MapPin, 
+  RotateCcw, 
+  ArrowUpDown, 
+  Users, 
+  Timer, 
+  Award, 
+  BarChart3 
+} from 'lucide-react';
 import { playerStatsService } from '@/services/playerStatsService';
 import { availabilityService } from '@/services/availabilityService';
 import { useState, useEffect } from 'react';
