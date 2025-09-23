@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { playStylesService } from '@/types/playStyles';
+import { PlayStylesManager } from '@/components/players/PlayStylesManager';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -463,7 +464,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           )}
 
           {hasAlerts && (
-            <div className="absolute top-3 left-3 flex flex-col gap-1 z-20">
+            <div className="absolute top-3 left-3 flex flex-row flex-wrap gap-1 z-20">
               {missingInfoAlerts.slice(0, 3).map((alert, index) => {
                 const IconComponent = alert.icon;
                 return (
@@ -817,6 +818,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Play Styles Manager Modal */}
+      {showPlayStylesManager && (
+        <PlayStylesManager 
+          isOpen={showPlayStylesManager}
+          onClose={() => setShowPlayStylesManager(false)}
+        />
+      )}
     </div>
   );
 };

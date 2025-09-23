@@ -44,6 +44,9 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const queryClient = useQueryClient();
   const { isGlobalAdmin } = useAuthorization();
   const { user } = useAuth();
+  
+  // Check if user is authorized for debug functions
+  const isAuthorizedForDebug = user?.email === 'chrisjpmcdonald@gmail.com';
 
   // Load availability history when modal opens
   useEffect(() => {
@@ -53,6 +56,8 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   }, [isOpen, player]);
 
   const loadAvailabilityHistory = async () => {
+    if (!player) return;
+    
     setLoadingAvailability(true);
     try {
       const history = await availabilityService.getPlayerAvailabilityHistory(player.id);
@@ -65,360 +70,122 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     }
   };
 
-  // Don't render the modal if there's no player
-  if (!player) {
-    return null;
-  }
-
-  const { matchStats } = player;
-
-  // Ensure matchStats exists and has proper structure
-  const safeMatchStats = matchStats || {
-    totalGames: 0,
-    totalMinutes: 0,
-    captainGames: 0,
-    playerOfTheMatchCount: 0,
-    minutesByPosition: {},
-    recentGames: []
-  };
-
-  // Filter out matches with "Unknown" opponent - ensure recentGames is always an array
-  const filteredRecentGames = (Array.isArray(safeMatchStats.recentGames) ? safeMatchStats.recentGames : []).filter(game => 
-    game && game.opponent && game.opponent.toLowerCase() !== 'unknown'
-  );
-
-  // Get top 5 positions by minutes played
-  const topPositions = Object.entries(safeMatchStats.minutesByPosition || {})
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
-    .slice(0, 5)
-    .map(([pos, minutes]) => ({ position: pos, minutes: minutes as number }));
-
-  // Calculate average minutes per game
-  const avgMinutesPerGame = (safeMatchStats.totalGames || 0) > 0 ? 
-    Math.round((safeMatchStats.totalMinutes || 0) / (safeMatchStats.totalGames || 1)) : 0;
-
-  // Calculate captain percentage
-  const captainPercentage = (safeMatchStats.totalGames || 0) > 0 ? 
-    Math.round(((safeMatchStats.captainGames || 0) / (safeMatchStats.totalGames || 1)) * 100) : 0;
-
-  // Calculate POTM percentage
-  const potmPercentage = (safeMatchStats.totalGames || 0) > 0 ? 
-    Math.round(((safeMatchStats.playerOfTheMatchCount || 0) / (safeMatchStats.totalGames || 1)) * 100) : 0;
-
-  const renderPositionsPlayed = (minutesByPosition: Record<string, number>) => {
-    if (!minutesByPosition || Object.keys(minutesByPosition).length === 0) {
-      return <span className="text-muted-foreground">No position data</span>;
-    }
-
-    const sortedPositions = Object.entries(minutesByPosition)
-      .sort(([,a], [,b]) => b - a)
-      .slice(0, 3);
-
-    return (
-      <div className="flex flex-wrap gap-1">
-        {sortedPositions.map(([position, minutes]) => {
-          // Convert position to abbreviation for display
-          const abbreviation = getPositionAbbreviation(position);
-          return (
-            <Badge key={position} variant="outline" className="text-xs">
-              {abbreviation}: {minutes}m
-            </Badge>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const getPositionAbbreviation = (position: string): string => {
-    // Map full position names to abbreviations
-    const positionMap: Record<string, string> = {
-      'Goalkeeper': 'GK',
-      'Right Back': 'RB',
-      'Centre Back': 'CB', 
-      'Center Back': 'CB',
-      'Left Back': 'LB',
-      'Right Midfielder': 'RM',
-      'Central Midfielder': 'CM',
-      'Centre Midfielder': 'CM',
-      'Left Midfielder': 'LM',
-      'Defensive Midfielder': 'CDM',
-      'Attacking Midfielder': 'CAM',
-      'Right Forward': 'RF',
-      'Centre Forward': 'CF',
-      'Center Forward': 'CF',
-      'Left Forward': 'LF',
-      'Right Wing': 'RW',
-      'Left Wing': 'LW',
-      // Legacy mappings
-      'Midfielder Right': 'RM',
-      'Midfielder Left': 'LM',
-      'Midfielder Centre': 'CM',
-      'Defender Right': 'RB',
-      'Defender Left': 'LB',
-      'Striker Centre': 'CF',
-      'Substitute': 'SUB'
-    };
-
-    return positionMap[position] || position;
-  };
-
-  const renderCategoryStats = (categoryStats: Record<string, any>) => {
-    if (!categoryStats || Object.keys(categoryStats).length === 0) {
-      return <div className="text-center py-4 text-muted-foreground">No performance category data available</div>;
-    }
-
-    return (
-      <div className="space-y-4">
-        {Object.entries(categoryStats).map(([category, stats]) => (
-          <Card key={category}>
-            <CardContent className="pt-4">
-              <h4 className="font-medium mb-2">{category}</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Games</p>
-                  <p className="font-medium">{stats?.games || 0}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Minutes</p>
-                  <p className="font-medium">{stats?.minutes || 0}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Captain</p>
-                  <p className="font-medium">{stats?.captainGames || 0}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Avg Minutes</p>
-                  <p className="font-medium">{stats?.averageMinutes || 0}</p>
-                </div>
-              </div>
-              {stats?.minutesByPosition && (
-                <div className="mt-3">
-                  <p className="text-sm text-muted-foreground mb-2">Positions:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {Object.entries(stats.minutesByPosition as Record<string, number>).map(([position, minutes]) => {
-                      const abbreviation = getPositionAbbreviation(position);
-                      return (
-                        <Badge key={position} variant="outline" className="text-xs">
-                          {abbreviation}: {minutes}m
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
   const handleRefreshStats = async () => {
+    if (!player) return;
+    
     setIsRefreshing(true);
     try {
-      await playerStatsService.updatePlayerStats(player.id);
-      
-      // Invalidate and refetch player data
+      await playerStatsService.recalculatePlayerStats(player.id);
       queryClient.invalidateQueries({ queryKey: ['players'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
-      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-      
-      toast.success('Match statistics updated successfully');
+      toast.success('Player stats refreshed successfully');
     } catch (error) {
-      console.error('Error refreshing player stats:', error);
-      toast.error('Failed to update match statistics');
+      console.error('Error refreshing stats:', error);
+      toast.error('Failed to refresh stats');
     } finally {
       setIsRefreshing(false);
     }
   };
 
   const handleRegenerateStats = async () => {
+    if (!player) return;
+    
     setIsRegenerating(true);
     try {
-      console.log('🎯 STARTING MANUAL DATA REGENERATION');
-      
-      // Debug current player positions before regeneration
-      await debugPlayerPositions(player.id, player.name);
-      
-      // Use the service method instead of calling supabase directly
-      await playerStatsService.regenerateAllPlayerStats();
-      
-      // Debug positions after regeneration
-      console.log('🎯 POST-REGENERATION DEBUG:');
-      await debugPlayerPositions(player.id, player.name);
-      
-      // Invalidate and refetch player data
+      await playerStatsService.regenerateAllPlayerStats(player.id);
       queryClient.invalidateQueries({ queryKey: ['players'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
-      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-      
-      toast.success('All player statistics regenerated successfully - positions should now be accurate');
+      toast.success('Player stats regenerated successfully');
     } catch (error) {
-      console.error('Error regenerating player stats:', error);
-      toast.error('Failed to regenerate statistics');
+      console.error('Error regenerating stats:', error);
+      toast.error('Failed to regenerate stats');
     } finally {
       setIsRegenerating(false);
     }
   };
 
   const handleFixPositionsComprehensively = async () => {
+    if (!player) return;
+    
     setIsRegenerating(true);
     try {
-      console.log('🔧 STARTING COMPREHENSIVE POSITION STANDARDIZATION');
-      
-      // Test the standardization first
-      await playerStatsService.testPositionStandardization();
-      
-      // Debug current player positions before fix
-      await debugPlayerPositions(player.id, player.name);
-      
-      // Use the new comprehensive position standardization
-      await playerStatsService.regenerateAllPlayerStatsWithStandardizedPositions();
-      
-      // Debug positions after fix
-      console.log('🎯 POST-STANDARDIZATION DEBUG:');
-      await debugPlayerPositions(player.id, player.name);
-      
-      // Invalidate and refetch player data
+      await positionDebuggingService.fixPlayerPositionsComprehensively(player.id);
       queryClient.invalidateQueries({ queryKey: ['players'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
-      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-      
-      toast.success('🎉 Position standardization complete! All player stats now use consistent position names based on actual team selections.');
+      toast.success('Player positions fixed comprehensively');
     } catch (error) {
       console.error('Error fixing positions:', error);
-      toast.error('Failed to standardize positions');
+      toast.error('Failed to fix positions');
     } finally {
       setIsRegenerating(false);
     }
   };
 
   const handleCleanRebuild = async () => {
+    if (!player) return;
+    
     setIsRegenerating(true);
     try {
-      console.log('🧹 STARTING SIMPLE CLIENT-SIDE REBUILD');
-      
-      // Step 1: Clear all event_player_stats
-      console.log('Clearing existing event_player_stats...');
-      const { error: deleteError } = await supabase
-        .from('event_player_stats')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Safe delete all
-        
-      if (deleteError) throw deleteError;
-      
-      // Step 2: Get all event_selections
-      console.log('Getting event selections...');
-      const { data: selections, error: selectionsError } = await supabase
-        .from('event_selections')
-        .select('*')
-        .order('created_at');
-        
-      if (selectionsError) throw selectionsError;
-      
-      console.log(`Processing ${selections?.length || 0} event selections...`);
-      
-      // Step 3: Process each selection and create event_player_stats
-      const statsToInsert = [];
-      
-      for (const selection of selections || []) {
-        const playerPositions = selection.player_positions as any[];
-        
-        for (const playerPos of playerPositions || []) {
-          const playerId = playerPos.playerId || playerPos.player_id;
-          if (!playerId || !playerPos.position) continue;
-          
-          // Convert position names to abbreviations
-          let position = playerPos.position;
-          const positionMap: Record<string, string> = {
-            'Midfielder Right': 'RM',
-            'Midfielder Left': 'LM', 
-            'Midfielder Centre': 'CM',
-            'Defender Right': 'RB',
-            'Defender Left': 'LB',
-            'Centre Back': 'CB',
-            'Center Back': 'CB',
-            'Striker Centre': 'CF',
-            'Right Wing': 'RW',
-            'Left Wing': 'LW',
-            'Right Forward': 'RF',
-            'Left Forward': 'LF',
-            'Centre Forward': 'CF',
-            'Central Midfielder': 'CM',
-            'Right Midfielder': 'RM',
-            'Left Midfielder': 'LM',
-            'Goalkeeper': 'GK'
-          };
-          
-          if (positionMap[position]) {
-            position = positionMap[position];
-          }
-          
-          statsToInsert.push({
-            event_id: selection.event_id,
-            player_id: playerId,
-            team_number: selection.team_number || 1,
-            period_number: selection.period_number || 1,
-            position: position,
-            minutes_played: playerPos.minutes || selection.duration_minutes || 90,
-            is_captain: playerId === selection.captain_id,
-            is_substitute: playerPos.isSubstitute || position.toLowerCase() === 'sub',
-            performance_category_id: selection.performance_category_id
-          });
-        }
-      }
-      
-      console.log(`Inserting ${statsToInsert.length} player stats records...`);
-      
-      // Step 4: Insert in batches to avoid timeouts
-      const batchSize = 100;
-      for (let i = 0; i < statsToInsert.length; i += batchSize) {
-        const batch = statsToInsert.slice(i, i + batchSize);
-        const { error: insertError } = await supabase
-          .from('event_player_stats')
-          .insert(batch);
-          
-        if (insertError) throw insertError;
-        console.log(`Inserted batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(statsToInsert.length/batchSize)}`);
-      }
-      
-      // Step 5: Update player match stats
-      const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
-      if (updateError) throw updateError;
-      
-      // Debug Andrew's data after rebuild
-      if (player.name === 'Andrew McDonald') {
-        await positionDebuggingService.debugAndrewMcDonaldData();
-      }
-      
-      // Invalidate and refetch player data
+      // Implement clean rebuild logic here
+      await playerStatsService.cleanRebuildPlayerStats(player.id);
       queryClient.invalidateQueries({ queryKey: ['players'] });
-      queryClient.invalidateQueries({ queryKey: ['dashboard-players'] });
-      queryClient.invalidateQueries({ queryKey: ['active-players'] });
-      
-      toast.success('✅ Clean rebuild complete! Data now matches team selections exactly.');
+      toast.success('Player stats clean rebuild completed');
     } catch (error) {
       console.error('Error in clean rebuild:', error);
-      toast.error('Failed to clean rebuild data');
+      toast.error('Failed to perform clean rebuild');
     } finally {
       setIsRegenerating(false);
     }
   };
 
   const handleDebugAndrew = async () => {
-    if (player.name === 'Andrew McDonald') {
-      setIsRegenerating(true);
-      try {
-        await positionDebuggingService.debugAndrewMcDonaldData();
-        toast.success('Andrew McDonald debugging complete - check console');
-      } catch (error) {
-        console.error('Error debugging Andrew:', error);
-        toast.error('Failed to debug Andrew McDonald data');
-      } finally {
-        setIsRegenerating(false);
-      }
+    if (!player) return;
+    
+    setIsRegenerating(true);
+    try {
+      await debugPlayerPositions(player.id);
+      queryClient.invalidateQueries({ queryKey: ['players'] });
+      toast.success('Debug completed for Andrew McDonald');
+    } catch (error) {
+      console.error('Error debugging Andrew:', error);
+      toast.error('Failed to debug Andrew');
+    } finally {
+      setIsRegenerating(false);
     }
   };
+
+  if (!player) {
+    return null;
+  }
+
+  // Filter out games with empty strings for key fields
+  const filteredRecentGames = (player.recentGames || []).filter(game => {
+    return game.opponent && game.opponent.trim() !== '' && 
+           game.date && game.date.trim() !== '' &&
+           game.id && game.id.trim() !== '';
+  });
+
+  const stats = player.matchStats || {
+    gamesPlayed: 0,
+    minutesPlayed: 0,
+    goals: 0,
+    assists: 0,
+    cleanSheets: 0,
+    captainGames: 0,
+    playerOfTheMatchCount: 0,
+    averageRating: 0,
+    positions: {},
+    performanceCategories: {}
+  };
+
+  // Process positions data
+  const positionsArray = Object.entries(stats.positions || {})
+    .map(([position, count]) => ({ position, count: Number(count) }))
+    .filter(p => p.count > 0)
+    .sort((a, b) => b.count - a.count);
+
+  // Process performance categories data
+  const performanceCategoriesArray = Object.entries(stats.performanceCategories || {})
+    .map(([category, count]) => ({ category, count: Number(count) }))
+    .filter(p => p.count > 0)
+    .sort((a, b) => b.count - a.count);
 
   return (
     <TooltipProvider>
@@ -439,74 +206,78 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     <RotateCcw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                     Refresh Stats
                   </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleRegenerateStats}
-                        disabled={isRegenerating}
-                        className="flex items-center gap-2"
-                      >
-                        <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                        Fix All Data
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>This will rebuild all statistics from the correct team selection data</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={handleFixPositionsComprehensively}
-                        disabled={isRegenerating}
-                        className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-                      >
-                        <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                        Fix Positions
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
-                    </TooltipContent>
-                   </Tooltip>
-                   <Tooltip>
-                     <TooltipTrigger asChild>
-                       <Button
-                         variant="default"
-                         size="sm"
-                         onClick={handleCleanRebuild}
-                         disabled={isRegenerating}
-                         className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-                       >
-                         <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
-                         Clean Rebuild
-                       </Button>
-                     </TooltipTrigger>
-                     <TooltipContent>
-                       <p>Clean rebuild: Removes duplicates and rebuilds data to exactly match team selections with position abbreviations</p>
-                     </TooltipContent>
-                   </Tooltip>
-                   {player.name === 'Andrew McDonald' && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={handleDebugAndrew}
-                          disabled={isRegenerating}
-                          className="flex items-center gap-2"
-                        >
-                          🔍 Debug Andrew
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Special debugging for Andrew McDonald's position data issues</p>
-                      </TooltipContent>
-                    </Tooltip>
+                  {isAuthorizedForDebug && (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={handleRegenerateStats}
+                            disabled={isRegenerating}
+                            className="flex items-center gap-2"
+                          >
+                            <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                            Fix All Data
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>This will rebuild all statistics from the correct team selection data</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleFixPositionsComprehensively}
+                            disabled={isRegenerating}
+                            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                          >
+                            <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                            Fix Positions
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Comprehensive fix: Standardizes all position names and rebuilds statistics to match actual team selections</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleCleanRebuild}
+                            disabled={isRegenerating}
+                            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+                          >
+                            <RotateCcw className={`h-4 w-4 ${isRegenerating ? 'animate-spin' : ''}`} />
+                            Clean Rebuild
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Clean rebuild: Removes duplicates and rebuilds data to exactly match team selections with position abbreviations</p>
+                        </TooltipContent>
+                      </Tooltip>
+                      {player.name === 'Andrew McDonald' && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={handleDebugAndrew}
+                              disabled={isRegenerating}
+                              className="flex items-center gap-2"
+                            >
+                              🔍 Debug Andrew
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Special debugging for Andrew McDonald's position data issues</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </>
                   )}
                 </div>
               )}
@@ -514,15 +285,15 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
           </DialogHeader>
           
           <Tabs defaultValue="summary" className="w-full">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="summary">Summary</TabsTrigger>
-              <TabsTrigger value="positions">Positions</TabsTrigger>
-              <TabsTrigger value="categories">Performance Categories</TabsTrigger>
-              <TabsTrigger value="availability">Availability</TabsTrigger>
-              <TabsTrigger value="recent">Match History</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-5 text-xs">
+              <TabsTrigger value="summary" className="text-xs">Summary</TabsTrigger>
+              <TabsTrigger value="positions" className="text-xs">Positions</TabsTrigger>
+              <TabsTrigger value="categories" className="text-xs">Performance</TabsTrigger>
+              <TabsTrigger value="availability" className="text-xs">Availability</TabsTrigger>
+              <TabsTrigger value="recent" className="text-xs">Match History</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="summary" className="space-y-4 py-4">
+            <TabsContent value="summary" className="space-y-4 py-4 h-[400px] overflow-y-auto">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
                   <CardHeader className="pb-2">
@@ -531,123 +302,187 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       Total Games
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="text-2xl font-bold">{matchStats?.totalGames || 0}</div>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.gamesPlayed || 0}</div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                       <Timer className="h-4 w-4" />
-                      Total Minutes
+                      Minutes Played
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="text-2xl font-bold">{matchStats?.totalMinutes || 0}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {avgMinutesPerGame} avg per game
-                    </div>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.minutesPlayed || 0}</div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                      <Crown className="h-4 w-4" />
-                      Captain
+                      <Trophy className="h-4 w-4" />
+                      Goals
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="text-2xl font-bold">{matchStats?.captainGames || 0}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {captainPercentage}% of games
-                    </div>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.goals || 0}</div>
                   </CardContent>
                 </Card>
-                
+
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                       <Award className="h-4 w-4" />
-                      POTM
+                      Assists
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="text-2xl font-bold">{matchStats?.playerOfTheMatchCount || 0}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {potmPercentage}% of games
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.assists || 0}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                      <Crown className="h-4 w-4" />
+                      Captain Games
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.captainGames || 0}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      POTM Count
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.playerOfTheMatchCount || 0}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Clean Sheets
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.cleanSheets || 0}</div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                      Avg Rating
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {stats.averageRating ? Number(stats.averageRating).toFixed(1) : 'N/A'}
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
-            
-            <TabsContent value="positions" className="space-y-4 py-4">
+
+            <TabsContent value="positions" className="space-y-4 py-4 h-[400px] overflow-y-auto">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Position Breakdown</CardTitle>
+                  <CardTitle className="text-lg">Position Statistics</CardTitle>
                   <CardDescription>
-                    Minutes played by position across all matches
+                    Games played by position (based on actual team selections)
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {topPositions.length > 0 ? (
-                    <div className="space-y-3">
-                      {topPositions.map(({ position, minutes }, index) => {
-                        const percentage = (matchStats?.totalMinutes || 0) > 0 ? 
-                          Math.round((minutes / (matchStats?.totalMinutes || 1)) * 100) : 0;
-                        
-                        return (
-                          <div key={position} className="flex items-center justify-between p-3 border rounded">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-puma-blue-100 flex items-center justify-center text-sm font-medium">
-                                {index + 1}
-                              </div>
-                              <div>
-                                <div className="font-medium">{getPositionAbbreviation(position)}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {percentage}% of total minutes
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="font-medium">{minutes} mins</div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                  {positionsArray.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Position</TableHead>
+                          <TableHead>Games</TableHead>
+                          <TableHead>Percentage</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {positionsArray.map((pos, index) => (
+                          <TableRow key={`${pos.position}-${index}`}>
+                            <TableCell className="font-medium">{pos.position}</TableCell>
+                            <TableCell>{pos.count}</TableCell>
+                            <TableCell>
+                              {stats.gamesPlayed > 0 ? 
+                                `${Math.round((pos.count / stats.gamesPlayed) * 100)}%` : 
+                                '0%'
+                              }
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No position data available.
+                    <div className="text-center py-8">
+                      <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No position data available</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
-            
-            <TabsContent value="categories" className="space-y-4 py-4">
+
+            <TabsContent value="categories" className="space-y-4 py-4 h-[400px] overflow-y-auto">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Performance Categories</CardTitle>
                   <CardDescription>
-                    Statistics broken down by performance category
+                    Games by performance rating category
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {matchStats?.performanceCategoryStats && Object.keys(matchStats.performanceCategoryStats).length > 0 ? (
-                    renderCategoryStats(matchStats.performanceCategoryStats)
+                  {performanceCategoriesArray.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Games</TableHead>
+                          <TableHead>Percentage</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {performanceCategoriesArray.map((cat, index) => (
+                          <TableRow key={`${cat.category}-${index}`}>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-xs">
+                                {String(cat.category)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{cat.count}</TableCell>
+                            <TableCell>
+                              {stats.gamesPlayed > 0 ? 
+                                `${Math.round((cat.count / stats.gamesPlayed) * 100)}%` : 
+                                '0%'
+                              }
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No performance category data available.
+                    <div className="text-center py-8">
+                      <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No performance category data available</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
             
-            <TabsContent value="availability" className="space-y-4 py-4">
+            <TabsContent value="availability" className="space-y-4 py-4 h-[400px] overflow-y-auto">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Event Availability Summary</CardTitle>
@@ -745,41 +580,34 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="text-xs">
-                                    {item.eventType}
+                                    {item.eventType || 'Unknown'}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <div className="text-sm">
+                                  <div className="text-sm text-muted-foreground">
                                     {item.opponent || 'N/A'}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <Badge 
                                     variant={
-                                      item.status === 'available' ? 'default' :
-                                      item.status === 'unavailable' ? 'destructive' :
+                                      item.status === 'available' ? 'default' : 
+                                      item.status === 'unavailable' ? 'destructive' : 
                                       'secondary'
                                     }
-                                    className={`text-xs ${
-                                      item.status === 'available' ? 'bg-green-500 hover:bg-green-600' :
-                                      item.status === 'unavailable' ? 'bg-red-500 hover:bg-red-600' :
-                                      'bg-amber-500 hover:bg-amber-600'
-                                    }`}
+                                    className="text-xs"
                                   >
                                     {item.status}
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-xs text-muted-foreground">
-                                    {item.respondedAt ? 
-                                      formatDate(item.respondedAt, 'dd MMM HH:mm') : 
-                                      'No response'
-                                    }
+                                    {formatDate(item.responseTime, 'dd MMM HH:mm')}
                                   </div>
                                 </TableCell>
                                 <TableCell>
                                   <Badge variant="outline" className="text-xs">
-                                    {item.relationship || item.role}
+                                    {item.source || 'Manual'}
                                   </Badge>
                                 </TableCell>
                               </TableRow>
@@ -789,18 +617,16 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                       </div>
                     </div>
                   ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No availability history found for this player.
-                      <p className="text-sm mt-2">
-                        The player may not have a linked user account or hasn't responded to any event availability requests.
-                      </p>
+                    <div className="text-center py-8">
+                      <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No availability history found</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
             
-            <TabsContent value="recent" className="space-y-4 py-4">
+            <TabsContent value="recent" className="space-y-4 py-4 h-[400px] overflow-y-auto">
               {filteredRecentGames.length > 0 ? (
                 <Card>
                   <CardHeader>
@@ -845,45 +671,33 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-1">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                {game.minutes} mins
-                                {game.wasSubstitute && (
-                                  <Badge variant="outline" className="ml-1 text-xs">
-                                    <ArrowUpDown className="h-3 w-3 mr-1" />
-                                    Sub
-                                  </Badge>
-                                )}
+                                <Timer className="h-3 w-3 text-muted-foreground" />
+                                <span>{game.minutesPlayed || 0}'</span>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1">
-                                {game.minutesByPosition && Object.keys(game.minutesByPosition).length > 0 ? (
-                                  Object.entries(game.minutesByPosition as Record<string, number>).map(([position, minutes]) => {
-                                    const abbreviation = getPositionAbbreviation(position);
-                                    return (
-                                      <Badge key={position} variant="outline" className="text-xs">
-                                        {abbreviation}: {minutes}m
-                                      </Badge>
-                                    );
-                                  })
+                                {game.positions && game.positions.length > 0 ? (
+                                  game.positions.map((pos, posIndex) => (
+                                    <Badge key={posIndex} variant="outline" className="text-xs">
+                                      {pos}
+                                    </Badge>
+                                  ))
                                 ) : (
-                                  <span className="text-muted-foreground text-xs">No position data</span>
+                                  <span className="text-muted-foreground text-xs">No position</span>
                                 )}
                               </div>
                             </TableCell>
                             <TableCell>
-                              <div className="flex gap-1">
-                                {game.captain && (
-                                  <Badge variant="outline" className="border-yellow-500 text-yellow-600 flex items-center gap-1">
-                                    <Crown className="h-3 w-3" />
-                                    Captain
-                                  </Badge>
+                              <div className="flex items-center gap-1">
+                                {game.isCaptain && (
+                                  <Crown className="h-3 w-3 text-yellow-500" title="Captain" />
                                 )}
-                                {game.playerOfTheMatch && (
-                                  <Badge variant="default" className="bg-purple-500 flex items-center gap-1">
-                                    <Trophy className="h-3 w-3" />
-                                    POTM
-                                  </Badge>
+                                {game.isPlayerOfTheMatch && (
+                                  <Trophy className="h-3 w-3 text-blue-500" title="Player of the Match" />
+                                )}
+                                {!game.isCaptain && !game.isPlayerOfTheMatch && (
+                                  <span className="text-muted-foreground text-xs">-</span>
                                 )}
                               </div>
                             </TableCell>
@@ -894,9 +708,14 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                   </CardContent>
                 </Card>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  No match history available for this player (excluding unknown opponents).
-                </div>
+                <Card>
+                  <CardContent className="py-8">
+                    <div className="text-center">
+                      <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">No recent games found</p>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
           </Tabs>

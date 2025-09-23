@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { format } from 'date-fns';
-import { Plus, Trash2, Check, ArrowUpRight, Circle, Target, Star, Lock } from 'lucide-react';
+import { Plus, Trash2, Check, ArrowUpRight, Circle, Target, Star, Lock, X } from 'lucide-react';
 
 interface PlayerObjectivesModalProps {
   player: Player;
@@ -277,9 +277,21 @@ export const PlayerObjectivesModal: React.FC<PlayerObjectivesModalProps> = ({
                        )}
                       
                       <div className="space-y-3 pr-8">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between mb-2">
                           <h4 className="font-semibold">{objective.title}</h4>
-                          {getStatusBadge(objective.status)}
+                          <div className="flex items-center gap-2">
+                            {getStatusBadge(objective.status)}
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRemoveObjective(objective.id)}
+                                className="h-6 w-6 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                         
                         <p className="text-sm text-muted-foreground">{objective.description}</p>

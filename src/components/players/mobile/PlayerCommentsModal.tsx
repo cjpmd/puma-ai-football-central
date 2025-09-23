@@ -26,7 +26,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
   onSave
 }) => {
   const { toast } = useToast();
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { isGlobalAdmin, isTeamManager, hasPermission } = useAuthorization();
   const [saving, setSaving] = useState(false);
   const [comments, setComments] = useState<PlayerComment[]>(player?.comments || []);
@@ -40,7 +40,7 @@ export const PlayerCommentsModal: React.FC<PlayerCommentsModalProps> = ({
         id: `comment-${Date.now()}`,
         text: newComment,
         createdAt: new Date().toISOString(),
-        createdBy: profile?.name || 'Unknown User'
+        createdBy: profile?.name || user?.email || 'Unknown User'
       };
       
       setComments([...comments, comment]);
