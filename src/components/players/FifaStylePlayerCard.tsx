@@ -493,9 +493,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
           <div className="p-4 h-full flex flex-col justify-end relative z-10">
             {topPositions.length > 0 && ( 
-              <div className={`absolute left-2 space-y-1 ${hasAlerts ? 'top-16' : 'top-3'}`}>
+              <div className={`absolute left-2 space-y-0.5 ${hasAlerts ? 'top-16' : 'top-3'}`}>
                 {topPositions.map((pos) => (
-                  <div key={pos.position} className="bg-black/70 text-white text-xs font-bold px-2 py-1 rounded-md shadow-lg border border-white/30">
+                  <div key={pos.position} className="bg-black/70 text-white text-[10px] font-medium px-1.5 py-0.5 rounded shadow-lg border border-white/30">
                     {pos.display}
                   </div>
                 ))}
