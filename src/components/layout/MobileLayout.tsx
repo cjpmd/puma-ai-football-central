@@ -33,18 +33,20 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
       
       {showTabs && tabs.length > 0 && (
         <div className={`bg-white border-b ${stickyTabs ? 'sticky top-[calc(3.5rem+theme(spacing.safe-top)+0.75rem)] z-20' : ''}`}>
-          <div className="flex">
+          <div className="flex w-full overflow-hidden">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => onTabChange?.(tab.id)}
-                className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
+                className={`flex-1 py-3 px-1 text-xs font-medium transition-colors text-center min-w-0 ${
                   activeTab === tab.id
                     ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                {tab.label}
+                <span className="block truncate">
+                  {tab.label}
+                </span>
               </button>
             ))}
           </div>
