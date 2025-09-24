@@ -364,19 +364,26 @@ export default function CalendarEvents() {
                   </SelectContent>
                 </Select>
 
-                <Select value={selectedEventType} onValueChange={setSelectedEventType}>
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    {eventTypes.map((type) => (
-                      <SelectItem key={type} value={type}>
-                        {type === 'individual_training' ? 'Individual Training' : type.charAt(0).toUpperCase() + type.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {/* Event Type Buttons */}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={selectedEventType === 'all' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedEventType('all')}
+                  >
+                    All Types
+                  </Button>
+                  {eventTypes.map((type) => (
+                    <Button
+                      key={type}
+                      variant={selectedEventType === type ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedEventType(type)}
+                    >
+                      {type === 'individual_training' ? 'Individual Training' : type.charAt(0).toUpperCase() + type.slice(1)}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
 
