@@ -37,7 +37,7 @@ const navigation = [
   { name: 'Training', href: '/training', icon: Dumbbell, permission: null }, // Allow all team members to view training
   { name: 'Individual Training', href: '/individual-training', icon: Target, permission: null }, // Allow all team members
   { name: 'Analytics', href: '/analytics', icon: BarChart3, permission: { resource: 'analytics', action: 'view' } },
-  { name: 'Player Management', href: '/player-management', icon: UserCheck, permission: { resource: 'players', action: 'manage' } },
+  
   { name: 'Teams', href: '/teams', icon: Trophy, permission: { resource: 'teams', action: 'manage' } },
   { name: 'Clubs', href: '/clubs', icon: Building2, permission: { resource: 'clubs', action: 'manage' } },
   { name: 'Staff Management', href: '/staff', icon: UserCog, permission: { resource: 'staff', action: 'manage' } },

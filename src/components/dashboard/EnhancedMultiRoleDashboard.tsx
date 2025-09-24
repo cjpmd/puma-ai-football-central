@@ -39,7 +39,7 @@ const navigation = [
   { name: 'Training', href: '/training', icon: Dumbbell },
   { name: 'Individual Training', href: '/individual-training', icon: Target },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'Player Management', href: '/player-management', icon: UserCheck },
+  
   { name: 'Teams', href: '/teams', icon: Trophy },
   { name: 'Clubs', href: '/clubs', icon: Building2 },
   { name: 'Staff Management', href: '/staff', icon: UserCog },

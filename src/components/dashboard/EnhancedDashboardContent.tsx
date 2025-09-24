@@ -531,12 +531,6 @@ export const EnhancedDashboardContent = () => {
                   <span className="text-sm font-medium">Create Event</span>
                 </Button>
                 
-                <Link to="/player-management" className="block">
-                  <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:bg-blue-500/10 hover:border-blue-500/50">
-                    <UserPlus className="h-6 w-6 text-blue-600" />
-                    <span className="text-sm font-medium">Manage Players</span>
-                  </Button>
-                </Link>
                 
                 <Link to="/analytics" className="block">
                   <Button variant="outline" className="w-full h-20 flex flex-col gap-2 hover:bg-green-500/10 hover:border-green-500/50">
