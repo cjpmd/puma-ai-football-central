@@ -32,12 +32,15 @@ const tabs = [
   { id: 'fixtures', label: 'FIXTURES' },
   { id: 'training', label: 'TRAINING' },
   { id: 'friendlies', label: 'FRIENDLIES' },
+  { id: 'other', label: 'OTHER' },
 ];
 
 export default function CalendarEventsMobile() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
   const [activeTab, setActiveTab] = useState('fixtures');
   const [loading, setLoading] = useState(true);
+  const [eventsToShow, setEventsToShow] = useState(5);
+  const showMoreIncrement = 5;
   const [selectedEvent, setSelectedEvent] = useState<DatabaseEvent | null>(null);
   const [showEventForm, setShowEventForm] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
@@ -183,7 +186,7 @@ export default function CalendarEventsMobile() {
         .from('events')
         .select('*')
         .eq('team_id', teams[0].id)
-        .order('date', { ascending: true });
+        .order('date', { ascending: false });
 
       if (error) throw error;
       console.log('Loaded events:', data?.length);
@@ -313,6 +316,8 @@ export default function CalendarEventsMobile() {
           return event.event_type === 'training';
         case 'friendlies':
           return event.event_type === 'friendly';
+        case 'other':
+          return !['match', 'fixture', 'training', 'friendly'].includes(event.event_type);
         default:
           return true;
       }
@@ -530,7 +535,29 @@ export default function CalendarEventsMobile() {
   };
 
   const filteredEvents = getFilteredEvents();
-  const groupedEvents = groupEventsByMonth(filteredEvents);
+  
+  // Separate upcoming and past events
+  const now = new Date();
+  const upcomingEvents = filteredEvents.filter(event => new Date(event.date) >= now);
+  const pastEvents = filteredEvents.filter(event => new Date(event.date) < now);
+  
+  // Sort upcoming events by date (ascending - closest first)
+  const sortedUpcomingEvents = upcomingEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  // Sort past events by date (descending - most recent first)  
+  const sortedPastEvents = pastEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  // Combine with upcoming first, then past
+  const orderedEvents = [...sortedUpcomingEvents, ...sortedPastEvents];
+  
+  // Apply pagination
+  const paginatedEvents = orderedEvents.slice(0, eventsToShow);
+  const hasMoreEvents = orderedEvents.length > eventsToShow;
+  
+  // Find next upcoming event for highlighting
+  const nextUpcomingEvent = sortedUpcomingEvents[0];
+  
+  const groupedEvents = groupEventsByMonth(paginatedEvents);
 
   if (showExpandedTeamSelection && selectedEvent) {
     return (
@@ -611,134 +638,161 @@ export default function CalendarEventsMobile() {
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
             <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
           </div>
-        ) : Object.keys(groupedEvents).length === 0 ? (
+        ) : paginatedEvents.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-muted-foreground">No {activeTab} scheduled</p>
           </div>
         ) : (
-          Object.entries(groupedEvents).map(([month, monthEvents]) => (
-            <div key={month} className="space-y-3">
-              <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wider px-1">
-                {month}
-              </h2>
-              
-              <div className="space-y-3">
-                {monthEvents.map((event) => {
-                  const team = teams?.find(t => t.id === event.team_id);
-                  const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
-                  const completed = isEventCompleted(event);
-                  const eventDate = new Date(event.date);
-                  const isEventToday = isToday(eventDate);
-                  const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
-                  const teamScores = getAllTeamScores(event);
-                  const borderClass = getEventBorderClass(event.id);
-                  const availabilityStatus = getAvailabilityStatus(event.id);
-                  const showAvailabilityControls = shouldShowAvailabilityControls(event);
-                  
-                  return (
-                    <Card 
-                      key={event.id} 
-                      className={`bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow ${borderClass}`}
-                      onClick={(e) => handleEventClick(event, e)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="space-y-3">
-                          {/* Date and Time */}
-                          <div className="flex items-center justify-between">
-                            <div className="text-center">
-                              <div className="text-xs text-gray-500 uppercase">
-                                {format(eventDate, 'EEE dd MMM')}
+          <>
+            {Object.entries(groupedEvents).map(([month, monthEvents]) => (
+              <div key={month} className="space-y-3">
+                <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wider px-1">
+                  {month}
+                </h2>
+                
+                <div className="space-y-3">
+                  {monthEvents.map((event) => {
+                    const team = teams?.find(t => t.id === event.team_id);
+                    const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+                    const completed = isEventCompleted(event);
+                    const eventDate = new Date(event.date);
+                    const isEventToday = isToday(eventDate);
+                    const isEventPast = isPast(startOfDay(eventDate)) && !isEventToday;
+                    const teamScores = getAllTeamScores(event);
+                    const borderClass = getEventBorderClass(event.id);
+                    const availabilityStatus = getAvailabilityStatus(event.id);
+                    const showAvailabilityControls = shouldShowAvailabilityControls(event);
+                    const isNextEvent = nextUpcomingEvent && event.id === nextUpcomingEvent.id;
+                    
+                    return (
+                      <Card 
+                        key={event.id} 
+                        className={`bg-white shadow-sm cursor-pointer hover:shadow-md transition-shadow ${borderClass} ${
+                          isNextEvent ? 'ring-2 ring-primary/50 shadow-lg' : ''
+                        }`}
+                        onClick={(e) => handleEventClick(event, e)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="space-y-3">
+                            {/* Next Event Badge */}
+                            {isNextEvent && (
+                              <div className="flex justify-center">
+                                <Badge className="bg-primary text-primary-foreground text-xs px-2 py-1">
+                                  NEXT EVENT
+                                </Badge>
                               </div>
-                              <div className="text-lg font-bold text-gray-900">
-                                {getUserRelevantTimeDisplay(event)}
-                              </div>
-                            </div>
+                            )}
                             
-                            <div className="flex items-center gap-2">
-                              {/* Result icons for completed matches - show ALL team results */}
-                              {completed && teamScores.length > 0 && (
-                                <div className="flex gap-1">
-                                  {teamScores.map((score, index) => (
-                                    <span key={index} className="text-lg">{score.outcomeIcon}</span>
-                                  ))}
+                            {/* Date and Time */}
+                            <div className="flex items-center justify-between">
+                              <div className="text-center">
+                                <div className="text-xs text-gray-500 uppercase">
+                                  {format(eventDate, 'EEE dd MMM')}
                                 </div>
-                              )}
-                              
-                              {/* Kit avatar */}
-                              {kitDesign && (
-                                <EnhancedKitAvatar design={kitDesign} size="sm" />
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Teams/Title */}
-                          <div className="text-center">
-                            {isMatchType(event.event_type) && event.opponent ? (
-                              <div className="flex items-center justify-center gap-3">
-                                <div className="flex items-center gap-2">
-                                  {team?.logoUrl && (
-                                    <img 
-                                      src={team.logoUrl} 
-                                      alt={team.name}
-                                      className="w-8 h-8 rounded-full"
-                                    />
-                                  )}
-                                </div>
-                                <span className="text-gray-400">vs</span>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm">{event.opponent}</span>
+                                <div className="text-lg font-bold text-gray-900">
+                                  {getUserRelevantTimeDisplay(event)}
                                 </div>
                               </div>
-                            ) : (
-                              <h3 className="font-medium text-gray-900">{event.title}</h3>
+                              
+                              <div className="flex items-center gap-2">
+                                {/* Result icons for completed matches - show ALL team results */}
+                                {completed && teamScores.length > 0 && (
+                                  <div className="flex gap-1">
+                                    {teamScores.map((score, index) => (
+                                      <span key={index} className="text-lg">{score.outcomeIcon}</span>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {/* Kit avatar */}
+                                {kitDesign && (
+                                  <EnhancedKitAvatar design={kitDesign} size="sm" />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Teams/Title */}
+                            <div className="text-center">
+                              {isMatchType(event.event_type) && event.opponent ? (
+                                <div className="flex items-center justify-center gap-3">
+                                  <div className="flex items-center gap-2">
+                                    {team?.logoUrl && (
+                                      <img 
+                                        src={team.logoUrl} 
+                                        alt={team.name}
+                                        className="w-8 h-8 rounded-full"
+                                      />
+                                    )}
+                                  </div>
+                                  <span className="text-gray-400">vs</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-sm">{event.opponent}</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <h3 className="font-medium text-gray-900">{event.title}</h3>
+                              )}
+                            </div>
+
+                            {/* Location and Details */}
+                            {event.location && (
+                              <div className="text-xs text-gray-500 text-center">
+                                {event.location}
+                              </div>
+                            )}
+
+                            {/* Match Info */}
+                            {isMatchType(event.event_type) && (
+                              <div className="text-xs text-gray-500 text-center">
+                                {event.game_format || 'Match'} • {event.is_home ? 'Home' : 'Away'}
+                              </div>
+                            )}
+
+                            {/* Multi-Role Availability Controls */}
+                            {shouldShowAvailabilityControls(event) && (
+                              <div className="pt-2 border-t">
+                                 <MultiRoleAvailabilityControls
+                                   eventId={event.id}
+                                   size="sm"
+                                 />
+                                 
+                                 {/* Debug Helper - Only show for Chris McDonald when no staff role detected */}
+                                 {user?.email === 'chrisjpmcdonald@gmail.com' && !getAvailabilityStatus(event.id) && (
+                                   <div className="mt-2 pt-2 border-t">
+                                     <StaffAssignmentHelper
+                                       eventId={event.id}
+                                       staffId="dbc26381-a72b-417a-92e0-061d9a552026"
+                                       onSuccess={() => {
+                                         // Refresh the page to reload roles
+                                         window.location.reload();
+                                       }}
+                                     />
+                                   </div>
+                                 )}
+                              </div>
                             )}
                           </div>
-
-                          {/* Location and Details */}
-                          {event.location && (
-                            <div className="text-xs text-gray-500 text-center">
-                              {event.location}
-                            </div>
-                          )}
-
-                          {/* Match Info */}
-                          {isMatchType(event.event_type) && (
-                            <div className="text-xs text-gray-500 text-center">
-                              {event.game_format || 'Match'} • {event.is_home ? 'Home' : 'Away'}
-                            </div>
-                          )}
-
-                          {/* Multi-Role Availability Controls */}
-                          {shouldShowAvailabilityControls(event) && (
-                            <div className="pt-2 border-t">
-                               <MultiRoleAvailabilityControls
-                                 eventId={event.id}
-                                 size="sm"
-                               />
-                               
-                               {/* Debug Helper - Only show for Chris McDonald when no staff role detected */}
-                               {user?.email === 'chrisjpmcdonald@gmail.com' && !getAvailabilityStatus(event.id) && (
-                                 <div className="mt-2 pt-2 border-t">
-                                   <StaffAssignmentHelper
-                                     eventId={event.id}
-                                     staffId="dbc26381-a72b-417a-92e0-061d9a552026"
-                                     onSuccess={() => {
-                                       // Refresh the page to reload roles
-                                       window.location.reload();
-                                     }}
-                                   />
-                                 </div>
-                               )}
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))
+            ))}
+            
+            {/* Show More Button */}
+            {hasMoreEvents && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setEventsToShow(prev => prev + showMoreIncrement)}
+                  className="px-6"
+                >
+                  Show More ({Math.min(showMoreIncrement, orderedEvents.length - eventsToShow)} more)
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
 
