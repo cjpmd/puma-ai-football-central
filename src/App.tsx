@@ -64,6 +64,7 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/player-management" element={<Navigate to="/players" replace />} />
               <Route 
                 path="/players" 
                 element={
