@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, Grid3X3, List, Plus } from 'lucide-react';
+import { Calendar, Grid3X3, List, Plus, Clock } from 'lucide-react';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -270,24 +271,45 @@ export default function CalendarEvents() {
 
   const eventTypes = Array.from(new Set([...events.map(e => e.event_type), 'individual_training']));
 
+  // Get current month and event counts for header
+  const currentMonth = format(new Date(), 'MMMM yyyy');
+  const currentMonthEvents = events.filter(event => {
+    const eventDate = new Date(event.date);
+    const currentDate = new Date();
+    return eventDate.getMonth() === currentDate.getMonth() && 
+           eventDate.getFullYear() === currentDate.getFullYear();
+  });
+
+  // Get next upcoming event
+  const upcomingEvents = events.filter(event => new Date(event.date) >= new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const nextEvent = upcomingEvents[0];
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <Card>
+        {/* Enhanced Header with Month Display */}
+        <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-3 text-2xl">
+                  <Calendar className="h-7 w-7 text-primary" />
                   Calendar & Events
                 </CardTitle>
-                <CardDescription>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-3xl font-bold text-primary">{currentMonth}</h2>
+                  <Badge variant="outline" className="text-sm">
+                    {currentMonthEvents.length} events this month
+                  </Badge>
+                </div>
+                <CardDescription className="text-base">
                   Manage your team's schedule and events
                 </CardDescription>
               </div>
               <div className="flex gap-2">
-                <Button onClick={() => setShowEventForm(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+                <Button onClick={() => setShowEventForm(true)} size="lg">
+                  <Plus className="h-5 w-5 mr-2" />
                   Add Event
                 </Button>
               </div>
@@ -358,11 +380,39 @@ export default function CalendarEvents() {
               </div>
             </div>
 
+            {/* Next Event Spotlight & Quick Stats */}
+            {nextEvent && (
+              <div className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20">
+                <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Next Event
+                </h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{nextEvent.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(nextEvent.date), 'EEEE, MMM dd')} 
+                      {nextEvent.start_time && ` at ${nextEvent.start_time}`}
+                    </p>
+                    {nextEvent.location && (
+                      <p className="text-sm text-muted-foreground">📍 {nextEvent.location}</p>
+                    )}
+                  </div>
+                  <Badge variant="secondary" className="text-sm">
+                    {Math.ceil((new Date(nextEvent.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days
+                  </Badge>
+                </div>
+              </div>
+            )}
+
             {/* Event Count */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">
                   {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
+                </Badge>
+                <Badge variant="outline" className="text-green-600 border-green-600">
+                  {upcomingEvents.length} upcoming
                 </Badge>
               </div>
             </div>
@@ -413,41 +463,159 @@ export default function CalendarEvents() {
             )}
             
             {viewMode === 'list' && (
-              <div className="space-y-4">
-                {filteredEvents.map((event) => (
-                  <Card key={event.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h3 className="font-semibold">{event.title}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(event.date).toLocaleDateString()} 
-                            {event.start_time && ` at ${event.start_time}`}
-                          </p>
-                          {event.location && (
-                            <p className="text-sm text-muted-foreground">{event.location}</p>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditEvent(event)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleTeamSelection(event)}
-                          >
-                            Team
-                          </Button>
-                        </div>
+              <div className="space-y-6">
+                {/* Upcoming Events Section */}
+                {upcomingEvents.length > 0 && (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4 text-primary flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Upcoming Events
+                    </h3>
+                    <div className="space-y-3">
+                      {upcomingEvents
+                        .filter(event => selectedTeam === 'all' || event.team_id === selectedTeam)
+                        .filter(event => selectedEventType === 'all' || event.event_type === selectedEventType)
+                        .map((event, index) => {
+                          const isNextEvent = index === 0;
+                          const team = teams.find(t => t.id === event.team_id);
+                          const isMatchType = ['match', 'fixture', 'friendly'].includes(event.event_type);
+                          
+                          return (
+                            <Card key={event.id} className={`${isNextEvent ? 'ring-2 ring-primary shadow-lg bg-primary/5' : ''}`}>
+                              <CardContent className="p-6">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                      {isNextEvent && (
+                                        <Badge className="bg-primary text-primary-foreground">Next Event</Badge>
+                                      )}
+                                      <Badge variant={isMatchType ? "destructive" : "secondary"}>
+                                        {event.event_type}
+                                      </Badge>
+                                      {team?.logoUrl && (
+                                        <img src={team.logoUrl} alt={team.name} className="w-6 h-6 rounded-full" />
+                                      )}
+                                    </div>
+                                    
+                                    <h3 className={`font-semibold mb-2 ${isNextEvent ? 'text-lg' : ''}`}>
+                                      {isMatchType && event.opponent ? (
+                                        <span>{team?.name} vs {event.opponent}</span>
+                                      ) : (
+                                        event.title
+                                      )}
+                                    </h3>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
+                                      <p className="flex items-center gap-1">
+                                        <Calendar className="h-4 w-4" />
+                                        {format(new Date(event.date), 'EEEE, MMM dd, yyyy')}
+                                      </p>
+                                      {event.start_time && (
+                                        <p className="flex items-center gap-1">
+                                          <Clock className="h-4 w-4" />
+                                          {event.start_time}
+                                        </p>
+                                      )}
+                                      {event.location && (
+                                        <p className="flex items-center gap-1">
+                                          📍 {event.location}
+                                        </p>
+                                      )}
+                                    </div>
+                                    
+                                    {event.description && (
+                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
+                                        {event.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  
+                                  <div className="flex flex-col gap-2 ml-4">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleEditEvent(event)}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleTeamSelection(event)}
+                                    >
+                                      Team
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Past Events Section */}
+                {(() => {
+                  const pastEvents = events
+                    .filter(event => new Date(event.date) < new Date())
+                    .filter(event => selectedTeam === 'all' || event.team_id === selectedTeam)
+                    .filter(event => selectedEventType === 'all' || event.event_type === selectedEventType)
+                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+                  return pastEvents.length > 0 ? (
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4 text-muted-foreground flex items-center gap-2">
+                        Past Events
+                      </h3>
+                      <div className="space-y-3">
+                        {pastEvents.map((event) => {
+                          const team = teams.find(t => t.id === event.team_id);
+                          const isMatchType = ['match', 'fixture', 'friendly'].includes(event.event_type);
+                          
+                          return (
+                            <Card key={event.id} className="opacity-75">
+                              <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <Badge variant="outline" className="text-xs">
+                                        {event.event_type}
+                                      </Badge>
+                                      {team?.logoUrl && (
+                                        <img src={team.logoUrl} alt={team.name} className="w-4 h-4 rounded-full" />
+                                      )}
+                                    </div>
+                                    <h3 className="font-medium text-sm">
+                                      {isMatchType && event.opponent ? (
+                                        <span>{team?.name} vs {event.opponent}</span>
+                                      ) : (
+                                        event.title
+                                      )}
+                                    </h3>
+                                    <p className="text-xs text-muted-foreground">
+                                      {format(new Date(event.date), 'MMM dd, yyyy')}
+                                      {event.start_time && ` at ${event.start_time}`}
+                                    </p>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEditEvent(event)}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </div>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                    </div>
+                  ) : null;
+                })()}
               </div>
             )}
           </>

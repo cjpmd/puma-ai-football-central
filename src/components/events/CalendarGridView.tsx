@@ -301,26 +301,48 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={() => navigateMonth('prev')}>
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        <h2 className="text-xl font-semibold">
-          {format(currentDate, 'MMMM yyyy')}
-        </h2>
-        <Button variant="outline" onClick={() => navigateMonth('next')}>
-          <ChevronRight className="h-4 w-4" />
-        </Button>
-      </div>
+    <div className="space-y-6">
+      {/* Enhanced Month Navigation */}
+      <Card className="p-4 bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
+        <div className="flex items-center justify-between">
+          <Button variant="outline" onClick={() => navigateMonth('prev')} size="lg">
+            <ChevronLeft className="h-5 w-5" />
+            <span className="ml-2 hidden sm:inline">
+              {format(subMonths(currentDate, 1), 'MMM')}
+            </span>
+          </Button>
+          
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-primary">
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {events.filter(e => {
+                const eventDate = new Date(e.date);
+                return eventDate.getMonth() === currentDate.getMonth() && 
+                       eventDate.getFullYear() === currentDate.getFullYear();
+              }).length} events this month
+            </p>
+          </div>
+          
+          <Button variant="outline" onClick={() => navigateMonth('next')} size="lg">
+            <span className="mr-2 hidden sm:inline">
+              {format(addMonths(currentDate, 1), 'MMM')}
+            </span>
+            <ChevronRight className="h-5 w-5" />
+          </Button>
+        </div>
+      </Card>
 
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      {/* Enhanced Calendar Grid */}
+      <div className="grid grid-cols-7 gap-3">
         {/* Day Headers */}
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-          <div key={day} className="p-2 text-center font-medium text-muted-foreground">
-            {day}
+        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, index) => (
+          <div key={day} className="p-3 text-center font-semibold text-primary bg-primary/5 rounded-lg">
+            <div className="text-sm">{day}</div>
+            <div className="text-xs text-muted-foreground hidden sm:block">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index]}
+            </div>
           </div>
         ))}
 
@@ -334,11 +356,11 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
           return (
             <Card 
               key={day.toISOString()} 
-              className={`min-h-[120px] ${!isCurrentMonth ? 'opacity-50' : ''} ${isEventToday ? 'ring-2 ring-primary' : ''}`}
+              className={`min-h-[140px] ${!isCurrentMonth ? 'opacity-50' : ''} ${isEventToday ? 'ring-2 ring-primary bg-primary/5' : ''} hover:shadow-md transition-shadow`}
             >
-              <CardContent className="p-2 h-full">
+              <CardContent className="p-3 h-full">
                 <div className="flex flex-col h-full">
-                  <div className="text-sm font-medium mb-2">
+                  <div className={`text-lg font-bold mb-2 ${isEventToday ? 'text-primary' : ''}`}>
                     {format(day, 'd')}
                   </div>
                   

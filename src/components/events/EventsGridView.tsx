@@ -277,16 +277,162 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     });
   };
 
-  // Combine and sort all events (team events + individual training sessions)
-  const allItems = [
-    ...events.map(event => ({ ...event, itemType: 'team_event' })),
-    ...individualTrainingSessions.map(session => ({ ...session, itemType: 'individual_training' }))
-  ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  // Organize events by time
+  const now = new Date();
+  const upcomingEvents = events.filter(event => new Date(event.date) >= now)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  const pastEvents = events.filter(event => new Date(event.date) < now)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  
+  const nextEvent = upcomingEvents[0];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {/* Team Events */}
-      {events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()).map((event) => {
+    <div className="space-y-8">
+      {/* Next Event Spotlight */}
+      {nextEvent && (
+        <div className="mb-8">
+          <h3 className="text-2xl font-bold mb-4 text-primary flex items-center gap-2">
+            <Clock className="h-6 w-6" />
+            Next Event
+          </h3>
+          <div className="grid grid-cols-1 gap-4">
+            {(() => {
+              const event = nextEvent;
+              const completed = isEventCompleted(event);
+              const matchType = isMatchType(event.event_type);
+              const teamScores = getTeamScores(event);
+              const weather = eventWeather[event.id];
+              const team = teams.find(t => t.id === event.team_id);
+              const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+              const outlineClass = getEventOutlineClass(event.id);
+              const availabilityStatus = getAvailabilityStatus(event.id);
+              const showAvailabilityControls = shouldShowAvailabilityControls(event);
+              
+              return (
+                <Card className={`${outlineClass} ring-2 ring-primary shadow-lg bg-primary/5 transform hover:scale-105 transition-transform`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex gap-2">
+                        <Badge className="bg-primary text-primary-foreground">
+                          Next Event
+                        </Badge>
+                        <Badge 
+                          className={`text-xs ${matchType ? 'bg-red-500' : 'bg-blue-500'}`}
+                          variant="default"
+                        >
+                          {event.event_type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {kitDesign && (
+                          <EnhancedKitAvatar design={kitDesign} size="md" />
+                        )}
+                      </div>
+                    </div>
+                    
+                    {shouldShowTitle(event) ? (
+                      <CardTitle className="text-xl line-clamp-2">{event.title}</CardTitle>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        {team?.logoUrl && (
+                          <img 
+                            src={team.logoUrl} 
+                            alt={team.name}
+                            className="w-8 h-8 rounded-full"
+                          />
+                        )}
+                        <span className="text-lg text-muted-foreground">vs</span>
+                        <span className="text-xl font-bold">{event.opponent}</span>
+                      </div>
+                    )}
+                  </CardHeader>
+                  
+                  <CardContent className="pt-0">
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <p className="text-lg font-medium text-primary">
+                          {format(new Date(event.date), 'EEEE, MMM dd, yyyy')}
+                        </p>
+                        
+                        {eventTimeContexts[event.id] && (
+                          <p className="text-lg font-medium text-primary">
+                            {formatEventTimeDisplay(eventTimeContexts[event.id])}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {event.location && (
+                        <div className="flex items-center justify-between">
+                          <p className="text-base text-muted-foreground">
+                            📍 {event.location}
+                          </p>
+                          {weather && (
+                            <div className="flex items-center gap-2">
+                              <img 
+                                src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
+                                alt={weather.description}
+                                className="w-8 h-8"
+                                title={`${Math.round(weather.temp)}°C - ${weather.description}`}
+                              />
+                              <span className="text-base font-medium">
+                                {Math.round(weather.temp)}°C
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {event.description && (
+                        <p className="text-base text-muted-foreground">
+                          {event.description}
+                        </p>
+                      )}
+
+                      {showAvailabilityControls && (
+                        <div className="pt-3 border-t">
+                          <QuickAvailabilityControls
+                            eventId={event.id}
+                            currentStatus={availabilityStatus}
+                            size="md"
+                            onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex gap-2 pt-3 border-t">
+                        <Button
+                          variant="default"
+                          onClick={() => onEditEvent(event)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Event
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          onClick={() => onTeamSelection(event)}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Team Selection
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Upcoming Events */}
+      {upcomingEvents.length > 1 && (
+        <div>
+          <h3 className="text-xl font-semibold mb-4 text-primary">
+            Other Upcoming Events
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {upcomingEvents.slice(1).map((event) => {
         const completed = isEventCompleted(event);
         const matchType = isMatchType(event.event_type);
         const teamScores = getTeamScores(event);
@@ -453,8 +599,124 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
               </div>
             </CardContent>
           </Card>
-        );
-      })}
+            );
+          })}
+          </div>
+        </div>
+      )}
+
+      {/* Past Events */}
+      {pastEvents.length > 0 && (
+        <div>
+          <h3 className="text-xl font-semibold mb-4 text-muted-foreground">
+            Past Events
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {pastEvents.map((event) => {
+              const completed = isEventCompleted(event);
+              const matchType = isMatchType(event.event_type);
+              const teamScores = getTeamScores(event);
+              const weather = eventWeather[event.id];
+              const team = teams.find(t => t.id === event.team_id);
+              const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
+              const outlineClass = getEventOutlineClass(event.id);
+              
+              return (
+                <Card key={event.id} className={`flex flex-col ${outlineClass} opacity-75 hover:opacity-100 transition-opacity`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex gap-2">
+                        <Badge 
+                          className={`text-xs ${matchType ? 'bg-red-500' : 'bg-blue-500'}`}
+                          variant="default"
+                        >
+                          {event.event_type}
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          Completed
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {kitDesign && (
+                          <EnhancedKitAvatar design={kitDesign} size="sm" />
+                        )}
+                        {completed && matchType && teamScores.length > 0 && (
+                          <div className="flex gap-1">
+                            {teamScores.map((score) => (
+                              <span key={score.teamNumber} className="text-lg">
+                                {score.outcomeIcon}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {shouldShowTitle(event) ? (
+                      <CardTitle className="text-base line-clamp-2">{event.title}</CardTitle>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {team?.logoUrl && (
+                          <img 
+                            src={team.logoUrl} 
+                            alt={team.name}
+                            className="w-6 h-6 rounded-full"
+                          />
+                        )}
+                        <span className="text-muted-foreground">vs</span>
+                        <span className="font-semibold">{event.opponent}</span>
+                      </div>
+                    )}
+                  </CardHeader>
+                  
+                  <CardContent className="pt-0 flex-1 flex flex-col">
+                    <div className="flex-1 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        {format(new Date(event.date), 'MMM dd, yyyy')}
+                      </p>
+                      
+                      {teamScores.length > 0 && matchType && (
+                        <div className="space-y-1">
+                          {teamScores.map((score) => (
+                            <p key={score.teamNumber} className="text-sm font-medium">
+                              {score.teamName}: {score.ourScore} - {score.opponentScore}
+                              {score.outcomeIcon && ` ${score.outcomeIcon}`}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => onEditEvent(event)}
+                        title="Edit Event"
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      
+                      {completed && matchType && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          onClick={() => onPostGameEdit(event)}
+                          title="Post-Game Editor"
+                        >
+                          <Trophy className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Individual Training Sessions */}
       {individualTrainingSessions.map((session) => (
