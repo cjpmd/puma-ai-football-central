@@ -66,6 +66,7 @@ export class IndividualTrainingService {
         title: planData.title,
         objective_text: planData.objective_text,
         plan_type: planData.plan_type,
+        status: 'active', // New plans are active by default
         start_date: planData.start_date,
         end_date: planData.end_date,
         weekly_sessions: planData.weekly_sessions,
@@ -177,34 +178,7 @@ export class IndividualTrainingService {
     } as IndividualTrainingPlan;
   }
 
-  // Auto-activate plan when sessions are scheduled
-  private static async autoActivatePlanIfNeeded(planId: string): Promise<void> {
-    // Check if plan is still in draft status
-    const { data: plan, error: planError } = await supabase
-      .from('individual_training_plans')
-      .select('status')
-      .eq('id', planId)
-      .single();
-    
-    if (planError || !plan || plan.status !== 'draft') {
-      return; // Plan not found or not in draft status
-    }
-    
-    // Check if any session now has a planned_date (is scheduled)
-    const { data: sessions, error: sessionsError } = await supabase
-      .from('individual_training_sessions')
-      .select('planned_date')
-      .eq('plan_id', planId)
-      .not('planned_date', 'is', null)
-      .limit(1);
-    
-    if (sessionsError || !sessions?.length) {
-      return; // No scheduled sessions yet
-    }
-    
-    // Auto-activate the plan
-    await this.updatePlan(planId, { status: 'active' });
-  }
+  // Note: Auto-activation logic removed since plans now start as active
 
   static async deletePlan(planId: string): Promise<void> {
     const { error } = await supabase
@@ -253,11 +227,6 @@ export class IndividualTrainingService {
       .single();
     
     if (error) throw error;
-    
-    // Auto-activate plan when first session is scheduled
-    if (updates.planned_date) {
-      await this.autoActivatePlanIfNeeded(data.plan_id);
-    }
     
     return {
       ...data,
