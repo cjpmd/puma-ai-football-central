@@ -1,9 +1,25 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { IndividualTrainingService } from '@/services/individualTrainingService';
 import { IndividualPlanCreator } from './IndividualPlanCreator';
 import { PlayerDrillLibrary } from './PlayerDrillLibrary';
@@ -18,9 +34,12 @@ import {
   BookOpen,
   Play,
   CheckCircle2,
-  Users
+  Users,
+  MoreVertical,
+  Trash2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 
 interface IndividualTrainingDashboardProps {
   userId: string;
@@ -32,12 +51,33 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
   const [showDrillLibrary, setShowDrillLibrary] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [executingSessionId, setExecutingSessionId] = useState<string | null>(null);
+  const [planToDelete, setPlanToDelete] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
 
   // Get user's training plans
   const { data: plans = [], isLoading } = useQuery({
     queryKey: ['individual-training-plans', userId],
     queryFn: () => IndividualTrainingService.getUserPlans(userId),
   });
+
+  // Delete plan mutation
+  const deletePlanMutation = useMutation({
+    mutationFn: (planId: string) => IndividualTrainingService.deletePlan(planId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['individual-training-plans'] });
+      toast.success('Training plan deleted successfully');
+      setPlanToDelete(null);
+    },
+    onError: (error) => {
+      console.error('Error deleting plan:', error);
+      toast.error('Failed to delete training plan');
+    },
+  });
+
+  const handleDeletePlan = (planId: string) => {
+    deletePlanMutation.mutate(planId);
+  };
 
   const activePlans = plans.filter(plan => plan.status === 'active');
   const completedPlans = plans.filter(plan => plan.status === 'completed');
@@ -195,13 +235,31 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
                               </CardDescription>
                             )}
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedPlanId(plan.id)}
-                          >
-                            View Plan
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setSelectedPlanId(plan.id)}
+                            >
+                              View Plan
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => setPlanToDelete(plan.id)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete Plan
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </CardHeader>
                       <CardContent>
@@ -262,10 +320,30 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
             {plans.filter(p => p.status === 'draft').map((plan) => (
               <Card key={plan.id}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {plan.title}
-                    <Badge variant="outline">Draft</Badge>
-                  </CardTitle>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {plan.title}
+                        <Badge variant="outline">Draft</Badge>
+                      </CardTitle>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => setPlanToDelete(plan.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Plan
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground mb-4">
@@ -283,10 +361,30 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
             {completedPlans.map((plan) => (
               <Card key={plan.id}>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    {plan.title}
-                    <Badge variant="outline">Completed</Badge>
-                  </CardTitle>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        {plan.title}
+                        <Badge variant="outline">Completed</Badge>
+                      </CardTitle>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => setPlanToDelete(plan.id)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete Plan
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">
@@ -330,6 +428,27 @@ export function IndividualTrainingDashboard({ userId, userPlayers = [] }: Indivi
           onOpenChange={(open) => !open && setExecutingSessionId(null)}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!planToDelete} onOpenChange={() => setPlanToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Training Plan</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this training plan? This action cannot be undone and will remove all associated sessions and progress data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => planToDelete && handleDeletePlan(planToDelete)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Plan
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
