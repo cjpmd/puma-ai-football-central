@@ -13,6 +13,7 @@ import { ClubAnalytics } from '@/components/clubs/ClubAnalytics';
 import { ClubStaffManagement } from '@/components/clubs/ClubStaffManagement';
 import { ClubTeamLinking } from '@/components/clubs/ClubTeamLinking';
 import { LinkedClubCard } from '@/components/clubs/LinkedClubCard';
+import { YearGroupManagement } from '@/components/clubs/YearGroupManagement';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,7 +28,7 @@ export const ClubManagement = () => {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [detailsClub, setDetailsClub] = useState<Club | null>(null);
   const [selectedClubForView, setSelectedClubForView] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'overview' | 'players' | 'calendar' | 'analytics' | 'staff' | 'teams'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'year-groups' | 'teams' | 'players' | 'calendar' | 'analytics' | 'staff'>('overview');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -391,8 +392,9 @@ export const ClubManagement = () => {
                 </div>
 
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-                  <TabsList className="grid w-full grid-cols-6">
+                  <TabsList className="grid w-full grid-cols-7">
                     <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="year-groups">Year Groups</TabsTrigger>
                     <TabsTrigger value="teams">Teams</TabsTrigger>
                     <TabsTrigger value="players">Players</TabsTrigger>
                     <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -405,6 +407,10 @@ export const ClubManagement = () => {
                       clubId={selectedClubData.id}
                       clubName={selectedClubData.name}
                     />
+                  </TabsContent>
+
+                  <TabsContent value="year-groups" className="space-y-6">
+                    <YearGroupManagement clubId={selectedClubData.id} />
                   </TabsContent>
 
                   <TabsContent value="teams" className="space-y-6">

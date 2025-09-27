@@ -100,6 +100,53 @@ export type Database = {
         }
         Relationships: []
       }
+      club_join_codes: {
+        Row: {
+          club_id: string
+          code: string
+          created_at: string
+          created_by: string
+          current_uses: number | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          role_type: string
+        }
+        Insert: {
+          club_id: string
+          code: string
+          created_at?: string
+          created_by: string
+          current_uses?: number | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          role_type: string
+        }
+        Update: {
+          club_id?: string
+          code?: string
+          created_at?: string
+          created_by?: string
+          current_uses?: number | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          role_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_join_codes_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       club_officials: {
         Row: {
           assigned_at: string
@@ -1659,6 +1706,7 @@ export type Database = {
           name: string
           team_id: string
           updated_at: string
+          year_group_id: string | null
         }
         Insert: {
           created_at?: string
@@ -1667,6 +1715,7 @@ export type Database = {
           name: string
           team_id: string
           updated_at?: string
+          year_group_id?: string | null
         }
         Update: {
           created_at?: string
@@ -1675,8 +1724,17 @@ export type Database = {
           name?: string
           team_id?: string
           updated_at?: string
+          year_group_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "performance_categories_year_group_id_fkey"
+            columns: ["year_group_id"]
+            isOneToOne: false
+            referencedRelation: "year_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       player_attribute_history: {
         Row: {
@@ -2835,6 +2893,7 @@ export type Database = {
           team_join_code: string | null
           team_join_code_expires_at: string | null
           updated_at: string | null
+          year_group_id: string | null
         }
         Insert: {
           age_group: string
@@ -2863,6 +2922,7 @@ export type Database = {
           team_join_code?: string | null
           team_join_code_expires_at?: string | null
           updated_at?: string | null
+          year_group_id?: string | null
         }
         Update: {
           age_group?: string
@@ -2891,6 +2951,7 @@ export type Database = {
           team_join_code?: string | null
           team_join_code_expires_at?: string | null
           updated_at?: string | null
+          year_group_id?: string | null
         }
         Relationships: [
           {
@@ -2905,6 +2966,13 @@ export type Database = {
             columns: ["club_id"]
             isOneToOne: false
             referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_year_group_id_fkey"
+            columns: ["year_group_id"]
+            isOneToOne: false
+            referencedRelation: "year_groups"
             referencedColumns: ["id"]
           },
         ]
@@ -3487,6 +3555,50 @@ export type Database = {
           },
         ]
       }
+      year_groups: {
+        Row: {
+          age_year: number | null
+          club_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          playing_format: string | null
+          soft_player_limit: number | null
+          updated_at: string
+        }
+        Insert: {
+          age_year?: number | null
+          club_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          playing_format?: string | null
+          soft_player_limit?: number | null
+          updated_at?: string
+        }
+        Update: {
+          age_year?: number | null
+          club_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          playing_format?: string | null
+          soft_player_limit?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "year_groups_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       club_teams_detailed: {
@@ -3644,6 +3756,10 @@ export type Database = {
         Args: { size_bytes: number }
         Returns: string
       }
+      generate_club_join_code: {
+        Args: { p_club_name: string; p_role_type: string }
+        Returns: string
+      }
       generate_club_serial: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -3737,6 +3853,14 @@ export type Database = {
       send_availability_notifications: {
         Args: { p_event_id: string }
         Returns: undefined
+      }
+      split_team: {
+        Args: {
+          p_new_team_name: string
+          p_player_ids_for_new_team: string[]
+          p_source_team_id: string
+        }
+        Returns: string
       }
       standardize_position_name: {
         Args: { input_position: string }

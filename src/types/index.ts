@@ -33,6 +33,7 @@ export type Team = {
   seasonStart: string;
   seasonEnd: string;
   clubId?: string;
+  yearGroupId?: string; // Link to year group instead of direct club
   subscriptionType: SubscriptionType;
   gameFormat: GameFormat;
   gameDuration?: number; // Added game duration in minutes
@@ -57,6 +58,18 @@ export type Team = {
   };
   isReadOnly?: boolean; // For linked teams
   kitDesigns?: any; // Added this property
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type YearGroup = {
+  id: string;
+  clubId: string;
+  name: string; // e.g. "U8s", "2015s"
+  ageYear?: number; // birth year for players (e.g. 2015)
+  playingFormat?: string; // e.g. "7-a-side", "9-a-side", "11-a-side"
+  softPlayerLimit?: number; // optional guidance, not enforced
+  description?: string;
   createdAt: string;
   updatedAt: string;
 };
