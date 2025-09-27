@@ -89,6 +89,7 @@ const TeamManagement = () => {
         seasonStart: team.season_start,
         seasonEnd: team.season_end,
         clubId: team.club_id,
+        yearGroupId: team.year_group_id, // map DB field
         gameFormat: team.game_format as GameFormat,
         subscriptionType: (team.subscription_type as SubscriptionType) || 'free',
         performanceCategories: team.performance_categories || [],

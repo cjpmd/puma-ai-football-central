@@ -269,6 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             seasonStart: teamData.season_start,
             seasonEnd: teamData.season_end,
             clubId: teamData.club_id,
+            yearGroupId: teamData.year_group_id, // map DB field
             subscriptionType: teamData.subscription_type,
             gameFormat: teamData.game_format,
             gameDuration: teamData.game_duration || 90,
@@ -412,6 +413,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             seasonStart: team.season_start,
             seasonEnd: team.season_end,
             clubId: team.club_id,
+            yearGroupId: team.year_group_id,
             subscriptionType: team.subscription_type,
             gameFormat: team.game_format,
             gameDuration: team.game_duration || 90,
