@@ -54,10 +54,11 @@ serve(async (req) => {
       default:
         throw new Error(`Unknown action: ${action}`);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in enhanced-notification-scheduler:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
@@ -125,7 +126,7 @@ async function processScheduledNotifications(supabaseClient: any) {
 }
 
 async function sendScheduledNotification(supabaseClient: any, notification: ScheduledNotification) {
-  const event = notification.events;
+  // Get event data - removed the invalid property access
   const eventData = notification.notification_data;
   
   // Generate secure deep link token
@@ -143,7 +144,7 @@ async function sendScheduledNotification(supabaseClient: any, notification: Sche
   }
 
   // Filter users based on notification preferences
-  const targetUsers = users.filter(user => {
+  const targetUsers = users.filter((user: any) => {
     const prefs = user.notification_preferences || {};
     return shouldSendNotification(notification.notification_type, prefs);
   });
@@ -159,7 +160,7 @@ async function sendScheduledNotification(supabaseClient: any, notification: Sche
       ...eventData.data
     },
     android: {
-      channelId: getAndroidChannel(event.event_type),
+      channelId: getAndroidChannel(notification.notification_type),
       actions: getQuickActions(notification.notification_type, token)
     },
     apns: {
@@ -195,8 +196,9 @@ async function sendScheduledNotification(supabaseClient: any, notification: Sche
           quick_actions: payload.android.actions
         });
         
-    } catch (error) {
+    } catch (error: unknown) {
       console.error(`Failed to send to user ${user.id}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       
       // Log failed notification
       await supabaseClient
@@ -209,7 +211,7 @@ async function sendScheduledNotification(supabaseClient: any, notification: Sche
           status: 'failed',
           metadata: {
             event_id: notification.event_id,
-            error: error.message
+            error: errorMessage
           }
         });
     }
@@ -344,7 +346,7 @@ async function scheduleWeeklyNudges(supabaseClient: any) {
           event_id: event.id,
           notification_type: 'weekly_nudge',
           scheduled_time: nudgeTime,
-          target_users: pendingUsers.map(u => u.user_id),
+          target_users: pendingUsers.map((u: any) => u.user_id),
           notification_data: {
             title: 'RSVP Reminder',
             body: `Please confirm your attendance for ${event.title} on ${event.date}`,
