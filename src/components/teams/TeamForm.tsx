@@ -1,12 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Team, Club, GameFormat, SubscriptionType } from '@/types/index';
+import { Team, Club, GameFormat, SubscriptionType, YearGroup } from '@/types/index';
 import { LogoUpload } from '@/components/shared/LogoUpload';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TeamFormProps {
   team?: Team | null;
@@ -22,18 +23,74 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
     seasonStart: team?.seasonStart || '',
     seasonEnd: team?.seasonEnd || '',
     clubId: team?.clubId || '',
+    yearGroupId: team?.yearGroupId || '',
     gameFormat: (team?.gameFormat || '11-a-side') as GameFormat,
     subscriptionType: (team?.subscriptionType || 'free') as SubscriptionType,
     logoUrl: team?.logoUrl || null
   });
 
+  const [yearGroups, setYearGroups] = useState<YearGroup[]>([]);
+  const [loadingYearGroups, setLoadingYearGroups] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const submitData = {
       ...formData,
-      clubId: formData.clubId === 'independent' ? null : formData.clubId
+      clubId: formData.clubId === 'independent' ? null : formData.clubId,
+      yearGroupId: formData.yearGroupId || null
     };
     onSubmit(submitData);
+  };
+
+  // Load year groups when club is selected
+  useEffect(() => {
+    if (formData.clubId && formData.clubId !== 'independent') {
+      loadYearGroups(formData.clubId);
+    } else {
+      setYearGroups([]);
+      setFormData(prev => ({ ...prev, yearGroupId: '' }));
+    }
+  }, [formData.clubId]);
+
+  // Update age group when year group is selected
+  useEffect(() => {
+    if (formData.yearGroupId) {
+      const selectedYearGroup = yearGroups.find(yg => yg.id === formData.yearGroupId);
+      if (selectedYearGroup) {
+        setFormData(prev => ({ ...prev, ageGroup: selectedYearGroup.name }));
+      }
+    }
+  }, [formData.yearGroupId, yearGroups]);
+
+  const loadYearGroups = async (clubId: string) => {
+    setLoadingYearGroups(true);
+    try {
+      const { data, error } = await supabase
+        .from('year_groups')
+        .select('*')
+        .eq('club_id', clubId)
+        .order('name');
+
+      if (error) throw error;
+      // Transform database response to match YearGroup interface
+      const transformedData = (data || []).map(item => ({
+        id: item.id,
+        name: item.name,
+        ageYear: item.age_year,
+        playingFormat: item.playing_format,
+        softPlayerLimit: item.soft_player_limit,
+        description: item.description,
+        clubId: item.club_id,
+        createdAt: item.created_at,
+        updatedAt: item.updated_at
+      }));
+      setYearGroups(transformedData);
+    } catch (error) {
+      console.error('Error loading year groups:', error);
+      setYearGroups([]);
+    } finally {
+      setLoadingYearGroups(false);
+    }
   };
 
   const handleLogoChange = (logoUrl: string | null) => {
@@ -81,8 +138,14 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 value={formData.ageGroup}
                 onChange={(e) => setFormData(prev => ({ ...prev, ageGroup: e.target.value }))}
                 placeholder="e.g., U12, U15, Senior"
+                disabled={!!formData.yearGroupId}
                 required
               />
+              {formData.yearGroupId && (
+                <p className="text-xs text-muted-foreground">
+                  Age group is automatically set from the selected year group
+                </p>
+              )}
             </div>
           </div>
 
@@ -134,6 +197,34 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
               Linking to a club allows for shared management and resources.
             </p>
           </div>
+
+          {/* Year Group Selection (for club teams) */}
+          {formData.clubId && formData.clubId !== 'independent' && (
+            <div className="space-y-2">
+              <Label htmlFor="yearGroup">Year Group</Label>
+              <Select 
+                value={formData.yearGroupId} 
+                onValueChange={(value) => setFormData(prev => ({ ...prev, yearGroupId: value }))}
+                disabled={loadingYearGroups}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingYearGroups ? "Loading year groups..." : "Select a year group (optional)"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">No year group</SelectItem>
+                  {yearGroups.map((yearGroup) => (
+                    <SelectItem key={yearGroup.id} value={yearGroup.id}>
+                      {yearGroup.name} - {yearGroup.playingFormat}
+                      {yearGroup.softPlayerLimit && ` (${yearGroup.softPlayerLimit} players)`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm text-muted-foreground">
+                Select a year group to automatically set the age group and playing format.
+              </p>
+            </div>
+          )}
 
           {/* Game Format - Restored complete list */}
           <div className="space-y-2">

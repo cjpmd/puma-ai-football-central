@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,7 +6,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LocationInput } from '@/components/ui/location-input';
 import { Team } from '@/types/team';
+import { YearGroup } from '@/types/index';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -23,6 +26,48 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   onSave,
   isSaving
 }) => {
+  // Check if team belongs to a club and load year group info
+  useEffect(() => {
+    const checkClubMembership = async () => {
+      if (team.clubId) {
+        setIsClubTeam(true);
+        
+        // Load year group if team has one
+        if ((team as any).yearGroupId) {
+          try {
+            const { data, error } = await supabase
+              .from('year_groups')
+              .select('*')
+              .eq('id', (team as any).yearGroupId)
+              .single();
+
+            if (!error && data) {
+              // Transform database response to match YearGroup interface
+              const transformedYearGroup = {
+                id: data.id,
+                name: data.name,
+                ageYear: data.age_year,
+                playingFormat: data.playing_format,
+                softPlayerLimit: data.soft_player_limit,
+                description: data.description,
+                clubId: data.club_id,
+                createdAt: data.created_at,
+                updatedAt: data.updated_at
+              };
+              setYearGroup(transformedYearGroup);
+            }
+          } catch (error) {
+            console.error('Error loading year group:', error);
+          }
+        }
+      } else {
+        setIsClubTeam(false);
+        setYearGroup(null);
+      }
+    };
+
+    checkClubMembership();
+  }, [team.clubId, (team as any).yearGroupId]);
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
@@ -37,6 +82,9 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     homeLatitude: team.homeLatitude || null,
     homeLongitude: team.homeLongitude || null
   });
+
+  const [yearGroup, setYearGroup] = useState<YearGroup | null>(null);
+  const [isClubTeam, setIsClubTeam] = useState(false);
 
   const handleInputChange = (field: string, value: any) => {
     try {
@@ -130,7 +178,23 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 value={formData.ageGroup}
                 onChange={(e) => handleInputChange('ageGroup', e.target.value)}
                 placeholder="e.g., U12, U16, Senior"
+                disabled={isClubTeam && !!yearGroup}
+                className={isClubTeam && yearGroup ? 'bg-muted' : ''}
               />
+              {isClubTeam && yearGroup && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Age group is managed by the year group: <strong>{yearGroup.name}</strong>
+                </p>
+              )}
+              {isClubTeam && !yearGroup && (
+                <Alert className="mt-2">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    This team is part of a club but not assigned to a year group. 
+                    Contact your club administrator to assign this team to a year group for standardized age group management.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
 
             <div>
