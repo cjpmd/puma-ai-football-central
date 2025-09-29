@@ -57,6 +57,7 @@ const TeamManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
+      console.log('Loading data for view:', currentView);
       await Promise.all([
         loadAllClubs(),
         loadTeamsForCurrentRole(),
@@ -131,7 +132,7 @@ const TeamManagement = () => {
         updatedAt: team.updated_at,
         clubName: team.clubs?.name || 'Independent',
         playerCount: team.players?.[0]?.count || 0,
-        isReadOnly: !isUserTeamAdmin(team.id)
+        isReadOnly: false // Club admins can edit all teams in their clubs
       }));
 
       console.log('Converted teams:', convertedTeams.length, 'teams');
@@ -148,6 +149,7 @@ const TeamManagement = () => {
       isReadOnly: true // Parents can only view teams
     }));
     
+    console.log('Parent teams loaded:', convertedTeams.length);
     setAllTeams(convertedTeams);
   };
 
@@ -225,9 +227,10 @@ const TeamManagement = () => {
     const convertedTeams: ExtendedTeam[] = teams.map(team => ({
       ...team,
       clubName: getClubName(team.clubId),
-      isReadOnly: false
+      isReadOnly: false // Team managers can edit their teams
     }));
 
+    console.log('User teams loaded:', convertedTeams.length);
     setAllTeams(convertedTeams);
   };
 
@@ -278,9 +281,13 @@ const TeamManagement = () => {
   };
 
   const isUserTeamAdmin = (teamId: string) => {
+    // Check if user is admin/manager of this specific team
     const userTeam = teams.find(t => t.id === teamId);
-    // Check if user has admin/manager roles (since userRole doesn't exist on Team interface)
-    return userTeam && ['admin', 'manager', 'team_manager', 'team_assistant_manager'].includes('manager') || false;
+    if (!userTeam) return false;
+    
+    // For now, since we don't have userRole on Team interface, check if team exists in user's teams
+    // This means user has some role on the team
+    return true; // If user has the team, they can manage it
   };
 
   const getRoleTitle = () => {
