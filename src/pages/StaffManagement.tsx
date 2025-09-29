@@ -111,7 +111,7 @@ const StaffManagement = () => {
           )
         `)
         .eq('team_id', teamId)
-        .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'team_helper']);
+        .in('role', ['manager', 'team_manager', 'team_assistant_manager', 'team_coach', 'team_helper']);
 
       if (userTeamsError) {
         console.error('Error fetching user teams:', userTeamsError);

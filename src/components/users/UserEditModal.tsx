@@ -51,7 +51,7 @@ interface UserEditModalProps {
 const availableRoles = [
   { id: 'global_admin', label: 'Global Admin', description: 'Full system access' },
   { id: 'club_admin', label: 'Club Admin', description: 'Manage club settings' },
-  { id: 'team_manager', label: 'Team Manager', description: 'Manage team operations' },
+  { id: 'manager', label: 'Manager', description: 'Manage team operations' },
   { id: 'coach', label: 'Coach', description: 'Team coaching responsibilities' },
   { id: 'staff', label: 'Staff', description: 'Team support staff' },
   { id: 'parent', label: 'Parent', description: 'Player parent/guardian' },
@@ -114,24 +114,24 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
         console.log('Current user teams before update:', currentUserTeams);
       }
 
-      // Handle team_manager role changes properly
-      const currentHasTeamManager = user.roles.includes('team_manager');
-      const newHasTeamManager = formData.roles.includes('team_manager');
+      // Handle manager role changes properly (backward compatible)
+      const currentHasManager = user.roles.includes('manager') || user.roles.includes('team_manager');
+      const newHasManager = formData.roles.includes('manager') || formData.roles.includes('team_manager');
       
-      if (currentHasTeamManager && !newHasTeamManager) {
-        // Removing team_manager role - delete all team_manager entries
-        console.log('Removing ALL team_manager roles for user:', user.id);
-        const { error: deleteTeamManagerError } = await supabase
+      if (currentHasManager && !newHasManager) {
+        // Removing manager role - delete all manager entries (including legacy team_manager)
+        console.log('Removing ALL manager roles for user:', user.id);
+        const { error: deleteManagerError } = await supabase
           .from('user_teams')
           .delete()
           .eq('user_id', user.id)
-          .eq('role', 'team_manager');
+          .in('role', ['manager', 'team_manager']);
 
-        if (deleteTeamManagerError) {
-          console.error('Error removing team manager roles:', deleteTeamManagerError);
-          throw deleteTeamManagerError;
+        if (deleteManagerError) {
+          console.error('Error removing manager roles:', deleteManagerError);
+          throw deleteManagerError;
         } else {
-          console.log('Successfully removed ALL team_manager roles for user:', user.id);
+          console.log('Successfully removed ALL manager roles for user:', user.id);
         }
       }
 
@@ -152,11 +152,11 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
         throw profileError;
       }
 
-      // Re-add team manager roles if selected (only for teams they previously managed)
-      if (!currentHasTeamManager && newHasTeamManager) {
-        // Adding team_manager role back - restore previous team associations
-        const userTeams = user.teams.filter(team => team.role === 'team_manager');
-        console.log('Re-adding team_manager roles for teams:', userTeams);
+      // Re-add manager roles if selected (only for teams they previously managed)
+      if (!currentHasManager && newHasManager) {
+        // Adding manager role back - restore previous team associations
+        const userTeams = user.teams.filter(team => team.role === 'manager' || team.role === 'team_manager');
+        console.log('Re-adding manager roles for teams:', userTeams);
         
         for (const team of userTeams) {
           const { error: teamRoleError } = await supabase
@@ -164,7 +164,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
             .upsert({
               user_id: user.id,
               team_id: team.id,
-              role: 'team_manager'
+              role: 'manager'
             });
 
           if (teamRoleError) {

@@ -95,7 +95,7 @@ export default function CalendarEventsMobile() {
   // Check if user can create events (admin or manager roles only)
   const canCreateEvents = () => {
     if (!profile?.roles) return false;
-    const allowedRoles = ['global_admin', 'club_admin', 'team_manager'];
+    const allowedRoles = ['global_admin', 'club_admin', 'manager', 'team_manager'];
     return profile.roles.some(role => allowedRoles.includes(role));
   };
 
@@ -103,7 +103,7 @@ export default function CalendarEventsMobile() {
   const canEditEvents = () => {
     if (!profile?.roles) return false;
     // Allow editing if user has any management/coaching roles
-    const canEditRoles = ['global_admin', 'club_admin', 'team_manager', 'coach', 'staff'];
+    const canEditRoles = ['global_admin', 'club_admin', 'manager', 'team_manager', 'coach', 'staff'];
     return profile.roles.some(role => canEditRoles.includes(role));
   };
 

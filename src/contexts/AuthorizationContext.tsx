@@ -83,6 +83,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
               basePermissions.add('teams:manage');
               basePermissions.add('analytics:view');
               break;
+            case 'manager':
             case 'team_manager':
               basePermissions.add('users:invite');
               basePermissions.add('teams:manage');
@@ -118,7 +119,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
         // Add team-specific permissions based on server data
         userData?.team_memberships?.forEach((membership) => {
           const { team_id, role } = membership;
-          if (role === 'team_manager' || role === 'team_assistant_manager') {
+          if (role === 'manager' || role === 'team_manager' || role === 'team_assistant_manager') {
             basePermissions.add(`teams:manage:${team_id}`);
             basePermissions.add(`players:manage:${team_id}`);
             basePermissions.add(`staff:manage:${team_id}`);
@@ -189,7 +190,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
   const isTeamManager = (teamId?: string): boolean => {
     if (isGlobalAdmin) return true;
     if (!teamId) {
-      return profile?.roles?.includes('team_manager') || teams.length > 0;
+      return (profile?.roles?.includes('manager') || profile?.roles?.includes('team_manager')) || teams.length > 0;
     }
     return teams.some(team => team.id === teamId);
   };

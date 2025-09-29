@@ -65,7 +65,7 @@ export const CoachAssignmentManager: React.FC<CoachAssignmentManagerProps> = ({
           )
         `)
         .eq('team_id', plan.player_id) // This would need to be player's team_id
-        .in('role', ['team_coach', 'team_manager', 'team_assistant_manager']);
+        .in('role', ['team_coach', 'team_assistant_manager', 'manager', 'team_manager']);
 
       if (error) throw error;
       setAvailableCoaches(teamStaff || []);

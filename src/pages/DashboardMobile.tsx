@@ -262,7 +262,7 @@ export default function DashboardMobile() {
   // Check if user can manage teams (not just parent or player)
   const canManageTeam = () => {
     if (!profile?.roles) return false;
-    const managementRoles = ['global_admin', 'club_admin', 'team_manager', 'team_coach', 'team_assistant_manager', 'coach', 'staff'];
+    const managementRoles = ['global_admin', 'club_admin', 'manager', 'team_manager', 'team_coach', 'team_assistant_manager', 'coach', 'staff'];
     return profile.roles.some(role => managementRoles.includes(role));
   };
 

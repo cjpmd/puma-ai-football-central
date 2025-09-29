@@ -163,7 +163,7 @@ export const TeamTrainingCoordinator: React.FC<TeamTrainingCoordinatorProps> = (
   }
 
   const stats = getTeamStats();
-  const isCoach = ['team_coach', 'team_manager', 'team_assistant_manager'].includes(userRole);
+  const isCoach = ['team_coach', 'team_assistant_manager', 'manager', 'team_manager'].includes(userRole);
 
   if (activeView === 'player' && selectedPlayer) {
     return (

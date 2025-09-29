@@ -204,6 +204,7 @@ export const UserManagement: React.FC = () => {
     switch (role) {
       case 'global_admin': return 'bg-red-500';
       case 'club_admin': return 'bg-blue-500';
+      case 'manager':
       case 'team_manager': return 'bg-green-500';
       case 'coach': return 'bg-purple-500';
       case 'player': return 'bg-gray-500';
@@ -273,7 +274,7 @@ export const UserManagement: React.FC = () => {
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="global_admin">Global Admin</SelectItem>
                   <SelectItem value="club_admin">Club Admin</SelectItem>
-                  <SelectItem value="team_manager">Team Manager</SelectItem>
+                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="coach">Coach</SelectItem>
                   <SelectItem value="player">Player</SelectItem>
                 </SelectContent>
@@ -428,7 +429,7 @@ export const UserManagement: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="global_admin">Global Admin</SelectItem>
                   <SelectItem value="club_admin">Club Admin</SelectItem>
-                  <SelectItem value="team_manager">Team Manager</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="coach">Coach</SelectItem>
                   <SelectItem value="player">Player</SelectItem>
                 </SelectContent>
