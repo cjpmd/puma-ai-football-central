@@ -77,6 +77,16 @@ export const EnhancedUserManagement = () => {
       // For each user, load their role contexts
       const enhancedUsers: EnhancedUserProfile[] = [];
 
+      // Preload staff roles for all users
+      const profileIds = profiles.map((p) => p.id);
+      const { data: staffRoles, error: staffRolesError } = await supabase
+        .from('user_teams')
+        .select('user_id, role, teams!user_teams_team_id_fkey (name)')
+        .in('user_id', profileIds);
+      if (staffRolesError) {
+        console.error('Error loading staff roles:', staffRolesError);
+      }
+
       for (const profile of profiles) {
         const roleContexts: { type: 'player' | 'parent' | 'staff' | 'admin'; context: string; count: number; }[] = [];
 
@@ -110,20 +120,25 @@ export const EnhancedUserManagement = () => {
           }
         }
 
-        // Check staff roles
-        const { data: staffData } = await supabase
-          .from('user_staff')
-          .select(`
-            team_staff!inner(role, teams!inner(name))
-          `)
-          .eq('user_id', profile.id);
+        // Check staff roles via user_teams (preloaded)
+        const staffForUser = (staffRoles || []).filter(sr => sr.user_id === profile.id && ['manager','team_manager','team_assistant_manager','team_coach','team_helper'].includes(sr.role));
 
-        if (staffData && staffData.length > 0) {
-          roleContexts.push({
-            type: 'staff',
-            context: `Staff in ${staffData.length} team${staffData.length > 1 ? 's' : ''}`,
-            count: staffData.length
-          });
+        if (staffForUser.length > 0) {
+          if (staffForUser.length === 1) {
+            const roleName = staffForUser[0].role.replace(/_/g, ' ');
+            const teamName = (staffForUser[0] as any).teams?.name;
+            roleContexts.push({
+              type: 'staff',
+              context: `${roleName.charAt(0).toUpperCase() + roleName.slice(1)}${teamName ? ` at ${teamName}` : ''}`,
+              count: 1
+            });
+          } else {
+            roleContexts.push({
+              type: 'staff',
+              context: `Staff in ${staffForUser.length} teams`,
+              count: staffForUser.length
+            });
+          }
         }
 
         // Check admin roles

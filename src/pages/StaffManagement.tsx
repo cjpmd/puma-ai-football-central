@@ -450,6 +450,8 @@ const StaffManagement = () => {
     }
   };
 
+  const uniqueTeams = Array.from(new Map(teams.map(t => [t.id, t])).values());
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
@@ -501,7 +503,7 @@ const StaffManagement = () => {
                           <SelectValue placeholder="Select a team" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teams.map((team) => (
+                          {uniqueTeams.map((team) => (
                             <SelectItem key={team.id} value={team.id}>
                               {team.name}
                             </SelectItem>
