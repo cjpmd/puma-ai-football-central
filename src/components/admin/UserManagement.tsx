@@ -305,7 +305,7 @@ export const UserManagement: React.FC = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="global_admin">Global Admin</SelectItem>
+                  <SelectItem value="global_admin">Global Administrator</SelectItem>
                   <SelectItem value="club_admin">Club Admin</SelectItem>
                    <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="coach">Coach</SelectItem>
@@ -465,7 +465,7 @@ export const UserManagement: React.FC = () => {
                   <SelectValue placeholder="Add role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="global_admin">Global Admin</SelectItem>
+                  <SelectItem value="global_admin">Global Administrator</SelectItem>
                   <SelectItem value="club_admin">Club Admin</SelectItem>
                   <SelectItem value="manager">Manager</SelectItem>
                   <SelectItem value="coach">Coach</SelectItem>

@@ -409,10 +409,10 @@ export const EnhancedUserManagement = () => {
 
                 {/* Admin badges */}
                 {user.roles.includes('global_admin') && (
-                  <Badge className="mt-2 bg-red-100 text-red-800 border-red-200">
-                    <Crown className="h-3 w-3 mr-1" />
-                    Global Admin
-                  </Badge>
+                <Badge className="mt-2 bg-red-100 text-red-800 border-red-200">
+                  <Crown className="h-3 w-3 mr-1" />
+                  Global Administrator
+                </Badge>
                 )}
 
                 <div className="mt-4 pt-4 border-t text-xs text-muted-foreground">

@@ -49,7 +49,7 @@ interface UserEditModalProps {
 }
 
 const availableRoles = [
-  { id: 'global_admin', label: 'Global Admin', description: 'Full system access' },
+  { id: 'global_admin', label: 'Global Administrator', description: 'Full system access' },
   { id: 'club_admin', label: 'Club Admin', description: 'Manage club settings' },
   { id: 'manager', label: 'Manager', description: 'Manage team operations' },
   { id: 'coach', label: 'Coach', description: 'Team coaching responsibilities' },
