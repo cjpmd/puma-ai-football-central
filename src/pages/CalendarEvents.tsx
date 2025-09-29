@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,10 +22,7 @@ import { IndividualTrainingService } from '@/services/individualTrainingService'
 
 type ViewMode = 'grid' | 'calendar' | 'list';
 
-import EnhancedCalendarEvents from './EnhancedCalendarEvents';
-
 export default function CalendarEvents() {
-  return <EnhancedCalendarEvents />;
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
   const [individualTrainingSessions, setIndividualTrainingSessions] = useState<any[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<DatabaseEvent[]>([]);
@@ -68,23 +64,6 @@ export default function CalendarEvents() {
       
       const eventData = (data || []) as DatabaseEvent[];
       console.log('Loaded events:', eventData.length);
-      
-      // Log current user info for debugging
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user ID:', user?.id);
-      console.log('Current user email:', user?.email);
-      
-      // Check availability for debugging
-      if (user?.id && eventData.length > 0) {
-        const { data: availabilityData, error: availError } = await supabase
-          .from('event_availability')
-          .select('event_id, status')
-          .eq('user_id', user.id);
-          
-        console.log('User availability records:', availabilityData);
-        if (availError) console.error('Availability error:', availError);
-      }
-      
       setEvents(eventData);
     } catch (error: any) {
       console.error('Error loading events:', error);
@@ -105,7 +84,6 @@ export default function CalendarEvents() {
         return;
       }
 
-      // Get sessions for the current month and next month
       const currentDate = new Date();
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
@@ -120,7 +98,6 @@ export default function CalendarEvents() {
       setIndividualTrainingSessions(sessions);
     } catch (error: any) {
       console.error('Error loading individual training sessions:', error);
-      // Don't show error toast for individual training sessions as they're supplementary
     }
   };
 
@@ -172,11 +149,6 @@ export default function CalendarEvents() {
     }
   };
 
-  const handleScoreEdit = (event: DatabaseEvent) => {
-    setSelectedEvent(event);
-    setShowPostGameEdit(true);
-  };
-
   const convertToEventFormat = (dbEvent: DatabaseEvent | null) => {
     if (!dbEvent) return null;
     
@@ -218,7 +190,6 @@ export default function CalendarEvents() {
       setLoading(true);
       
       if (selectedEvent) {
-        // Update existing event
         await eventsService.updateEvent({
           id: selectedEvent.id,
           ...eventData,
@@ -231,7 +202,6 @@ export default function CalendarEvents() {
           description: 'Event updated successfully',
         });
       } else {
-        // Create new event
         await eventsService.createEvent({
           ...eventData,
           team_id: eventData.teamId,
@@ -274,7 +244,6 @@ export default function CalendarEvents() {
 
   const eventTypes = Array.from(new Set([...events.map(e => e.event_type), 'individual_training']));
 
-  // Get current month and event counts for header
   const currentMonth = format(new Date(), 'MMMM yyyy');
   const currentMonthEvents = events.filter(event => {
     const eventDate = new Date(event.date);
@@ -283,7 +252,6 @@ export default function CalendarEvents() {
            eventDate.getFullYear() === currentDate.getFullYear();
   });
 
-  // Get next upcoming event
   const upcomingEvents = events.filter(event => new Date(event.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const nextEvent = upcomingEvents[0];
@@ -457,7 +425,7 @@ export default function CalendarEvents() {
                 onTeamSelection={handleTeamSelection}
                 onPostGameEdit={handlePostGameEdit}
                 onDeleteEvent={handleDeleteEvent}
-                onScoreEdit={handleScoreEdit}
+                onScoreEdit={handlePostGameEdit}
               />
             )}
             
@@ -471,183 +439,20 @@ export default function CalendarEvents() {
                 onDeleteEvent={handleDeleteEvent}
               />
             )}
-            
-            {viewMode === 'list' && (
-              <div className="space-y-6">
-                {/* Upcoming Events Section */}
-                {upcomingEvents.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4 text-primary flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Upcoming Events
-                    </h3>
-                    <div className="space-y-3">
-                      {upcomingEvents
-                        .filter(event => selectedTeam === 'all' || event.team_id === selectedTeam)
-                        .filter(event => selectedEventType === 'all' || event.event_type === selectedEventType)
-                        .map((event, index) => {
-                          const isNextEvent = index === 0;
-                          const team = teams.find(t => t.id === event.team_id);
-                          const isMatchType = ['match', 'fixture', 'friendly'].includes(event.event_type);
-                          
-                          return (
-                            <Card key={event.id} className={`${isNextEvent ? 'ring-2 ring-primary shadow-lg bg-primary/5' : ''}`}>
-                              <CardContent className="p-6">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      {isNextEvent && (
-                                        <Badge className="bg-primary text-primary-foreground">Next Event</Badge>
-                                      )}
-                                      <Badge variant={isMatchType ? "destructive" : "secondary"}>
-                                        {event.event_type}
-                                      </Badge>
-                                      {team?.logoUrl && (
-                                        <img src={team.logoUrl} alt={team.name} className="w-6 h-6 rounded-full" />
-                                      )}
-                                    </div>
-                                    
-                                    <h3 className={`font-semibold mb-2 ${isNextEvent ? 'text-lg' : ''}`}>
-                                      {isMatchType && event.opponent ? (
-                                        <span>{team?.name} vs {event.opponent}</span>
-                                      ) : (
-                                        event.title
-                                      )}
-                                    </h3>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                                      <p className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4" />
-                                        {format(new Date(event.date), 'EEEE, MMM dd, yyyy')}
-                                      </p>
-                                      {event.start_time && (
-                                        <p className="flex items-center gap-1">
-                                          <Clock className="h-4 w-4" />
-                                          {event.start_time}
-                                        </p>
-                                      )}
-                                      {event.location && (
-                                        <p className="flex items-center gap-1">
-                                          📍 {event.location}
-                                        </p>
-                                      )}
-                                    </div>
-                                    
-                                    {event.description && (
-                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                        {event.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="flex flex-col gap-2 ml-4">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEditEvent(event)}
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleTeamSelection(event)}
-                                    >
-                                      Team
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Past Events Section */}
-                {(() => {
-                  const pastEvents = events
-                    .filter(event => new Date(event.date) < new Date())
-                    .filter(event => selectedTeam === 'all' || event.team_id === selectedTeam)
-                    .filter(event => selectedEventType === 'all' || event.event_type === selectedEventType)
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-                  return pastEvents.length > 0 ? (
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4 text-muted-foreground flex items-center gap-2">
-                        Past Events
-                      </h3>
-                      <div className="space-y-3">
-                        {pastEvents.map((event) => {
-                          const team = teams.find(t => t.id === event.team_id);
-                          const isMatchType = ['match', 'fixture', 'friendly'].includes(event.event_type);
-                          
-                          return (
-                            <Card key={event.id} className="opacity-75">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <Badge variant="outline" className="text-xs">
-                                        {event.event_type}
-                                      </Badge>
-                                      {team?.logoUrl && (
-                                        <img src={team.logoUrl} alt={team.name} className="w-4 h-4 rounded-full" />
-                                      )}
-                                    </div>
-                                    <h3 className="font-medium text-sm">
-                                      {isMatchType && event.opponent ? (
-                                        <span>{team?.name} vs {event.opponent}</span>
-                                      ) : (
-                                        event.title
-                                      )}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(new Date(event.date), 'MMM dd, yyyy')}
-                                      {event.start_time && ` at ${event.start_time}`}
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEditEvent(event)}
-                                    >
-                                      Edit
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            )}
           </>
         )}
 
-        {/* Event Form Modal */}
+        {/* Modals */}
         <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {selectedEvent ? 'Edit Event' : 'Create New Event'}
               </DialogTitle>
             </DialogHeader>
-            <EventForm
+            <EventForm 
               event={convertToEventFormat(selectedEvent)}
-              teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
               onSubmit={handleFormSubmit}
-              onEventCreated={(eventId) => {
-                setShowEventForm(false);
-                setSelectedEvent(null);
-                loadEvents();
-              }}
               onCancel={() => {
                 setShowEventForm(false);
                 setSelectedEvent(null);
@@ -656,28 +461,35 @@ export default function CalendarEvents() {
           </DialogContent>
         </Dialog>
 
-        {/* Team Selection Modal */}
-        {selectedEvent && (
-          <EnhancedTeamSelectionManager
-            event={selectedEvent}
-            isOpen={showTeamSelection}
-            onClose={() => {
-              setShowTeamSelection(false);
-              setSelectedEvent(null);
-            }}
-          />
-        )}
-
-        {/* Post Game Edit Modal - Made Full Screen */}
-        <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto">
+        <Dialog open={showTeamSelection} onOpenChange={setShowTeamSelection}>
+          <DialogContent className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Post-Game Report</DialogTitle>
+              <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="h-[70vh] overflow-y-auto">
+              {selectedEvent && (
+                <EnhancedTeamSelectionManager
+                  event={selectedEvent}
+                  isOpen={true}
+                  onClose={() => {
+                    setShowTeamSelection(false);
+                    setSelectedEvent(null);
+                  }}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Post-Game Report - {selectedEvent?.title}</DialogTitle>
             </DialogHeader>
             {selectedEvent && (
               <PostGameEditor
                 eventId={selectedEvent.id}
-                isOpen={showPostGameEdit}
+                isOpen={true}
                 onClose={() => {
                   setShowPostGameEdit(false);
                   setSelectedEvent(null);

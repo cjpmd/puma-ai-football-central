@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Team, Club, Profile } from '@/types';
+import { Team, Club, Profile, GameFormat, SubscriptionType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
 
