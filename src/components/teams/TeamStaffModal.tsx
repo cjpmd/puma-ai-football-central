@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Plus, UserPlus, Award, CheckCircle, Clock, Info } from 'lucide-react';
+import { Trash2, Plus, UserPlus, Award, CheckCircle, Clock, Info, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -292,7 +292,7 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
               <div className="flex items-center gap-2 text-blue-800">
                 <Info className="h-4 w-4" />
                 <span className="text-sm font-medium">
-                  PVG status can only be checked/unchecked by club officials in Club Management
+                  Managers and Coaches require PVG verification. Only club administrators can verify PVG status in Club Management.
                 </span>
               </div>
             </CardContent>
@@ -398,35 +398,61 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
                                   )}
                                 </div>
                                 
-                                <div className="space-y-2">
-                                  {/* PVG Check Section - READ ONLY */}
-                                  <div className="flex items-center gap-2">
-                                    <Checkbox
-                                      id={`pvg-${staffMember.id}`}
-                                      checked={staffMember.pvgChecked}
-                                      disabled={true}
-                                    />
-                                    <label 
-                                      htmlFor={`pvg-${staffMember.id}`}
-                                      className="text-sm font-medium text-muted-foreground"
-                                    >
-                                      PVG Checked (Read Only)
-                                    </label>
-                                    {staffMember.pvgChecked && (
-                                      <CheckCircle className="h-4 w-4 text-green-600" />
-                                    )}
-                                  </div>
-                                  {staffMember.pvgChecked && staffMember.pvgCheckedAt && (
-                                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                      <Clock className="h-3 w-3" />
-                                      Checked on {new Date(staffMember.pvgCheckedAt).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'short',
-                                        day: 'numeric'
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
+                                 <div className="space-y-2">
+                                   {/* PVG Check Section - Based on Role Requirements */}
+                                   {(() => {
+                                     const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'team_assistant_manager'];
+                                     const requiresPvg = pvgRequiredRoles.includes(staffMember.role);
+                                     
+                                     if (requiresPvg) {
+                                       return (
+                                         <div className="space-y-2">
+                                           <div className="flex items-center gap-2">
+                                             <Checkbox
+                                               id={`pvg-${staffMember.id}`}
+                                               checked={staffMember.pvgChecked}
+                                               disabled={true}
+                                             />
+                                             <label 
+                                               htmlFor={`pvg-${staffMember.id}`}
+                                               className="text-sm font-medium text-muted-foreground"
+                                             >
+                                               PVG Verified (Read Only)
+                                             </label>
+                                             {staffMember.pvgChecked ? (
+                                               <CheckCircle className="h-4 w-4 text-green-600" />
+                                             ) : (
+                                               <Shield className="h-4 w-4 text-orange-500" />
+                                             )}
+                                           </div>
+                                           {staffMember.pvgChecked && staffMember.pvgCheckedAt && (
+                                             <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                               <Clock className="h-3 w-3" />
+                                               Verified on {new Date(staffMember.pvgCheckedAt).toLocaleDateString('en-US', {
+                                                 year: 'numeric',
+                                                 month: 'short',
+                                                 day: 'numeric'
+                                               })}
+                                             </div>
+                                           )}
+                                           {!staffMember.pvgChecked && (
+                                             <div className="text-xs text-orange-600">
+                                               ⚠️ PVG verification required for this role. Contact club administrator.
+                                             </div>
+                                           )}
+                                         </div>
+                                       );
+                                     } else {
+                                       return (
+                                         <div className="flex items-center gap-2">
+                                           <div className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">
+                                             ✅ PVG not required for this role
+                                           </div>
+                                         </div>
+                                       );
+                                     }
+                                   })()}
+                                 </div>
                               </div>
                               
                               {/* Coaching Badges */}

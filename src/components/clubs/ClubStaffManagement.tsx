@@ -23,6 +23,7 @@ interface StaffMember {
   pvgCheckedBy?: string;
   pvgCheckedAt?: string;
   userId?: string;
+  requiresPvg: boolean;
 }
 
 interface ClubStaffManagementProps {
@@ -90,6 +91,11 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       // Transform data to include team information
       const staffWithTeams = staffData?.map(member => {
         const teamData = clubTeams.find(ct => ct.team_id === member.team_id)?.teams;
+        
+        // Determine if this role requires PVG checking
+        const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'team_assistant_manager'];
+        const requiresPvg = pvgRequiredRoles.includes(member.role);
+        
         return {
           id: member.id,
           name: member.name,
@@ -102,11 +108,12 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           pvgChecked: member.pvg_checked || false,
           pvgCheckedBy: member.pvg_checked_by,
           pvgCheckedAt: member.pvg_checked_at,
-          userId: member.user_id
+          userId: member.user_id,
+          requiresPvg
         };
       }) || [];
 
-      // Calculate team summaries
+      // Calculate team summaries - only count staff who require PVG
       const summaries = staffWithTeams.reduce((acc, member) => {
         const teamId = member.teamId;
         if (!acc[teamId]) {
@@ -114,13 +121,22 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
             teamName: member.teamName,
             ageGroup: member.ageGroup,
             totalStaff: 0,
-            pvgCheckedCount: 0
+            pvgRequiredStaff: 0,
+            pvgCheckedCount: 0,
+            pvgPendingCount: 0
           };
         }
         
         acc[teamId].totalStaff++;
-        if (member.pvgChecked) {
-          acc[teamId].pvgCheckedCount++;
+        
+        // Only count PVG for roles that require it
+        if (member.requiresPvg) {
+          acc[teamId].pvgRequiredStaff++;
+          if (member.pvgChecked) {
+            acc[teamId].pvgCheckedCount++;
+          } else {
+            acc[teamId].pvgPendingCount++;
+          }
         }
         
         return acc;
@@ -160,12 +176,14 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
   const updatePVGStatus = async (staffId: string, checked: boolean) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { error } = await supabase
         .from('team_staff')
         .update({
           pvg_checked: checked,
           pvg_checked_at: checked ? new Date().toISOString() : null,
-          pvg_checked_by: checked ? 'current_user_id' : null // Replace with actual user ID
+          pvg_checked_by: checked ? user?.id : null
         })
         .eq('id', staffId);
 
@@ -173,7 +191,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
       toast({
         title: 'PVG Status Updated',
-        description: `PVG status has been ${checked ? 'checked' : 'unchecked'}`,
+        description: `PVG status has been ${checked ? 'verified' : 'unverified'}`,
       });
 
       loadClubStaff();
@@ -235,7 +253,9 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       <Card>
         <CardHeader>
           <CardTitle>Staff Management - {clubName}</CardTitle>
-          <CardDescription>Manage staff from all linked teams with PVG tracking</CardDescription>
+          <CardDescription>
+            Manage staff from all linked teams with PVG tracking. Only Managers and Coaches require PVG verification.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4 mb-6">
@@ -310,24 +330,32 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`pvg-${member.id}`}
-                            checked={member.pvgChecked}
-                            onCheckedChange={(checked) => 
-                              updatePVGStatus(member.id, checked as boolean)
-                            }
-                          />
-                          <label 
-                            htmlFor={`pvg-${member.id}`} 
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            PVG Checked
-                          </label>
-                        </div>
-                        {member.pvgCheckedAt && (
+                        {member.requiresPvg ? (
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`pvg-${member.id}`}
+                              checked={member.pvgChecked}
+                              onCheckedChange={(checked) => 
+                                updatePVGStatus(member.id, checked as boolean)
+                              }
+                            />
+                            <label 
+                              htmlFor={`pvg-${member.id}`} 
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                            >
+                              PVG Verified
+                            </label>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-2">
+                            <div className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">
+                              PVG Not Required
+                            </div>
+                          </div>
+                        )}
+                        {member.pvgCheckedAt && member.requiresPvg && (
                           <div className="text-xs text-muted-foreground">
-                            Checked: {new Date(member.pvgCheckedAt).toLocaleDateString()}
+                            Verified: {new Date(member.pvgCheckedAt).toLocaleDateString()}
                           </div>
                         )}
                       </div>
