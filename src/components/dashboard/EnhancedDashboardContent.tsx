@@ -6,6 +6,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 import { UpcomingEvents } from '@/components/dashboard/UpcomingEvents';
