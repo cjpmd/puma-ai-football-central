@@ -708,7 +708,7 @@ export const EventForm: React.FC<EventFormProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="start_time">Start Time</Label>
                   <Input
@@ -720,24 +720,26 @@ export const EventForm: React.FC<EventFormProps> = ({
                       setFormData(prev => ({ 
                         ...prev, 
                         start_time: newStartTime,
-                        meeting_time: prev.meeting_time || calculateMeetingTime(newStartTime)
+                        meeting_time: formData.event_type !== 'training' && !prev.meeting_time ? calculateMeetingTime(newStartTime) : prev.meeting_time
                       }));
                     }}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="meeting_time">Meeting Time</Label>
-                  <Input
-                    id="meeting_time"
-                    type="time"
-                    value={formData.meeting_time}
-                    onChange={(e) => setFormData(prev => ({ ...prev, meeting_time: e.target.value }))}
-                    placeholder="30 mins before start"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Defaults to 30 mins before start time
-                  </p>
-                </div>
+                {formData.event_type !== 'training' && (
+                  <div>
+                    <Label htmlFor="meeting_time">Meeting Time</Label>
+                    <Input
+                      id="meeting_time"
+                      type="time"
+                      value={formData.meeting_time}
+                      onChange={(e) => setFormData(prev => ({ ...prev, meeting_time: e.target.value }))}
+                      placeholder="30 mins before start"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Defaults to 30 mins before start time
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label htmlFor="end_time">End Time</Label>
                   <Input
