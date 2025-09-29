@@ -239,7 +239,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('user_teams')
         .select(`
           role,
-          teams (
+          teams!fk_user_teams_team_id (
             id, name, age_group, season_start, season_end, club_id, 
             year_group_id, game_format, subscription_type, 
             performance_categories, kit_icons, logo_url, kit_designs,
