@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
@@ -290,7 +291,7 @@ export default function DashboardMobile() {
         {/* Welcome Message */}
         <div className="text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">
-            Welcome, {profile?.name || 'Player'}!
+            Welcome, {getPersonalizedGreeting(profile, user?.email)}!
           </h2>
           
           {/* Teams and Players Section */}

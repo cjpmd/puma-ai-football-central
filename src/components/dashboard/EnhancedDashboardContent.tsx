@@ -273,7 +273,7 @@ export const EnhancedDashboardContent = () => {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {profile?.name || user?.email || 'Team Manager'}!
+          Welcome back, {getPersonalizedGreeting(profile, user?.email)}!
         </h1>
         <p className="text-muted-foreground mt-2">
           Here's what's happening with your teams today.

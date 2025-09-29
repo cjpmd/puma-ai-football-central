@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSmartNavigation } from '@/hooks/useSmartNavigation';
+import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { 
   Heart, 
   Users, 
@@ -19,8 +20,12 @@ import {
 
 export function SmartDashboardContent() {
   const { currentView, getViewLabel, isMultiRoleUser } = useSmartView();
-  const { teams, clubs, connectedPlayers, profile } = useAuth();
+  const { teams, clubs, connectedPlayers, profile, user } = useAuth();
   const { quickActions } = useSmartNavigation();
+
+  // Get personalized greeting
+  // Get personalized greeting
+  const firstName = getPersonalizedGreeting(profile, user?.email);
 
   const getWelcomeMessage = () => {
     const viewLabels = getViewLabel(currentView);
@@ -28,7 +33,7 @@ export function SmartDashboardContent() {
     switch (currentView) {
       case 'parent':
         return {
-          title: `Welcome back, Parent!`,
+          title: `Welcome back, ${firstName}!`,
           description: `Track your ${connectedPlayers.length === 1 ? 'child\'s' : 'children\'s'} progress and stay updated with team activities.`,
           stats: [
             { label: 'Connected Children', value: connectedPlayers.length, icon: Heart },
@@ -38,7 +43,7 @@ export function SmartDashboardContent() {
       
       case 'coach':
         return {
-          title: `Coach Dashboard`,
+          title: `Welcome back, ${firstName}!`,
           description: `Focus on player development and training session management.`,
           stats: [
             { label: 'Your Teams', value: teams.length, icon: Trophy },
@@ -48,7 +53,7 @@ export function SmartDashboardContent() {
       
       case 'team_manager':
         return {
-          title: `Team Management Hub`,
+          title: `Welcome back, ${firstName}!`,
           description: `Comprehensive team management tools at your fingertips.`,
           stats: [
             { label: 'Teams Managed', value: teams.length, icon: Trophy },
@@ -58,7 +63,7 @@ export function SmartDashboardContent() {
       
       case 'club_admin':
         return {
-          title: `Club Administration`,
+          title: `Welcome back, ${firstName}!`,
           description: `Manage multiple teams and oversee club operations.`,
           stats: [
             { label: 'Clubs', value: clubs.length, icon: Building2 },
@@ -69,7 +74,7 @@ export function SmartDashboardContent() {
       
       case 'global_admin':
         return {
-          title: `System Administration`,
+          title: `Welcome back, ${firstName}!`,
           description: `Platform-wide management and oversight capabilities.`,
           stats: [
             { label: 'Total Clubs', value: clubs.length, icon: Building2 },
