@@ -1,8 +1,13 @@
 
-import { MultiRoleDashboard } from '@/components/dashboard/EnhancedMultiRoleDashboard';
+import { SmartDashboardContent } from '@/components/dashboard/SmartDashboardContent';
+import { DashboardLayout } from '@/components/layout/DashboardLayout';
 
 const Dashboard = () => {
-  return <MultiRoleDashboard />;
+  return (
+    <DashboardLayout>
+      <SmartDashboardContent />
+    </DashboardLayout>
+  );
 };
 
 export default Dashboard;

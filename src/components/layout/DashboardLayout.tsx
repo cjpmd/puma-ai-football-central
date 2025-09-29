@@ -4,25 +4,16 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { useSmartView } from '@/contexts/SmartViewContext';
 import { EntityHeader } from '@/components/shared/EntityHeader';
+import { RoleContextSwitcher } from './RoleContextSwitcher';
+import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 import { 
-  Home, 
-  Users, 
-  Calendar, 
-  Settings, 
   Menu,
   LogOut,
-  BarChart3,
-  Trophy,
-  UserCheck,
-  Building2,
-  UserCog,
-  UserPlus,
-  CreditCard,
-  Dumbbell,
-  Target
+  Zap
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -30,25 +21,13 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home, permission: null },
-  { name: 'Players', href: '/players', icon: Users, permission: null }, // Basic access for all team members
-  { name: 'Calendar & Events', href: '/calendar', icon: Calendar, permission: null }, // Basic access for all team members
-  { name: 'Training', href: '/training', icon: Dumbbell, permission: null }, // Allow all team members to view training
-  { name: 'Individual Training', href: '/individual-training', icon: Target, permission: null }, // Allow all team members
-  { name: 'Analytics', href: '/analytics', icon: BarChart3, permission: { resource: 'analytics', action: 'view' } },
-  
-  { name: 'Teams', href: '/teams', icon: Trophy, permission: { resource: 'teams', action: 'manage' } },
-  { name: 'Clubs', href: '/clubs', icon: Building2, permission: { resource: 'clubs', action: 'manage' } },
-  { name: 'Staff Management', href: '/staff', icon: UserCog, permission: { resource: 'staff', action: 'manage' } },
-  { name: 'User Management', href: '/users', icon: UserPlus, permission: { resource: 'users', action: 'manage' } },
-  { name: 'Subscriptions', href: '/subscriptions', icon: CreditCard, permission: { resource: 'teams', action: 'manage' } },
-];
+// Navigation is now handled by useSmartNavigation hook
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, signOut, teams, clubs } = useAuth();
-  const { hasPermission } = useAuthorization();
+  const { user, signOut, teams, clubs, connectedPlayers } = useAuth();
+  const { currentView, isMultiRoleUser } = useSmartView();
+  const { navigation, quickActions } = useSmartNavigation();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -57,9 +36,48 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     navigate('/login');
   };
 
-  // Get current team or club for header display
-  const currentTeam = teams?.[0]; // For now, show first team
-  const currentClub = clubs?.[0]; // For now, show first club
+  // Get context-appropriate entity for header display
+  const getHeaderEntity = () => {
+    switch (currentView) {
+      case 'parent':
+        if (connectedPlayers.length > 0) {
+          return {
+            type: 'team' as const,
+            name: connectedPlayers[0].team.name,
+            logoUrl: connectedPlayers[0].team.logoUrl
+          };
+        }
+        break;
+      case 'coach':
+      case 'team_manager':
+        if (teams.length > 0) {
+          return {
+            type: 'team' as const,
+            name: teams[0].name,
+            logoUrl: teams[0].logoUrl
+          };
+        }
+        break;
+      case 'club_admin':
+        if (clubs.length > 0) {
+          return {
+            type: 'club' as const,
+            name: clubs[0].name,
+            logoUrl: clubs[0].logoUrl
+          };
+        }
+        break;
+      case 'global_admin':
+        return {
+          type: 'team' as const,
+          name: 'System Administration',
+          logoUrl: null
+        };
+    }
+    return null;
+  };
+
+  const headerEntity = getHeaderEntity();
 
   const Sidebar = ({ className }: { className?: string }) => (
     <div className={cn('flex h-full w-64 flex-col bg-background', className)}>
@@ -75,31 +93,58 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </div>
       <ScrollArea className="flex-1">
         <nav className="flex flex-col gap-1 p-4">
-          {navigation
-            .filter((item) => {
-              // Show item if no permission required or user has permission
-              if (!item.permission) return true;
-              return hasPermission(item.permission);
-            })
-            .map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  className={cn(
-                    'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-accent text-accent-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-                  )}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <item.icon className="h-5 w-5" />
+          {/* Quick Actions Section */}
+          {quickActions.length > 0 && (
+            <div className="mb-6">
+              <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                Quick Actions
+              </div>
+              <div className="flex flex-col gap-1">
+                {quickActions.map((action) => (
+                  <Link
+                    key={action.name}
+                    to={action.href}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors text-muted-foreground hover:bg-accent hover:text-accent-foreground border border-dashed border-muted-foreground/20"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <Zap className="h-4 w-4" />
+                    {action.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Main Navigation */}
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Navigation
+          </div>
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                className={cn(
+                  'flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                onClick={() => setSidebarOpen(false)}
+              >
+                <item.icon className="h-5 w-5" />
+                <div className="flex-1">
                   {item.name}
-                </Link>
-              );
-            })}
+                  {item.description && (
+                    <div className="text-xs text-muted-foreground/70 mt-0.5">
+                      {item.description}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            );
+          })}
         </nav>
       </ScrollArea>
       <div className="border-t p-4">
@@ -140,20 +185,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top header with entity logo and name */}
+        {/* Top header with entity logo, name, and role switcher */}
         <div className="h-16 border-b bg-background flex items-center px-6">
           <div className="flex-1">
-            {currentClub ? (
+            {headerEntity ? (
               <EntityHeader 
-                logoUrl={currentClub.logoUrl}
-                entityName={currentClub.name}
-                entityType="club"
-              />
-            ) : currentTeam ? (
-              <EntityHeader 
-                logoUrl={currentTeam.logoUrl}
-                entityName={currentTeam.name}
-                entityType="team"
+                logoUrl={headerEntity.logoUrl}
+                entityName={headerEntity.name}
+                entityType={headerEntity.type}
               />
             ) : (
               <EntityHeader 
@@ -161,6 +200,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 entityType="team"
               />
             )}
+          </div>
+          
+          {/* Role Context Switcher */}
+          <div className="flex items-center gap-4">
+            {isMultiRoleUser && (
+              <Badge variant="outline" className="text-xs">
+                Multi-Role User
+              </Badge>
+            )}
+            <RoleContextSwitcher />
           </div>
         </div>
         
