@@ -591,11 +591,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2">
-      <div className={`bg-white rounded-lg w-full flex flex-col ${
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className={`bg-background rounded-lg w-full flex flex-col shadow-xl ${
         isMobile 
-          ? 'max-w-sm h-[95vh]' 
-          : 'max-w-[95vw] h-[95vh]'
+          ? 'max-w-sm max-h-[90vh]' 
+          : 'max-w-[90vw] max-h-[90vh]'
       }`}>
         <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
@@ -749,9 +749,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-            <div className={`${isMobile ? 'p-2' : 'p-6'} space-y-4`}>
+        <div className="flex-1 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+            <div className={`${isMobile ? 'p-2' : 'p-6'} flex-shrink-0`}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
                   <Users className="h-3 w-3" />
@@ -766,8 +766,10 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   {isTrainingEvent ? "Training Plan" : "Formation"}
                 </TabsTrigger>
               </TabsList>
+            </div>
 
-              <TabsContent value="squad" className="h-full mt-0">
+            <div className="flex-1 overflow-auto px-2 pb-2">
+              <TabsContent value="squad" className="mt-0 h-full">
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement
                     key={`team-${currentTeamIndex}`}
@@ -786,7 +788,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 )}
               </TabsContent>
 
-              <TabsContent value="staff" className="h-full mt-0">
+              <TabsContent value="staff" className="mt-0 h-full">
                 {currentTeam && (
                   <EventStaffAssignmentSection
                     eventId={event.id}
@@ -798,7 +800,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               </TabsContent>
 
               {isTrainingEvent ? (
-                <TabsContent value="training-plan" className="h-full mt-0">
+                <TabsContent value="training-plan" className="mt-0 h-full">
                   {currentTeam && (
                     <TrainingPlanEditor
                       teamId={teamId}
@@ -810,7 +812,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   )}
                 </TabsContent>
               ) : (
-                <TabsContent value="formation" className="h-full mt-0">
+                <TabsContent value="formation" className="mt-0 h-full">
                   {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
                     <Card>
                       <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
