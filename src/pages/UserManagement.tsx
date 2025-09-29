@@ -1,11 +1,11 @@
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { UserManagementSystem } from "@/components/users/UserManagementSystem";
+import { EnhancedUserManagement } from "@/components/users/EnhancedUserManagement";
 
 const UserManagement = () => {
   return (
     <DashboardLayout>
-      <UserManagementSystem />
+      <EnhancedUserManagement />
     </DashboardLayout>
   );
 };

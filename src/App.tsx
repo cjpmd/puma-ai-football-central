@@ -35,6 +35,7 @@ import IndividualTraining from "./pages/IndividualTraining";
 import IndividualTrainingMobile from "./pages/IndividualTrainingMobile";
 import UserManagement from "./pages/UserManagement";
 import UserManagementMobile from "./pages/UserManagementMobile";
+import UserProfile from "./pages/UserProfile";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
 import SubscriptionManagementMobile from "./pages/SubscriptionManagementMobile";
 
@@ -160,6 +161,14 @@ const App = () => (
                       desktopComponent={<UserManagement />}
                       mobileComponent={<UserManagementMobile />}
                     />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/profile"
+                element={
+                  <ProtectedRoute>
+                    <UserProfile />
                   </ProtectedRoute>
                 }
               />
