@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -295,7 +295,7 @@ export const ClubManagement = () => {
   const selectedClubData = allClubs.find(c => c.id === selectedClubForView);
 
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -475,7 +475,7 @@ export const ClubManagement = () => {
           onClose={() => setIsDetailsModalOpen(false)}
         />
       </div>
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 };
 

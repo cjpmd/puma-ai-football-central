@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -36,7 +36,7 @@ const PlayerManagementPage = () => {
   })) || [];
 
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -112,7 +112,7 @@ const PlayerManagementPage = () => {
           </div>
         )}
       </div>
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 };
 

@@ -14,7 +14,7 @@ import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSe
 import { PostGameEditor } from '@/components/events/PostGameEditor';
 import { EventsGridView } from '@/components/events/EventsGridView';
 import { CalendarGridView } from '@/components/events/CalendarGridView';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { eventsService } from '@/services/eventsService';
@@ -231,14 +231,14 @@ export default function CalendarEvents() {
 
   if (loading) {
     return (
-      <DashboardLayout>
+      <SafeDashboardLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
             <p>Loading events...</p>
           </div>
         </div>
-      </DashboardLayout>
+      </SafeDashboardLayout>
     );
   }
 
@@ -257,7 +257,7 @@ export default function CalendarEvents() {
   const nextEvent = upcomingEvents[0];
 
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <div className="space-y-6">
         {/* Enhanced Header with Month Display */}
         <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
@@ -500,6 +500,6 @@ export default function CalendarEvents() {
           </DialogContent>
         </Dialog>
       </div>
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 }

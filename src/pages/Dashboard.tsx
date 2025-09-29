@@ -1,12 +1,12 @@
 
 import { SmartDashboardContent } from '@/components/dashboard/SmartDashboardContent';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 
 const Dashboard = () => {
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <SmartDashboardContent />
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 };
 

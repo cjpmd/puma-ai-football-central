@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DrillLibraryManager } from '@/components/training/DrillLibraryManager';
 import { DrillCreator } from '@/components/training/DrillCreator';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { CoachTrainingDashboard } from '@/components/training/CoachTrainingDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 import { playersService } from '@/services/playersService';
@@ -54,7 +54,7 @@ export default function Training() {
     return Array.from(map.values());
   })();
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -137,6 +137,6 @@ export default function Training() {
           />
         )}
       </div>
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 }

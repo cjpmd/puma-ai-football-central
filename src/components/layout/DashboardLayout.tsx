@@ -26,10 +26,32 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut, teams, clubs, connectedPlayers } = useAuth();
-  const { currentView, isMultiRoleUser } = useSmartView();
-  const { navigation, quickActions } = useSmartNavigation();
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Handle case where SmartView context might not be available
+  let currentView: string = 'parent';
+  let isMultiRoleUser = false;
+  let navigation: any[] = [];
+  let quickActions: any[] = [];
+  
+  try {
+    const smartView = useSmartView();
+    currentView = smartView.currentView;
+    isMultiRoleUser = smartView.isMultiRoleUser;
+    
+    const smartNav = useSmartNavigation();
+    navigation = smartNav.navigation;
+    quickActions = smartNav.quickActions;
+  } catch (error) {
+    // SmartView context not available, use fallback navigation
+    console.log('SmartView context not available, using fallback navigation');
+    navigation = [
+      { name: 'Dashboard', href: '/dashboard', icon: Menu, priority: 1 },
+      { name: 'Players', href: '/players', icon: Menu, priority: 2 },
+      { name: 'Calendar', href: '/calendar', icon: Menu, priority: 3 }
+    ];
+  }
 
   const handleSignOut = async () => {
     await signOut();
@@ -209,7 +231,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 Multi-Role User
               </Badge>
             )}
-            <RoleContextSwitcher />
+            {/* Only show role switcher if SmartView context is available */}
+            {typeof useSmartView !== 'undefined' && (
+              <RoleContextSwitcher />
+            )}
           </div>
         </div>
         

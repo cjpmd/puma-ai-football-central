@@ -1,4 +1,4 @@
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { IndividualTrainingDashboard } from '@/components/individual-training/IndividualTrainingDashboard';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,7 +13,7 @@ const IndividualTraining = () => {
   })) || [];
 
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -29,7 +29,7 @@ const IndividualTraining = () => {
           userPlayers={userPlayers}
         />
       </div>
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 };
 

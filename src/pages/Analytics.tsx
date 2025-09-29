@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -63,16 +63,16 @@ const Analytics = () => {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <SafeDashboardLayout>
         <div className="space-y-6">
           <div className="text-center py-8">Loading analytics...</div>
         </div>
-      </DashboardLayout>
+      </SafeDashboardLayout>
     );
   }
 
   return (
-    <DashboardLayout>
+    <SafeDashboardLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -372,7 +372,7 @@ const Analytics = () => {
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </SafeDashboardLayout>
   );
 };
 
