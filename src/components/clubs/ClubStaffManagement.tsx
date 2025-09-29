@@ -79,24 +79,49 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       }
 
       const teamIds = clubTeams.map(ct => ct.team_id);
+      console.log('Loading staff for teams:', teamIds);
 
-      // Get all staff from linked teams
-      const { data: staffData, error: staffError } = await supabase
+      // Get all staff from team_staff table
+      const { data: teamStaffData, error: staffError } = await supabase
         .from('team_staff')
         .select('*')
         .in('team_id', teamIds);
 
       if (staffError) throw staffError;
 
-      // Transform data to include team information
-      const staffWithTeams = staffData?.map(member => {
+      // Get all staff from user_teams table with profile information
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select(`
+          id,
+          user_id,
+          team_id,
+          role,
+          profiles:user_id (
+            id,
+            name,
+            email,
+            phone
+          )
+        `)
+        .in('team_id', teamIds);
+
+      if (userTeamsError) throw userTeamsError;
+
+      console.log('Team staff data:', teamStaffData?.length || 0);
+      console.log('User teams data:', userTeamsData?.length || 0);
+
+      // Combine both sources - use a Map to avoid duplicates
+      const staffMap = new Map<string, any>();
+
+      // Add team_staff records first
+      teamStaffData?.forEach(member => {
         const teamData = clubTeams.find(ct => ct.team_id === member.team_id)?.teams;
-        
-        // Determine if this role requires PVG checking
         const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'team_assistant_manager'];
         const requiresPvg = pvgRequiredRoles.includes(member.role);
         
-        return {
+        const key = `${member.user_id || member.email}-${member.team_id}`;
+        staffMap.set(key, {
           id: member.id,
           name: member.name,
           email: member.email,
@@ -110,8 +135,39 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           pvgCheckedAt: member.pvg_checked_at,
           userId: member.user_id,
           requiresPvg
-        };
-      }) || [];
+        });
+      });
+
+      // Add user_teams records if not already in map
+      userTeamsData?.forEach(ut => {
+        const profile = ut.profiles as any;
+        const key = `${ut.user_id}-${ut.team_id}`;
+        
+        if (!staffMap.has(key) && profile) {
+          const teamData = clubTeams.find(ct => ct.team_id === ut.team_id)?.teams;
+          const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'team_assistant_manager'];
+          const requiresPvg = pvgRequiredRoles.includes(ut.role);
+          
+          staffMap.set(key, {
+            id: ut.id,
+            name: profile.name || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+            role: ut.role,
+            teamId: ut.team_id,
+            teamName: teamData?.name || 'Unknown Team',
+            ageGroup: teamData?.age_group || 'Unknown',
+            pvgChecked: false,
+            pvgCheckedBy: undefined,
+            pvgCheckedAt: undefined,
+            userId: ut.user_id,
+            requiresPvg
+          });
+        }
+      });
+
+      const staffWithTeams = Array.from(staffMap.values());
+      console.log('Combined staff:', staffWithTeams.length);
 
       // Calculate team summaries - only count staff who require PVG
       const summaries = staffWithTeams.reduce((acc, member) => {
