@@ -212,7 +212,11 @@ const TeamManagement = () => {
     }
 
     if (selectedClub !== 'all') {
-      filtered = filtered.filter(team => team.clubId === selectedClub);
+      if (selectedClub === 'independent') {
+        filtered = filtered.filter(team => !team.clubId);
+      } else {
+        filtered = filtered.filter(team => team.clubId === selectedClub);
+      }
     }
 
     if (selectedAgeGroup !== 'all') {
@@ -461,7 +465,7 @@ const TeamManagement = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Clubs</SelectItem>
-                    <SelectItem value="">Independent Teams</SelectItem>
+                    <SelectItem value="independent">Independent Teams</SelectItem>
                     {allClubs.map((club) => (
                       <SelectItem key={club.id} value={club.id}>
                         {club.name}

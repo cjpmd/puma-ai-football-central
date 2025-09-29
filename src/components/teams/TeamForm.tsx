@@ -37,7 +37,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
     const submitData = {
       ...formData,
       clubId: formData.clubId === 'independent' ? null : formData.clubId,
-      yearGroupId: formData.yearGroupId || null
+      yearGroupId: formData.yearGroupId === 'none' ? null : formData.yearGroupId
     };
     onSubmit(submitData);
   };
@@ -48,13 +48,13 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
       loadYearGroups(formData.clubId);
     } else {
       setYearGroups([]);
-      setFormData(prev => ({ ...prev, yearGroupId: '' }));
+      setFormData(prev => ({ ...prev, yearGroupId: 'none' }));
     }
   }, [formData.clubId]);
 
   // Update age group when year group is selected
   useEffect(() => {
-    if (formData.yearGroupId) {
+    if (formData.yearGroupId && formData.yearGroupId !== 'none') {
       const selectedYearGroup = yearGroups.find(yg => yg.id === formData.yearGroupId);
       if (selectedYearGroup) {
         setFormData(prev => ({ ...prev, ageGroup: selectedYearGroup.name }));
@@ -138,10 +138,10 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 value={formData.ageGroup}
                 onChange={(e) => setFormData(prev => ({ ...prev, ageGroup: e.target.value }))}
                 placeholder="e.g., U12, U15, Senior"
-                disabled={!!formData.yearGroupId}
+                disabled={formData.yearGroupId !== 'none' && !!formData.yearGroupId}
                 required
               />
-              {formData.yearGroupId && (
+              {formData.yearGroupId && formData.yearGroupId !== 'none' && (
                 <p className="text-xs text-muted-foreground">
                   Age group is automatically set from the selected year group
                 </p>
@@ -211,7 +211,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                   <SelectValue placeholder={loadingYearGroups ? "Loading year groups..." : "Select a year group (optional)"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No year group</SelectItem>
+                  <SelectItem value="none">No year group</SelectItem>
                   {yearGroups.map((yearGroup) => (
                     <SelectItem key={yearGroup.id} value={yearGroup.id}>
                       {yearGroup.name} - {yearGroup.playingFormat}
