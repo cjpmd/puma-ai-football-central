@@ -591,11 +591,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`bg-background rounded-lg w-full flex flex-col shadow-xl ${
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-6">
+      <div className={`bg-background rounded-lg w-full flex flex-col shadow-xl my-8 ${
         isMobile 
-          ? 'max-w-sm max-h-[90vh]' 
-          : 'max-w-[90vw] max-h-[90vh]'
+          ? 'max-w-sm max-h-[85vh]' 
+          : 'max-w-[85vw] max-h-[85vh]'
       }`}>
         <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
