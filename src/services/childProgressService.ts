@@ -60,14 +60,13 @@ export const childProgressService = {
             teams!inner (
               id,
               name,
-              club_id,
-              clubs!club_id (
-                name
-              )
+              club_id
             )
           )
         `)
         .eq('user_id', userId);
+
+      console.log('Child progress query result:', { userPlayers, playersError });
 
       if (playersError) throw playersError;
 
@@ -78,6 +77,17 @@ export const childProgressService = {
         
         // Calculate age
         const age = new Date().getFullYear() - new Date(player.date_of_birth).getFullYear();
+        
+        // Get club name separately to avoid complex join
+        let clubName = null;
+        if (player.teams.club_id) {
+          const { data: clubData } = await supabase
+            .from('clubs')
+            .select('name')
+            .eq('id', player.teams.club_id)
+            .single();
+          clubName = clubData?.name;
+        }
         
         // Get performance trend
         const performanceTrend = await calculatePerformanceTrend(player.id);
@@ -153,7 +163,7 @@ export const childProgressService = {
           position: player.play_style,
           teamName: player.teams.name,
           teamId: player.team_id,
-          clubName: player.teams.clubs?.name,
+          clubName: clubName,
           performanceTrend,
           stats: {
             totalGames,

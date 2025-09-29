@@ -48,11 +48,11 @@ export const useSmartNavigation = () => {
         // Parent-focused navigation
         if (connectedPlayers.length > 0) {
           items.push({
-            name: 'My Children',
-            href: '/players',
+            name: 'My Team',
+            href: '/child-progress',
             icon: Heart,
             priority: 2,
-            description: 'View your children\'s progress'
+            description: 'View your children\'s progress and team'
           });
         }
         
@@ -322,7 +322,7 @@ export const useSmartNavigation = () => {
         if (connectedPlayers.length > 0) {
           actions.push({
             name: 'View Child Progress',
-            href: `/players/${connectedPlayers[0].id}`,
+            href: '/child-progress',
             icon: Heart,
             priority: 1
           });
