@@ -1,6 +1,7 @@
 export type UserRole = 
   | "admin" 
-  | "team_manager" 
+  | "manager"
+  | "team_manager" // Legacy support
   | "team_assistant_manager" 
   | "team_coach" 
   | "team_helper" 
@@ -9,6 +10,8 @@ export type UserRole =
   | "club_admin" 
   | "club_chair" 
   | "club_secretary"
+  | "coach"
+  | "staff"
   | "global_admin";
 
 export type SubscriptionType = "free" | "premium" | "pro" | "analytics_plus";
