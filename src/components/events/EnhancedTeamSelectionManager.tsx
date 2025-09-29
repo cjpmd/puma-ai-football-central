@@ -768,8 +768,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-auto px-2 pb-2">
-              <TabsContent value="squad" className="mt-0 h-full">
+            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2">
+              <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden"  style={{ height: 'auto' }}>
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement
                     key={`team-${currentTeamIndex}`}
@@ -788,7 +788,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                 )}
               </TabsContent>
 
-              <TabsContent value="staff" className="mt-0 h-full">
+              <TabsContent value="staff" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                 {currentTeam && (
                   <EventStaffAssignmentSection
                     eventId={event.id}
@@ -800,7 +800,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               </TabsContent>
 
               {isTrainingEvent ? (
-                <TabsContent value="training-plan" className="mt-0 h-full">
+                <TabsContent value="training-plan" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                   {currentTeam && (
                     <TrainingPlanEditor
                       teamId={teamId}
@@ -812,7 +812,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
                   )}
                 </TabsContent>
               ) : (
-                <TabsContent value="formation" className="mt-0 h-full">
+                <TabsContent value="formation" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                   {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
                     <Card>
                       <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
