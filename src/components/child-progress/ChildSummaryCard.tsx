@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Trophy, Target, Calendar, TrendingUp, TrendingDown, Minus, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Trophy, Target, Calendar, TrendingUp, TrendingDown, Minus, Clock, CreditCard, Users } from 'lucide-react';
+import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
+import { TeamFifaCardsModal } from './TeamFifaCardsModal';
 import type { ChildProgressData } from '@/services/childProgressService';
 
 interface ChildSummaryCardProps {
@@ -11,6 +14,8 @@ interface ChildSummaryCardProps {
 }
 
 export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => {
+  const [showTeamCards, setShowTeamCards] = useState(false);
+  const [showPlayerCard, setShowPlayerCard] = useState(false);
   const getTrendIcon = () => {
     switch (child.performanceTrend) {
       case 'improving':
@@ -31,6 +36,39 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
       default:
         return 'text-blue-600 bg-blue-50 border-blue-200';
     }
+  };
+
+  
+  // Convert child data to Player type for FIFA card
+  const playerForCard = {
+    id: child.id,
+    name: child.name,
+    photo_url: child.photo,
+    date_of_birth: new Date().toISOString().split('T')[0], // Default date
+    squad_number: child.squadNumber,
+    team_id: child.teamId,
+    play_style: child.position,
+    match_stats: child.stats,
+    attributes: null,
+    objectives: null,
+    comments: null,
+    availability: 'green' as const,
+    parent_id: null,
+    subscription_type: 'free',
+    subscription_status: 'active',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    status: 'active',
+    leave_date: null,
+    leave_comments: null,
+    performance_category_id: null,
+    kit_sizes: null,
+    linking_code: null,
+    card_design_id: null,
+    fun_stats: null,
+    parent_linking_code: null,
+    parent_linking_code_expires_at: null,
+    type: 'outfield' as const
   };
 
   return (
@@ -121,7 +159,58 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
             </div>
           )}
         </div>
+        
+        {/* FIFA Card Actions */}
+        <div className="flex gap-2 pt-4 border-t">
+          <Button
+            variant="outline"
+            onClick={() => setShowPlayerCard(true)}
+            className="flex-1 gap-2"
+          >
+            <CreditCard className="h-4 w-4" />
+            View FIFA Card
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowTeamCards(true)}
+            className="flex-1 gap-2"
+          >
+            <Users className="h-4 w-4" />
+            Team FIFA Cards
+          </Button>
+        </div>
       </CardContent>
+
+      {/* FIFA Card Modal */}
+      {showPlayerCard && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-background rounded-lg p-6 max-w-md w-full relative">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPlayerCard(false)}
+              className="absolute top-2 right-2 h-8 w-8 p-0"
+            >
+              <Minus className="h-4 w-4" />
+            </Button>
+            <div className="flex justify-center">
+              <FifaStylePlayerCard
+                player={playerForCard}
+                team={null}
+                onClose={() => setShowPlayerCard(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Team FIFA Cards Modal */}
+      <TeamFifaCardsModal
+        isOpen={showTeamCards}
+        onClose={() => setShowTeamCards(false)}
+        teamId={child.teamId}
+        teamName={child.teamName}
+      />
     </Card>
   );
 };
