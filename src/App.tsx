@@ -39,6 +39,8 @@ import UserManagementMobile from "./pages/UserManagementMobile";
 import UserProfile from "./pages/UserProfile";
 import SubscriptionManagement from "./pages/SubscriptionManagement";
 import SubscriptionManagementMobile from "./pages/SubscriptionManagementMobile";
+import ChildProgress from "./pages/ChildProgress";
+import ChildProgressMobile from "./pages/ChildProgressMobile";
 
 const queryClient = new QueryClient();
 
@@ -185,7 +187,18 @@ const App = () => (
                   </ProtectedRoute>
                  }
                />
-               <Route path="/data-recovery" element={<DataRecovery />} />
+               <Route 
+                 path="/child-progress" 
+                 element={
+                   <ProtectedRoute>
+                     <ResponsiveRoute
+                       desktopComponent={<ChildProgress />}
+                       mobileComponent={<ChildProgressMobile />}
+                     />
+                   </ProtectedRoute>
+                  }
+                />
+                <Route path="/data-recovery" element={<DataRecovery />} />
                <Route path="/email-test" element={<EmailTestPage />} />
                <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
                <Route path="*" element={<NotFound />} />

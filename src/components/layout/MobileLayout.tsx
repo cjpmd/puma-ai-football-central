@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { MobileHeader } from './MobileHeader';
-import { MobileBottomNav } from './MobileBottomNav';
+import { RoleAwareBottomNav } from './RoleAwareBottomNav';
 
 interface Tab {
   id: string;
@@ -59,7 +59,7 @@ export const MobileLayout: React.FC<MobileLayoutProps> = ({
         </div>
       </div>
       
-      <MobileBottomNav />
+      <RoleAwareBottomNav />
     </div>
   );
 };
