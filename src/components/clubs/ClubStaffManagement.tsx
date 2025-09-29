@@ -234,7 +234,8 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { error } = await supabase
+      // First try to update team_staff table
+      const { error: teamStaffError } = await supabase
         .from('team_staff')
         .update({
           pvg_checked: checked,
@@ -243,7 +244,33 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         })
         .eq('id', staffId);
 
-      if (error) throw error;
+      // If no rows were affected in team_staff, this person might only exist in user_teams
+      // We need to find them by checking our current staff list to get their user_id
+      const staffMember = staff.find(s => s.id === staffId);
+      
+      if (teamStaffError || (staffMember && !staffMember.userId)) {
+        // Try to update user_teams instead, but we need to add PVG fields to user_teams table
+        // For now, we'll create a team_staff record for this user
+        if (staffMember && staffMember.userId) {
+          const { error: insertError } = await supabase
+            .from('team_staff')
+            .insert({
+              team_id: staffMember.teamId,
+              user_id: staffMember.userId,
+              name: staffMember.name,
+              email: staffMember.email,
+              phone: staffMember.phone,
+              role: staffMember.role,
+              pvg_checked: checked,
+              pvg_checked_at: checked ? new Date().toISOString() : null,
+              pvg_checked_by: checked ? user?.id : null
+            });
+
+          if (insertError) throw insertError;
+        } else {
+          throw new Error('Unable to update PVG status - staff member not found or missing user ID');
+        }
+      }
 
       toast({
         title: 'PVG Status Updated',
