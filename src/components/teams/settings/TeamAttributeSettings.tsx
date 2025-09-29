@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Team, PlayerAttributeGroup, DEFAULT_PLAYER_ATTRIBUTES, PlayerAttribute } from '@/types/team';
+import { Team, PlayerAttributeGroup, PlayerAttribute } from '@/types/team';
+import { STANDARD_PLAYER_ATTRIBUTES } from '@/types/playerAttributes';
 import { Plus, X, Edit, Eye, EyeOff } from 'lucide-react';
 
 interface TeamAttributeSettingsProps {
@@ -31,7 +32,7 @@ export const TeamAttributeSettings: React.FC<TeamAttributeSettingsProps> = ({
       technical: []
     };
     
-    DEFAULT_PLAYER_ATTRIBUTES.forEach(attr => {
+    STANDARD_PLAYER_ATTRIBUTES.forEach(attr => {
       grouped[attr.group].push(attr);
     });
     
@@ -70,6 +71,12 @@ export const TeamAttributeSettings: React.FC<TeamAttributeSettingsProps> = ({
   };
 
   const removeAttribute = (group: PlayerAttributeGroup, attributeId: string) => {
+    // Check if this is a standard attribute - if so, don't allow deletion
+    const isStandardAttribute = STANDARD_PLAYER_ATTRIBUTES.some(attr => attr.id === attributeId);
+    if (isStandardAttribute) {
+      return; // Don't allow deletion of standard attributes
+    }
+    
     setAttributes(prev => ({
       ...prev,
       [group]: prev[group].filter(attr => attr.id !== attributeId)
@@ -170,14 +177,16 @@ export const TeamAttributeSettings: React.FC<TeamAttributeSettingsProps> = ({
                         {attribute.name}
                       </span>
                     </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeAttribute(groupKey, attribute.id)}
-                      className="p-1 h-auto text-red-500 hover:text-red-700"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    {!STANDARD_PLAYER_ATTRIBUTES.some(attr => attr.id === attribute.id) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeAttribute(groupKey, attribute.id)}
+                        className="p-1 h-auto text-red-500 hover:text-red-700"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>
