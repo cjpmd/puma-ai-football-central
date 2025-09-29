@@ -81,7 +81,7 @@ export const EnhancedUserManagement = () => {
       const profileIds = profiles.map((p) => p.id);
       const { data: staffRoles, error: staffRolesError } = await supabase
         .from('user_teams')
-        .select('user_id, role, teams!user_teams_team_id_fkey (name)')
+        .select('user_id, team_id, role, teams!user_teams_team_id_fkey (name)')
         .in('user_id', profileIds);
       if (staffRolesError) {
         console.error('Error loading staff roles:', staffRolesError);
@@ -120,13 +120,31 @@ export const EnhancedUserManagement = () => {
           }
         }
 
-        // Check staff roles via user_teams (preloaded)
-        const staffForUser = (staffRoles || []).filter(sr => sr.user_id === profile.id && ['manager','team_manager','team_assistant_manager','team_coach','team_helper'].includes(sr.role));
+        // Check staff roles via user_teams (preloaded) and dedupe by team
+        const staffRows = (staffRoles || []).filter(
+          (sr: any) => sr.user_id === profile.id && ['manager','team_manager','team_assistant_manager','team_coach','team_helper'].includes(sr.role)
+        );
+        const rolePriority: Record<string, number> = {
+          manager: 4,
+          team_manager: 4,
+          team_assistant_manager: 3,
+          team_coach: 2,
+          team_helper: 1,
+        };
+        const teamsMap = new Map<string, any>();
+        for (const sr of staffRows) {
+          const existing = teamsMap.get(sr.team_id);
+          if (!existing || (rolePriority[sr.role] || 0) > (rolePriority[existing.role] || 0)) {
+            teamsMap.set(sr.team_id, sr);
+          }
+        }
+        const uniqueTeamStaff = Array.from(teamsMap.values());
 
-        if (staffForUser.length > 0) {
-          if (staffForUser.length === 1) {
-            const roleName = staffForUser[0].role.replace(/_/g, ' ');
-            const teamName = (staffForUser[0] as any).teams?.name;
+        if (uniqueTeamStaff.length > 0) {
+          if (uniqueTeamStaff.length === 1) {
+            const sr: any = uniqueTeamStaff[0];
+            const roleName = sr.role.replace(/_/g, ' ');
+            const teamName = sr.teams?.name;
             roleContexts.push({
               type: 'staff',
               context: `${roleName.charAt(0).toUpperCase() + roleName.slice(1)}${teamName ? ` at ${teamName}` : ''}`,
@@ -135,11 +153,12 @@ export const EnhancedUserManagement = () => {
           } else {
             roleContexts.push({
               type: 'staff',
-              context: `Staff in ${staffForUser.length} teams`,
-              count: staffForUser.length
+              context: `Staff in ${uniqueTeamStaff.length} teams`,
+              count: uniqueTeamStaff.length
             });
           }
         }
+
 
         // Check admin roles
         if (profile.roles?.includes('global_admin')) {
