@@ -242,17 +242,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </div>
         
         <main className="flex-1 flex flex-col min-h-0">
-          <header className="bg-background border-b px-6 py-4 flex items-center justify-between">
-            {headerEntity && (
-              <EntityHeader 
-                logoUrl={headerEntity.logoUrl || undefined}
-                entityName={headerEntity.name}
-                entityType={headerEntity.type}
-              />
-            )}
-            {isMultiRoleUser && <RoleContextSwitcher />}
-          </header>
-          
           <div className="flex-1 overflow-auto p-6">
             {children}
           </div>

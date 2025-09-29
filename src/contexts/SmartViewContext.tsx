@@ -22,6 +22,18 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [currentView, setCurrentView] = useState<ViewRole>('parent');
   const [availableViews, setAvailableViews] = useState<ViewRole[]>([]);
   const [primaryRole, setPrimaryRole] = useState<ViewRole>('parent');
+  const [hasManuallySetView, setHasManuallySetView] = useState(false);
+
+  // Load saved view preference on mount
+  useEffect(() => {
+    if (!profile) return;
+    
+    const savedView = localStorage.getItem(`smartview-${profile.id}`);
+    if (savedView && (savedView as ViewRole)) {
+      setCurrentView(savedView as ViewRole);
+      setHasManuallySetView(true);
+    }
+  }, [profile]);
 
   // Determine available views based on user's roles and relationships
   useEffect(() => {
@@ -85,12 +97,12 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setAvailableViews(views);
     setPrimaryRole(primary);
     
-    // Set current view to primary role if not already set to a valid view
-    if (!views.includes(currentView)) {
+    // Only auto-set view if user hasn't manually chosen one and current view is invalid
+    if (!hasManuallySetView && !views.includes(currentView)) {
       setCurrentView(primary);
-      console.log('Set current view to:', primary);
+      console.log('Auto-set current view to:', primary);
     }
-  }, [profile, connectedPlayers, teams, clubs, isGlobalAdmin, isClubAdmin, isTeamManager, currentView]);
+  }, [profile, connectedPlayers, teams, clubs, isGlobalAdmin, isClubAdmin, isTeamManager, hasManuallySetView]);
 
   const isMultiRoleUser = availableViews.length > 1;
 
@@ -105,9 +117,19 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return labels[view];
   };
 
+  // Enhanced setCurrentView function that persists to localStorage
+  const handleSetCurrentView = (view: ViewRole) => {
+    setCurrentView(view);
+    setHasManuallySetView(true);
+    if (profile) {
+      localStorage.setItem(`smartview-${profile.id}`, view);
+      console.log('Manually set view to:', view);
+    }
+  };
+
   const value: SmartViewContextType = {
     currentView,
-    setCurrentView,
+    setCurrentView: handleSetCurrentView,
     availableViews,
     isMultiRoleUser,
     primaryRole,
