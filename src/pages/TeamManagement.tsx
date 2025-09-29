@@ -84,10 +84,14 @@ const TeamManagement = () => {
   };
 
   const loadClubTeams = async () => {
-    if (!clubs || clubs.length === 0) return;
+    if (!clubs || clubs.length === 0) {
+      console.log('No clubs available for loading teams');
+      return;
+    }
     
     try {
       const clubIds = clubs.map(club => club.id);
+      console.log('Loading teams for club IDs:', clubIds);
       
       const { data, error } = await supabase
         .from('teams')
@@ -100,6 +104,8 @@ const TeamManagement = () => {
         .order('name');
 
       if (error) throw error;
+
+      console.log('Loaded teams data:', data);
 
       const convertedTeams: ExtendedTeam[] = (data || []).map(team => ({
         id: team.id,
@@ -128,6 +134,7 @@ const TeamManagement = () => {
         isReadOnly: !isUserTeamAdmin(team.id)
       }));
 
+      console.log('Converted teams:', convertedTeams.length, 'teams');
       setAllTeams(convertedTeams);
     } catch (error) {
       console.error('Error loading club teams:', error);

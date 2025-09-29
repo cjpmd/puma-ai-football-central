@@ -66,36 +66,79 @@ export const TeamStaffModal: React.FC<TeamStaffModalProps> = ({
     
     try {
       setLoading(true);
-      console.log('Loading staff for team:', team.id);
+      console.log('Fetching team staff for team:', team.id);
 
-      const { data: staffData, error } = await supabase
+      // Load from team_staff table
+      const { data: teamStaffData, error: teamStaffError } = await supabase
         .from('team_staff')
         .select('*')
         .eq('team_id', team.id);
 
-      if (error) {
-        console.error('Error loading staff:', error);
-        throw error;
-      }
+      if (teamStaffError) throw teamStaffError;
+      console.log('Team staff data:', teamStaffData);
 
-      console.log('Loaded staff data:', staffData);
+      // Load from user_teams table with profile information
+      const { data: userTeamsData, error: userTeamsError } = await supabase
+        .from('user_teams')
+        .select(`
+          id,
+          user_id,
+          role,
+          profiles:user_id (
+            id,
+            name,
+            email,
+            phone
+          )
+        `)
+        .eq('team_id', team.id);
 
-      const teamStaff: TeamStaff[] = (staffData || []).map(staff => ({
-        id: staff.id,
-        name: staff.name || '',
-        email: staff.email || '',
-        phone: staff.phone || '',
-        role: staff.role,
-        pvgChecked: staff.pvg_checked || false,
-        pvgCheckedBy: staff.pvg_checked_by || '',
-        pvgCheckedAt: staff.pvg_checked_at || '',
-        coachingBadges: Array.isArray(staff.coaching_badges) 
-          ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
-          : [],
-        certificates: Array.isArray(staff.certificates) ? staff.certificates : []
-      }));
+      if (userTeamsError) throw userTeamsError;
+      console.log('User teams data:', userTeamsData);
 
-      setStaff(teamStaff);
+      // Combine both sources - prioritize team_staff, then add user_teams
+      const staffMap = new Map<string, TeamStaff>();
+
+      // Add team_staff records first
+      (teamStaffData || []).forEach(staff => {
+        staffMap.set(staff.user_id || staff.email, {
+          id: staff.id,
+          name: staff.name || '',
+          email: staff.email || '',
+          phone: staff.phone || '',
+          role: staff.role,
+          pvgChecked: staff.pvg_checked || false,
+          pvgCheckedBy: staff.pvg_checked_by || '',
+          pvgCheckedAt: staff.pvg_checked_at || '',
+          coachingBadges: Array.isArray(staff.coaching_badges) 
+            ? staff.coaching_badges.filter((badge): badge is string => typeof badge === 'string')
+            : [],
+          certificates: Array.isArray(staff.certificates) ? staff.certificates : []
+        });
+      });
+
+      // Add user_teams records if not already in map
+      (userTeamsData || []).forEach(ut => {
+        const profile = ut.profiles as any;
+        const userId = ut.user_id;
+        
+        if (!staffMap.has(userId) && profile) {
+          staffMap.set(userId, {
+            id: ut.id,
+            name: profile.name || '',
+            email: profile.email || '',
+            phone: profile.phone || '',
+            role: ut.role,
+            pvgChecked: false,
+            coachingBadges: [],
+            certificates: []
+          });
+        }
+      });
+
+      const combinedStaff = Array.from(staffMap.values());
+      console.log('Combined staff:', combinedStaff);
+      setStaff(combinedStaff);
     } catch (error: any) {
       console.error('Error loading staff:', error);
       toast({
