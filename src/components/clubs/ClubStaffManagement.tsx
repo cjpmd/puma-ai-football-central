@@ -234,24 +234,24 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
-      // First try to update team_staff table
-      const { error: teamStaffError } = await supabase
+      // First try to update team_staff table and see if any row was affected
+      const { data: updatedRows, error: teamStaffError } = await supabase
         .from('team_staff')
         .update({
           pvg_checked: checked,
           pvg_checked_at: checked ? new Date().toISOString() : null,
           pvg_checked_by: checked ? user?.id : null
         })
-        .eq('id', staffId);
+        .eq('id', staffId)
+        .select('id');
 
-      // If no rows were affected in team_staff, this person might only exist in user_teams
-      // We need to find them by checking our current staff list to get their user_id
+      // Determine if we need to create a team_staff record (e.g., when this person only exists in user_teams)
+      const noTeamStaffUpdated = !!teamStaffError || !updatedRows || updatedRows.length === 0;
       const staffMember = staff.find(s => s.id === staffId);
-      
-      if (teamStaffError || (staffMember && !staffMember.userId)) {
-        // Try to update user_teams instead, but we need to add PVG fields to user_teams table
-        // For now, we'll create a team_staff record for this user
-        if (staffMember && staffMember.userId) {
+
+      if (noTeamStaffUpdated) {
+        if (staffMember?.userId && staffMember.teamId) {
+          // Create a corresponding team_staff record so PVG state is consistently stored and visible to Team Manager views
           const { error: insertError } = await supabase
             .from('team_staff')
             .insert({
@@ -271,6 +271,7 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           throw new Error('Unable to update PVG status - staff member not found or missing user ID');
         }
       }
+
 
       toast({
         title: 'PVG Status Updated',
