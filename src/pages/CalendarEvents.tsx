@@ -461,25 +461,17 @@ export default function CalendarEvents() {
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showTeamSelection} onOpenChange={setShowTeamSelection}>
-          <DialogContent className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
-            </DialogHeader>
-            <div className="h-[70vh] overflow-y-auto">
-              {selectedEvent && (
-                <EnhancedTeamSelectionManager
-                  event={selectedEvent}
-                  isOpen={true}
-                  onClose={() => {
-                    setShowTeamSelection(false);
-                    setSelectedEvent(null);
-                  }}
-                />
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
+        {/* Team Selection Overlay */}
+        {selectedEvent && (
+          <EnhancedTeamSelectionManager
+            event={selectedEvent}
+            isOpen={showTeamSelection}
+            onClose={() => {
+              setShowTeamSelection(false);
+              setSelectedEvent(null);
+            }}
+          />
+        )}
 
         <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
           <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
