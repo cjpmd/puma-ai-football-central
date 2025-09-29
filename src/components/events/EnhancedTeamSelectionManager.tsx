@@ -595,7 +595,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
       <div className={`bg-white rounded-lg w-full flex flex-col ${
         isMobile 
           ? 'max-w-sm h-[95vh]' 
-          : 'max-w-7xl h-[90vh]'
+          : 'max-w-[95vw] h-[95vh]'
       }`}>
         <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
