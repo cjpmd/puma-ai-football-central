@@ -474,15 +474,16 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                              </div>
                            )}
 
-                          {teamScores.length > 0 && matchType && (
-                            <div className="space-y-1">
-                              {teamScores.map((score) => (
-                                <div key={score.teamNumber} className="text-xs text-muted-foreground">
-                                  {score.teamName}: {score.ourScore} - {score.opponentScore}
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                           {teamScores.length > 0 && matchType && (
+                             <div className="space-y-1">
+                               {teamScores.map((score) => (
+                                 <div key={score.teamNumber} className="flex items-center gap-1 text-xs text-muted-foreground">
+                                   <span>{score.teamName}: {score.ourScore} - {score.opponentScore}</span>
+                                   <span className="text-sm">{score.outcomeIcon}</span>
+                                 </div>
+                               ))}
+                             </div>
+                           )}
 
                           {/* Availability Controls */}
                           {showAvailabilityControls && (
