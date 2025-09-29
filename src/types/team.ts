@@ -65,6 +65,8 @@ export interface Team {
   nameDisplayOption?: NameDisplayOption;
   headerDisplayType?: HeaderDisplayType;
   headerImageUrl?: string;
+  userRole?: string; // User's primary role in this team (backward compatibility)
+  userRoles?: string[]; // All user roles in this team
   createdAt: string;
   updatedAt: string;
 }

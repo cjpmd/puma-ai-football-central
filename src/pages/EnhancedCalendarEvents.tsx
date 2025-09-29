@@ -1,15 +1,16 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calendar, Grid3X3, List, Plus, Clock } from 'lucide-react';
+import { Calendar, Grid3X3, List, Plus, Clock, Search, Filter, Crown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { EventForm } from '@/components/events/EventForm';
 import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
@@ -23,11 +24,18 @@ import { IndividualTrainingService } from '@/services/individualTrainingService'
 
 type ViewMode = 'grid' | 'calendar' | 'list';
 
-import EnhancedCalendarEvents from './EnhancedCalendarEvents';
+interface TeamWithEvents {
+  id: string;
+  name: string;
+  ageGroup: string;
+  logoUrl?: string;
+  clubName?: string;
+  eventCount: number;
+}
 
-export default function CalendarEvents() {
-  return <EnhancedCalendarEvents />;
+const EnhancedCalendarEvents = () => {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
+  const [allTeams, setAllTeams] = useState<TeamWithEvents[]>([]);
   const [individualTrainingSessions, setIndividualTrainingSessions] = useState<any[]>([]);
   const [filteredEvents, setFilteredEvents] = useState<DatabaseEvent[]>([]);
   const [filteredIndividualSessions, setFilteredIndividualSessions] = useState<any[]>([]);
@@ -39,53 +47,92 @@ export default function CalendarEvents() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedClub, setSelectedClub] = useState<string>('all');
   const { toast } = useToast();
-  const { teams, connectedPlayers } = useAuth();
+  const { teams, clubs, connectedPlayers } = useAuth();
+  const { isGlobalAdmin, isClubAdmin } = useAuthorization();
+
+  const isAdminUser = isGlobalAdmin || isClubAdmin();
 
   useEffect(() => {
     loadEvents();
     loadIndividualTrainingSessions();
-  }, [teams, connectedPlayers]);
+    if (isAdminUser) {
+      loadAllTeams();
+    }
+  }, [teams, connectedPlayers, isAdminUser]);
 
   useEffect(() => {
     filterEvents();
-  }, [events, individualTrainingSessions, selectedTeam, selectedEventType]);
+  }, [events, individualTrainingSessions, selectedTeam, selectedEventType, searchTerm, selectedClub]);
+
+  const loadAllTeams = async () => {
+    if (!isAdminUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          id,
+          name,
+          age_group,
+          logo_url,
+          club_id,
+          clubs (name),
+          events (count)
+        `)
+        .order('name');
+
+      if (error) throw error;
+
+      const teamsWithEvents: TeamWithEvents[] = (data || []).map(team => ({
+        id: team.id,
+        name: team.name,
+        ageGroup: team.age_group,
+        logoUrl: team.logo_url,
+        clubName: team.clubs?.name || 'Independent',
+        eventCount: team.events?.[0]?.count || 0
+      }));
+
+      setAllTeams(teamsWithEvents);
+    } catch (error) {
+      console.error('Error loading all teams:', error);
+    }
+  };
 
   const loadEvents = async () => {
     try {
-      if (!teams || teams.length === 0) return;
+      if (isAdminUser) {
+        // Load all events for admin users
+        const { data, error } = await supabase
+          .from('events')
+          .select(`
+            *,
+            teams (name, logo_url, club_id, clubs (name))
+          `)
+          .order('date', { ascending: true });
 
-      console.log('Loading events for teams:', teams.map(t => ({ id: t.id, name: t.name })));
+        if (error) throw error;
+        
+        const eventData = (data || []) as any[];
+        setEvents(eventData);
+      } else {
+        // Load events for user's teams only
+        if (!teams || teams.length === 0) return;
 
-      const teamIds = teams.map(team => team.id);
-      const { data, error } = await supabase
-        .from('events')
-        .select('*')
-        .in('team_id', teamIds)
-        .order('date', { ascending: true });
+        const teamIds = teams.map(team => team.id);
+        const { data, error } = await supabase
+          .from('events')
+          .select('*')
+          .in('team_id', teamIds)
+          .order('date', { ascending: true });
 
-      if (error) throw error;
-      
-      const eventData = (data || []) as DatabaseEvent[];
-      console.log('Loaded events:', eventData.length);
-      
-      // Log current user info for debugging
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('Current user ID:', user?.id);
-      console.log('Current user email:', user?.email);
-      
-      // Check availability for debugging
-      if (user?.id && eventData.length > 0) {
-        const { data: availabilityData, error: availError } = await supabase
-          .from('event_availability')
-          .select('event_id, status')
-          .eq('user_id', user.id);
-          
-        console.log('User availability records:', availabilityData);
-        if (availError) console.error('Availability error:', availError);
+        if (error) throw error;
+        
+        const eventData = (data || []) as DatabaseEvent[];
+        setEvents(eventData);
       }
-      
-      setEvents(eventData);
     } catch (error: any) {
       console.error('Error loading events:', error);
       toast({
@@ -105,7 +152,6 @@ export default function CalendarEvents() {
         return;
       }
 
-      // Get sessions for the current month and next month
       const currentDate = new Date();
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
       const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
@@ -116,16 +162,23 @@ export default function CalendarEvents() {
         endDate.toISOString().split('T')[0]
       );
 
-      console.log('Loaded individual training sessions:', sessions.length);
       setIndividualTrainingSessions(sessions);
     } catch (error: any) {
       console.error('Error loading individual training sessions:', error);
-      // Don't show error toast for individual training sessions as they're supplementary
     }
   };
 
   const filterEvents = () => {
     let filtered = events;
+
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(event =>
+        event.title.toLowerCase().includes(search) ||
+        event.opponent?.toLowerCase().includes(search) ||
+        event.location?.toLowerCase().includes(search)
+      );
+    }
 
     if (selectedTeam !== 'all') {
       filtered = filtered.filter(event => event.team_id === selectedTeam);
@@ -133,6 +186,18 @@ export default function CalendarEvents() {
 
     if (selectedEventType !== 'all') {
       filtered = filtered.filter(event => event.event_type === selectedEventType);
+    }
+
+    if (selectedClub !== 'all') {
+      if (isAdminUser && allTeams.length > 0) {
+        const clubTeamIds = allTeams
+          .filter(team => {
+            if (selectedClub === 'independent') return !team.clubName || team.clubName === 'Independent';
+            return team.clubName === selectedClub;
+          })
+          .map(team => team.id);
+        filtered = filtered.filter(event => clubTeamIds.includes(event.team_id));
+      }
     }
 
     setFilteredEvents(filtered);
@@ -170,11 +235,6 @@ export default function CalendarEvents() {
         variant: 'destructive',
       });
     }
-  };
-
-  const handleScoreEdit = (event: DatabaseEvent) => {
-    setSelectedEvent(event);
-    setShowPostGameEdit(true);
   };
 
   const convertToEventFormat = (dbEvent: DatabaseEvent | null) => {
@@ -218,7 +278,6 @@ export default function CalendarEvents() {
       setLoading(true);
       
       if (selectedEvent) {
-        // Update existing event
         await eventsService.updateEvent({
           id: selectedEvent.id,
           ...eventData,
@@ -231,7 +290,6 @@ export default function CalendarEvents() {
           description: 'Event updated successfully',
         });
       } else {
-        // Create new event
         await eventsService.createEvent({
           ...eventData,
           team_id: eventData.teamId,
@@ -273,8 +331,8 @@ export default function CalendarEvents() {
   }
 
   const eventTypes = Array.from(new Set([...events.map(e => e.event_type), 'individual_training']));
-
-  // Get current month and event counts for header
+  const uniqueClubs = isAdminUser ? Array.from(new Set(allTeams.map(t => t.clubName).filter(Boolean))) : [];
+  
   const currentMonth = format(new Date(), 'MMMM yyyy');
   const currentMonthEvents = events.filter(event => {
     const eventDate = new Date(event.date);
@@ -283,7 +341,6 @@ export default function CalendarEvents() {
            eventDate.getFullYear() === currentDate.getFullYear();
   });
 
-  // Get next upcoming event
   const upcomingEvents = events.filter(event => new Date(event.date) >= new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const nextEvent = upcomingEvents[0];
@@ -291,7 +348,7 @@ export default function CalendarEvents() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Enhanced Header with Month Display */}
+        {/* Enhanced Header */}
         <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/20">
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -299,15 +356,24 @@ export default function CalendarEvents() {
                 <CardTitle className="flex items-center gap-3 text-2xl">
                   <Calendar className="h-7 w-7 text-primary" />
                   Calendar & Events
+                  {isAdminUser && <Crown className="h-5 w-5 text-yellow-600" />}
+                  {isAdminUser && <Badge variant="outline">Admin View</Badge>}
                 </CardTitle>
                 <div className="flex items-center gap-4">
                   <h2 className="text-3xl font-bold text-primary">{currentMonth}</h2>
                   <Badge variant="outline" className="text-sm">
                     {currentMonthEvents.length} events this month
                   </Badge>
+                  {isAdminUser && (
+                    <Badge variant="secondary" className="text-sm">
+                      {filteredEvents.length} total events
+                    </Badge>
+                  )}
                 </div>
                 <CardDescription className="text-base">
-                  Manage your team's schedule and events
+                  {isAdminUser 
+                    ? 'View and manage all events across teams and clubs'
+                    : 'Manage your team\'s schedule and events'}
                 </CardDescription>
               </div>
               <div className="flex gap-2">
@@ -319,39 +385,71 @@ export default function CalendarEvents() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4 mb-6">
-              {/* View Mode Selector */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">View:</span>
-                <div className="flex rounded-lg border">
-                  <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('grid')}
-                    className="rounded-r-none"
-                  >
-                    <Grid3X3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('calendar')}
-                    className="rounded-none border-x"
-                  >
-                    <Calendar className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
-                    size="sm"
-                    onClick={() => setViewMode('list')}
-                    className="rounded-l-none"
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
+            {/* Enhanced Filters */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                {/* View Mode Selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">View:</span>
+                  <div className="flex rounded-lg border">
+                    <Button
+                      variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('grid')}
+                      className="rounded-r-none"
+                    >
+                      <Grid3X3 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('calendar')}
+                      className="rounded-none border-x"
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'default' : 'ghost'}
+                      size="sm"
+                      onClick={() => setViewMode('list')}
+                      className="rounded-l-none"
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              {/* Filters */}
+              {/* Search and Filters */}
+              {isAdminUser && (
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1 relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search events by title, opponent, or location..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  
+                  <Select value={selectedClub} onValueChange={setSelectedClub}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="Filter by club" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Clubs</SelectItem>
+                      <SelectItem value="independent">Independent Teams</SelectItem>
+                      {uniqueClubs.map((club) => (
+                        <SelectItem key={club} value={club}>
+                          {club}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="flex gap-4 flex-1">
                 <Select value={selectedTeam} onValueChange={setSelectedTeam}>
                   <SelectTrigger className="w-[200px]">
@@ -359,9 +457,9 @@ export default function CalendarEvents() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map((team) => (
+                    {(isAdminUser ? allTeams : teams).map((team) => (
                       <SelectItem key={team.id} value={team.id}>
-                        {team.name}
+                        {team.name} {isAdminUser && `(${(team as any).eventCount || 0} events)`}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -390,9 +488,9 @@ export default function CalendarEvents() {
               </div>
             </div>
 
-            {/* Next Event Spotlight & Quick Stats */}
+            {/* Next Event Spotlight */}
             {nextEvent && (
-              <div className="mb-6 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <div className="mt-6 p-4 rounded-lg bg-primary/5 border border-primary/20">
                 <h3 className="text-lg font-semibold text-primary mb-2 flex items-center gap-2">
                   <Clock className="h-5 w-5" />
                   Next Event
@@ -416,7 +514,7 @@ export default function CalendarEvents() {
             )}
 
             {/* Event Count */}
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mt-4">
               <div className="flex items-center gap-2">
                 <Badge variant="outline">
                   {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
@@ -437,7 +535,9 @@ export default function CalendarEvents() {
               <h3 className="font-semibold mb-2">No Events Found</h3>
               <p className="text-muted-foreground mb-4">
                 {events.length === 0 && individualTrainingSessions.length === 0
-                  ? "You haven't created any events yet. Get started by adding your first event!"
+                  ? isAdminUser 
+                    ? "No events have been created yet. Get started by adding the first event!"
+                    : "You haven't created any events yet. Get started by adding your first event!"
                   : "No events match your current filters. Try adjusting your search criteria."
                 }
               </p>
@@ -457,7 +557,7 @@ export default function CalendarEvents() {
                 onTeamSelection={handleTeamSelection}
                 onPostGameEdit={handlePostGameEdit}
                 onDeleteEvent={handleDeleteEvent}
-                onScoreEdit={handleScoreEdit}
+                onScoreEdit={handlePostGameEdit}
               />
             )}
             
@@ -471,183 +571,21 @@ export default function CalendarEvents() {
                 onDeleteEvent={handleDeleteEvent}
               />
             )}
-            
-            {viewMode === 'list' && (
-              <div className="space-y-6">
-                {/* Upcoming Events Section */}
-                {upcomingEvents.length > 0 && (
-                  <div>
-                    <h3 className="text-xl font-semibold mb-4 text-primary flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Upcoming Events
-                    </h3>
-                    <div className="space-y-3">
-                      {upcomingEvents
-                        .filter(event => selectedTeam === 'all' || event.team_id === selectedTeam)
-                        .filter(event => selectedEventType === 'all' || event.event_type === selectedEventType)
-                        .map((event, index) => {
-                          const isNextEvent = index === 0;
-                          const team = teams.find(t => t.id === event.team_id);
-                          const isMatchType = ['match', 'fixture', 'friendly'].includes(event.event_type);
-                          
-                          return (
-                            <Card key={event.id} className={`${isNextEvent ? 'ring-2 ring-primary shadow-lg bg-primary/5' : ''}`}>
-                              <CardContent className="p-6">
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                      {isNextEvent && (
-                                        <Badge className="bg-primary text-primary-foreground">Next Event</Badge>
-                                      )}
-                                      <Badge variant={isMatchType ? "destructive" : "secondary"}>
-                                        {event.event_type}
-                                      </Badge>
-                                      {team?.logoUrl && (
-                                        <img src={team.logoUrl} alt={team.name} className="w-6 h-6 rounded-full" />
-                                      )}
-                                    </div>
-                                    
-                                    <h3 className={`font-semibold mb-2 ${isNextEvent ? 'text-lg' : ''}`}>
-                                      {isMatchType && event.opponent ? (
-                                        <span>{team?.name} vs {event.opponent}</span>
-                                      ) : (
-                                        event.title
-                                      )}
-                                    </h3>
-                                    
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-muted-foreground">
-                                      <p className="flex items-center gap-1">
-                                        <Calendar className="h-4 w-4" />
-                                        {format(new Date(event.date), 'EEEE, MMM dd, yyyy')}
-                                      </p>
-                                      {event.start_time && (
-                                        <p className="flex items-center gap-1">
-                                          <Clock className="h-4 w-4" />
-                                          {event.start_time}
-                                        </p>
-                                      )}
-                                      {event.location && (
-                                        <p className="flex items-center gap-1">
-                                          📍 {event.location}
-                                        </p>
-                                      )}
-                                    </div>
-                                    
-                                    {event.description && (
-                                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                                        {event.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                  
-                                  <div className="flex flex-col gap-2 ml-4">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleEditEvent(event)}
-                                    >
-                                      Edit
-                                    </Button>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => handleTeamSelection(event)}
-                                    >
-                                      Team
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Past Events Section */}
-                {(() => {
-                  const pastEvents = events
-                    .filter(event => new Date(event.date) < new Date())
-                    .filter(event => selectedTeam === 'all' || event.team_id === selectedTeam)
-                    .filter(event => selectedEventType === 'all' || event.event_type === selectedEventType)
-                    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-                  return pastEvents.length > 0 ? (
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4 text-muted-foreground flex items-center gap-2">
-                        Past Events
-                      </h3>
-                      <div className="space-y-3">
-                        {pastEvents.map((event) => {
-                          const team = teams.find(t => t.id === event.team_id);
-                          const isMatchType = ['match', 'fixture', 'friendly'].includes(event.event_type);
-                          
-                          return (
-                            <Card key={event.id} className="opacity-75">
-                              <CardContent className="p-4">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <Badge variant="outline" className="text-xs">
-                                        {event.event_type}
-                                      </Badge>
-                                      {team?.logoUrl && (
-                                        <img src={team.logoUrl} alt={team.name} className="w-4 h-4 rounded-full" />
-                                      )}
-                                    </div>
-                                    <h3 className="font-medium text-sm">
-                                      {isMatchType && event.opponent ? (
-                                        <span>{team?.name} vs {event.opponent}</span>
-                                      ) : (
-                                        event.title
-                                      )}
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground">
-                                      {format(new Date(event.date), 'MMM dd, yyyy')}
-                                      {event.start_time && ` at ${event.start_time}`}
-                                    </p>
-                                  </div>
-                                  <div className="flex gap-1">
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEditEvent(event)}
-                                    >
-                                      Edit
-                                    </Button>
-                                  </div>
-                                </div>
-                              </CardContent>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ) : null;
-                })()}
-              </div>
-            )}
           </>
         )}
 
-        {/* Event Form Modal */}
+        {/* Modals */}
         <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {selectedEvent ? 'Edit Event' : 'Create New Event'}
               </DialogTitle>
             </DialogHeader>
-            <EventForm
+            <EventForm 
               event={convertToEventFormat(selectedEvent)}
-              teamId={selectedTeam !== 'all' ? selectedTeam : teams?.[0]?.id || ''}
+              teams={isAdminUser ? allTeams : teams}
               onSubmit={handleFormSubmit}
-              onEventCreated={(eventId) => {
-                setShowEventForm(false);
-                setSelectedEvent(null);
-                loadEvents();
-              }}
               onCancel={() => {
                 setShowEventForm(false);
                 setSelectedEvent(null);
@@ -656,28 +594,33 @@ export default function CalendarEvents() {
           </DialogContent>
         </Dialog>
 
-        {/* Team Selection Modal */}
-        {selectedEvent && (
-          <EnhancedTeamSelectionManager
-            event={selectedEvent}
-            isOpen={showTeamSelection}
-            onClose={() => {
-              setShowTeamSelection(false);
-              setSelectedEvent(null);
-            }}
-          />
-        )}
-
-        {/* Post Game Edit Modal - Made Full Screen */}
-        <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
-          <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-y-auto">
+        <Dialog open={showTeamSelection} onOpenChange={setShowTeamSelection}>
+          <DialogContent className="sm:max-w-[90vw] max-h-[90vh] overflow-hidden">
             <DialogHeader>
-              <DialogTitle>Post-Game Report</DialogTitle>
+              <DialogTitle>Team Selection - {selectedEvent?.title}</DialogTitle>
+            </DialogHeader>
+            <div className="h-[70vh] overflow-y-auto">
+              {selectedEvent && (
+                <EnhancedTeamSelectionManager
+                  event={selectedEvent}
+                  onClose={() => {
+                    setShowTeamSelection(false);
+                    setSelectedEvent(null);
+                  }}
+                />
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Post-Game Report - {selectedEvent?.title}</DialogTitle>
             </DialogHeader>
             {selectedEvent && (
               <PostGameEditor
-                eventId={selectedEvent.id}
-                isOpen={showPostGameEdit}
+                event={selectedEvent}
                 onClose={() => {
                   setShowPostGameEdit(false);
                   setSelectedEvent(null);
@@ -690,4 +633,6 @@ export default function CalendarEvents() {
       </div>
     </DashboardLayout>
   );
-}
+};
+
+export default EnhancedCalendarEvents;

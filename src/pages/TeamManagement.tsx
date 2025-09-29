@@ -17,6 +17,7 @@ import { PlusCircle, Settings, UserPlus, Users, QrCode, Link } from 'lucide-reac
 import { StaffManagementButton } from '@/components/teams/StaffManagementButton';
 
 const TeamManagement = () => {
+  return <EnhancedTeamManagement />;
   const { teams, clubs, refreshUserData, user } = useAuth();
   const [allClubs, setAllClubs] = useState<Club[]>([]);
   const [linkedTeams, setLinkedTeams] = useState<Team[]>([]);

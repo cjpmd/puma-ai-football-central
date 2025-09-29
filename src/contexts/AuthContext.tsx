@@ -234,69 +234,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchTeams = async (userId: string) => {
     try {
       console.log('Fetching teams for user:', userId);
-      const { data: teamsData, error: teamsError } = await supabase
+      
+      const { data, error } = await supabase
         .from('user_teams')
-        .select('team_id')
+        .select(`
+          role,
+          teams (
+            id, name, age_group, season_start, season_end, club_id, 
+            year_group_id, game_format, subscription_type, 
+            performance_categories, kit_icons, logo_url, kit_designs,
+            manager_name, manager_email, manager_phone, game_duration,
+            header_display_type, header_image_url, created_at, updated_at
+          )
+        `)
         .eq('user_id', userId);
 
-      if (teamsError) {
-        throw teamsError;
+      if (error) {
+        console.error('Error fetching teams:', error);
+        throw error;
       }
 
-      if (!teamsData || teamsData.length === 0) {
+      console.log('Raw team data:', data);
+
+      if (!data || data.length === 0) {
         console.log('No teams found for user');
         setTeams([]);
         return;
       }
 
-      const teamDetails = await Promise.all(
-        teamsData.map(async (userTeam) => {
-          const { data: teamData, error: teamError } = await supabase
-            .from('teams')
-            .select('*')
-            .eq('id', userTeam.team_id)
-            .single();
-
-          if (teamError) {
-            console.error(`Error fetching team ${userTeam.team_id}:`, teamError);
-            return null;
-          }
+      // Deduplicate teams by team ID and aggregate roles
+      const teamMap = new Map<string, Team>();
+      
+      data.forEach((item: any) => {
+        const teamId = item.teams.id;
+        
+        if (teamMap.has(teamId)) {
+          // Team already exists, add the new role to its roles array
+          const existingTeam = teamMap.get(teamId)!;
+          // Aggregate roles logic would go here
+        } else {
+          // Create new team entry
+          const teamData: Team = {
+            id: item.teams.id,
+            name: item.teams.name,
+            ageGroup: item.teams.age_group,
+            seasonStart: item.teams.season_start,
+            seasonEnd: item.teams.season_end,
+            clubId: item.teams.club_id,
+            yearGroupId: item.teams.year_group_id,
+            gameFormat: item.teams.game_format as GameFormat,
+            subscriptionType: (item.teams.subscription_type as SubscriptionType) || 'free',
+            performanceCategories: item.teams.performance_categories || [],
+            kitIcons: typeof item.teams.kit_icons === 'object' && item.teams.kit_icons !== null ? 
+              item.teams.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
+              { home: '', away: '', training: '', goalkeeper: '' },
+            logoUrl: item.teams.logo_url,
+            kitDesigns: item.teams.kit_designs ? item.teams.kit_designs as any : undefined,
+            managerName: item.teams.manager_name,
+            managerEmail: item.teams.manager_email,
+            managerPhone: item.teams.manager_phone,
+            gameDuration: item.teams.game_duration || 90,
+            headerDisplayType: item.teams.header_display_type,
+            headerImageUrl: item.teams.header_image_url,
+            createdAt: item.teams.created_at,
+            updatedAt: item.teams.updated_at,
+            // Keep existing properties for backward compatibility
+          };
           
-          return {
-            id: teamData.id,
-            name: teamData.name,
-            ageGroup: teamData.age_group,
-            seasonStart: teamData.season_start,
-            seasonEnd: teamData.season_end,
-            clubId: teamData.club_id,
-            yearGroupId: teamData.year_group_id, // map DB field
-            subscriptionType: teamData.subscription_type,
-            gameFormat: teamData.game_format,
-            gameDuration: teamData.game_duration || 90,
-            kitIcons: (teamData.kit_icons as any) || { home: '', away: '', training: '', goalkeeper: '' },
-            logoUrl: teamData.logo_url,
-            kitDesigns: teamData.kit_designs,
-            performanceCategories: teamData.performance_categories || [],
-            managerName: teamData.manager_name,
-            managerEmail: teamData.manager_email,
-            managerPhone: teamData.manager_phone,
-            headerDisplayType: teamData.header_display_type,
-            headerImageUrl: teamData.header_image_url,
-            createdAt: teamData.created_at,
-            updatedAt: teamData.updated_at,
-          } as Team;
-        })
-      );
+          teamMap.set(teamId, teamData);
+        }
+      });
 
-      const validTeams = teamDetails.filter(team => team !== null);
-      setTeams(validTeams as Team[]);
-      console.log('Teams loaded successfully:', validTeams.length);
+      const deduplicatedTeams = Array.from(teamMap.values());
+      console.log('Deduplicated teams:', deduplicatedTeams);
+      setTeams(deduplicatedTeams);
       
       // Update allTeams after teams are loaded
-      updateAllTeams(validTeams as Team[]);
+      updateAllTeams(deduplicatedTeams);
 
     } catch (error: any) {
-      console.error('Error fetching teams:', error.message);
+      console.error('Error in fetchTeams:', error);
       toast({
         title: 'Teams fetch failed',
         description: error.message,
