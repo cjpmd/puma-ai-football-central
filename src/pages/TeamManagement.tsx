@@ -215,8 +215,6 @@ const TeamManagement = () => {
   };
 
   const loadUserTeams = async () => {
-    if (isAdminUser) return;
-
     const convertedTeams: ExtendedTeam[] = teams.map(team => ({
       ...team,
       clubName: getClubName(team.clubId),
