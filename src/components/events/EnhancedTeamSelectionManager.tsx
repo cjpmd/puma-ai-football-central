@@ -592,7 +592,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-12 sm:py-14">
-      <div className={`bg-background rounded-xl w-full flex flex-col overflow-hidden min-h-0 shadow-2xl ring-1 ring-border my-12 ${
+      <div className={`bg-background rounded-xl w-full flex flex-col overflow-y-auto min-h-0 shadow-2xl ring-1 ring-border my-12 ${
         isMobile 
           ? 'max-w-[92vw] max-h-[82vh]'
           : 'max-w-[1100px] max-h-[78vh]'
