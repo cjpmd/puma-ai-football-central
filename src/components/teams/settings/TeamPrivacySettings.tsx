@@ -19,6 +19,10 @@ interface PrivacySettings {
   showScoresToPlayers: boolean;
   showPlayerStatsToParents: boolean;
   showPlayerStatsToPlayers: boolean;
+  hideEditButtonFromParents: boolean;
+  hideTeamSelectionFromParents: boolean;
+  hideMatchReportFromParents: boolean;
+  hideDeleteButtonFromParents: boolean;
 }
 
 export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, onUpdate }) => {
@@ -26,7 +30,11 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
     showScoresToParents: true,
     showScoresToPlayers: true,
     showPlayerStatsToParents: true,
-    showPlayerStatsToPlayers: true
+    showPlayerStatsToPlayers: true,
+    hideEditButtonFromParents: false,
+    hideTeamSelectionFromParents: false,
+    hideMatchReportFromParents: false,
+    hideDeleteButtonFromParents: false
   });
   const [loading, setLoading] = useState(false);
 
@@ -49,7 +57,11 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
           showScoresToParents: (data as any).show_scores_to_parents ?? true,
           showScoresToPlayers: (data as any).show_scores_to_players ?? true,
           showPlayerStatsToParents: (data as any).show_player_stats_to_parents ?? true,
-          showPlayerStatsToPlayers: (data as any).show_player_stats_to_players ?? true
+          showPlayerStatsToPlayers: (data as any).show_player_stats_to_players ?? true,
+          hideEditButtonFromParents: (data as any).hide_edit_button_from_parents ?? false,
+          hideTeamSelectionFromParents: (data as any).hide_team_selection_from_parents ?? false,
+          hideMatchReportFromParents: (data as any).hide_match_report_from_parents ?? false,
+          hideDeleteButtonFromParents: (data as any).hide_delete_button_from_parents ?? false
         });
       }
     } catch (error: any) {
@@ -69,7 +81,11 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
           show_scores_to_parents: settings.showScoresToParents,
           show_scores_to_players: settings.showScoresToPlayers,
           show_player_stats_to_parents: settings.showPlayerStatsToParents,
-          show_player_stats_to_players: settings.showPlayerStatsToPlayers
+          show_player_stats_to_players: settings.showPlayerStatsToPlayers,
+          hide_edit_button_from_parents: settings.hideEditButtonFromParents,
+          hide_team_selection_from_parents: settings.hideTeamSelectionFromParents,
+          hide_match_report_from_parents: settings.hideMatchReportFromParents,
+          hide_delete_button_from_parents: settings.hideDeleteButtonFromParents
         });
 
       if (error) throw error;
@@ -163,6 +179,60 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
                 id="stats-players"
                 checked={settings.showPlayerStatsToPlayers}
                 onCheckedChange={(checked) => updateSetting('showPlayerStatsToPlayers', checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Button Visibility for Parents
+            </CardTitle>
+            <CardDescription>
+              Control which action buttons are visible to parent users on calendar events
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-edit-parents" className="text-sm font-medium">
+                Hide Edit button from parents
+              </Label>
+              <Switch
+                id="hide-edit-parents"
+                checked={settings.hideEditButtonFromParents}
+                onCheckedChange={(checked) => updateSetting('hideEditButtonFromParents', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-team-selection-parents" className="text-sm font-medium">
+                Hide Team Selection button from parents
+              </Label>
+              <Switch
+                id="hide-team-selection-parents"
+                checked={settings.hideTeamSelectionFromParents}
+                onCheckedChange={(checked) => updateSetting('hideTeamSelectionFromParents', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-match-report-parents" className="text-sm font-medium">
+                Hide Match Report button from parents
+              </Label>
+              <Switch
+                id="hide-match-report-parents"
+                checked={settings.hideMatchReportFromParents}
+                onCheckedChange={(checked) => updateSetting('hideMatchReportFromParents', checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-delete-parents" className="text-sm font-medium">
+                Hide Delete button from parents
+              </Label>
+              <Switch
+                id="hide-delete-parents"
+                checked={settings.hideDeleteButtonFromParents}
+                onCheckedChange={(checked) => updateSetting('hideDeleteButtonFromParents', checked)}
               />
             </div>
           </CardContent>

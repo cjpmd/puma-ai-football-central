@@ -11,6 +11,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { WeatherService } from '@/services/weatherService';
 import { QuickAvailabilityControls } from './QuickAvailabilityControls';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
+import { useSmartView } from '@/contexts/SmartViewContext';
+import { EventActionButtons } from './EventActionButtons';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -47,6 +49,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const { teams, user } = useAuth();
+  const { currentView } = useSmartView();
 
   useEffect(() => {
     loadPerformanceCategoryNames();
@@ -399,23 +402,17 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                         </div>
                       )}
                       
-                      <div className="flex gap-2 pt-3 border-t">
-                        <Button
-                          variant="default"
-                          onClick={() => onEditEvent(event)}
-                        >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Event
-                        </Button>
-                        
-                        <Button
-                          variant="outline"
-                          onClick={() => onTeamSelection(event)}
-                        >
-                          <Users className="h-4 w-4 mr-2" />
-                          Team Selection
-                        </Button>
-                      </div>
+                      <EventActionButtons
+                        event={event}
+                        completed={completed}
+                        matchType={matchType}
+                        currentView={currentView}
+                        onEditEvent={onEditEvent}
+                        onTeamSelection={onTeamSelection}
+                        onPostGameEdit={onPostGameEdit}
+                        onDeleteEvent={onDeleteEvent}
+                        size="md"
+                      />
                     </div>
                   </CardContent>
                 </Card>
@@ -687,29 +684,17 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                       )}
                     </div>
                     
-                    <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        onClick={() => onEditEvent(event)}
-                        title="Edit Event"
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      
-                      {completed && matchType && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => onPostGameEdit(event)}
-                          title="Post-Game Editor"
-                        >
-                          <Trophy className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
+                    <EventActionButtons
+                      event={event}
+                      completed={completed}
+                      matchType={matchType}
+                      currentView={currentView}
+                      onEditEvent={onEditEvent}
+                      onTeamSelection={onTeamSelection}
+                      onPostGameEdit={onPostGameEdit}
+                      onDeleteEvent={onDeleteEvent}
+                      size="sm"
+                    />
                   </CardContent>
                 </Card>
               );

@@ -3013,6 +3013,10 @@ export type Database = {
       team_privacy_settings: {
         Row: {
           created_at: string
+          hide_delete_button_from_parents: boolean | null
+          hide_edit_button_from_parents: boolean | null
+          hide_match_report_from_parents: boolean | null
+          hide_team_selection_from_parents: boolean | null
           id: string
           show_player_stats_to_parents: boolean
           show_player_stats_to_players: boolean
@@ -3023,6 +3027,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          hide_delete_button_from_parents?: boolean | null
+          hide_edit_button_from_parents?: boolean | null
+          hide_match_report_from_parents?: boolean | null
+          hide_team_selection_from_parents?: boolean | null
           id?: string
           show_player_stats_to_parents?: boolean
           show_player_stats_to_players?: boolean
@@ -3033,6 +3041,10 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          hide_delete_button_from_parents?: boolean | null
+          hide_edit_button_from_parents?: boolean | null
+          hide_match_report_from_parents?: boolean | null
+          hide_team_selection_from_parents?: boolean | null
           id?: string
           show_player_stats_to_parents?: boolean
           show_player_stats_to_players?: boolean

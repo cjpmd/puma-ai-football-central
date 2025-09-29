@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { MultiRoleAvailabilityControls } from './MultiRoleAvailabilityControls';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
+import { useSmartView } from '@/contexts/SmartViewContext';
+import { EventActionButtons } from './EventActionButtons';
 
 interface CalendarGridViewProps {
   events: DatabaseEvent[];
@@ -43,6 +45,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const { teams, user, connectedPlayers } = useAuth();
+  const { currentView } = useSmartView();
 
   const monthStart = startOfMonth(currentDate);
   const monthEnd = endOfMonth(currentDate);
@@ -503,45 +506,16 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             )}
                           </div>
                           
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => onEditEvent(event)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
-                            
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0"
-                              onClick={() => onTeamSelection(event)}
-                            >
-                              <Users className="h-3 w-3" />
-                            </Button>
-                            
-                            {completed && matchType && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={() => onPostGameEdit(event)}
-                              >
-                                <Trophy className="h-3 w-3" />
-                              </Button>
-                            )}
-                            
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
-                              onClick={() => onDeleteEvent(event.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
+                          <EventActionButtons
+                            event={event}
+                            completed={completed}
+                            matchType={matchType}
+                            currentView={currentView}
+                            onEditEvent={onEditEvent}
+                            onTeamSelection={onTeamSelection}
+                            onPostGameEdit={onPostGameEdit}
+                            onDeleteEvent={onDeleteEvent}
+                          />
                         </div>
                       );
                     })}
