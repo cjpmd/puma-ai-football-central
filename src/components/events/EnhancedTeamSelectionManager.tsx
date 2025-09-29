@@ -592,7 +592,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-12 sm:py-14">
-      <div className={`bg-background rounded-xl w-full flex flex-col shadow-2xl ring-1 ring-border my-12 ${
+      <div className={`bg-background rounded-xl w-full flex flex-col overflow-hidden min-h-0 shadow-2xl ring-1 ring-border my-12 ${
         isMobile 
           ? 'max-w-[92vw] max-h-[82vh]'
           : 'max-w-[1100px] max-h-[78vh]'
@@ -749,8 +749,8 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col">
             <div className={`${isMobile ? 'p-2' : 'p-6'} flex-shrink-0`}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
@@ -768,7 +768,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
               </TabsList>
             </div>
 
-            <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 pb-2">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pb-2">
               <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden"  style={{ height: 'auto' }}>
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement
