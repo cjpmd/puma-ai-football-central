@@ -13,6 +13,7 @@ import { CodeManagementModal } from '@/components/codes/CodeManagementModal';
 import { StaffManagementButton } from '@/components/teams/StaffManagementButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { useSmartView } from '@/contexts/SmartViewContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
@@ -26,6 +27,7 @@ interface ExtendedTeam extends Team {
 const TeamManagement = () => {
   const { teams, clubs, refreshUserData, user } = useAuth();
   const { isGlobalAdmin, isClubAdmin } = useAuthorization();
+  const { currentView } = useSmartView();
   const [allTeams, setAllTeams] = useState<ExtendedTeam[]>([]);
   const [filteredTeams, setFilteredTeams] = useState<ExtendedTeam[]>([]);
   const [allClubs, setAllClubs] = useState<Club[]>([]);
@@ -46,7 +48,7 @@ const TeamManagement = () => {
 
   useEffect(() => {
     loadData();
-  }, [teams, clubs, isAdminUser]);
+  }, [teams, clubs, currentView]);
 
   useEffect(() => {
     filterTeams();
@@ -57,12 +59,89 @@ const TeamManagement = () => {
       setLoading(true);
       await Promise.all([
         loadAllClubs(),
-        isAdminUser ? loadAllTeams() : loadUserTeams(),
+        loadTeamsForCurrentRole(),
         loadLinkedTeams()
       ]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadTeamsForCurrentRole = async () => {
+    switch (currentView) {
+      case 'global_admin':
+        return loadAllTeams();
+      case 'club_admin':
+        return loadClubTeams();
+      case 'team_manager':
+      case 'coach':
+        return loadUserTeams();
+      case 'parent':
+        return loadParentTeams();
+      default:
+        return loadUserTeams();
+    }
+  };
+
+  const loadClubTeams = async () => {
+    if (!clubs || clubs.length === 0) return;
+    
+    try {
+      const clubIds = clubs.map(club => club.id);
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .select(`
+          *,
+          clubs!teams_club_id_fkey (name),
+          players (count)
+        `)
+        .in('club_id', clubIds)
+        .order('name');
+
+      if (error) throw error;
+
+      const convertedTeams: ExtendedTeam[] = (data || []).map(team => ({
+        id: team.id,
+        name: team.name,
+        ageGroup: team.age_group,
+        seasonStart: team.season_start,
+        seasonEnd: team.season_end,
+        clubId: team.club_id,
+        yearGroupId: team.year_group_id,
+        gameFormat: team.game_format as GameFormat,
+        subscriptionType: (team.subscription_type as SubscriptionType) || 'free',
+        performanceCategories: team.performance_categories || [],
+        kitIcons: typeof team.kit_icons === 'object' && team.kit_icons !== null ? 
+          team.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
+          { home: '', away: '', training: '', goalkeeper: '' },
+        logoUrl: team.logo_url,
+        kitDesigns: team.kit_designs ? team.kit_designs as any : undefined,
+        managerName: team.manager_name,
+        managerEmail: team.manager_email,
+        managerPhone: team.manager_phone,
+        gameDuration: team.game_duration || 90,
+        createdAt: team.created_at,
+        updatedAt: team.updated_at,
+        clubName: team.clubs?.name || 'Independent',
+        playerCount: team.players?.[0]?.count || 0,
+        isReadOnly: !isUserTeamAdmin(team.id)
+      }));
+
+      setAllTeams(convertedTeams);
+    } catch (error) {
+      console.error('Error loading club teams:', error);
+    }
+  };
+
+  const loadParentTeams = async () => {
+    const convertedTeams: ExtendedTeam[] = teams.map(team => ({
+      ...team,
+      clubName: getClubName(team.clubId),
+      isReadOnly: true // Parents can only view teams
+    }));
+    
+    setAllTeams(convertedTeams);
   };
 
   const loadAllClubs = async () => {
@@ -197,6 +276,44 @@ const TeamManagement = () => {
     const userTeam = teams.find(t => t.id === teamId);
     // Check if user has admin/manager roles (since userRole doesn't exist on Team interface)
     return userTeam && ['admin', 'manager', 'team_manager', 'team_assistant_manager'].includes('manager') || false;
+  };
+
+  const getRoleTitle = () => {
+    switch (currentView) {
+      case 'global_admin':
+        return 'Team Management - Global Admin';
+      case 'club_admin':
+        return 'Team Management - Club Admin';
+      case 'team_manager':
+        return 'Team Management - My Teams';
+      case 'coach':
+        return 'Team Management - Coach View';
+      case 'parent':
+        return 'Team Management - Parent View';
+      default:
+        return 'Team Management';
+    }
+  };
+
+  const getRoleDescription = () => {
+    switch (currentView) {
+      case 'global_admin':
+        return `Manage all teams across the platform (${filteredTeams.length} teams)`;
+      case 'club_admin':
+        return `Manage teams in your clubs (${filteredTeams.length} teams)`;
+      case 'team_manager':
+        return `Manage your teams (${filteredTeams.length} teams)`;
+      case 'coach':
+        return `View and manage teams you coach (${filteredTeams.length} teams)`;
+      case 'parent':
+        return `View teams for your children (${filteredTeams.length} teams)`;
+      default:
+        return 'Manage your teams and their settings';
+    }
+  };
+
+  const shouldShowFilters = () => {
+    return currentView === 'global_admin' || currentView === 'club_admin';
   };
 
   const filterTeams = () => {
@@ -405,14 +522,13 @@ const TeamManagement = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-              {isAdminUser && <Crown className="h-6 w-6 text-yellow-600" />}
-              Team Management
-              {isAdminUser && <Badge variant="outline">Admin View</Badge>}
+              {currentView === 'global_admin' && <Crown className="h-6 w-6 text-yellow-600" />}
+              {getRoleTitle()}
+              {currentView === 'global_admin' && <Badge variant="outline">Global Admin</Badge>}
+              {currentView === 'club_admin' && <Badge variant="outline">Club Admin</Badge>}
             </h1>
             <p className="text-muted-foreground">
-              {isAdminUser 
-                ? `Manage all teams across the platform (${filteredTeams.length} teams)` 
-                : 'Manage your teams and their settings'}
+              {getRoleDescription()}
             </p>
           </div>
           <Dialog open={isTeamDialogOpen} onOpenChange={setIsTeamDialogOpen}>
@@ -440,7 +556,7 @@ const TeamManagement = () => {
         </div>
 
         {/* Search and Filters */}
-        {isAdminUser && (
+        {shouldShowFilters() && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
