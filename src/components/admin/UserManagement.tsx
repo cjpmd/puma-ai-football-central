@@ -21,6 +21,7 @@ interface UserProfile {
   fa_id?: string;
   created_at: string;
   updated_at: string;
+  staffTeams?: { role: string; teamName: string }[];
 }
 
 export const UserManagement: React.FC = () => {
@@ -47,18 +48,50 @@ export const UserManagement: React.FC = () => {
       console.log('Loading all users...');
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Load profiles with their staff roles from user_teams
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error loading users:', error);
-        throw error;
+      if (profilesError) {
+        console.error('Error loading profiles:', profilesError);
+        throw profilesError;
       }
 
-      console.log('Loaded users:', data);
-      setUsers(data || []);
+      // Load staff roles for all users
+      const { data: staffRoles, error: staffError } = await supabase
+        .from('user_teams')
+        .select(`
+          user_id,
+          role,
+          team_id,
+          teams!user_teams_team_id_fkey (name)
+        `);
+
+      if (staffError) {
+        console.error('Error loading staff roles:', staffError);
+        // Don't throw here, continue without staff roles
+      }
+
+      // Enhance users with their staff roles
+      const enhancedUsers = (profilesData || []).map(user => {
+        const userStaffRoles = staffRoles?.filter(sr => sr.user_id === user.id) || [];
+        const staffRoleNames = userStaffRoles.map(sr => sr.role);
+        
+        // Combine profile roles with staff roles, removing duplicates
+        const allRoles = [...(user.roles || []), ...staffRoleNames];
+        const uniqueRoles = Array.from(new Set(allRoles));
+
+        return {
+          ...user,
+          roles: uniqueRoles,
+          staffTeams: userStaffRoles.map(sr => ({ role: sr.role, teamName: sr.teams?.name || 'Unknown Team' }))
+        };
+      });
+
+      console.log('Loaded enhanced users:', enhancedUsers);
+      setUsers(enhancedUsers);
     } catch (error) {
       console.error('Error loading users:', error);
       toast({
@@ -314,6 +347,11 @@ export const UserManagement: React.FC = () => {
                       {user.roles?.map((role) => (
                         <Badge key={role} className={`text-white ${getRoleBadgeColor(role)}`}>
                           {role.replace('_', ' ')}
+                        </Badge>
+                      ))}
+                      {user.staffTeams?.map((staff, index) => (
+                        <Badge key={`${staff.role}-${index}`} className="text-white bg-indigo-500" title={`${staff.role} at ${staff.teamName}`}>
+                          {staff.role.replace('_', ' ')} ({staff.teamName})
                         </Badge>
                       ))}
                     </div>

@@ -217,8 +217,9 @@ export const StaffManagementDashboard: React.FC = () => {
     return availableRoles.find(r => r.value === role)?.label || role;
   };
 
-  const uniqueTeams = Array.from(new Set(staff.map(s => ({ id: s.team_id, name: s.team_name }))))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const uniqueTeams = Array.from(
+    new Map(staff.map(s => [s.team_id, { id: s.team_id, name: s.team_name }])).values()
+  ).sort((a, b) => a.name.localeCompare(b.name));
 
   if (loading) {
     return (
