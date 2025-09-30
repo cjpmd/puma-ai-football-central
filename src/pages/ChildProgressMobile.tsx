@@ -54,7 +54,7 @@ const ChildProgressMobile = () => {
 
   if (loading) {
     return (
-      <MobileLayout headerTitle="Player Progress">
+      <MobileLayout>
         <div className="flex items-center justify-center h-64">
           <div className="text-muted-foreground">Loading player progress...</div>
         </div>
@@ -64,7 +64,7 @@ const ChildProgressMobile = () => {
 
   if (children.length === 0) {
     return (
-      <MobileLayout headerTitle="Player Progress">
+      <MobileLayout>
         <div className="text-center py-12">
           <h2 className="text-xl font-bold mb-4">No Players Found</h2>
           <p className="text-muted-foreground mb-6 text-sm">
@@ -78,7 +78,6 @@ const ChildProgressMobile = () => {
 
   return (
     <MobileLayout 
-      headerTitle="Player Progress"
       showTabs
       tabs={tabs}
       activeTab={activeTab}
