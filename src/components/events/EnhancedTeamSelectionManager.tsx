@@ -595,7 +595,7 @@ const { data: teamData } = useQuery({
 return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="p-0 w-[min(1100px,92vw)] max-h-[92vh] overflow-hidden">
+      <DialogContent className="sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0">
         <div className="h-[85vh] flex flex-col bg-background rounded-xl min-h-0">
           <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
