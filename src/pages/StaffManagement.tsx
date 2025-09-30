@@ -85,75 +85,51 @@ const StaffManagement = () => {
     try {
       console.log('Fetching team staff for team:', teamId);
       
-      // Get regular team staff
-      const { data: teamStaffData, error: teamStaffError } = await supabase
-        .from('team_staff')
-        .select('*')
-        .eq('team_id', teamId);
+      // Use the consolidated staff function to avoid duplicates
+      const { data: consolidatedStaff, error: staffError } = await supabase
+        .rpc('get_consolidated_team_staff', { p_team_id: teamId });
 
-      if (teamStaffError) {
-        console.error('Error fetching team staff:', teamStaffError);
-        throw teamStaffError;
+      if (staffError) {
+        console.error('Error fetching consolidated staff:', staffError);
+        throw staffError;
       }
       
-      console.log('Team staff data:', teamStaffData);
+      console.log('Consolidated staff data:', consolidatedStaff);
 
-      // Get users assigned to this team with management roles
-      const { data: userTeamsData, error: userTeamsError } = await supabase
-        .from('user_teams')
-        .select(`
-          *,
-          profiles!inner(
-            id,
-            name,
-            email,
-            phone
-          )
-        `)
-        .eq('team_id', teamId)
-        .in('role', ['manager', 'team_manager', 'team_assistant_manager', 'team_coach', 'team_helper']);
-
-      if (userTeamsError) {
-        console.error('Error fetching user teams:', userTeamsError);
-        throw userTeamsError;
-      }
-
-      console.log('User teams data:', userTeamsData);
+      // Deduplicate by user_id or email (prefer team_staff entries over user_teams)
+      const staffMap = new Map<string, StaffMember>();
       
-      // Combine both data sources
-      const staffMembers: StaffMember[] = [];
-
-      // Add regular team staff
-      if (teamStaffData) {
-        teamStaffData.forEach(staff => {
-          staffMembers.push({
-            id: staff.id,
-            name: staff.name || 'Unknown',
-            email: staff.email || 'No email',
-            phone: staff.phone || '',
-            role: staff.role
-          });
-        });
-      }
-
-      // Add users with team roles
-      if (userTeamsData) {
-        userTeamsData.forEach(userTeam => {
-          const profile = userTeam.profiles;
-          if (profile) {
-            staffMembers.push({
-              id: userTeam.id,
-              name: profile.name || 'Unknown',
-              email: profile.email || 'No email',
-              phone: profile.phone || '',
-              role: userTeam.role,
-              userId: profile.id
+      (consolidatedStaff || []).forEach((staff: any) => {
+        const key = staff.email || staff.user_id || staff.id;
+        
+        // If we already have this person, prefer team_staff records over user_teams
+        if (staffMap.has(key)) {
+          const existing = staffMap.get(key)!;
+          // Prefer team_staff source or better role priority
+          if (staff.source_type === 'team_staff' || 
+              getRolePriority(staff.role) < getRolePriority(existing.role)) {
+            staffMap.set(key, {
+              id: staff.id,
+              name: staff.name || 'Unknown',
+              email: staff.email || 'No email',
+              phone: '', // Phone not in consolidated function
+              role: staff.role,
+              userId: staff.user_id
             });
           }
-        });
-      }
-      
-      setTeamStaff(staffMembers);
+        } else {
+          staffMap.set(key, {
+            id: staff.id,
+            name: staff.name || 'Unknown', 
+            email: staff.email || 'No email',
+            phone: '', // Phone not in consolidated function
+            role: staff.role,
+            userId: staff.user_id
+          });
+        }
+      });
+
+      setTeamStaff(Array.from(staffMap.values()));
     } catch (error: any) {
       console.error('Error in fetchTeamStaff:', error);
       toast.error('Failed to fetch team staff', {
@@ -161,6 +137,22 @@ const StaffManagement = () => {
       });
       setTeamStaff([]);
     }
+  };
+
+  // Helper function to determine role priority for deduplication
+  const getRolePriority = (role: string): number => {
+    const priorities: { [key: string]: number } = {
+      'manager': 1,
+      'team_manager': 2, 
+      'assistant_manager': 3,
+      'team_assistant_manager': 4,
+      'coach': 5,
+      'team_coach': 6,
+      'staff': 7,
+      'helper': 8,
+      'team_helper': 9
+    };
+    return priorities[role] || 10;
   };
 
   const fetchClubStaff = async (clubId: string) => {
