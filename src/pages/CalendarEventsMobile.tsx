@@ -583,7 +583,6 @@ export default function CalendarEventsMobile() {
 
   return (
     <MobileLayout 
-      headerTitle={teams?.[0]?.name || 'Team Manager'}
       showTabs={true}
       activeTab={activeTab}
       onTabChange={setActiveTab}
