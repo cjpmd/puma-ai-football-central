@@ -48,10 +48,7 @@ const IndividualTrainingMobile = () => {
   })();
 
   return (
-    <MobileLayout 
-      headerTitle="Individual Training"
-      showTabs={false}
-    >
+    <MobileLayout showTabs={false}>
       <div className="space-y-4">
         <IndividualTrainingDashboard 
           userId={user?.id || ''} 

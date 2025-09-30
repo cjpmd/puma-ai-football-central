@@ -3,7 +3,7 @@ import {
   Home, 
   Calendar, 
   Target,
-  Baby
+  Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,7 +17,7 @@ const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Individual', href: '/individual-training', icon: Target },
-  { name: 'My Team', href: '/child-progress', icon: Baby },
+  { name: 'My Team', href: '/child-progress', icon: Shield },
 ];
 
 export function RoleAwareBottomNav() {
