@@ -405,7 +405,10 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
             </div>
 
             {/* FIFA-Style Player Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 justify-items-center">
+            <div className="grid gap-6 justify-items-center" style={{ 
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 320px))',
+              justifyContent: 'center'
+            }}>
               {filteredPlayers.map((player) => (
                 <FifaStylePlayerCard
                   key={player.id}

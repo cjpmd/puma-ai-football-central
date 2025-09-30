@@ -415,7 +415,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
   // Container with perspective for 3D effect
   return (
-    <div className="w-[300px] h-[450px] mx-auto" style={{ perspective: '1000px' }}>
+    <div className="w-full max-w-[320px] mx-auto aspect-[2/3]" style={{ perspective: '1000px' }}>
       <div 
         className="relative w-full h-full transition-transform duration-700"
         style={{
