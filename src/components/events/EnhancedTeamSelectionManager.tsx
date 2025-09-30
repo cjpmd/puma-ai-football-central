@@ -22,6 +22,7 @@ import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
+import { StaffAccountLinkingModal } from '@/components/teams/StaffAccountLinkingModal';
 
 // Helper function to create a default period with the first available formation
 const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): FormationPeriod => {
@@ -67,9 +68,11 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const teamId = propTeamId || event.team_id;
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('squad');
-  const [showMatchDayPack, setShowMatchDayPack] = useState(false);
+const [saving, setSaving] = useState(false);
+const [activeTab, setActiveTab] = useState('squad');
+const [showMatchDayPack, setShowMatchDayPack] = useState(false);
+const [linkModalOpen, setLinkModalOpen] = useState(false);
+const [staffLinksRefresh, setStaffLinksRefresh] = useState(0);
 
   // Helper function to extract staff IDs from staff_selection
   const extractStaffIds = (staffSelection: any[]): string[] => {
@@ -94,14 +97,14 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   });
 
   // Load team name display option
-  const { data: teamData } = useQuery({
-    queryKey: ['team-settings', teamId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('name_display_option')
-        .eq('id', teamId)
-        .single();
+const { data: teamData } = useQuery({
+  queryKey: ['team-settings', teamId],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('name, name_display_option')
+      .eq('id', teamId)
+      .single();
       
       if (error) throw error;
       return data;
@@ -585,19 +588,16 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     }
   };
 
-  if (!isOpen) return null;
 
   const currentTeam = getCurrentTeam();
   const nameDisplayOption = teamData?.name_display_option || 'surname';
 
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-12 sm:py-14">
-      <div className={`bg-background rounded-xl w-full flex flex-col overflow-y-auto min-h-0 shadow-2xl ring-1 ring-border my-12 ${
-        isMobile 
-          ? 'max-w-[92vw] max-h-[82vh]'
-          : 'max-w-[1100px] max-h-[78vh]'
-      }`}>
-        <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
+return (
+  <>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="p-0 w-[min(1100px,92vw)] max-h-[92vh] overflow-hidden">
+        <div className="h-[85vh] flex flex-col bg-background rounded-xl min-h-0">
+          <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>{event.title}</h2>
@@ -790,12 +790,24 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 
               <TabsContent value="staff" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                 {currentTeam && (
-                  <EventStaffAssignmentSection
-                    eventId={event.id}
-                    teamId={teamId}
-                    selectedStaff={currentTeam.selectedStaff || []}
-                    onStaffChange={handleStaffChange}
-                  />
+                  <div className="space-y-2">
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size={isMobile ? 'sm' : 'default'}
+                        onClick={() => setLinkModalOpen(true)}
+                      >
+                        Manage Staff Links
+                      </Button>
+                    </div>
+                    <EventStaffAssignmentSection
+                      eventId={event.id}
+                      teamId={teamId}
+                      selectedStaff={currentTeam.selectedStaff || []}
+                      onStaffChange={handleStaffChange}
+                      refreshToken={staffLinksRefresh}
+                    />
+                  </div>
                 )}
               </TabsContent>
 
@@ -846,21 +858,34 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
           </Tabs>
         </div>
       </div>
+      </DialogContent>
+    </Dialog>
 
-      {/* Match Day Pack Modal */}
-      <Dialog open={showMatchDayPack} onOpenChange={setShowMatchDayPack}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Match Day Pack</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="h-[95vh] match-day-pack-scroll">
-            <MatchDayPackView 
-              event={event} 
-              onClose={() => setShowMatchDayPack(false)} 
-            />
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+    {/* Match Day Pack Modal */}
+    <Dialog open={showMatchDayPack} onOpenChange={setShowMatchDayPack}>
+      <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden p-0">
+        <DialogHeader className="sr-only">
+          <DialogTitle>Match Day Pack</DialogTitle>
+        </DialogHeader>
+        <ScrollArea className="h-[95vh] match-day-pack-scroll">
+          <MatchDayPackView 
+            event={event} 
+            onClose={() => setShowMatchDayPack(false)} 
+          />
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
+
+    {/* Staff Linking Modal */}
+    <StaffAccountLinkingModal
+      isOpen={linkModalOpen}
+      onClose={() => {
+        setLinkModalOpen(false);
+        setStaffLinksRefresh((v) => v + 1);
+      }}
+      teamId={teamId}
+      teamName={(teamData as any)?.name || 'Team'}
+    />
+  </>
+);
 };

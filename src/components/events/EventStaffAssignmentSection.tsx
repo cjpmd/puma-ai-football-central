@@ -24,26 +24,28 @@ interface EventStaffAssignmentSectionProps {
   teamId: string;
   selectedStaff: string[];
   onStaffChange: (staffIds: string[]) => void;
+  refreshToken?: number;
 }
 
 export const EventStaffAssignmentSection: React.FC<EventStaffAssignmentSectionProps> = ({
   eventId,
   teamId,
   selectedStaff,
-  onStaffChange
+  onStaffChange,
+  refreshToken
 }) => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadTeamStaff();
-  }, [teamId]);
+useEffect(() => {
+  loadTeamStaff();
+}, [teamId, refreshToken]);
 
-  useEffect(() => {
-    if (eventId && staff.length > 0) {
-      loadStaffAvailability();
-    }
-  }, [eventId, staff, selectedStaff]);
+useEffect(() => {
+  if (eventId && staff.length > 0) {
+    loadStaffAvailability();
+  }
+}, [eventId, staff, selectedStaff, refreshToken]);
 
   const loadTeamStaff = async () => {
     try {
