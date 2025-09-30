@@ -4641,6 +4641,18 @@ export type Database = {
         Args: { team_name: string }
         Returns: string
       }
+      get_consolidated_team_staff: {
+        Args: { p_team_id: string }
+        Returns: {
+          email: string
+          id: string
+          is_linked: boolean
+          name: string
+          role: string
+          source_type: string
+          user_id: string
+        }[]
+      }
       get_current_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string

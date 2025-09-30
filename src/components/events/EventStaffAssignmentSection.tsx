@@ -51,42 +51,68 @@ useEffect(() => {
     try {
       setLoading(true);
       
-      // Get team staff
-      const { data: staffData, error: staffError } = await supabase
-        .from('team_staff')
-        .select('id, name, email, role')
-        .eq('team_id', teamId);
+      // Use the new consolidated function to get all staff
+      const { data: consolidatedStaff, error } = await supabase
+        .rpc('get_consolidated_team_staff', { p_team_id: teamId });
 
-      if (staffError) throw staffError;
+      if (error) throw error;
 
-      // Get user staff links
-      const { data: userStaffLinks, error: userStaffError } = await supabase
-        .from('user_staff')
-        .select('user_id, staff_id')
-        .in('staff_id', (staffData || []).map(s => s.id));
-
-      if (userStaffError) throw userStaffError;
-
-      const transformedStaff: StaffMember[] = (staffData || []).map(staff => {
-        const userLink = userStaffLinks?.find(link => link.staff_id === staff.id);
+      // Transform and deduplicate staff data
+      const staffMap = new Map<string, StaffMember>();
+      
+      (consolidatedStaff || []).forEach((staff: any) => {
+        const key = staff.email || staff.user_id || staff.id;
         
-        return {
-          id: staff.id,
-          name: staff.name,
-          email: staff.email,
-          role: staff.role,
-          isLinked: !!userLink,
-          linkedUserId: userLink?.user_id
-        };
+        // If we already have this person, prefer team_staff records over user_teams
+        if (staffMap.has(key)) {
+          const existing = staffMap.get(key)!;
+          // Prefer team_staff source or better role priority
+          if (staff.source_type === 'team_staff' || 
+              getRolePriority(staff.role) < getRolePriority(existing.role)) {
+            staffMap.set(key, {
+              id: staff.id,
+              name: staff.name,
+              email: staff.email,
+              role: staff.role,
+              isLinked: staff.is_linked,
+              linkedUserId: staff.user_id
+            });
+          }
+        } else {
+          staffMap.set(key, {
+            id: staff.id,
+            name: staff.name,
+            email: staff.email,
+            role: staff.role,
+            isLinked: staff.is_linked,
+            linkedUserId: staff.user_id
+          });
+        }
       });
 
-      setStaff(transformedStaff);
+      setStaff(Array.from(staffMap.values()));
     } catch (error) {
       console.error('Error loading team staff:', error);
       toast.error('Failed to load staff data');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to determine role priority for deduplication
+  const getRolePriority = (role: string): number => {
+    const priorities: { [key: string]: number } = {
+      'manager': 1,
+      'team_manager': 2, 
+      'assistant_manager': 3,
+      'team_assistant_manager': 4,
+      'coach': 5,
+      'team_coach': 6,
+      'staff': 7,
+      'helper': 8,
+      'team_helper': 9
+    };
+    return priorities[role] || 10;
   };
 
   const loadStaffAvailability = async () => {
@@ -215,7 +241,20 @@ useEffect(() => {
   };
 
   const formatRole = (role: string) => {
-    return role.split('_').map(word => 
+    // Handle special role mappings
+    const roleMap: { [key: string]: string } = {
+      'team_manager': 'Manager',
+      'manager': 'Manager',
+      'team_assistant_manager': 'Assistant Manager', 
+      'assistant_manager': 'Assistant Manager',
+      'team_coach': 'Coach',
+      'coach': 'Coach',
+      'team_helper': 'Helper',
+      'helper': 'Helper',
+      'staff': 'Staff'
+    };
+    
+    return roleMap[role] || role.split('_').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
   };
