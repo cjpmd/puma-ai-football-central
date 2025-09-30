@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard } from 'lucide-react';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { TrainingPlanEditor } from './TrainingPlanEditor';
@@ -588,6 +588,33 @@ const { data: teamData } = useQuery({
     }
   };
 
+  const handleCopyTeams = async () => {
+    try {
+      let copyText = `${event.title}\n`;
+      copyText += `${event.date}\n\n`;
+
+      teamSelections.forEach((team) => {
+        const captainPlayer = team.squadPlayers.find(p => p.id === team.globalCaptainId);
+        const captainText = captainPlayer 
+          ? `(Captain: ${captainPlayer.name} #${captainPlayer.squadNumber})`
+          : '';
+
+        copyText += `Team ${team.teamNumber} ${captainText}\n`;
+        
+        team.squadPlayers.forEach((player, index) => {
+          copyText += `${index + 1}. ${player.name} (#${player.squadNumber})\n`;
+        });
+        
+        copyText += `\n`;
+      });
+
+      await navigator.clipboard.writeText(copyText);
+      toast.success('Team lists copied to clipboard!');
+    } catch (error) {
+      console.error('Error copying teams:', error);
+      toast.error('Failed to copy team lists');
+    }
+  };
 
   const currentTeam = getCurrentTeam();
   const nameDisplayOption = teamData?.name_display_option || 'surname';
@@ -621,10 +648,19 @@ return (
                     {currentTeam?.periods.length || 0} period(s)
                   </Badge>
                   <Button 
+                    onClick={handleCopyTeams}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-1.5"
+                  >
+                    <Clipboard className="h-3 w-3" />
+                    Copy Teams
+                  </Button>
+                  <Button 
                     onClick={() => setShowMatchDayPack(true)}
                     variant="outline"
                     size="sm"
-                    className="flex items-center gap-1"
+                    className="flex items-center gap-1.5"
                   >
                     <FileText className="h-3 w-3" />
                     📦 Pack
