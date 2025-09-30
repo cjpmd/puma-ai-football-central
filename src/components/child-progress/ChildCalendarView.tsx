@@ -241,24 +241,49 @@ export const ChildCalendarView: React.FC<ChildCalendarViewProps> = ({ child }) =
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {events.filter(e => e.event_type === 'match').length}
-              </div>
-              <div className="text-sm text-muted-foreground">Matches</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {events.filter(e => e.event_type === 'training').length}
-              </div>
-              <div className="text-sm text-muted-foreground">Training</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {events.length}
-              </div>
-              <div className="text-sm text-muted-foreground">Total Events</div>
-            </div>
+            {(() => {
+              // Get all event types except 'match'
+              const nonMatchEvents = events.filter(e => e.event_type !== 'match');
+              const eventTypes = Array.from(new Set(nonMatchEvents.map(e => e.event_type)));
+              
+              const getTypeColor = (type: string) => {
+                switch (type) {
+                  case 'training':
+                    return 'text-green-600';
+                  case 'friendly':
+                    return 'text-blue-600';
+                  case 'tournament':
+                    return 'text-orange-600';
+                  case 'trial':
+                    return 'text-yellow-600';
+                  default:
+                    return 'text-gray-600';
+                }
+              };
+
+              const formatTypeName = (type: string) => {
+                return type.charAt(0).toUpperCase() + type.slice(1);
+              };
+
+              return (
+                <>
+                  {eventTypes.map(type => (
+                    <div key={type} className="text-center">
+                      <div className={`text-2xl font-bold ${getTypeColor(type)}`}>
+                        {nonMatchEvents.filter(e => e.event_type === type).length}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{formatTypeName(type)}</div>
+                    </div>
+                  ))}
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-purple-600">
+                      {nonMatchEvents.length}
+                    </div>
+                    <div className="text-sm text-muted-foreground">Total Events</div>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </CardContent>
       </Card>
