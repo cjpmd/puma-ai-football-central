@@ -85,7 +85,6 @@ export const getPlayerMatchHistory = async (playerId: string) => {
     console.log('Player ID:', playerId);
 
     // Get match history directly from event_selections (the authoritative source)
-    // This ensures we get the exact positions as they were selected
     const { data: eventSelections, error: selectionsError } = await supabase
       .from('event_selections')
       .select(`
@@ -117,8 +116,8 @@ export const getPlayerMatchHistory = async (playerId: string) => {
 
     console.log(`Found ${eventSelections.length} event selections to process`);
 
-    // Filter and process events where this player was selected
-    const playerEvents = [];
+    // Group selections by event_id to aggregate positions
+    const eventMap = new Map<string, any>();
     
     for (const selection of eventSelections) {
       // Only process completed events
@@ -135,76 +134,52 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       );
 
       if (playerInSelection) {
-        const isArbroathGame = selection.events?.opponent && 
-          selection.events.opponent.toLowerCase().includes('arbroath');
-          
-        if (isArbroathGame) {
-          console.log('🎯 FOUND ARBROATH GAME IN MATCH HISTORY:');
-          console.log(`🎯 Event: ${selection.events?.title}`);
-          console.log(`🎯 Player position in selection: ${playerInSelection.position}`);
-          console.log(`🎯 Full player data:`, JSON.stringify(playerInSelection, null, 2));
-        }
-
-        // Calculate total minutes for this player in this event
+        const eventId = selection.event_id;
         const minutes = playerInSelection.minutes || selection.duration_minutes || 90;
+        const position = playerInSelection.position;
         
-        // Check if player was captain
-        const isCaptain = selection.captain_id === playerId;
-        
-        // Check if player was POTM
-        const isPlayerOfTheMatch = selection.events?.player_of_match_id === playerId;
-        
-        // Build position data - use the actual selected position from event_selections
-        const minutesByPosition = {
-          [playerInSelection.position]: minutes
-        };
-
-        const eventData = {
-          id: selection.event_id,
-          uniqueKey: `${selection.event_id}-${selection.id}`,
-          date: selection.events?.date,
-          opponent: selection.events?.opponent || 'Training',
-          eventType: selection.events?.event_type,
-          performanceCategory: selection.performance_categories?.name,
-          totalMinutes: minutes,
-          minutesByPosition,
-          captain: isCaptain,
-          playerOfTheMatch: isPlayerOfTheMatch,
-          wasSubstitute: playerInSelection.isSubstitute || false,
-          teams: selection.team_number ? [selection.team_number.toString()] : [],
-          periods: selection.period_number ? [selection.period_number.toString()] : []
-        };
-
-        if (isArbroathGame) {
-          console.log('🎯 ARBROATH GAME EVENT DATA:');
-          console.log(`🎯 Position in minutesByPosition: ${Object.keys(minutesByPosition)[0]}`);
-          console.log(`🎯 Minutes: ${minutes}`);
-          console.log('🎯 Full event data:', JSON.stringify(eventData, null, 2));
+        // Check if we already have this event
+        if (eventMap.has(eventId)) {
+          // Add this position to the existing event
+          const existingEvent = eventMap.get(eventId);
+          existingEvent.minutesByPosition[position] = 
+            (existingEvent.minutesByPosition[position] || 0) + minutes;
+          existingEvent.totalMinutes += minutes;
+          
+          // Update captain/POTM flags if needed
+          if (selection.captain_id === playerId) {
+            existingEvent.captain = true;
+          }
+        } else {
+          // Create new event entry
+          const isCaptain = selection.captain_id === playerId;
+          const isPlayerOfTheMatch = selection.events?.player_of_match_id === playerId;
+          
+          eventMap.set(eventId, {
+            id: eventId,
+            date: selection.events?.date,
+            opponent: selection.events?.opponent || 'Training',
+            eventType: selection.events?.event_type,
+            performanceCategory: selection.performance_categories?.name,
+            totalMinutes: minutes,
+            minutesByPosition: { [position]: minutes },
+            captain: isCaptain,
+            playerOfTheMatch: isPlayerOfTheMatch,
+            wasSubstitute: playerInSelection.isSubstitute || false,
+          });
         }
-
-        playerEvents.push(eventData);
       }
     }
 
-    // Sort by date (most recent first)
+    // Convert map to array and sort
+    const playerEvents = Array.from(eventMap.values());
     playerEvents.sort((a, b) => {
       const dateA = new Date(a.date || '1900-01-01');
       const dateB = new Date(b.date || '1900-01-01');
       return dateB.getTime() - dateA.getTime();
     });
 
-    console.log(`✅ Found ${playerEvents.length} events for player using event_selections (authoritative source)`);
-    
-    // Log Arbroath data if found
-    const arbroathGame = playerEvents.find(event => 
-      event.opponent && event.opponent.toLowerCase().includes('arbroath')
-    );
-    if (arbroathGame) {
-      console.log('🎯 FINAL ARBROATH GAME DATA IN MATCH HISTORY:');
-      console.log(`🎯 Opponent: ${arbroathGame.opponent}`);
-      console.log(`🎯 Position: ${Object.keys(arbroathGame.minutesByPosition)[0]}`);
-      console.log(`🎯 Minutes: ${arbroathGame.totalMinutes}`);
-    }
+    console.log(`✅ Found ${playerEvents.length} unique events for player`);
     
     return playerEvents.slice(0, 20); // Limit to recent 20 events
 

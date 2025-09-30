@@ -4,9 +4,10 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
-import { Trophy, Target, Calendar, TrendingUp, TrendingDown, Minus, Clock, CreditCard, Users } from 'lucide-react';
+import { Trophy, Target, Calendar, TrendingUp, TrendingDown, Minus, Clock, CreditCard } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { ChildProgressData } from '@/services/childProgressService';
+import { playStylesService } from '@/types/playStyles';
 
 interface ChildSummaryCardProps {
   child: ChildProgressData;
@@ -35,6 +36,47 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
     }
   };
 
+  // Get top positions played
+  const getTopPositions = () => {
+    // Get minutesByPosition from match_stats if available
+    const matchStats = child.matchHistory?.[0]?.minutesByPosition || {};
+    
+    // Aggregate from all match history
+    const positionTotals: { [key: string]: number } = {};
+    child.matchHistory?.forEach((match: any) => {
+      if (match.minutesByPosition) {
+        Object.entries(match.minutesByPosition).forEach(([position, minutes]) => {
+          positionTotals[position] = (positionTotals[position] || 0) + (minutes as number);
+        });
+      }
+    });
+
+    // Sort by minutes and get top 3
+    return Object.entries(positionTotals)
+      .sort(([, a], [, b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([position, minutes]) => ({ position, minutes: minutes as number }));
+  };
+
+  const topPositions = getTopPositions();
+
+  // Get play style icons
+  const getPlayStyleIcons = () => {
+    if (!child.position) return null;
+    
+    const allPlayStyles = playStylesService.getAllPlayStyles();
+    const playerStyleTexts = child.position.split(',').map(s => s.trim());
+    
+    return playerStyleTexts
+      .map(styleText => {
+        const style = allPlayStyles.find(s => s.label.toLowerCase() === styleText.toLowerCase());
+        return style?.icon;
+      })
+      .filter(Boolean);
+  };
+
+  const playStyleIcons = getPlayStyleIcons();
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-4">
@@ -50,7 +92,9 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
             <div className="flex items-center gap-4 mt-1 text-muted-foreground">
               <span>Age {child.age}</span>
               {child.squadNumber && <span>#{child.squadNumber}</span>}
-              {child.position && <span>{child.position}</span>}
+              {playStyleIcons && playStyleIcons.length > 0 && (
+                <span className="text-lg">{playStyleIcons.join(' ')}</span>
+              )}
             </div>
             <div className="flex items-center gap-2 mt-2">
               <Badge variant="outline">{child.teamName}</Badge>
@@ -106,8 +150,25 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
           <Progress value={child.stats.trainingCompletionRate} className="h-2" />
         </div>
 
+        {/* Top Positions Played */}
+        {topPositions.length > 0 && (
+          <div className="space-y-2 pt-2 border-t">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-sm">Top Positions</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {topPositions.map(({ position, minutes }) => (
+                <Badge key={position} variant="secondary" className="text-xs">
+                  {position}: {Math.round(minutes)}min
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Quick Activity Info */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t">
           {child.stats.lastMatchDate && (
             <div className="flex items-center gap-2 text-sm">
               <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -123,26 +184,17 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
             </div>
           )}
         </div>
-        {/* FIFA Card Actions */}
-        <div className="flex gap-2 pt-4 border-t">
+
+        {/* Single FIFA Card Action */}
+        <div className="pt-4 border-t">
           <Button
             asChild
             variant="outline"
-            className="flex-1 gap-2"
+            className="w-full gap-2"
           >
             <Link to="/players">
               <CreditCard className="h-4 w-4" />
-              View FIFA Cards
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            className="flex-1 gap-2"
-          >
-            <Link to="/players">
-              <Users className="h-4 w-4" />
-              All Team Cards
+              View Player Cards
             </Link>
           </Button>
         </div>

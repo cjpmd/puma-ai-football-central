@@ -30,7 +30,7 @@ const allNavItems: NavItem[] = [
   { name: 'Calendar', href: '/calendar', icon: Calendar },
   { name: 'Training', href: '/training', icon: Dumbbell, roles: ['manager', 'coach', 'admin'] },
   { name: 'Individual', href: '/individual-training', icon: Target, roles: ['manager', 'coach', 'admin'] },
-  { name: 'My Child', href: '/child-progress', icon: Baby, roles: ['parent'] },
+  { name: 'My Team', href: '/child-progress', icon: Baby, roles: ['parent'] },
 ];
 
 export function RoleAwareBottomNav() {

@@ -52,7 +52,7 @@ export const useSmartNavigation = () => {
             href: '/child-progress',
             icon: Heart,
             priority: 2,
-            description: 'View your children\'s progress and team'
+            description: 'View your player\'s progress and team'
           });
         }
         
