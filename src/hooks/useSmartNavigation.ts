@@ -321,7 +321,7 @@ export const useSmartNavigation = () => {
       case 'parent':
         if (connectedPlayers.length > 0) {
           actions.push({
-            name: 'View Child Progress',
+            name: 'View Player Progress',
             href: '/child-progress',
             icon: Heart,
             priority: 1

@@ -80,25 +80,25 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
   return (
     <Card className="overflow-hidden">
       <CardHeader className="pb-4">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <Avatar className="h-16 w-16 flex-shrink-0">
             <AvatarImage src={child.photo} alt={child.name} />
             <AvatarFallback className="text-lg font-semibold">
               {child.name.split(' ').map(n => n[0]).join('')}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1">
-            <CardTitle className="text-2xl">{child.name}</CardTitle>
-            <div className="flex items-center gap-4 mt-1 text-muted-foreground">
+          <div className="flex-1 w-full sm:w-auto">
+            <CardTitle className="text-xl sm:text-2xl">{child.name}</CardTitle>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1 text-sm sm:text-base text-muted-foreground">
               <span>Age {child.age}</span>
               {child.squadNumber && <span>#{child.squadNumber}</span>}
               {playStyleIcons && playStyleIcons.length > 0 && (
-                <span className="text-lg">{playStyleIcons.join(' ')}</span>
+                <span className="text-base sm:text-lg">{playStyleIcons.join(' ')}</span>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="outline">{child.teamName}</Badge>
-              {child.clubName && <Badge variant="secondary">{child.clubName}</Badge>}
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <Badge variant="outline" className="text-xs sm:text-sm">{child.teamName}</Badge>
+              {child.clubName && <Badge variant="secondary" className="text-xs sm:text-sm">{child.clubName}</Badge>}
             </div>
           </div>
         </div>

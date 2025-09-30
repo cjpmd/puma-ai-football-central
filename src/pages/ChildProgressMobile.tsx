@@ -54,9 +54,9 @@ const ChildProgressMobile = () => {
 
   if (loading) {
     return (
-      <MobileLayout headerTitle="Child Progress">
+      <MobileLayout headerTitle="Player Progress">
         <div className="flex items-center justify-center h-64">
-          <div className="text-muted-foreground">Loading child progress...</div>
+          <div className="text-muted-foreground">Loading player progress...</div>
         </div>
       </MobileLayout>
     );
@@ -64,11 +64,11 @@ const ChildProgressMobile = () => {
 
   if (children.length === 0) {
     return (
-      <MobileLayout headerTitle="Child Progress">
+      <MobileLayout headerTitle="Player Progress">
         <div className="text-center py-12">
-          <h2 className="text-xl font-bold mb-4">No Children Found</h2>
+          <h2 className="text-xl font-bold mb-4">No Players Found</h2>
           <p className="text-muted-foreground mb-6 text-sm">
-            You don't have any children linked to your account yet.
+            You don't have any players linked to your account yet.
           </p>
           <Button onClick={loadChildrenData} size="sm">Refresh</Button>
         </div>
@@ -78,7 +78,7 @@ const ChildProgressMobile = () => {
 
   return (
     <MobileLayout 
-      headerTitle="Child Progress"
+      headerTitle="Player Progress"
       showTabs
       tabs={tabs}
       activeTab={activeTab}
@@ -86,11 +86,11 @@ const ChildProgressMobile = () => {
       stickyTabs
     >
       <div className="space-y-4">
-        {/* Child Selection */}
+        {/* Player Selection */}
         {children.length > 1 && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">Select Child</CardTitle>
+              <CardTitle className="text-base">Select Player</CardTitle>
             </CardHeader>
             <CardContent>
               <Select 
@@ -101,7 +101,7 @@ const ChildProgressMobile = () => {
                 }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a child" />
+                  <SelectValue placeholder="Select a player" />
                 </SelectTrigger>
                 <SelectContent>
                   {children.map((child) => (
