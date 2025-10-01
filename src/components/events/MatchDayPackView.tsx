@@ -459,9 +459,9 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
         </div>
         
         <div className="flex gap-6">
-          {/* Formation Pitch */}
-          <div className="flex-1">
-            <div className="relative bg-green-100 rounded-lg p-4 h-64 border">
+            {/* Formation Pitch */}
+            <div className="flex-1">
+              <div className="relative bg-green-100 rounded-lg p-4 h-72 border">
               {/* Football pitch markings */}
               <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
               
@@ -489,25 +489,25 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
                     }}
                   >
                     <div className="flex flex-col items-center">
-                      <div className={`w-14 h-14 rounded-full border-2 border-dashed ${positionGroupColor} flex flex-col items-center justify-center text-xs font-bold relative shadow-lg`}>
+                      <div className={`w-12 h-12 rounded-full border-2 border-dashed ${positionGroupColor} flex flex-col items-center justify-center text-xs font-bold relative shadow-lg`}>
                         {isCaptain && (
-                          <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
-                            <span className="text-xs font-bold text-black">C</span>
+                          <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <span className="text-[8px] font-bold text-black">C</span>
                           </div>
                         )}
                         
                         {/* Position abbreviation above player name */}
-                        <div className="text-xs font-bold text-gray-700 mb-0.5">
+                        <div className="text-[10px] font-bold text-gray-700 leading-none">
                           {pos.abbreviation || pos.position?.substring(0, 2) || ''}
                         </div>
                         
                         {/* Player name */}
-                        <div className="text-xs font-medium text-center leading-tight">
+                        <div className="text-[9px] font-medium text-center leading-none mt-0.5">
                           {player?.name || 'Unknown'}
                         </div>
                         
                         {/* Squad number below */}
-                        <div className="text-xs font-bold text-gray-600">
+                        <div className="text-[10px] font-bold text-gray-600 leading-none mt-0.5">
                           #{player?.squad_number}
                         </div>
                       </div>
@@ -668,26 +668,26 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="squad-grid grid grid-cols-3 gap-3">
                 {teamPlayers.map(player => (
-                  <div key={player.id} className="flex items-center gap-4 p-4 border rounded-lg">
+                  <div key={player.id} className="player-card flex items-center gap-2 p-2 border rounded-lg">
                     {player.photo_url ? (
                       <img 
                         src={player.photo_url} 
                         alt={player.name}
-                        className="w-16 h-16 rounded-full object-cover"
+                        className="w-12 h-12 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="text-xl font-bold">#{player.squad_number}</span>
+                      <div className="w-12 h-12 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+                        <span className="text-base font-bold">#{player.squad_number}</span>
                       </div>
                     )}
-                    <div>
-                      <div className="font-bold text-lg">{player.name}</div>
-                      <div className="text-gray-600">#{player.squad_number}</div>
+                    <div className="min-w-0">
+                      <div className="font-bold text-base truncate">{player.name}</div>
+                      <div className="text-gray-600 text-sm">#{player.squad_number}</div>
                       {playingTime[player.id] && (
-                        <div className="text-sm text-blue-600">
-                          {playingTime[player.id]} minutes
+                        <div className="text-xs text-blue-600">
+                          {playingTime[player.id]}m
                         </div>
                       )}
                     </div>
@@ -697,22 +697,19 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
 
               {/* Staff Section */}
               {assignedStaff.length > 0 && (
-                <div className="mt-8">
-                  <h3 className="text-xl font-bold mb-4">Assigned Staff</h3>
-                  <div className="grid grid-cols-1 gap-4">
+                <div className="mt-6">
+                  <h3 className="text-xl font-bold mb-3">Assigned Staff</h3>
+                  <div className="grid grid-cols-2 gap-3">
                     {assignedStaff.map(staff => (
-                      <div key={staff.id} className="flex items-center gap-4 p-4 border rounded-lg bg-blue-50">
-                        <div className="w-12 h-12 rounded-full bg-blue-200 flex items-center justify-center">
-                          <span className="text-lg font-bold text-blue-800">
+                      <div key={staff.id} className="staff-card flex items-center gap-2 p-2 border rounded-lg bg-blue-50">
+                        <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
+                          <span className="text-sm font-bold text-blue-800">
                             {staff.name.split(' ').map((n: string) => n[0]).join('')}
                           </span>
                         </div>
-                        <div>
-                          <div className="font-bold text-lg">{formatPlayerName(staff.name, 'firstName')}</div>
-                          <div className="text-gray-600">{staff.role || 'Staff'}</div>
-                          {staff.email && (
-                            <div className="text-sm text-gray-500">{staff.email}</div>
-                          )}
+                        <div className="min-w-0">
+                          <div className="font-bold text-base truncate">{formatPlayerName(staff.name, 'firstName')}</div>
+                          <div className="text-gray-600 text-sm truncate">{staff.role || 'Staff'}</div>
                         </div>
                       </div>
                     ))}

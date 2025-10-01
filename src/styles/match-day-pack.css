@@ -117,6 +117,20 @@
     background-color: #e5e5e5 !important;
   }
   
+  /* Squad and Staff compact layout */
+  .squad-grid {
+    gap: 0.5rem !important;
+  }
+  
+  .player-card, .staff-card {
+    padding: 0.375rem !important;
+  }
+  
+  .player-card .font-bold,
+  .staff-card .font-bold {
+    font-size: 0.875rem !important;
+  }
+  
   /* Input and textarea styles for print */
   input, textarea {
     border: 1px solid #333 !important;
