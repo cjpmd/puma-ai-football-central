@@ -23,6 +23,15 @@
   page-break-inside: avoid;
 }
 
+.formation-container {
+  page-break-inside: avoid;
+  overflow: hidden;
+}
+
+.tactical-section {
+  page-break-inside: avoid;
+}
+
 .no-print {
   display: block;
 }
@@ -64,6 +73,16 @@
   }
   
   .page-break-inside-avoid {
+    page-break-inside: avoid !important;
+  }
+
+  .formation-container {
+    page-break-inside: avoid !important;
+    margin-bottom: 1rem;
+    overflow: visible;
+  }
+
+  .tactical-section {
     page-break-inside: avoid !important;
   }
   
@@ -122,6 +141,22 @@
   .page-break {
     break-after: page !important;
     page-break-after: always !important;
+  }
+
+  /* Prevent text overflow in print */
+  textarea, input {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Ensure proper spacing */
+  h2, h3, h4 {
+    page-break-after: avoid !important;
+  }
+
+  /* Keep labels with their inputs */
+  label {
+    page-break-after: avoid !important;
   }
 }
 

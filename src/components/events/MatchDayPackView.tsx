@@ -446,7 +446,7 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
       .join(', ');
     
     return (
-      <div className="mb-6 page-break-inside-avoid">
+      <div className="formation-container mb-4">
         <div className="flex justify-between items-center mb-3">
           <h4 className="text-lg font-bold">
             Period {selection.period_number} - {selection.formation}
@@ -520,8 +520,8 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
           
           {/* Notes space */}
           <div className="w-48">
-            <h5 className="font-medium mb-2 text-sm">Period Notes:</h5>
-            <div className="border rounded p-3 h-52 bg-gray-50">
+            <h5 className="font-medium mb-1 text-sm">Period Notes:</h5>
+            <div className="border rounded p-2 h-44 bg-gray-50">
               {/* Substitute players list */}
               {substitutePlayersDisplay && (
                 <div className="mb-3">
@@ -721,100 +721,141 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
               )}
             </div>
 
-            {/* Page 3: Formation & Selection - All Periods on One Page */}
-            <div className="page page-break">
-              <h2 className="text-3xl font-bold mb-6">
-                Team {teamNumber} Formation & Selection
-              </h2>
+            {/* Page 3: Formation & Selection - Split into multiple pages if needed */}
+            {periodsWithTiming.length <= 2 ? (
+              // Single page for 1-2 periods
+              <div className="page page-break">
+                <h2 className="text-3xl font-bold mb-4">
+                  Team {teamNumber} Formation & Selection
+                </h2>
 
-              {/* All Periods */}
-              <div className="space-y-6">
-                {periodsWithTiming.map((period) => renderFormation(period))}
-              </div>
+                <div className="space-y-4">
+                  {periodsWithTiming.map((period) => renderFormation(period))}
+                </div>
 
-              {/* Compact Playing Time Summary */}
-              <div className="mt-6 page-break-inside-avoid">
-                <h3 className="text-lg font-bold mb-3">Playing Time Summary</h3>
-                <div className="grid grid-cols-4 gap-2 text-sm">
-                  {Object.entries(playingTime).map(([playerId, minutes]) => {
-                    const player = squadPlayers.find(p => p.id === playerId);
-                    return player ? (
-                      <div key={playerId} className="flex justify-between p-2 border rounded text-xs">
-                        <span className="truncate">#{player.squad_number} {player.name}</span>
-                        <span className="font-bold ml-2">{minutes}m</span>
-                      </div>
-                    ) : null;
-                  })}
+                {/* Compact Playing Time Summary */}
+                <div className="mt-4 page-break-inside-avoid">
+                  <h3 className="text-lg font-bold mb-2">Playing Time Summary</h3>
+                  <div className="grid grid-cols-4 gap-2 text-sm">
+                    {Object.entries(playingTime).map(([playerId, minutes]) => {
+                      const player = squadPlayers.find(p => p.id === playerId);
+                      return player ? (
+                        <div key={playerId} className="flex justify-between p-2 border rounded text-xs">
+                          <span className="truncate">#{player.squad_number} {player.name}</span>
+                          <span className="font-bold ml-2">{minutes}m</span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              // Multiple pages for 3+ periods (2 periods per page)
+              <>
+                {Array.from({ length: Math.ceil(periodsWithTiming.length / 2) }).map((_, pageIndex) => {
+                  const startIdx = pageIndex * 2;
+                  const periodsOnPage = periodsWithTiming.slice(startIdx, startIdx + 2);
+                  const isLastPage = startIdx + 2 >= periodsWithTiming.length;
+                  
+                  return (
+                    <div key={`formation-page-${pageIndex}`} className="page page-break">
+                      <h2 className="text-3xl font-bold mb-4">
+                        Team {teamNumber} Formation & Selection {pageIndex > 0 && `(Cont.)`}
+                      </h2>
+
+                      <div className="space-y-4">
+                        {periodsOnPage.map((period) => renderFormation(period))}
+                      </div>
+
+                      {/* Playing Time Summary on last page only */}
+                      {isLastPage && (
+                        <div className="mt-4 page-break-inside-avoid">
+                          <h3 className="text-lg font-bold mb-2">Playing Time Summary</h3>
+                          <div className="grid grid-cols-4 gap-2 text-sm">
+                            {Object.entries(playingTime).map(([playerId, minutes]) => {
+                              const player = squadPlayers.find(p => p.id === playerId);
+                              return player ? (
+                                <div key={playerId} className="flex justify-between p-2 border rounded text-xs">
+                                  <span className="truncate">#{player.squad_number} {player.name}</span>
+                                  <span className="font-bold ml-2">{minutes}m</span>
+                                </div>
+                              ) : null;
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
 
             {/* Page 4: Tactical Notes */}
             <div className="page page-break">
-              <h2 className="text-3xl font-bold mb-6">
+              <h2 className="text-3xl font-bold mb-4">
                 Team {teamNumber} Tactical Notes & Set Pieces
               </h2>
 
-              <div className="grid grid-cols-1 gap-6">
+              <div className="tactical-section grid grid-cols-1 gap-4">
                 <div>
-                  <Label className="text-lg font-bold">General Tactics</Label>
+                  <Label className="text-base font-bold">General Tactics</Label>
                   <Textarea
                     value={tacticalNotes.generalTactics}
                     onChange={(e) => setTacticalNotes(prev => ({...prev, generalTactics: e.target.value}))}
-                    className="min-h-24 mt-2"
+                    className="h-20 mt-1 text-sm"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-lg font-bold">Corners (Attacking)</Label>
+                    <Label className="text-base font-bold">Corners (Attacking)</Label>
                     <Textarea
                       value={tacticalNotes.corners}
                       onChange={(e) => setTacticalNotes(prev => ({...prev, corners: e.target.value}))}
-                      className="min-h-20 mt-2"
+                      className="h-16 mt-1 text-sm"
                     />
                   </div>
                   <div>
-                    <Label className="text-lg font-bold">Free Kicks</Label>
+                    <Label className="text-base font-bold">Free Kicks</Label>
                     <Textarea
                       value={tacticalNotes.freeKicks}
                       onChange={(e) => setTacticalNotes(prev => ({...prev, freeKicks: e.target.value}))}
-                      className="min-h-20 mt-2"
+                      className="h-16 mt-1 text-sm"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-lg font-bold">Defensive Shape</Label>
+                    <Label className="text-base font-bold">Defensive Shape</Label>
                     <Textarea
                       value={tacticalNotes.defensiveShape}
                       onChange={(e) => setTacticalNotes(prev => ({...prev, defensiveShape: e.target.value}))}
-                      className="min-h-20 mt-2"
+                      className="h-16 mt-1 text-sm"
                     />
                   </div>
                   <div>
-                    <Label className="text-lg font-bold">Attacking Shape</Label>
+                    <Label className="text-base font-bold">Attacking Shape</Label>
                     <Textarea
                       value={tacticalNotes.attackingShape}
                       onChange={(e) => setTacticalNotes(prev => ({...prev, attackingShape: e.target.value}))}
-                      className="min-h-20 mt-2"
+                      className="h-16 mt-1 text-sm"
                     />
                   </div>
                 </div>
 
                 {/* Sketch Areas */}
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-lg font-bold">Sketch Area 1</Label>
-                    <div className="border-2 border-dashed border-gray-300 h-32 mt-2 bg-gray-50 flex items-center justify-center">
-                      <span className="text-gray-500">Draw here</span>
+                    <Label className="text-base font-bold">Sketch Area 1</Label>
+                    <div className="border-2 border-dashed border-gray-300 h-24 mt-1 bg-gray-50 flex items-center justify-center">
+                      <span className="text-gray-400 text-sm">Draw here</span>
                     </div>
                   </div>
                   <div>
-                    <Label className="text-lg font-bold">Sketch Area 2</Label>
-                    <div className="border-2 border-dashed border-gray-300 h-32 mt-2 bg-gray-50 flex items-center justify-center">
-                      <span className="text-gray-500">Draw here</span>
+                    <Label className="text-base font-bold">Sketch Area 2</Label>
+                    <div className="border-2 border-dashed border-gray-300 h-24 mt-1 bg-gray-50 flex items-center justify-center">
+                      <span className="text-gray-400 text-sm">Draw here</span>
                     </div>
                   </div>
                 </div>
@@ -823,57 +864,57 @@ export const MatchDayPackView: React.FC<MatchDayPackViewProps> = ({
 
             {/* Page 5: Opposition Analysis */}
             <div className="page page-break">
-              <h2 className="text-3xl font-bold mb-6">
+              <h2 className="text-3xl font-bold mb-4">
                 Team {teamNumber} Opposition Analysis
               </h2>
 
-              <div className="grid grid-cols-1 gap-6">
-                <div className="grid grid-cols-2 gap-6">
+              <div className="tactical-section grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-lg font-bold">Opposition Strengths</Label>
+                    <Label className="text-base font-bold">Opposition Strengths</Label>
                     <Textarea
                       value={oppositionNotes.strengths}
                       onChange={(e) => setOppositionNotes(prev => ({...prev, strengths: e.target.value}))}
-                      className="min-h-24 mt-2"
+                      className="h-20 mt-1 text-sm"
                     />
                   </div>
                   <div>
-                    <Label className="text-lg font-bold">Opposition Weaknesses</Label>
+                    <Label className="text-base font-bold">Opposition Weaknesses</Label>
                     <Textarea
                       value={oppositionNotes.weaknesses}
                       onChange={(e) => setOppositionNotes(prev => ({...prev, weaknesses: e.target.value}))}
-                      className="min-h-24 mt-2"
+                      className="h-20 mt-1 text-sm"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-lg font-bold">Dangerous Players</Label>
+                  <Label className="text-base font-bold">Dangerous Players</Label>
                   <Textarea
                     value={oppositionNotes.dangerousPlayers}
                     onChange={(e) => setOppositionNotes(prev => ({...prev, dangerousPlayers: e.target.value}))}
                     placeholder="Key players to watch, their positions and threats..."
-                    className="min-h-20 mt-2"
+                    className="h-16 mt-1 text-sm"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-lg font-bold">Tactical Instructions</Label>
+                  <Label className="text-base font-bold">Tactical Instructions</Label>
                   <Textarea
                     value={oppositionNotes.instructions}
                     onChange={(e) => setOppositionNotes(prev => ({...prev, instructions: e.target.value}))}
                     placeholder="e.g. 'Press #6 early', 'Watch #10 on long balls'..."
-                    className="min-h-24 mt-2"
+                    className="h-20 mt-1 text-sm"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-lg font-bold">Opposition Formation & Style</Label>
+                  <Label className="text-base font-bold">Opposition Formation & Style</Label>
                   <Textarea
                     value={oppositionNotes.formation}
                     onChange={(e) => setOppositionNotes(prev => ({...prev, formation: e.target.value}))}
                     placeholder="Expected formation and typical style of play..."
-                    className="min-h-20 mt-2"
+                    className="h-16 mt-1 text-sm"
                   />
                 </div>
               </div>
