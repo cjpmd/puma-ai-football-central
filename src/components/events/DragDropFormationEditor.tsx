@@ -140,6 +140,39 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     }
   }, [periods, gameFormat]);
 
+  // Apply anti-overlap nudging for rendering only (non-persistent)
+  const applyAntiOverlapNudge = (positions: PositionSlotType[]): PositionSlotType[] => {
+    const positionMap = new Map<string, PositionSlotType[]>();
+    
+    // Group positions by their x,y coordinates (rounded to nearest percent)
+    positions.forEach(pos => {
+      const key = `${Math.round(pos.x)}-${Math.round(pos.y)}`;
+      if (!positionMap.has(key)) {
+        positionMap.set(key, []);
+      }
+      positionMap.get(key)!.push(pos);
+    });
+    
+    // Apply horizontal offset to overlapping positions
+    const nudgedPositions: PositionSlotType[] = [];
+    positionMap.forEach(group => {
+      if (group.length === 1) {
+        nudgedPositions.push(group[0]);
+      } else {
+        // Multiple positions at same location - apply horizontal spread
+        group.forEach((pos, i) => {
+          const offset = (i - (group.length - 1) / 2) * 1.8;
+          nudgedPositions.push({
+            ...pos,
+            x: pos.x + offset
+          });
+        });
+      }
+    });
+    
+    return nudgedPositions;
+  };
+
   const halfDuration = gameDuration / 2;
 
   const calculateGameTime = (periodIndex: number) => {
@@ -668,78 +701,82 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     }
   };
 
-  const renderPeriodCard = (period: FormationPeriod) => (
-    <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
-      <CardHeader className="pb-3">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="text-center flex-1">
-              <CardTitle className="text-lg mb-2">Period {period.periodNumber}</CardTitle>
-              <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-                <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  <Input
-                    type="number"
-                    value={period.duration}
-                    onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
-                    className="w-20 h-7 text-xs text-center"
-                    min="1"
-                    max="90"
-                  />
-                  <span className="text-xs">min</span>
+  const renderPeriodCard = (period: FormationPeriod) => {
+    // Apply anti-overlap nudging for this period's positions
+    const nudgedPositions = applyAntiOverlapNudge(period.positions);
+    
+    return (
+      <Card key={period.id} className="min-h-[550px] print:shadow-none print:border print:break-inside-avoid">
+        <CardHeader className="pb-3">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-center flex-1">
+                <CardTitle className="text-lg mb-2">Period {period.periodNumber}</CardTitle>
+                <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+                  <span>{calculateGameTime(periods.findIndex(p => p.id === period.id))}</span>
+                  <div className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    <Input
+                      type="number"
+                      value={period.duration}
+                      onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 8)}
+                      className="w-20 h-7 text-xs text-center"
+                      min="1"
+                      max="90"
+                    />
+                    <span className="text-xs">min</span>
+                  </div>
                 </div>
               </div>
+              {periods.length > 1 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => deletePeriod(period.id)}
+                  className="h-6 w-6 p-0 print:hidden"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
             </div>
-            {periods.length > 1 && (
+            
+            <div className="flex items-center gap-2">
+              <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
+                <SelectTrigger className="h-7 text-sm flex-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {gameFormatFormations.map((formation) => (
+                    <SelectItem key={formation.id} value={formation.id}>
+                      {formation.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 size="sm"
                 variant="ghost"
-                onClick={() => deletePeriod(period.id)}
-                className="h-6 w-6 p-0 print:hidden"
+                onClick={() => refreshPeriodLayout(period.id)}
+                className="h-7 w-7 p-0 print:hidden"
+                title="Refresh layout"
               >
-                <X className="h-3 w-3" />
+                <RefreshCw className="h-3 w-3" />
               </Button>
-            )}
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-              <SelectTrigger className="h-7 text-sm flex-1">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {gameFormatFormations.map((formation) => (
-                  <SelectItem key={formation.id} value={formation.id}>
-                    {formation.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => refreshPeriodLayout(period.id)}
-              className="h-7 w-7 p-0 print:hidden"
-              title="Refresh layout"
-            >
-              <RefreshCw className="h-3 w-3" />
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
-          <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
-          
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
-          <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
-          <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-          <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
-          
-          <div className="relative h-full">
-            {period.positions.map((position, index) => {
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
+            <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
+            
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
+            <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-white opacity-50" />
+            <div className="absolute top-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+            <div className="absolute bottom-2 left-1/4 right-1/4 h-10 border-l-2 border-r-2 border-white opacity-50" />
+            
+            <div className="relative h-full">
+              {nudgedPositions.map((position, index) => {
               const player = position.playerId ? squadPlayers.find(p => p.id === position.playerId) : undefined;
               const isCaptain = !eventType || eventType !== 'training' ? position.playerId === globalCaptainId : false;
               const positionGroupColor = getPositionGroupColor(position.positionName);
@@ -787,15 +824,16 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           </div>
         </div>
         
-        <SubstituteBench
-          id={`substitutes-${period.id}`}
-          substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
-          globalCaptainId={eventType === 'training' ? undefined : globalCaptainId}
-          nameDisplayOption={mappedNameDisplayOption}
-        />
-      </CardContent>
-    </Card>
-  );
+            <SubstituteBench
+              id={`substitutes-${period.id}`}
+              substitutes={period.substitutes.map(id => squadPlayers.find(p => p.id === id)!).filter(Boolean)}
+              globalCaptainId={eventType === 'training' ? undefined : globalCaptainId}
+              nameDisplayOption={mappedNameDisplayOption}
+            />
+          </CardContent>
+        </Card>
+      );
+    };
 
   return (
     <DndContext 

@@ -68,11 +68,12 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const teamId = propTeamId || event.team_id;
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
-const [saving, setSaving] = useState(false);
-const [activeTab, setActiveTab] = useState('squad');
-const [showMatchDayPack, setShowMatchDayPack] = useState(false);
-const [linkModalOpen, setLinkModalOpen] = useState(false);
-const [staffLinksRefresh, setStaffLinksRefresh] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('squad');
+  const [showMatchDayPack, setShowMatchDayPack] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [staffLinksRefresh, setStaffLinksRefresh] = useState(0);
+  const [hasAutoSyncedFormation, setHasAutoSyncedFormation] = useState(false);
 
   // Helper function to extract staff IDs from staff_selection
   const extractStaffIds = (staffSelection: any[]): string[] => {
@@ -225,6 +226,81 @@ const { data: teamData } = useQuery({
 
     initializeData();
   }, [isOpen, event.id, teamId]);
+
+  // Auto-sync formation coordinates when formation tab opens
+  useEffect(() => {
+    if (!isOpen || activeTab !== 'formation' || hasAutoSyncedFormation) return;
+    if (teamSelections.length === 0) return;
+    
+    const currentTeam = teamSelections[currentTeamIndex];
+    if (!currentTeam || currentTeam.periods.length === 0) return;
+    
+    console.log('Auto-syncing formation layouts on tab open');
+    
+    // Helper to create position slots from formation
+    const createPositionSlots = (formationId: string): any[] => {
+      const formations = getFormationsByFormat(event.game_format as any);
+      const formation = formations.find(f => f.id === formationId);
+      if (!formation) return [];
+      
+      return formation.positions.map((pos, index) => ({
+        id: `position-${index}`,
+        positionName: pos.position,
+        abbreviation: pos.position.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+        positionGroup: pos.position.toLowerCase().includes('goalkeeper') ? 'goalkeeper' :
+                       pos.position.toLowerCase().includes('def') ? 'defender' :
+                       pos.position.toLowerCase().includes('mid') ? 'midfielder' : 'forward',
+        x: pos.x,
+        y: pos.y,
+        playerId: undefined
+      }));
+    };
+    
+    let needsUpdate = false;
+    const updatedPeriods = currentTeam.periods.map(period => {
+      const templatePositions = createPositionSlots(period.formation);
+      
+      // Check if update is needed
+      const positionsNeedUpdate = period.positions.some((pos, idx) => {
+        const template = templatePositions[idx];
+        return template && (
+          Math.abs(pos.x - template.x) > 0.1 ||
+          Math.abs(pos.y - template.y) > 0.1
+        );
+      });
+      
+      if (!positionsNeedUpdate) return period;
+      
+      needsUpdate = true;
+      
+      // Sync positions while preserving player assignments
+      const syncedPositions = period.positions.map((pos, idx) => {
+        const template = templatePositions[idx];
+        if (!template) return pos;
+        
+        return {
+          ...pos,
+          x: template.x,
+          y: template.y,
+          abbreviation: template.abbreviation,
+          positionGroup: template.positionGroup,
+          positionName: template.positionName
+        };
+      });
+      
+      return {
+        ...period,
+        positions: syncedPositions
+      };
+    });
+    
+    if (needsUpdate) {
+      console.log('Applied auto-sync to formation coordinates');
+      updateCurrentTeam({ periods: updatedPeriods });
+    }
+    
+    setHasAutoSyncedFormation(true);
+  }, [isOpen, activeTab, hasAutoSyncedFormation, currentTeamIndex, teamSelections, event.game_format]);
 
   const addTeam = async () => {
     const newTeamNumber = teamSelections.length + 1;

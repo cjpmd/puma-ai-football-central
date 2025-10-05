@@ -97,12 +97,12 @@ const formations9ASide: FormationConfig[] = [
     name: "1-3-3-2",
     positions: [
       { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 15, y: 75 },
-      { position: "Defender Centre", x: 50, y: 75 },
-      { position: "Defender Right", x: 85, y: 75 },
-      { position: "Midfielder Left", x: 10, y: 50 },
-      { position: "Midfielder Centre", x: 50, y: 50 },
-      { position: "Midfielder Right", x: 90, y: 50 },
+      { position: "Defender Left", x: 15, y: 70 },
+      { position: "Defender Centre", x: 50, y: 70 },
+      { position: "Defender Right", x: 85, y: 70 },
+      { position: "Midfielder Left", x: 10, y: 44 },
+      { position: "Midfielder Centre", x: 50, y: 44 },
+      { position: "Midfielder Right", x: 90, y: 44 },
       { position: "Striker Left", x: 30, y: 15 },
       { position: "Striker Right", x: 70, y: 15 }
     ]
