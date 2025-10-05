@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Clock, X, ChevronDown, ChevronUp, Users, AlertTriangle } from 'lucide-react';
+import { Plus, Clock, X, ChevronDown, ChevronUp, Users, AlertTriangle, RefreshCw } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
@@ -85,7 +85,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     formations: gameFormatFormations.length
   });
 
-  // Ensure all periods have proper position slots when formations are set
+  // Auto-sync existing periods to updated formation coordinates
   useEffect(() => {
     let needsUpdate = false;
     const updatedPeriods = periods.map(period => {
@@ -98,11 +98,44 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
           positions: createPositionSlots(period.formation)
         };
       }
+      
+      // Sync existing positions with latest formation coordinates
+      if (period.formation && period.positions.length > 0) {
+        const templatePositions = createPositionSlots(period.formation);
+        const syncedPositions = period.positions.map(existingPos => {
+          const matchingTemplate = templatePositions.find(
+            template => template.positionName === existingPos.positionName
+          );
+          
+          if (matchingTemplate) {
+            // Check if coordinates actually changed
+            if (existingPos.x !== matchingTemplate.x || existingPos.y !== matchingTemplate.y) {
+              needsUpdate = true;
+              return {
+                ...existingPos,
+                x: matchingTemplate.x,
+                y: matchingTemplate.y,
+                abbreviation: matchingTemplate.abbreviation,
+                positionGroup: matchingTemplate.positionGroup
+              };
+            }
+          }
+          return existingPos;
+        });
+        
+        if (needsUpdate) {
+          return {
+            ...period,
+            positions: syncedPositions
+          };
+        }
+      }
+      
       return period;
     });
 
     if (needsUpdate) {
-      console.log('Updating periods with missing positions');
+      console.log('Syncing periods with updated formation coordinates');
       onPeriodsChange(updatedPeriods);
     }
   }, [periods, gameFormat]);
@@ -161,30 +194,26 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     const newPeriodNumber = periods.length + 1;
     const lastPeriod = periods[periods.length - 1];
     
-    // Create deep copies of position objects to ensure each period is independent
-    const createDeepCopyPositions = (positions: PositionSlotType[]): PositionSlotType[] => {
-      return positions.map(pos => ({
-        id: `position-${Math.random().toString(36).substr(2, 9)}`, // Generate new unique ID
-        positionName: pos.positionName,
-        abbreviation: pos.abbreviation,
-        positionGroup: pos.positionGroup,
-        x: pos.x,
-        y: pos.y,
-        playerId: pos.playerId // Copy the player assignment
-      }));
-    };
+    // Always create positions from formation defaults to get latest coordinates
+    const formationId = lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1';
+    const freshPositions = createPositionSlots(formationId);
+    
+    // Then preserve player assignments from last period if it exists
+    const positionsWithPlayers = lastPeriod 
+      ? preservePlayerAssignments(lastPeriod.positions, freshPositions)
+      : freshPositions;
     
     const newPeriod: FormationPeriod = {
       id: `period-${newPeriodNumber}`,
       periodNumber: newPeriodNumber,
-      formation: lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1',
+      formation: formationId,
       duration: 8,
-      positions: lastPeriod ? createDeepCopyPositions(lastPeriod.positions) : createPositionSlots(lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1'),
+      positions: positionsWithPlayers,
       substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
       captainId: globalCaptainId
     };
 
-    console.log('Adding new period:', newPeriod);
+    console.log('Adding new period with fresh coordinates:', newPeriod);
     onPeriodsChange([...periods, newPeriod]);
   };
 
@@ -251,6 +280,25 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     setTimeout(() => {
       onPeriodsChange(updatedPeriods);
     }, 0);
+  };
+
+  const refreshPeriodLayout = (periodId: string) => {
+    console.log('Refreshing layout for period:', periodId);
+    
+    const updatedPeriods = periods.map(period => {
+      if (period.id === periodId) {
+        const freshPositions = createPositionSlots(period.formation);
+        const preservedPositions = preservePlayerAssignments(period.positions, freshPositions);
+        
+        return {
+          ...period,
+          positions: preservedPositions
+        };
+      }
+      return period;
+    });
+    
+    onPeriodsChange(updatedPeriods);
   };
 
   const updatePeriodDuration = (periodId: string, duration: number) => {
@@ -655,18 +703,29 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             )}
           </div>
           
-          <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
-            <SelectTrigger className="h-7 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {gameFormatFormations.map((formation) => (
-                <SelectItem key={formation.id} value={formation.id}>
-                  {formation.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            <Select value={period.formation} onValueChange={(formation) => updatePeriodFormation(period.id, formation)}>
+              <SelectTrigger className="h-7 text-sm flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {gameFormatFormations.map((formation) => (
+                  <SelectItem key={formation.id} value={formation.id}>
+                    {formation.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => refreshPeriodLayout(period.id)}
+              className="h-7 w-7 p-0 print:hidden"
+              title="Refresh layout"
+            >
+              <RefreshCw className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       </CardHeader>
       
