@@ -10,6 +10,7 @@ import {
   useSensors,
   closestCenter
 } from '@dnd-kit/core';
+import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -959,17 +960,15 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         </div>
       </div>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {draggedPlayer && (
-          <div className="cursor-grabbing" style={{ transform: 'translate(-50%, -50%)' }}>
-            <PlayerIcon
-              player={draggedPlayer}
-              isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
-              nameDisplayOption={mappedNameDisplayOption}
-              isCircular={true}
-              isDragging={true}
-            />
-          </div>
+          <PlayerIcon
+            player={draggedPlayer}
+            isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
+            nameDisplayOption={mappedNameDisplayOption}
+            isCircular={true}
+            isDragging={true}
+          />
         )}
       </DragOverlay>
     </DndContext>
