@@ -60,11 +60,11 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
 
-  // Improved sensors with better activation constraints and proper coordinate handling
+  // Improved sensors with minimal activation distance for precise cursor alignment
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 3,
+        distance: 1,
       },
     }),
     useSensor(TouchSensor, {
@@ -959,15 +959,17 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         </div>
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={null}>
         {draggedPlayer && (
-          <PlayerIcon
-            player={draggedPlayer}
-            isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
-            nameDisplayOption={mappedNameDisplayOption}
-            isCircular={true}
-            isDragging={true}
-          />
+          <div className="cursor-grabbing" style={{ transform: 'translate(-50%, -50%)' }}>
+            <PlayerIcon
+              player={draggedPlayer}
+              isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
+              nameDisplayOption={mappedNameDisplayOption}
+              isCircular={true}
+              isDragging={true}
+            />
+          </div>
         )}
       </DragOverlay>
     </DndContext>
