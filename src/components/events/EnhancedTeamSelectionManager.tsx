@@ -478,7 +478,39 @@ const { data: teamData } = useQuery({
 
   const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
     console.log('Squad changed for team', currentTeamIndex + 1, ':', newSquadPlayers);
-    updateCurrentTeam({ squadPlayers: newSquadPlayers });
+    
+    // Get current periods or create default if none exist
+    const existingPeriods = currentTeam?.periods || [];
+    const updatedPeriods = existingPeriods.length > 0 ? [...existingPeriods] : [];
+    
+    // Ensure Period 1 exists
+    if (updatedPeriods.length === 0) {
+      updatedPeriods.push(createDefaultPeriod(event.game_format || '11-a-side', event.game_duration));
+    }
+    
+    // Get all player IDs currently assigned to positions or substitutes across all periods
+    const assignedPlayerIds = new Set<string>();
+    updatedPeriods.forEach(period => {
+      period.positions.forEach(pos => {
+        if (pos.playerId) assignedPlayerIds.add(pos.playerId);
+      });
+      period.substitutes.forEach(subId => assignedPlayerIds.add(subId));
+    });
+    
+    // Add unassigned players to Period 1's substitutes
+    const period1 = updatedPeriods[0];
+    const unassignedPlayers = newSquadPlayers
+      .filter(player => !assignedPlayerIds.has(player.id))
+      .map(player => player.id);
+    
+    if (unassignedPlayers.length > 0) {
+      period1.substitutes = [...period1.substitutes, ...unassignedPlayers];
+    }
+    
+    updateCurrentTeam({ 
+      squadPlayers: newSquadPlayers,
+      periods: updatedPeriods
+    });
   };
 
   const handleStaffChange = (staffIds: string[]) => {

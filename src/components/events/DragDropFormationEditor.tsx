@@ -58,7 +58,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   eventType
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
-  const [availablePlayersOpen, setAvailablePlayersOpen] = useState(true);
   const { positions } = usePositionAbbreviations(gameFormat);
 
   // Improved sensors with minimal activation distance for precise cursor alignment
@@ -674,14 +673,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     });
   }, [periods]);
 
-  useEffect(() => {
-    const unusedPlayers = getUnusedPlayers();
-    if (unusedPlayers.length === 0 && availablePlayersOpen) {
-      setAvailablePlayersOpen(false);
-    } else if (unusedPlayers.length > 0 && !availablePlayersOpen) {
-      setAvailablePlayersOpen(true);
-    }
-  }, [squadPlayers, periods]);
 
   const playingTimeSummary = calculatePlayingTimeSummary();
   const unusedPlayers = getUnusedPlayers();
@@ -855,46 +846,6 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
             </AlertDescription>
           </Alert>
         )}
-
-        {/* Available Players - Now scrollable with everything else */}
-        <div>
-          <Collapsible open={availablePlayersOpen} onOpenChange={setAvailablePlayersOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between print:hidden">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>Available Players ({unusedPlayers.length})</span>
-                </div>
-                {availablePlayersOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="print:block">
-              <Card>
-                <CardContent className="pt-4">
-                  {unusedPlayers.length === 0 ? (
-                    <div className="text-center text-muted-foreground py-4">
-                      All available players have been assigned
-                    </div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                       {unusedPlayers.map((player) => (
-                         <div key={player.id} className={isPositionsLocked ? 'opacity-60 cursor-not-allowed' : ''}>
-                           <PlayerIcon
-                             player={player}
-                             isCaptain={eventType === 'training' ? false : player.id === globalCaptainId}
-                             nameDisplayOption={mappedNameDisplayOption}
-                             isCircular={false}
-                             dragId={isPositionsLocked ? undefined : player.id}
-                           />
-                         </div>
-                       ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
 
         {/* Formation Area - Now part of the overall scroll */}
         <div className="space-y-6">
