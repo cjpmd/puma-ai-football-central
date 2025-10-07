@@ -764,7 +764,7 @@ return (
           </div>
 
           {/* Team Selection */}
-          <div className={`flex flex-col gap-2 ${isMobile ? 'mt-2' : 'mt-4'}`}>
+          <div className={`flex items-center gap-4 flex-wrap ${isMobile ? 'mt-2' : 'mt-4'}`}>
             <div className="flex items-center gap-2 flex-wrap">
               <Label className="text-xs font-medium">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
                <div className="flex gap-1 flex-wrap">
@@ -807,7 +807,7 @@ return (
 
             {/* Performance Category Selection for Current Team */}
             {performanceCategories.length > 0 && currentTeam && (
-              <div className="flex items-center gap-2 flex-wrap">
+              <>
                 <Label className="text-xs font-medium flex items-center gap-1">
                   <Target className="h-3 w-3" />
                   Category:
@@ -828,35 +828,33 @@ return (
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </>
             )}
 
             {/* Position Lock Toggle */}
             {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size={isMobile ? "sm" : "default"}
-                   onClick={handleTogglePositionsLock}
-                   className={`${isMobile ? 'h-8 px-2' : 'px-3'} ${
-                     currentTeam.isPositionsLocked 
-                       ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' 
-                       : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-                   }`}
-                   title={currentTeam.isPositionsLocked ? 'Unlock player positions' : 'Lock player positions'}
-                 >
-                   {currentTeam.isPositionsLocked ? (
-                     <Lock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                   ) : (
-                     <Unlock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                   )}
-                   {!isMobile && (
-                     <span className="ml-1">
-                       {currentTeam.isPositionsLocked ? 'Locked' : 'Unlocked'}
-                     </span>
-                   )}
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                size={isMobile ? "sm" : "default"}
+                 onClick={handleTogglePositionsLock}
+                 className={`${isMobile ? 'h-8 px-2' : 'px-3'} ${
+                   currentTeam.isPositionsLocked 
+                     ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' 
+                     : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                 }`}
+                 title={currentTeam.isPositionsLocked ? 'Unlock player positions' : 'Lock player positions'}
+               >
+                 {currentTeam.isPositionsLocked ? (
+                   <Lock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                 ) : (
+                   <Unlock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                 )}
+                 {!isMobile && (
+                   <span className="ml-1">
+                     {currentTeam.isPositionsLocked ? 'Locked' : 'Unlocked'}
+                   </span>
+                 )}
+              </Button>
             )}
           </div>
         </div>
