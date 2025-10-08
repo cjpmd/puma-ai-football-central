@@ -2,7 +2,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Event } from '@/types';
 
 export const eventsService = {
-  async createEvent(eventData: Partial<Event>) {
+  async createEvent(eventData: Partial<Event>, invitations?: {
+    type: 'everyone' | 'pick_squad',
+    selectedPlayerIds?: string[],
+    selectedStaffIds?: string[]
+  }) {
     try {
       console.log('Creating event with data:', eventData);
       
@@ -80,9 +84,139 @@ export const eventsService = {
         }
       }
       
+      // Create invitations if specified
+      if (invitations) {
+        await this.createEventInvitations(data.id, eventData.teamId!, invitations);
+      }
+      
       return data;
     } catch (error) {
       console.error('Error creating event:', error);
+      throw error;
+    }
+  },
+  
+  async createEventInvitations(
+    eventId: string,
+    teamId: string,
+    invitations: {
+      type: 'everyone' | 'pick_squad',
+      selectedPlayerIds?: string[],
+      selectedStaffIds?: string[]
+    }
+  ) {
+    try {
+      console.log('Creating event invitations:', invitations);
+      
+      const invitationRecords: any[] = [];
+      
+      if (invitations.type === 'everyone') {
+        // Get all active players for the team
+        const { data: players, error: playersError } = await supabase
+          .from('players')
+          .select('id')
+          .eq('team_id', teamId)
+          .eq('is_active', true);
+          
+        if (playersError) throw playersError;
+        
+        // Get all active staff for the team  
+        const { data: staff, error: staffError } = await supabase
+          .from('team_staff')
+          .select('id')
+          .eq('team_id', teamId)
+          .eq('is_active', true);
+          
+        if (staffError) throw staffError;
+        
+        // Get user IDs for players
+        const { data: playerUsers, error: playerUsersError } = await supabase
+          .from('user_players')
+          .select('user_id, player_id')
+          .in('player_id', (players || []).map(p => p.id));
+          
+        if (playerUsersError) throw playerUsersError;
+        
+        // Get user IDs for staff
+        const { data: staffUsers, error: staffUsersError } = await supabase
+          .from('user_staff')
+          .select('user_id, staff_id')
+          .in('staff_id', (staff || []).map(s => s.id));
+          
+        if (staffUsersError) throw staffUsersError;
+        
+        // Create invitation records for players
+        (playerUsers || []).forEach(pu => {
+          invitationRecords.push({
+            event_id: eventId,
+            user_id: pu.user_id,
+            invitee_type: 'player',
+            player_id: pu.player_id
+          });
+        });
+        
+        // Create invitation records for staff
+        (staffUsers || []).forEach(su => {
+          invitationRecords.push({
+            event_id: eventId,
+            user_id: su.user_id,
+            invitee_type: 'staff',
+            staff_id: su.staff_id
+          });
+        });
+      } else {
+        // Pick squad - use selected IDs
+        if (invitations.selectedPlayerIds && invitations.selectedPlayerIds.length > 0) {
+          const { data: playerUsers, error: playerUsersError } = await supabase
+            .from('user_players')
+            .select('user_id, player_id')
+            .in('player_id', invitations.selectedPlayerIds);
+            
+          if (playerUsersError) throw playerUsersError;
+          
+          (playerUsers || []).forEach(pu => {
+            invitationRecords.push({
+              event_id: eventId,
+              user_id: pu.user_id,
+              invitee_type: 'player',
+              player_id: pu.player_id
+            });
+          });
+        }
+        
+        if (invitations.selectedStaffIds && invitations.selectedStaffIds.length > 0) {
+          const { data: staffUsers, error: staffUsersError } = await supabase
+            .from('user_staff')
+            .select('user_id, staff_id')
+            .in('staff_id', invitations.selectedStaffIds);
+            
+          if (staffUsersError) throw staffUsersError;
+          
+          (staffUsers || []).forEach(su => {
+            invitationRecords.push({
+              event_id: eventId,
+              user_id: su.user_id,
+              invitee_type: 'staff',
+              staff_id: su.staff_id
+            });
+          });
+        }
+      }
+      
+      if (invitationRecords.length > 0) {
+        const { error: insertError } = await supabase
+          .from('event_invitations')
+          .insert(invitationRecords);
+          
+        if (insertError) {
+          console.error('Error inserting invitations:', insertError);
+          throw insertError;
+        }
+        
+        console.log(`Created ${invitationRecords.length} invitations for event ${eventId}`);
+      }
+    } catch (error) {
+      console.error('Error creating event invitations:', error);
       throw error;
     }
   },
