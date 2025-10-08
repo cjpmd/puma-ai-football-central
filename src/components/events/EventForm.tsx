@@ -888,14 +888,23 @@ export const EventForm: React.FC<EventFormProps> = ({
                 onSelectAll={handleSelectAll}
                 onDeselectAll={handleDeselectAll}
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setShowSquadPicker(false)}
-                className="w-full"
-              >
-                Back to Event Details
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowSquadPicker(false)}
+                  className="flex-1"
+                >
+                  Back to Event Details
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  {loading ? 'Creating...' : 'Create Event'}
+                </Button>
+              </div>
             </div>
           )}
 
