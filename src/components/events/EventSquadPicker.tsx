@@ -39,7 +39,8 @@ export const EventSquadPicker = ({
     queryKey: ['team-players-picker', teamId],
     enabled: !!teamId,
     queryFn: async (): Promise<any[]> => {
-      const result = await supabase
+      // @ts-ignore - Supabase type inference causes excessive depth
+      const result: any = await supabase
         .from('players')
         .select('id, name, squad_number, subscription_type')
         .eq('team_id', teamId!)
@@ -56,7 +57,8 @@ export const EventSquadPicker = ({
     queryKey: ['team-staff-picker', teamId],
     enabled: !!teamId,
     queryFn: async (): Promise<any[]> => {
-      const result = await supabase
+      // @ts-ignore - Supabase type inference causes excessive depth
+      const result: any = await supabase
         .from('team_staff')
         .select('id, name, role')
         .eq('team_id', teamId!)

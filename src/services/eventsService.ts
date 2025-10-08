@@ -112,41 +112,47 @@ export const eventsService = {
       
       if (invitations.type === 'everyone') {
         // Get all active players for the team
-        const { data: players, error: playersError } = await supabase
+        // @ts-ignore - Supabase type inference causes excessive depth
+        const playersResult: any = await supabase
           .from('players')
           .select('id')
           .eq('team_id', teamId)
           .eq('is_active', true);
           
-        if (playersError) throw playersError;
+        if (playersResult.error) throw playersResult.error;
+        const players = playersResult.data;
         
         // Get all active staff for the team  
-        const { data: staff, error: staffError } = await supabase
+        // @ts-ignore - Supabase type inference causes excessive depth
+        const staffResult: any = await supabase
           .from('team_staff')
           .select('id')
           .eq('team_id', teamId)
           .eq('is_active', true);
           
-        if (staffError) throw staffError;
+        if (staffResult.error) throw staffResult.error;
+        const staff = staffResult.data;
         
         // Get user IDs for players
-        const { data: playerUsers, error: playerUsersError } = await supabase
+        const playerUsersResult: any = await supabase
           .from('user_players')
           .select('user_id, player_id')
-          .in('player_id', (players || []).map(p => p.id));
+          .in('player_id', (players || []).map((p: any) => p.id));
           
-        if (playerUsersError) throw playerUsersError;
+        if (playerUsersResult.error) throw playerUsersResult.error;
+        const playerUsers = playerUsersResult.data;
         
         // Get user IDs for staff
-        const { data: staffUsers, error: staffUsersError } = await supabase
+        const staffUsersResult: any = await supabase
           .from('user_staff')
           .select('user_id, staff_id')
-          .in('staff_id', (staff || []).map(s => s.id));
+          .in('staff_id', (staff || []).map((s: any) => s.id));
           
-        if (staffUsersError) throw staffUsersError;
+        if (staffUsersResult.error) throw staffUsersResult.error;
+        const staffUsers = staffUsersResult.data;
         
         // Create invitation records for players
-        (playerUsers || []).forEach(pu => {
+        (playerUsers || []).forEach((pu: any) => {
           invitationRecords.push({
             event_id: eventId,
             user_id: pu.user_id,
@@ -156,7 +162,7 @@ export const eventsService = {
         });
         
         // Create invitation records for staff
-        (staffUsers || []).forEach(su => {
+        (staffUsers || []).forEach((su: any) => {
           invitationRecords.push({
             event_id: eventId,
             user_id: su.user_id,
@@ -167,14 +173,15 @@ export const eventsService = {
       } else {
         // Pick squad - use selected IDs
         if (invitations.selectedPlayerIds && invitations.selectedPlayerIds.length > 0) {
-          const { data: playerUsers, error: playerUsersError } = await supabase
+          const playerUsersResult: any = await supabase
             .from('user_players')
             .select('user_id, player_id')
             .in('player_id', invitations.selectedPlayerIds);
             
-          if (playerUsersError) throw playerUsersError;
+          if (playerUsersResult.error) throw playerUsersResult.error;
+          const playerUsers = playerUsersResult.data;
           
-          (playerUsers || []).forEach(pu => {
+          (playerUsers || []).forEach((pu: any) => {
             invitationRecords.push({
               event_id: eventId,
               user_id: pu.user_id,
@@ -185,14 +192,15 @@ export const eventsService = {
         }
         
         if (invitations.selectedStaffIds && invitations.selectedStaffIds.length > 0) {
-          const { data: staffUsers, error: staffUsersError } = await supabase
+          const staffUsersResult: any = await supabase
             .from('user_staff')
             .select('user_id, staff_id')
             .in('staff_id', invitations.selectedStaffIds);
             
-          if (staffUsersError) throw staffUsersError;
+          if (staffUsersResult.error) throw staffUsersResult.error;
+          const staffUsers = staffUsersResult.data;
           
-          (staffUsers || []).forEach(su => {
+          (staffUsers || []).forEach((su: any) => {
             invitationRecords.push({
               event_id: eventId,
               user_id: su.user_id,
