@@ -44,7 +44,6 @@ export const EventSquadPicker = ({
         .from('players')
         .select('id, name, squad_number, subscription_type')
         .eq('team_id', teamId!)
-        .eq('is_active', true)
         .order('squad_number', { ascending: true, nullsFirst: false });
       
       if (result.error) throw result.error;
@@ -62,7 +61,6 @@ export const EventSquadPicker = ({
         .from('team_staff')
         .select('id, name, role')
         .eq('team_id', teamId!)
-        .eq('is_active', true)
         .order('name', { ascending: true });
       
       if (result.error) throw result.error;
