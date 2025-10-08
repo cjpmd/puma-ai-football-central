@@ -408,7 +408,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         .from('team_staff')
         .select('id')
         .eq('team_id', formData.team_id)
-        .eq('is_active', true)
         .then(({ data }: any) => {
           if (data) {
             const staffIds = data.map((s: any) => s.id);
@@ -422,7 +421,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         .from('players')
         .select('id')
         .eq('team_id', formData.team_id)
-        .eq('is_active', true)
         .eq('subscription_type', type)
         .then(({ data }: any) => {
           if (data) {
@@ -443,7 +441,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         .from('team_staff')
         .select('id')
         .eq('team_id', formData.team_id)
-        .eq('is_active', true)
         .then(({ data }: any) => {
           if (data) {
             const staffIds = data.map((s: any) => s.id);
@@ -457,7 +454,6 @@ export const EventForm: React.FC<EventFormProps> = ({
         .from('players')
         .select('id')
         .eq('team_id', formData.team_id)
-        .eq('is_active', true)
         .eq('subscription_type', type)
         .then(({ data }: any) => {
           if (data) {

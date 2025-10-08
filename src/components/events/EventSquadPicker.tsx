@@ -29,10 +29,10 @@ export const EventSquadPicker = ({
   onDeselectAll
 }: EventSquadPickerProps) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [fullSquadOpen, setFullSquadOpen] = useState(true);
-  const [trainingOpen, setTrainingOpen] = useState(true);
-  const [trialistOpen, setTrialistOpen] = useState(true);
-  const [staffOpen, setStaffOpen] = useState(true);
+  const [fullSquadOpen, setFullSquadOpen] = useState(false);
+  const [trainingOpen, setTrainingOpen] = useState(false);
+  const [trialistOpen, setTrialistOpen] = useState(false);
+  const [staffOpen, setStaffOpen] = useState(false);
 
   // Fetch players
   const { data: playersData = [] } = useQuery({
@@ -111,13 +111,13 @@ export const EventSquadPicker = ({
 
     return (
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <Card>
+        <Card className="border-border/50">
           <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+            <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors py-3 px-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <CardTitle className="text-lg">{title}</CardTitle>
-                  <Badge variant="secondary">
+                  <CardTitle className="text-base font-medium">{title}</CardTitle>
+                  <Badge variant="secondary" className="text-xs">
                     {selectedCount}/{sectionPlayers.length}
                   </Badge>
                 </div>
@@ -126,15 +126,16 @@ export const EventSquadPicker = ({
             </CardHeader>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <CardContent>
+            <CardContent className="px-4 py-3">
               {sectionPlayers.length > 0 && (
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-3">
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={() => onSelectAll(type)}
                     disabled={allSelected}
+                    className="h-8 text-xs"
                   >
                     Select All
                   </Button>
@@ -144,19 +145,20 @@ export const EventSquadPicker = ({
                     variant="outline"
                     onClick={() => onDeselectAll(type)}
                     disabled={selectedCount === 0}
+                    className="h-8 text-xs"
                   >
                     Deselect All
                   </Button>
                 </div>
               )}
               {sectionPlayers.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No {title.toLowerCase()} players</p>
+                <p className="text-xs text-muted-foreground">No {title.toLowerCase()} players</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {sectionPlayers.map(player => (
                     <div
                       key={player.id}
-                      className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent/50 transition-colors"
+                      className="flex items-center space-x-2 p-1.5 rounded hover:bg-accent/50 transition-colors"
                     >
                       <Checkbox
                         id={`player-${player.id}`}
@@ -165,15 +167,15 @@ export const EventSquadPicker = ({
                       />
                       <label
                         htmlFor={`player-${player.id}`}
-                        className="flex-1 cursor-pointer flex items-center gap-3"
+                        className="flex-1 cursor-pointer flex items-center gap-2"
                       >
                         {player.squad_number && (
-                          <Badge variant="outline" className="w-8 h-8 rounded-full flex items-center justify-center">
+                          <Badge variant="outline" className="w-6 h-6 rounded-full flex items-center justify-center text-xs p-0">
                             {player.squad_number}
                           </Badge>
                         )}
                         <div className="flex-1">
-                          <p className="font-medium">{player.name}</p>
+                          <p className="text-sm font-medium">{player.name}</p>
                         </div>
                       </label>
                     </div>
@@ -188,15 +190,15 @@ export const EventSquadPicker = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {/* Header with selection count */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <UserCheck className="h-5 w-5" />
-          <h3 className="text-lg font-semibold">Select Squad</h3>
+          <UserCheck className="h-4 w-4" />
+          <h3 className="text-base font-semibold">Select Squad</h3>
         </div>
-        <Badge variant="secondary" className="text-base">
-          {totalSelected} / {totalAvailable} selected
+        <Badge variant="secondary">
+          {totalSelected} / {totalAvailable}
         </Badge>
       </div>
 
@@ -208,12 +210,12 @@ export const EventSquadPicker = ({
           placeholder="Search players and staff..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9"
+          className="pl-9 h-9 text-sm"
         />
       </div>
 
       {/* Player Sections */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {renderPlayerSection(
           'Full Squad',
           playersByType.full_squad,
@@ -238,13 +240,13 @@ export const EventSquadPicker = ({
 
         {/* Staff Section */}
         <Collapsible open={staffOpen} onOpenChange={setStaffOpen}>
-          <Card>
+          <Card className="border-border/50">
             <CollapsibleTrigger asChild>
-              <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors">
+              <CardHeader className="cursor-pointer hover:bg-accent/50 transition-colors py-3 px-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">Staff</CardTitle>
-                    <Badge variant="secondary">
+                    <CardTitle className="text-base font-medium">Staff</CardTitle>
+                    <Badge variant="secondary" className="text-xs">
                       {selectedStaffIds.length}/{filteredStaff.length}
                     </Badge>
                   </div>
@@ -253,15 +255,16 @@ export const EventSquadPicker = ({
               </CardHeader>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <CardContent>
+              <CardContent className="px-4 py-3">
                 {filteredStaff.length > 0 && (
-                  <div className="flex gap-2 mb-4">
+                  <div className="flex gap-2 mb-3">
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       onClick={() => onSelectAll('staff')}
                       disabled={selectedStaffIds.length === filteredStaff.length}
+                      className="h-8 text-xs"
                     >
                       Select All
                     </Button>
@@ -271,19 +274,20 @@ export const EventSquadPicker = ({
                       variant="outline"
                       onClick={() => onDeselectAll('staff')}
                       disabled={selectedStaffIds.length === 0}
+                      className="h-8 text-xs"
                     >
                       Deselect All
                     </Button>
                   </div>
                 )}
                 {filteredStaff.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No staff members</p>
+                  <p className="text-xs text-muted-foreground">No staff members</p>
                 ) : (
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     {filteredStaff.map(staffMember => (
                       <div
                         key={staffMember.id}
-                        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-accent/50 transition-colors"
+                        className="flex items-center space-x-2 p-1.5 rounded hover:bg-accent/50 transition-colors"
                       >
                         <Checkbox
                           id={`staff-${staffMember.id}`}
@@ -294,9 +298,9 @@ export const EventSquadPicker = ({
                           htmlFor={`staff-${staffMember.id}`}
                           className="flex-1 cursor-pointer"
                         >
-                          <p className="font-medium">{staffMember.name}</p>
+                          <p className="text-sm font-medium">{staffMember.name}</p>
                           {staffMember.role && (
-                            <p className="text-sm text-muted-foreground">{staffMember.role}</p>
+                            <p className="text-xs text-muted-foreground">{staffMember.role}</p>
                           )}
                         </label>
                       </div>
