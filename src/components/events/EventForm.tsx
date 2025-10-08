@@ -6,12 +6,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Calendar, MapPin, Clock, Users, Trophy, FileText } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Calendar, MapPin, Clock, Users, Trophy, FileText, UserCheck } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { eventsService } from '@/services/eventsService';
 import { GameFormat } from '@/types';
+import { EventSquadPicker } from './EventSquadPicker';
 
 interface EventFormProps {
   onEventCreated?: (eventId: string) => void;
@@ -63,6 +65,12 @@ export const EventForm: React.FC<EventFormProps> = ({
   const [performanceCategories, setPerformanceCategories] = useState<any[]>([]);
   const [facilities, setFacilities] = useState<any[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<any>(null);
+  
+  // New states for invitation management
+  const [invitationType, setInvitationType] = useState<'everyone' | 'pick_squad'>('everyone');
+  const [showSquadPicker, setShowSquadPicker] = useState(false);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
 
   // Load team settings when team is selected
   useEffect(() => {
@@ -208,6 +216,13 @@ export const EventForm: React.FC<EventFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If pick squad is selected and squad picker not shown yet, show it instead of submitting
+    if (invitationType === 'pick_squad' && !showSquadPicker) {
+      setShowSquadPicker(true);
+      return;
+    }
+    
     if (!formData.team_id || !formData.title || !formData.date) {
       toast.error('Please fill in all required fields');
       return;
@@ -340,8 +355,12 @@ export const EventForm: React.FC<EventFormProps> = ({
         if (onEventCreated) onEventCreated(eventData.id);
         eventId = eventData.id;
       } else {
-        // Create new event using the service
-        const newEvent = await eventsService.createEvent(cleanEventData);
+        // Create new event using the service with invitation data
+        const newEvent = await eventsService.createEvent(cleanEventData, {
+          type: invitationType,
+          selectedPlayerIds: invitationType === 'pick_squad' ? selectedPlayerIds : undefined,
+          selectedStaffIds: invitationType === 'pick_squad' ? selectedStaffIds : undefined
+        });
         
         toast.success('Event created successfully');
         if (onEventCreated) onEventCreated(newEvent.id);
@@ -359,6 +378,93 @@ export const EventForm: React.FC<EventFormProps> = ({
   const handleCancel = () => {
     if (onCancel) {
       onCancel();
+    }
+  };
+  
+  // Squad picker handlers
+  const handlePlayerToggle = (playerId: string) => {
+    setSelectedPlayerIds(prev => 
+      prev.includes(playerId) 
+        ? prev.filter(id => id !== playerId)
+        : [...prev, playerId]
+    );
+  };
+  
+  const handleStaffToggle = (staffId: string) => {
+    setSelectedStaffIds(prev => 
+      prev.includes(staffId) 
+        ? prev.filter(id => id !== staffId)
+        : [...prev, staffId]
+    );
+  };
+  
+  const handleSelectAll = (type: 'full_squad' | 'training' | 'trialist' | 'staff') => {
+    if (!formData.team_id) return;
+    
+    if (type === 'staff') {
+      // Select all staff
+      // @ts-ignore - Supabase type inference causes excessive depth
+      supabase
+        .from('team_staff')
+        .select('id')
+        .eq('team_id', formData.team_id)
+        .eq('is_active', true)
+        .then(({ data }: any) => {
+          if (data) {
+            const staffIds = data.map((s: any) => s.id);
+            setSelectedStaffIds(prev => [...new Set([...prev, ...staffIds])]);
+          }
+        });
+    } else {
+      // Select all players of subscription type
+      // @ts-ignore - Supabase type inference causes excessive depth
+      supabase
+        .from('players')
+        .select('id')
+        .eq('team_id', formData.team_id)
+        .eq('is_active', true)
+        .eq('subscription_type', type)
+        .then(({ data }: any) => {
+          if (data) {
+            const playerIds = data.map((p: any) => p.id);
+            setSelectedPlayerIds(prev => [...new Set([...prev, ...playerIds])]);
+          }
+        });
+    }
+  };
+  
+  const handleDeselectAll = (type: 'full_squad' | 'training' | 'trialist' | 'staff') => {
+    if (!formData.team_id) return;
+    
+    if (type === 'staff') {
+      // Deselect all staff
+      // @ts-ignore - Supabase type inference causes excessive depth
+      supabase
+        .from('team_staff')
+        .select('id')
+        .eq('team_id', formData.team_id)
+        .eq('is_active', true)
+        .then(({ data }: any) => {
+          if (data) {
+            const staffIds = data.map((s: any) => s.id);
+            setSelectedStaffIds(prev => prev.filter(id => !staffIds.includes(id)));
+          }
+        });
+    } else {
+      // Deselect all players of subscription type
+      // @ts-ignore - Supabase type inference causes excessive depth
+      supabase
+        .from('players')
+        .select('id')
+        .eq('team_id', formData.team_id)
+        .eq('is_active', true)
+        .eq('subscription_type', type)
+        .then(({ data }: any) => {
+          if (data) {
+            const playerIds = data.map((p: any) => p.id);
+            setSelectedPlayerIds(prev => prev.filter(id => !playerIds.includes(id)));
+          }
+        });
     }
   };
 
@@ -753,19 +859,65 @@ export const EventForm: React.FC<EventFormProps> = ({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="Add general notes about this event..."
-              rows={3}
-            />
-          </div>
+          {/* Who's Invited Section - Only show for non-editing mode */}
+          {!actualIsEditing && !showSquadPicker && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+              <h3 className="font-medium flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                Who's Invited
+              </h3>
+              
+              <RadioGroup value={invitationType} onValueChange={(value: 'everyone' | 'pick_squad') => setInvitationType(value)}>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="everyone" id="everyone" />
+                  <Label htmlFor="everyone" className="cursor-pointer">Everyone</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="pick_squad" id="pick_squad" />
+                  <Label htmlFor="pick_squad" className="cursor-pointer">Pick Squad</Label>
+                </div>
+              </RadioGroup>
+            </div>
+          )}
 
-          {/* Submit Button */}
-          <div className="flex gap-2">
+          {/* Squad Picker View */}
+          {showSquadPicker && formData.team_id && (
+            <div className="space-y-4">
+              <EventSquadPicker
+                teamId={formData.team_id}
+                selectedPlayerIds={selectedPlayerIds}
+                selectedStaffIds={selectedStaffIds}
+                onPlayerToggle={handlePlayerToggle}
+                onStaffToggle={handleStaffToggle}
+                onSelectAll={handleSelectAll}
+                onDeselectAll={handleDeselectAll}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowSquadPicker(false)}
+                className="w-full"
+              >
+                Back to Event Details
+              </Button>
+            </div>
+          )}
+
+          {!showSquadPicker && (
+            <>
+              <div>
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Add general notes about this event..."
+                  rows={3}
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="flex gap-2">
             {onCancel && (
               <Button 
                 type="button" 
@@ -782,9 +934,15 @@ export const EventForm: React.FC<EventFormProps> = ({
               className="flex-1" 
               disabled={loading}
             >
-              {loading ? 'Saving...' : (actualIsEditing ? 'Update Event' : 'Create Event')}
+              {loading ? 'Saving...' : (
+                showSquadPicker ? 'Create Event' : 
+                invitationType === 'pick_squad' ? 'Pick Squad' : 
+                actualIsEditing ? 'Update Event' : 'Create Event'
+              )}
             </Button>
-          </div>
+              </div>
+            </>
+          )}
         </form>
       </CardContent>
     </Card>
