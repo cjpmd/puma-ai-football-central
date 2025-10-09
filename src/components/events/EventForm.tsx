@@ -94,6 +94,44 @@ export const EventForm: React.FC<EventFormProps> = ({
     loadTeamSettings();
   }, [formData.team_id, teams, eventData]);
 
+  // Load existing invitations when editing
+  useEffect(() => {
+    const loadExistingInvitations = async () => {
+      if (eventData?.id && actualIsEditing) {
+        try {
+          const { data: invitations, error } = await supabase
+            .from('event_invitations')
+            .select('player_id, staff_id, invitee_type')
+            .eq('event_id', eventData.id);
+          
+          if (error) {
+            console.error('Error loading invitations:', error);
+            return;
+          }
+          
+          if (invitations && invitations.length > 0) {
+            setInvitationType('pick_squad');
+            const playerIds = invitations
+              .filter(inv => inv.invitee_type === 'player' && inv.player_id)
+              .map(inv => inv.player_id);
+            const staffIds = invitations
+              .filter(inv => inv.invitee_type === 'staff' && inv.staff_id)
+              .map(inv => inv.staff_id);
+            
+            setSelectedPlayerIds(playerIds);
+            setSelectedStaffIds(staffIds);
+          } else {
+            setInvitationType('everyone');
+          }
+        } catch (error) {
+          console.error('Error loading invitations:', error);
+        }
+      }
+    };
+    
+    loadExistingInvitations();
+  }, [eventData?.id, actualIsEditing]);
+
   useEffect(() => {
     if (eventData) {
       setFormData({
@@ -296,6 +334,66 @@ export const EventForm: React.FC<EventFormProps> = ({
           .eq('id', eventData.id);
 
         if (error) throw error;
+        
+        // Update invitations if they changed
+        if (invitationType === 'pick_squad') {
+          // Delete existing invitations
+          await supabase
+            .from('event_invitations')
+            .delete()
+            .eq('event_id', eventData.id);
+          
+          // Create new invitations
+          const newInvitations = [];
+          
+          for (const playerId of selectedPlayerIds) {
+            const { data: userPlayers } = await supabase
+              .from('user_players')
+              .select('user_id')
+              .eq('player_id', playerId);
+            
+            if (userPlayers && userPlayers.length > 0) {
+              for (const up of userPlayers) {
+                newInvitations.push({
+                  event_id: eventData.id,
+                  user_id: up.user_id,
+                  player_id: playerId,
+                  invitee_type: 'player'
+                });
+              }
+            }
+          }
+          
+          for (const staffId of selectedStaffIds) {
+            const { data: userStaff } = await supabase
+              .from('user_staff')
+              .select('user_id')
+              .eq('staff_id', staffId);
+            
+            if (userStaff && userStaff.length > 0) {
+              for (const us of userStaff) {
+                newInvitations.push({
+                  event_id: eventData.id,
+                  user_id: us.user_id,
+                  staff_id: staffId,
+                  invitee_type: 'staff'
+                });
+              }
+            }
+          }
+          
+          if (newInvitations.length > 0) {
+            await supabase
+              .from('event_invitations')
+              .insert(newInvitations);
+          }
+        } else {
+          // Everyone invited - delete all specific invitations
+          await supabase
+            .from('event_invitations')
+            .delete()
+            .eq('event_id', eventData.id);
+        }
 
         // Update or create team-specific times
         if (formData.num_teams > 1) {
@@ -855,12 +953,12 @@ export const EventForm: React.FC<EventFormProps> = ({
             )}
           </div>
 
-          {/* Who's Invited Section - Only show for non-editing mode */}
-          {!actualIsEditing && !showSquadPicker && (
+          {/* Who's Invited Section - Show for both create and edit modes */}
+          {!showSquadPicker && (
             <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
               <h3 className="font-medium flex items-center gap-2">
                 <UserCheck className="h-4 w-4" />
-                Who's Invited
+                Who's Invited {actualIsEditing && '(Click to Edit)'}
               </h3>
               
               <RadioGroup value={invitationType} onValueChange={(value: 'everyone' | 'pick_squad') => setInvitationType(value)}>
@@ -870,9 +968,23 @@ export const EventForm: React.FC<EventFormProps> = ({
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="pick_squad" id="pick_squad" />
-                  <Label htmlFor="pick_squad" className="cursor-pointer">Pick Squad</Label>
+                  <Label htmlFor="pick_squad" className="cursor-pointer">
+                    Pick Squad {invitationType === 'pick_squad' && actualIsEditing && `(${selectedPlayerIds.length} players, ${selectedStaffIds.length} staff selected)`}
+                  </Label>
                 </div>
               </RadioGroup>
+              
+              {invitationType === 'pick_squad' && actualIsEditing && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowSquadPicker(true)}
+                  className="w-full"
+                >
+                  Edit Squad Selection
+                </Button>
+              )}
             </div>
           )}
 

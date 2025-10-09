@@ -37,13 +37,81 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       setLoading(true);
       console.log(`[${contextId}] Loading team players...`);
 
-      // Load ALL players for this team
-      const { data: teamPlayersData, error: playersError } = await supabase
-        .from('players')
-        .select('id, name, squad_number, type')
-        .eq('team_id', teamId)
-        .eq('status', 'active')
-        .order('squad_number');
+      // If eventId is provided, only load players who were invited to the event
+      let teamPlayersData;
+      let playersError;
+      
+      if (eventId) {
+        // Get invited player IDs from event_invitations
+        const { data: invitations, error: invError } = await supabase
+          .from('event_invitations')
+          .select('player_id')
+          .eq('event_id', eventId)
+          .eq('invitee_type', 'player')
+          .not('player_id', 'is', null);
+        
+        if (invError) {
+          console.error(`[${contextId}] Error loading event invitations:`, invError);
+          throw invError;
+        }
+        
+        const invitedPlayerIds = invitations?.map(inv => inv.player_id).filter(Boolean) || [];
+        
+        if (invitedPlayerIds.length === 0) {
+          // No invitations found - check if it's an "everyone" event by checking if there are any invitations at all
+          const { data: anyInvitations, error: anyInvError } = await supabase
+            .from('event_invitations')
+            .select('id')
+            .eq('event_id', eventId)
+            .limit(1);
+          
+          if (anyInvError) {
+            console.warn(`[${contextId}] Error checking for invitations:`, anyInvError);
+          }
+          
+          // If no invitations exist at all, it's an "everyone" event - load all players
+          if (!anyInvitations || anyInvitations.length === 0) {
+            console.log(`[${contextId}] No invitations found - loading all team players (everyone invited)`);
+            const result = await supabase
+              .from('players')
+              .select('id, name, squad_number, type')
+              .eq('team_id', teamId)
+              .eq('status', 'active')
+              .order('squad_number');
+            
+            teamPlayersData = result.data;
+            playersError = result.error;
+          } else {
+            // Invitations exist but none for players - no players to show
+            console.log(`[${contextId}] Event has invitations but no players invited`);
+            teamPlayersData = [];
+            playersError = null;
+          }
+        } else {
+          // Load only invited players
+          console.log(`[${contextId}] Loading ${invitedPlayerIds.length} invited players`);
+          const result = await supabase
+            .from('players')
+            .select('id, name, squad_number, type')
+            .in('id', invitedPlayerIds)
+            .eq('status', 'active')
+            .order('squad_number');
+          
+          teamPlayersData = result.data;
+          playersError = result.error;
+        }
+      } else {
+        // No eventId - load all team players
+        const result = await supabase
+          .from('players')
+          .select('id, name, squad_number, type')
+          .eq('team_id', teamId)
+          .eq('status', 'active')
+          .order('squad_number');
+        
+        teamPlayersData = result.data;
+        playersError = result.error;
+      }
 
       if (playersError) {
         console.error(`[${contextId}] Error loading team players:`, playersError);
