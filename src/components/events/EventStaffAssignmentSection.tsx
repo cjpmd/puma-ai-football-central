@@ -51,34 +51,100 @@ useEffect(() => {
     try {
       setLoading(true);
       
-      // Use the new consolidated function to get all staff
-      const { data: consolidatedStaff, error } = await supabase
-        .rpc('get_consolidated_team_staff', { p_team_id: teamId });
-
-      if (error) throw error;
-
-      // Transform and deduplicate staff data
-      const staffMap = new Map<string, StaffMember>();
+      // If eventId is provided, only load staff who were invited to the event
+      let staffToLoad: StaffMember[] = [];
       
-      (consolidatedStaff || []).forEach((staff: any) => {
-        const key = staff.email || staff.user_id || staff.id;
+      if (eventId) {
+        // Get invited staff IDs from event_invitations
+        const { data: invitations, error: invError } = await supabase
+          .from('event_invitations')
+          .select('staff_id')
+          .eq('event_id', eventId)
+          .eq('invitee_type', 'staff')
+          .not('staff_id', 'is', null);
         
-        // If we already have this person, prefer team_staff records over user_teams
-        if (staffMap.has(key)) {
-          const existing = staffMap.get(key)!;
-          // Prefer team_staff source or better role priority
-          if (staff.source_type === 'team_staff' || 
-              getRolePriority(staff.role) < getRolePriority(existing.role)) {
-            staffMap.set(key, {
-              id: staff.id,
-              name: staff.name,
-              email: staff.email,
-              role: staff.role,
-              isLinked: staff.is_linked,
-              linkedUserId: staff.user_id
-            });
+        if (invError) {
+          console.error('Error loading event invitations:', invError);
+          throw invError;
+        }
+        
+        const invitedStaffIds = invitations?.map(inv => inv.staff_id).filter(Boolean) || [];
+        
+        if (invitedStaffIds.length === 0) {
+          // No staff invitations found - check if it's an "everyone" event
+          const { data: anyInvitations } = await supabase
+            .from('event_invitations')
+            .select('id')
+            .eq('event_id', eventId)
+            .limit(1);
+          
+          // If no invitations exist at all, it's an "everyone" event - load all staff
+          if (!anyInvitations || anyInvitations.length === 0) {
+            console.log('No invitations found - loading all team staff (everyone invited)');
+            const { data: consolidatedStaff, error } = await supabase
+              .rpc('get_consolidated_team_staff', { p_team_id: teamId });
+            if (error) throw error;
+            staffToLoad = transformStaffData(consolidatedStaff || []);
+          } else {
+            // Invitations exist but none for staff
+            console.log('Event has invitations but no staff invited');
+            staffToLoad = [];
           }
         } else {
+          // Load only invited staff from team_staff table
+          const { data: teamStaff, error: staffError } = await supabase
+            .from('team_staff')
+            .select('id, name, email, role')
+            .in('id', invitedStaffIds);
+          
+          if (staffError) throw staffError;
+          
+          // Get user IDs for linked staff
+          const { data: userStaff } = await supabase
+            .from('user_staff')
+            .select('user_id, staff_id')
+            .in('staff_id', invitedStaffIds);
+          
+          const userStaffMap = new Map(userStaff?.map(us => [us.staff_id, us.user_id]) || []);
+          
+          staffToLoad = (teamStaff || []).map(staff => ({
+            id: staff.id,
+            name: staff.name,
+            email: staff.email,
+            role: staff.role,
+            isLinked: userStaffMap.has(staff.id),
+            linkedUserId: userStaffMap.get(staff.id)
+          }));
+        }
+      } else {
+        // No eventId - load all team staff
+        const { data: consolidatedStaff, error } = await supabase
+          .rpc('get_consolidated_team_staff', { p_team_id: teamId });
+        if (error) throw error;
+        staffToLoad = transformStaffData(consolidatedStaff || []);
+      }
+
+      setStaff(staffToLoad);
+    } catch (error) {
+      console.error('Error loading team staff:', error);
+      toast.error('Failed to load staff data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const transformStaffData = (consolidatedStaff: any[]): StaffMember[] => {
+    const staffMap = new Map<string, StaffMember>();
+    
+    consolidatedStaff.forEach((staff: any) => {
+      const key = staff.email || staff.user_id || staff.id;
+      
+      // If we already have this person, prefer team_staff records over user_teams
+      if (staffMap.has(key)) {
+        const existing = staffMap.get(key)!;
+        // Prefer team_staff source or better role priority
+        if (staff.source_type === 'team_staff' || 
+            getRolePriority(staff.role) < getRolePriority(existing.role)) {
           staffMap.set(key, {
             id: staff.id,
             name: staff.name,
@@ -88,15 +154,19 @@ useEffect(() => {
             linkedUserId: staff.user_id
           });
         }
-      });
+      } else {
+        staffMap.set(key, {
+          id: staff.id,
+          name: staff.name,
+          email: staff.email,
+          role: staff.role,
+          isLinked: staff.is_linked,
+          linkedUserId: staff.user_id
+        });
+      }
+    });
 
-      setStaff(Array.from(staffMap.values()));
-    } catch (error) {
-      console.error('Error loading team staff:', error);
-      toast.error('Failed to load staff data');
-    } finally {
-      setLoading(false);
-    }
+    return Array.from(staffMap.values());
   };
 
   // Helper function to determine role priority for deduplication
