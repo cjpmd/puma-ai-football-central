@@ -86,7 +86,10 @@ export const eventsService = {
       
       // Create invitations if specified
       if (invitations) {
+        console.log('Creating invitations for event:', data.id, 'with data:', invitations);
         await this.createEventInvitations(data.id, eventData.teamId!, invitations);
+      } else {
+        console.log('No invitations data provided');
       }
       
       return data;
