@@ -301,7 +301,14 @@ export const EventForm: React.FC<EventFormProps> = ({
 
       // If onSubmit prop is provided, use it (for new EventForm interface)
       if (onSubmit) {
-        await onSubmit(cleanEventData);
+        await onSubmit({
+          ...cleanEventData,
+          invitations: {
+            type: invitationType,
+            selectedPlayerIds: invitationType === 'pick_squad' ? selectedPlayerIds : undefined,
+            selectedStaffIds: invitationType === 'pick_squad' ? selectedStaffIds : undefined,
+          },
+        });
         return;
       }
 

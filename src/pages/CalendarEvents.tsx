@@ -195,7 +195,7 @@ export default function CalendarEvents() {
           ...eventData,
           team_id: eventData.teamId,
           event_type: eventData.type,
-        });
+        }, eventData.invitations);
         
         toast({
           title: 'Success',
@@ -206,7 +206,7 @@ export default function CalendarEvents() {
           ...eventData,
           team_id: eventData.teamId,
           event_type: eventData.type,
-        });
+        }, eventData.invitations);
         
         toast({
           title: 'Success',

@@ -232,7 +232,14 @@ export const eventsService = {
     }
   },
   
-  async updateEvent(eventData: Partial<Event> & { id: string }) {
+  async updateEvent(
+    eventData: Partial<Event> & { id: string },
+    invitations?: {
+      type: 'everyone' | 'pick_squad',
+      selectedPlayerIds?: string[],
+      selectedStaffIds?: string[]
+    }
+  ) {
     try {
       console.log('Updating event with data:', eventData);
       
@@ -269,6 +276,61 @@ export const eventsService = {
       if (error) throw error;
       
       console.log('Event updated successfully:', data);
+
+      // Handle invitations update if provided
+      if (invitations) {
+        console.log('Updating invitations for event:', eventData.id, invitations);
+        // Delete existing invitations
+        await supabase
+          .from('event_invitations')
+          .delete()
+          .eq('event_id', eventData.id);
+
+        const invitationRecords: any[] = [];
+
+        if (invitations.type === 'everyone') {
+          // No specific invites retained
+        } else {
+          if (invitations.selectedPlayerIds && invitations.selectedPlayerIds.length > 0) {
+            const playerUsersResult: any = await supabase
+              .from('user_players')
+              .select('user_id, player_id')
+              .in('player_id', invitations.selectedPlayerIds);
+            if (playerUsersResult.error) throw playerUsersResult.error;
+            (playerUsersResult.data || []).forEach((pu: any) => {
+              invitationRecords.push({
+                event_id: eventData.id,
+                user_id: pu.user_id,
+                invitee_type: 'player',
+                player_id: pu.player_id,
+              });
+            });
+          }
+
+          if (invitations.selectedStaffIds && invitations.selectedStaffIds.length > 0) {
+            const staffUsersResult: any = await supabase
+              .from('user_staff')
+              .select('user_id, staff_id')
+              .in('staff_id', invitations.selectedStaffIds);
+            if (staffUsersResult.error) throw staffUsersResult.error;
+            (staffUsersResult.data || []).forEach((su: any) => {
+              invitationRecords.push({
+                event_id: eventData.id,
+                user_id: su.user_id,
+                invitee_type: 'staff',
+                staff_id: su.staff_id,
+              });
+            });
+          }
+        }
+
+        if (invitationRecords.length > 0) {
+          const { error: insertError } = await supabase
+            .from('event_invitations')
+            .insert(invitationRecords);
+          if (insertError) throw insertError;
+        }
+      }
       return data;
     } catch (error) {
       console.error('Error updating event:', error);
