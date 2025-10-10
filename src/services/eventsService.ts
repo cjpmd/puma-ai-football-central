@@ -141,21 +141,20 @@ export const eventsService = {
           .from('user_players')
           .select('user_id, player_id')
           .in('player_id', (players || []).map((p: any) => p.id));
-          
         if (playerUsersResult.error) throw playerUsersResult.error;
-        const playerUsers = playerUsersResult.data;
+        const playerUsers = playerUsersResult.data || [];
         
         // Get user IDs for staff
         const staffUsersResult: any = await supabase
           .from('user_staff')
           .select('user_id, staff_id')
           .in('staff_id', (staff || []).map((s: any) => s.id));
-          
         if (staffUsersResult.error) throw staffUsersResult.error;
-        const staffUsers = staffUsersResult.data;
+        const staffUsers = staffUsersResult.data || [];
         
-        // Create invitation records for players
-        (playerUsers || []).forEach((pu: any) => {
+        // Create invitation records for players (with or without linked users)
+        const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
+        playerUsers.forEach((pu: any) => {
           invitationRecords.push({
             event_id: eventId,
             user_id: pu.user_id,
@@ -163,15 +162,36 @@ export const eventsService = {
             player_id: pu.player_id
           });
         });
+        (players || []).forEach((p: any) => {
+          if (!mappedPlayerIds.has(p.id)) {
+            invitationRecords.push({
+              event_id: eventId,
+              user_id: null, // no linked user
+              invitee_type: 'player',
+              player_id: p.id
+            });
+          }
+        });
         
-        // Create invitation records for staff
-        (staffUsers || []).forEach((su: any) => {
+        // Create invitation records for staff (with or without linked users)
+        const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
+        staffUsers.forEach((su: any) => {
           invitationRecords.push({
             event_id: eventId,
             user_id: su.user_id,
             invitee_type: 'staff',
             staff_id: su.staff_id
           });
+        });
+        (staff || []).forEach((s: any) => {
+          if (!mappedStaffIds.has(s.id)) {
+            invitationRecords.push({
+              event_id: eventId,
+              user_id: null,
+              invitee_type: 'staff',
+              staff_id: s.id
+            });
+          }
         });
       } else {
         // Pick squad - use selected IDs
@@ -180,17 +200,30 @@ export const eventsService = {
             .from('user_players')
             .select('user_id, player_id')
             .in('player_id', invitations.selectedPlayerIds);
-            
-          if (playerUsersResult.error) throw playerUsersResult.error;
-          const playerUsers = playerUsersResult.data;
           
-          (playerUsers || []).forEach((pu: any) => {
+          if (playerUsersResult.error) throw playerUsersResult.error;
+          const playerUsers = playerUsersResult.data || [];
+          
+          const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
+          // Linked users
+          playerUsers.forEach((pu: any) => {
             invitationRecords.push({
               event_id: eventId,
               user_id: pu.user_id,
               invitee_type: 'player',
               player_id: pu.player_id
             });
+          });
+          // No linked users
+          invitations.selectedPlayerIds.forEach((pid) => {
+            if (!mappedPlayerIds.has(pid)) {
+              invitationRecords.push({
+                event_id: eventId,
+                user_id: null,
+                invitee_type: 'player',
+                player_id: pid
+              });
+            }
           });
         }
         
@@ -199,17 +232,30 @@ export const eventsService = {
             .from('user_staff')
             .select('user_id, staff_id')
             .in('staff_id', invitations.selectedStaffIds);
-            
-          if (staffUsersResult.error) throw staffUsersResult.error;
-          const staffUsers = staffUsersResult.data;
           
-          (staffUsers || []).forEach((su: any) => {
+          if (staffUsersResult.error) throw staffUsersResult.error;
+          const staffUsers = staffUsersResult.data || [];
+          
+          const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
+          // Linked users
+          staffUsers.forEach((su: any) => {
             invitationRecords.push({
               event_id: eventId,
               user_id: su.user_id,
               invitee_type: 'staff',
               staff_id: su.staff_id
             });
+          });
+          // No linked users
+          invitations.selectedStaffIds.forEach((sid) => {
+            if (!mappedStaffIds.has(sid)) {
+              invitationRecords.push({
+                event_id: eventId,
+                user_id: null,
+                invitee_type: 'staff',
+                staff_id: sid
+              });
+            }
           });
         }
       }
@@ -289,7 +335,7 @@ export const eventsService = {
         const invitationRecords: any[] = [];
 
         if (invitations.type === 'everyone') {
-          // No specific invites retained
+          // No specific invites retained (clear all)
         } else {
           if (invitations.selectedPlayerIds && invitations.selectedPlayerIds.length > 0) {
             const playerUsersResult: any = await supabase
@@ -297,13 +343,28 @@ export const eventsService = {
               .select('user_id, player_id')
               .in('player_id', invitations.selectedPlayerIds);
             if (playerUsersResult.error) throw playerUsersResult.error;
-            (playerUsersResult.data || []).forEach((pu: any) => {
+            const playerUsers = playerUsersResult.data || [];
+
+            const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
+            // Linked users
+            playerUsers.forEach((pu: any) => {
               invitationRecords.push({
                 event_id: eventData.id,
                 user_id: pu.user_id,
                 invitee_type: 'player',
                 player_id: pu.player_id,
               });
+            });
+            // No linked users
+            invitations.selectedPlayerIds.forEach((pid) => {
+              if (!mappedPlayerIds.has(pid)) {
+                invitationRecords.push({
+                  event_id: eventData.id,
+                  user_id: null,
+                  invitee_type: 'player',
+                  player_id: pid,
+                });
+              }
             });
           }
 
@@ -313,13 +374,28 @@ export const eventsService = {
               .select('user_id, staff_id')
               .in('staff_id', invitations.selectedStaffIds);
             if (staffUsersResult.error) throw staffUsersResult.error;
-            (staffUsersResult.data || []).forEach((su: any) => {
+            const staffUsers = staffUsersResult.data || [];
+
+            const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
+            // Linked users
+            staffUsers.forEach((su: any) => {
               invitationRecords.push({
                 event_id: eventData.id,
                 user_id: su.user_id,
                 invitee_type: 'staff',
                 staff_id: su.staff_id,
               });
+            });
+            // No linked users
+            invitations.selectedStaffIds.forEach((sid) => {
+              if (!mappedStaffIds.has(sid)) {
+                invitationRecords.push({
+                  event_id: eventData.id,
+                  user_id: null,
+                  invitee_type: 'staff',
+                  staff_id: sid,
+                });
+              }
             });
           }
         }
