@@ -405,6 +405,28 @@ export const eventsService = {
             .from('event_invitations')
             .insert(invitationRecords);
           if (insertError) throw insertError;
+
+          // Create event_availability records for users with linked accounts
+          const availabilityRecords = invitationRecords
+            .filter(inv => inv.user_id) // Only for users with linked accounts
+            .map(inv => ({
+              event_id: eventData.id,
+              user_id: inv.user_id,
+              role: inv.invitee_type, // 'player' or 'staff'
+              status: 'pending' as const,
+              notification_sent_at: new Date().toISOString()
+            }));
+
+          if (availabilityRecords.length > 0) {
+            const { error: availabilityError } = await supabase
+              .from('event_availability')
+              .upsert(availabilityRecords, {
+                onConflict: 'event_id,user_id,role'
+              });
+            if (availabilityError) {
+              console.error('Error creating availability records:', availabilityError);
+            }
+          }
         }
       }
       return data;
