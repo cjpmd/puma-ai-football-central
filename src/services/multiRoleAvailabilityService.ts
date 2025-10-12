@@ -192,5 +192,39 @@ export const multiRoleAvailabilityService = {
 
       if (error) throw error;
     }
+  },
+
+  // Check if user was invited to an event
+  async isUserInvitedToEvent(eventId: string, userId: string): Promise<boolean> {
+    try {
+      // Check if ANY invitations exist for this event
+      const { data: anyInvitations, error: anyInvitationsError } = await supabase
+        .from('event_invitations')
+        .select('id')
+        .eq('event_id', eventId)
+        .limit(1);
+
+      if (anyInvitationsError) throw anyInvitationsError;
+
+      // If no invitations exist for this event, it's an "everyone" event
+      if (!anyInvitations || anyInvitations.length === 0) {
+        return true;
+      }
+
+      // Check if this specific user was invited
+      const { data: userInvitations, error: userInvitationsError } = await supabase
+        .from('event_invitations')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', userId)
+        .limit(1);
+
+      if (userInvitationsError) throw userInvitationsError;
+
+      return userInvitations && userInvitations.length > 0;
+    } catch (error) {
+      console.error('Error checking event invitation:', error);
+      return false;
+    }
   }
 };

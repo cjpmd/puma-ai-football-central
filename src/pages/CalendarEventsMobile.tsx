@@ -25,6 +25,7 @@ import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { StaffAssignmentHelper } from '@/components/debug/StaffAssignmentHelper';
 import { MultiRoleAvailabilityControls } from '@/components/events/MultiRoleAvailabilityControls';
+import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
@@ -54,6 +55,7 @@ export default function CalendarEventsMobile() {
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [pendingAvailability, setPendingAvailability] = useState<any[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
+  const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { teams, user, profile } = useAuth();
   const { hasPermission } = useAuthorization();
@@ -116,6 +118,7 @@ export default function CalendarEventsMobile() {
       loadUserAvailability();
       loadPendingAvailability();
       loadEventTimeContexts();
+      loadInvitedEvents();
     }
   }, [events, user?.id]);
 
@@ -273,9 +276,31 @@ export default function CalendarEventsMobile() {
   };
 
   const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
-    // Show availability controls for future events only
+    // Show availability controls for future events only AND if user was invited
     const eventDate = new Date(event.date);
-    return eventDate >= new Date() || isToday(eventDate);
+    const isFutureEvent = eventDate >= new Date() || isToday(eventDate);
+    const isInvited = invitedEventIds.has(event.id);
+    return isFutureEvent && isInvited;
+  };
+
+  const loadInvitedEvents = async () => {
+    if (!user?.id || events.length === 0) return;
+
+    try {
+      const invitedIds = new Set<string>();
+      
+      // Check each event to see if user is invited
+      for (const event of events) {
+        const isInvited = await multiRoleAvailabilityService.isUserInvitedToEvent(event.id, user.id);
+        if (isInvited) {
+          invitedIds.add(event.id);
+        }
+      }
+      
+      setInvitedEventIds(invitedIds);
+    } catch (error) {
+      console.error('Error loading invited events:', error);
+    }
   };
 
   const loadEventTimeContexts = async () => {

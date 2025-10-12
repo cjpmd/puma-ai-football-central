@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { MultiRoleAvailabilityControls } from './MultiRoleAvailabilityControls';
+import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { EventActionButtons } from './EventActionButtons';
@@ -44,6 +45,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
+  const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const { teams, user, connectedPlayers } = useAuth();
   const { currentView } = useSmartView();
 
@@ -55,6 +57,9 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     loadEventWeather();
     loadPerformanceCategories();
     loadEventTimeContexts();
+    if (user?.id) {
+      loadInvitedEvents();
+    }
   }, [events, teams, user?.id]);
 
   useEffect(() => {
@@ -286,9 +291,31 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   };
 
   const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
-    // Show availability controls for future events only
+    // Show availability controls for future events only AND if user was invited
     const eventDate = new Date(event.date);
-    return eventDate >= new Date() || isToday(eventDate);
+    const isFutureEvent = eventDate >= new Date() || isToday(eventDate);
+    const isInvited = invitedEventIds.has(event.id);
+    return isFutureEvent && isInvited;
+  };
+
+  const loadInvitedEvents = async () => {
+    if (!user?.id || events.length === 0) return;
+
+    try {
+      const invitedIds = new Set<string>();
+      
+      // Check each event to see if user is invited
+      for (const event of events) {
+        const isInvited = await multiRoleAvailabilityService.isUserInvitedToEvent(event.id, user.id);
+        if (isInvited) {
+          invitedIds.add(event.id);
+        }
+      }
+      
+      setInvitedEventIds(invitedIds);
+    } catch (error) {
+      console.error('Error loading invited events:', error);
+    }
   };
 
   const handleAvailabilityChange = (eventId: string, role: string, status: 'available' | 'unavailable') => {
