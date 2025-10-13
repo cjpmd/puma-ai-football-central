@@ -194,37 +194,86 @@ export const multiRoleAvailabilityService = {
     }
   },
 
-  // Check if user was invited to an event
+  // Check if user was invited to an event (in ANY role: direct user, linked player, or linked staff)
   async isUserInvitedToEvent(eventId: string, userId: string): Promise<boolean> {
     try {
-      // Check if ANY invitations exist for this event
-      const { data: anyInvitations, error: anyInvitationsError } = await supabase
+      // Fetch any invitations for the event
+      const { data: invitations, error: invError } = await supabase
         .from('event_invitations')
-        .select('id')
-        .eq('event_id', eventId)
-        .limit(1);
+        .select('id, user_id, player_id, staff_id')
+        .eq('event_id', eventId);
+      if (invError) throw invError;
 
-      if (anyInvitationsError) throw anyInvitationsError;
-
-      // If no invitations exist for this event, it's an "everyone" event
-      if (!anyInvitations || anyInvitations.length === 0) {
+      // If no invitations exist for this event, treat as "everyone" event
+      if (!invitations || invitations.length === 0) {
         return true;
       }
 
-      // Check if this specific user was invited
-      const { data: userInvitations, error: userInvitationsError } = await supabase
-        .from('event_invitations')
-        .select('id')
-        .eq('event_id', eventId)
-        .eq('user_id', userId)
-        .limit(1);
+      // Collect linked player and staff IDs for this user
+      const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
+        supabase.from('user_players').select('player_id').eq('user_id', userId),
+        supabase.from('user_staff').select('staff_id').eq('user_id', userId)
+      ]);
 
-      if (userInvitationsError) throw userInvitationsError;
+      const linkedPlayerIds = (userPlayers || []).map((r: any) => r.player_id);
+      const linkedStaffIds = (userStaff || []).map((r: any) => r.staff_id);
 
-      return userInvitations && userInvitations.length > 0;
+      // Determine if invited in any way
+      const invited = invitations.some((inv: any) =>
+        inv.user_id === userId ||
+        (inv.player_id && linkedPlayerIds.includes(inv.player_id)) ||
+        (inv.staff_id && linkedStaffIds.includes(inv.staff_id))
+      );
+
+      return invited;
     } catch (error) {
       console.error('Error checking event invitation:', error);
       return false;
+    }
+  },
+
+  // Get which roles the user is invited for this event (player/staff)
+  async getInvitedRolesForUser(eventId: string, userId: string): Promise<Array<'player' | 'staff'>> {
+    try {
+      const { data: invitations, error: invError } = await supabase
+        .from('event_invitations')
+        .select('user_id, player_id, staff_id')
+        .eq('event_id', eventId);
+      if (invError) throw invError;
+
+      // Everyone event => include roles the user actually has
+      if (!invitations || invitations.length === 0) {
+        const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
+          supabase.from('user_players').select('player_id').eq('user_id', userId),
+          supabase.from('user_staff').select('staff_id').eq('user_id', userId)
+        ]);
+        const roles: Array<'player' | 'staff'> = [];
+        if ((userPlayers || []).length > 0) roles.push('player');
+        if ((userStaff || []).length > 0 || invitations?.some((i: any) => i.user_id === userId)) roles.push('staff');
+        return Array.from(new Set(roles));
+      }
+
+      const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
+        supabase.from('user_players').select('player_id').eq('user_id', userId),
+        supabase.from('user_staff').select('staff_id').eq('user_id', userId)
+      ]);
+      const linkedPlayerIds = (userPlayers || []).map((r: any) => r.player_id);
+      const linkedStaffIds = (userStaff || []).map((r: any) => r.staff_id);
+
+      const invitedPlayer = invitations.some((inv: any) =>
+        (inv.player_id && linkedPlayerIds.includes(inv.player_id))
+      );
+      const invitedStaff = invitations.some((inv: any) =>
+        inv.user_id === userId || (inv.staff_id && linkedStaffIds.includes(inv.staff_id))
+      );
+
+      const roles: Array<'player' | 'staff'> = [];
+      if (invitedPlayer) roles.push('player');
+      if (invitedStaff) roles.push('staff');
+      return roles;
+    } catch (error) {
+      console.error('Error getting invited roles for user:', error);
+      return [];
     }
   }
 };

@@ -327,9 +327,9 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
               const kitDesign = team?.kitDesigns?.[event.kit_selection as 'home' | 'away' | 'training'];
               const outlineClass = getEventOutlineClass(event.id);
               const availabilityStatus = getAvailabilityStatus(event.id);
-              const showAvailabilityControls = shouldShowAvailabilityControls(event);
-              
-              return (
+               const showAvailabilityControls = shouldShowAvailabilityControls(event);
+               
+               return (
                 <Card className={`${outlineClass} ring-2 ring-primary shadow-lg bg-primary/5 transform hover:scale-105 transition-transform`}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between mb-2">

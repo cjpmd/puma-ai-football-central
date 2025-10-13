@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useStaffAvailability } from '@/hooks/useStaffAvailability';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { useAvailabilityState } from '@/hooks/useAvailabilityState';
+import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 
 interface UserProfile {
   id: string;
@@ -19,6 +20,8 @@ interface UserProfile {
     photo_url?: string;
   };
 }
+
+type RoleType = 'player' | 'staff';
 
 interface QuickAvailabilityControlsProps {
   eventId: string;
@@ -35,6 +38,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [invitedRoles, setInvitedRoles] = useState<Set<RoleType>>(new Set());
   const { user } = useAuth();
   const { 
     userRoles, 
@@ -56,6 +60,10 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   useEffect(() => {
     loadUserProfile();
   }, [user?.id]);
+
+  useEffect(() => {
+    loadInvitedRoles();
+  }, [eventId, user?.id]);
 
   const loadUserProfile = async () => {
     if (!user?.id) return;
@@ -103,6 +111,16 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
       }
     } catch (error) {
       console.error('Error loading user profile:', error);
+    }
+  };
+
+  const loadInvitedRoles = async () => {
+    if (!user?.id) return;
+    try {
+      const roles = await multiRoleAvailabilityService.getInvitedRolesForUser(eventId, user.id);
+      setInvitedRoles(new Set(roles));
+    } catch (error) {
+      console.error('Error loading invited roles:', error);
     }
   };
 
@@ -272,9 +290,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   // If user has multiple roles, show each role separately
   if (hasMultipleRoles) {
+    const filteredRoles = userRoles.filter(r => invitedRoles.has(r.role as RoleType));
+    if (filteredRoles.length === 0) return null;
     return (
       <div className="space-y-2">
-        {userRoles.map((role) => {
+        {filteredRoles.map((role) => {
           const roleLabel = role.role === 'staff' ? 'Coach' : 'Player';
           return (
             <div key={`${role.role}-${role.sourceId}`}>
@@ -288,6 +308,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   // Single role - show with avatar and improved layout
   const singleRole = userRoles[0]?.role || 'player';
+  if (!invitedRoles.has(singleRole as RoleType)) return null;
   const status = user?.id ? (getAvailabilityStatus(eventId, user.id, singleRole) || getStaffRoleStatus(singleRole) || currentStatus) : currentStatus;
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
