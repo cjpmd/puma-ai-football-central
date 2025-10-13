@@ -38,7 +38,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 }) => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [invitedRoles, setInvitedRoles] = useState<Set<RoleType>>(new Set());
+  const [invitedRoleSources, setInvitedRoleSources] = useState<Set<string>>(new Set());
   const { user } = useAuth();
   const { 
     userRoles, 
@@ -63,7 +63,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   useEffect(() => {
     loadInvitedRoles();
-  }, [eventId, user?.id]);
+  }, [eventId, user?.id, userRoles]);
 
   const loadUserProfile = async () => {
     if (!user?.id) return;
@@ -117,10 +117,50 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   const loadInvitedRoles = async () => {
     if (!user?.id) return;
     try {
-      const roles = await multiRoleAvailabilityService.getInvitedRolesForUser(eventId, user.id);
-      setInvitedRoles(new Set(roles));
+      // Fetch all invitations for this event
+      const { data: invitations, error } = await supabase
+        .from('event_invitations')
+        .select('user_id, player_id, staff_id, invitee_type')
+        .eq('event_id', eventId);
+
+      if (error) throw error;
+
+      const invited = new Set<string>();
+
+      if (!invitations || invitations.length === 0) {
+        // "Everyone" event: include all available role sources for this user
+        userRoles.forEach(r => invited.add(`${r.role}:${r.sourceId}`));
+      } else {
+        // Gather linked player and staff IDs for this user
+        const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
+          supabase.from('user_players').select('player_id').eq('user_id', user.id),
+          supabase.from('user_staff').select('staff_id').eq('user_id', user.id)
+        ]);
+
+        const linkedPlayerIds = (userPlayers || []).map((r: any) => r.player_id);
+        const linkedStaffIds = (userStaff || []).map((r: any) => r.staff_id);
+
+        // Map invitations to specific role sources
+        invitations.forEach((inv: any) => {
+          // Direct user invitation: allow all role sources
+          if (inv.user_id === user.id) {
+            userRoles.forEach(r => invited.add(`${r.role}:${r.sourceId}`));
+          }
+          // Player-specific invitations
+          if (inv.player_id && linkedPlayerIds.includes(inv.player_id)) {
+            invited.add(`player:${inv.player_id}`);
+          }
+          // Staff-specific invitations
+          if (inv.staff_id && linkedStaffIds.includes(inv.staff_id)) {
+            invited.add(`staff:${inv.staff_id}`);
+          }
+        });
+      }
+
+      setInvitedRoleSources(invited);
     } catch (error) {
-      console.error('Error loading invited roles:', error);
+      console.error('Error loading invited role sources:', error);
+      setInvitedRoleSources(new Set());
     }
   };
 
@@ -290,7 +330,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
   // If user has multiple roles, show each role separately
   if (hasMultipleRoles) {
-    const filteredRoles = userRoles.filter(r => invitedRoles.has(r.role as RoleType));
+    const filteredRoles = userRoles.filter(r => invitedRoleSources.has(`${r.role}:${r.sourceId}`));
     if (filteredRoles.length === 0) return null;
     return (
       <div className="space-y-2">
@@ -307,8 +347,10 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   }
 
   // Single role - show with avatar and improved layout
-  const singleRole = userRoles[0]?.role || 'player';
-  if (!invitedRoles.has(singleRole as RoleType)) return null;
+  const singleRoleEntry = userRoles[0];
+  if (!singleRoleEntry) return null;
+  if (!invitedRoleSources.has(`${singleRoleEntry.role}:${singleRoleEntry.sourceId}`)) return null;
+  const singleRole = singleRoleEntry.role;
   const status = user?.id ? (getAvailabilityStatus(eventId, user.id, singleRole) || getStaffRoleStatus(singleRole) || currentStatus) : currentStatus;
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
