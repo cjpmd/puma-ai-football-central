@@ -13,6 +13,7 @@ import { QuickAvailabilityControls } from './QuickAvailabilityControls';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { EventActionButtons } from './EventActionButtons';
+import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -49,6 +50,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const { teams, user } = useAuth();
+  const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const { currentView } = useSmartView();
 
   useEffect(() => {
@@ -56,6 +58,20 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     loadEventWeather();
     loadUserAvailability();
     loadEventTimeContexts();
+
+    (async () => {
+      if (!user?.id) return;
+      const invitedIds = new Set<string>();
+      for (const e of events) {
+        try {
+          const invited = await multiRoleAvailabilityService.isUserInvitedToEvent(e.id, user.id);
+          if (invited) invitedIds.add(e.id);
+        } catch (err) {
+          console.error('Error determining invitations for event', e.id, err);
+        }
+      }
+      setInvitedEventIds(invitedIds);
+    })();
   }, [events, user?.id]);
 
   const loadUserAvailability = async () => {
@@ -263,9 +279,11 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   };
 
   const shouldShowAvailabilityControls = (event: DatabaseEvent) => {
-    // Show availability controls for future events only
     const eventDate = new Date(event.date);
-    return eventDate >= new Date() || isToday(eventDate);
+    const isFuture = eventDate >= new Date() || isToday(eventDate);
+    if (!isFuture) return false;
+    const isInvited = invitedEventIds.has(event.id);
+    return isInvited;
   };
 
   const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
