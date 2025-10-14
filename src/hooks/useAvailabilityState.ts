@@ -85,14 +85,17 @@ export const useAvailabilityState = (eventId?: string) => {
     try {
       const { error } = await supabase
         .from('event_availability')
-        .update({ 
+        .upsert({
+          event_id: eventId,
+          user_id: userId,
+          role,
           status,
           responded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('event_id', eventId)
-        .eq('user_id', userId)
-        .eq('role', role);
+          updated_at: new Date().toISOString(),
+          notification_sent_at: null
+        }, {
+          onConflict: 'event_id,user_id,role'
+        });
 
       if (error) {
         // Revert optimistic update on error
