@@ -122,16 +122,26 @@ export const multiRoleAvailabilityService = {
     userId: string,
     role: 'player' | 'staff' = 'staff'
   ): Promise<void> {
+    // Do NOT overwrite an existing response. Only create if missing.
+    const { data: existing, error: checkError } = await supabase
+      .from('event_availability')
+      .select('id, status')
+      .eq('event_id', eventId)
+      .eq('user_id', userId)
+      .eq('role', role)
+      .maybeSingle();
+
+    if (checkError) throw checkError;
+    if (existing) return; // Respect existing choice (available/unavailable/pending)
+
     const { error } = await supabase
       .from('event_availability')
-      .upsert({
+      .insert({
         event_id: eventId,
         user_id: userId,
         role,
         status: 'pending',
         notification_sent_at: new Date().toISOString()
-      }, {
-        onConflict: 'event_id,user_id,role'
       });
 
     if (error) throw error;

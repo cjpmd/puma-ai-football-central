@@ -78,7 +78,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     try {
       const { data: availabilityData, error } = await supabase
         .from('event_availability')
-        .select('event_id, status')
+        .select('event_id, status, role')
         .eq('user_id', (await supabase.auth.getUser()).data.user?.id);
 
       if (error) {
@@ -86,9 +86,23 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
         return;
       }
 
-      const availability = (availabilityData || []).map(item => ({
-        eventId: item.event_id,
-        status: item.status as 'pending' | 'available' | 'unavailable'
+      // Aggregate per event so a concrete choice (available/unavailable) wins over pending
+      const byEvent = new Map<string, 'pending' | 'available' | 'unavailable'>();
+      (availabilityData || []).forEach((row: any) => {
+        const current = byEvent.get(row.event_id);
+        const nextStatus = row.status as 'pending' | 'available' | 'unavailable';
+        if (nextStatus === 'available') {
+          byEvent.set(row.event_id, 'available');
+        } else if (nextStatus === 'unavailable') {
+          if (current !== 'available') byEvent.set(row.event_id, 'unavailable');
+        } else if (!current) {
+          byEvent.set(row.event_id, 'pending');
+        }
+      });
+
+      const availability: UserAvailability[] = Array.from(byEvent.entries()).map(([eventId, status]) => ({
+        eventId,
+        status
       }));
 
       setUserAvailability(availability);
@@ -96,7 +110,6 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       console.error('Error in loadUserAvailability:', error);
     }
   };
-
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     return availability?.status || null;
