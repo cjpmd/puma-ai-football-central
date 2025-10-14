@@ -197,16 +197,16 @@ export const multiRoleAvailabilityService = {
   // Check if user was invited to an event (in ANY role: direct user, linked player, or linked staff)
   async isUserInvitedToEvent(eventId: string, userId: string): Promise<boolean> {
     try {
-      // Fetch any invitations for the event
+      // Fetch invitations for the event
       const { data: invitations, error: invError } = await supabase
         .from('event_invitations')
-        .select('id, user_id, player_id, staff_id')
+        .select('user_id, player_id, staff_id, invitee_type')
         .eq('event_id', eventId);
       if (invError) throw invError;
 
-      // If no invitations exist for this event, treat as "everyone" event
+      // If no invitations exist for this event, do NOT assume "everyone"; treat as not invited
       if (!invitations || invitations.length === 0) {
-        return true;
+        return false;
       }
 
       // Collect linked player and staff IDs for this user
@@ -220,9 +220,12 @@ export const multiRoleAvailabilityService = {
 
       // Determine if invited in any way
       const invited = invitations.some((inv: any) =>
-        inv.user_id === userId ||
+        // Player-specific invitation must match a linked player
         (inv.player_id && linkedPlayerIds.includes(inv.player_id)) ||
-        (inv.staff_id && linkedStaffIds.includes(inv.staff_id))
+        // Staff-specific invitation must match a linked staff
+        (inv.staff_id && linkedStaffIds.includes(inv.staff_id)) ||
+        // Direct user invitation only counts for staff invites
+        (inv.user_id === userId && inv.invitee_type === 'staff')
       );
 
       return invited;
@@ -237,20 +240,13 @@ export const multiRoleAvailabilityService = {
     try {
       const { data: invitations, error: invError } = await supabase
         .from('event_invitations')
-        .select('user_id, player_id, staff_id')
+        .select('user_id, player_id, staff_id, invitee_type')
         .eq('event_id', eventId);
       if (invError) throw invError;
 
-      // Everyone event => include roles the user actually has
+      // If there are no invitations, do not assume access
       if (!invitations || invitations.length === 0) {
-        const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
-          supabase.from('user_players').select('player_id').eq('user_id', userId),
-          supabase.from('user_staff').select('staff_id').eq('user_id', userId)
-        ]);
-        const roles: Array<'player' | 'staff'> = [];
-        if ((userPlayers || []).length > 0) roles.push('player');
-        if ((userStaff || []).length > 0 || invitations?.some((i: any) => i.user_id === userId)) roles.push('staff');
-        return Array.from(new Set(roles));
+        return [];
       }
 
       const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
@@ -264,7 +260,8 @@ export const multiRoleAvailabilityService = {
         (inv.player_id && linkedPlayerIds.includes(inv.player_id))
       );
       const invitedStaff = invitations.some((inv: any) =>
-        inv.user_id === userId || (inv.staff_id && linkedStaffIds.includes(inv.staff_id))
+        (inv.staff_id && linkedStaffIds.includes(inv.staff_id)) ||
+        (inv.user_id === userId && inv.invitee_type === 'staff')
       );
 
       const roles: Array<'player' | 'staff'> = [];

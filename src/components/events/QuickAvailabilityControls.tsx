@@ -127,35 +127,37 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
 
       const invited = new Set<string>();
 
-      if (!invitations || invitations.length === 0) {
-        // "Everyone" event: include all available role sources for this user
-        userRoles.forEach(r => invited.add(`${r.role}:${r.sourceId}`));
-      } else {
-        // Gather linked player and staff IDs for this user
-        const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
-          supabase.from('user_players').select('player_id').eq('user_id', user.id),
-          supabase.from('user_staff').select('staff_id').eq('user_id', user.id)
-        ]);
+      // Gather linked player and staff IDs for this user
+      const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
+        supabase.from('user_players').select('player_id').eq('user_id', user.id),
+        supabase.from('user_staff').select('staff_id').eq('user_id', user.id)
+      ]);
 
-        const linkedPlayerIds = (userPlayers || []).map((r: any) => r.player_id);
-        const linkedStaffIds = (userStaff || []).map((r: any) => r.staff_id);
+      const linkedPlayerIds = (userPlayers || []).map((r: any) => r.player_id);
+      const linkedStaffIds = (userStaff || []).map((r: any) => r.staff_id);
 
-        // Map invitations to specific role sources
-        invitations.forEach((inv: any) => {
-          // Direct user invitation: allow all role sources
-          if (inv.user_id === user.id) {
-            userRoles.forEach(r => invited.add(`${r.role}:${r.sourceId}`));
-          }
-          // Player-specific invitations
-          if (inv.player_id && linkedPlayerIds.includes(inv.player_id)) {
-            invited.add(`player:${inv.player_id}`);
-          }
-          // Staff-specific invitations
+      // Map invitations to specific role sources only
+      (invitations || []).forEach((inv: any) => {
+        // Direct user invitation: only count for staff invites
+        if (inv.user_id === user.id && inv.invitee_type === 'staff') {
+          // Prefer specific staff_id if provided
           if (inv.staff_id && linkedStaffIds.includes(inv.staff_id)) {
             invited.add(`staff:${inv.staff_id}`);
+          } else {
+            userRoles
+              .filter(r => r.role === 'staff')
+              .forEach(r => invited.add(`${r.role}:${r.sourceId}`));
           }
-        });
-      }
+        }
+        // Player-specific invitations
+        if (inv.player_id && linkedPlayerIds.includes(inv.player_id)) {
+          invited.add(`player:${inv.player_id}`);
+        }
+        // Staff-specific invitations
+        if (inv.staff_id && linkedStaffIds.includes(inv.staff_id)) {
+          invited.add(`staff:${inv.staff_id}`);
+        }
+      });
 
       setInvitedRoleSources(invited);
     } catch (error) {
