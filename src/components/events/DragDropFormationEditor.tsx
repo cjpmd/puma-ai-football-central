@@ -416,6 +416,19 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         return;
       }
       
+      // Improve touch/mouse behavior in production by disabling scroll and selection during drag
+      try {
+        document.documentElement.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+        // @ts-ignore - touchAction is supported in modern browsers
+        document.body.style.touchAction = 'none';
+        // Prevent overscroll rubber-banding on mobile
+        // @ts-ignore - overscrollBehavior is supported in modern browsers
+        document.body.style.overscrollBehavior = 'contain';
+      } catch (e) {
+        // no-op
+      }
+      
       const dragId = event.active.id as string;
       console.log('Drag started with ID:', dragId);
       
@@ -468,6 +481,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       
       // Clear drag state immediately
       setDraggedPlayer(null);
+      
+      // Restore default scroll/selection behavior
+      try {
+        document.documentElement.style.removeProperty('cursor');
+        document.body.style.removeProperty('user-select');
+        // @ts-ignore
+        document.body.style.removeProperty('touch-action');
+        // @ts-ignore
+        document.body.style.removeProperty('overscroll-behavior');
+      } catch (e) {
+        // no-op
+      }
       
       if (!over || !playerBeingDragged) {
         console.log('No drop target or dragged player - cancelling drag');
@@ -524,6 +549,14 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
     } catch (error) {
       console.error('Error in handleDragEnd:', error);
       setDraggedPlayer(null);
+      try {
+        document.documentElement.style.removeProperty('cursor');
+        document.body.style.removeProperty('user-select');
+        // @ts-ignore
+        document.body.style.removeProperty('touch-action');
+        // @ts-ignore
+        document.body.style.removeProperty('overscroll-behavior');
+      } catch (e) {}
     }
   };
 
