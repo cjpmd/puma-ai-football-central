@@ -18,6 +18,9 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
 }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: id,
+    data: {
+      type: 'substitutes'
+    }
   });
 
   // Extract period ID from the id prop (format: substitutes-{periodId})

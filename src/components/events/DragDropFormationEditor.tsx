@@ -10,7 +10,6 @@ import {
   useSensors,
   closestCenter
 } from '@dnd-kit/core';
-import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,17 +59,17 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
   const { positions } = usePositionAbbreviations(gameFormat);
 
-  // Improved sensors with minimal activation distance for precise cursor alignment
+  // Production-optimized sensors with better activation constraints
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 1,
+        distance: 3,
       },
     }),
     useSensor(TouchSensor, {
       activationConstraint: {
-        delay: 100,
-        tolerance: 5,
+        delay: 150,
+        tolerance: 8,
       },
     })
   );
@@ -224,30 +223,43 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   const timeCheck = checkHalfTimeExceeded();
 
   const addPeriod = () => {
-    const newPeriodNumber = periods.length + 1;
-    const lastPeriod = periods[periods.length - 1];
-    
-    // Always create positions from formation defaults to get latest coordinates
-    const formationId = lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1';
-    const freshPositions = createPositionSlots(formationId);
-    
-    // Then preserve player assignments from last period if it exists
-    const positionsWithPlayers = lastPeriod 
-      ? preservePlayerAssignments(lastPeriod.positions, freshPositions)
-      : freshPositions;
-    
-    const newPeriod: FormationPeriod = {
-      id: `period-${newPeriodNumber}`,
-      periodNumber: newPeriodNumber,
-      formation: formationId,
-      duration: 8,
-      positions: positionsWithPlayers,
-      substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
-      captainId: globalCaptainId
-    };
+    try {
+      const newPeriodNumber = periods.length + 1;
+      const lastPeriod = periods[periods.length - 1];
+      
+      // Always create positions from formation defaults to get latest coordinates
+      const formationId = lastPeriod?.formation || gameFormatFormations[0]?.id || '1-2-3-1';
+      const freshPositions = createPositionSlots(formationId);
+      
+      // Validate that positions were created successfully
+      if (!freshPositions || freshPositions.length === 0) {
+        console.error('Failed to create positions for new period');
+        return;
+      }
+      
+      // Then preserve player assignments from last period if it exists
+      const positionsWithPlayers = lastPeriod 
+        ? preservePlayerAssignments(lastPeriod.positions, freshPositions)
+        : freshPositions;
+      
+      // Generate unique period ID with timestamp to ensure uniqueness
+      const periodId = `period-${newPeriodNumber}-${Date.now()}`;
+      
+      const newPeriod: FormationPeriod = {
+        id: periodId,
+        periodNumber: newPeriodNumber,
+        formation: formationId,
+        duration: 8,
+        positions: positionsWithPlayers,
+        substitutes: lastPeriod ? [...lastPeriod.substitutes] : [],
+        captainId: globalCaptainId
+      };
 
-    console.log('Adding new period with fresh coordinates:', newPeriod);
-    onPeriodsChange([...periods, newPeriod]);
+      console.log('Adding new period with fresh coordinates:', newPeriod);
+      onPeriodsChange([...periods, newPeriod]);
+    } catch (error) {
+      console.error('Error adding period:', error);
+    }
   };
 
   const deletePeriod = (periodId: string) => {
@@ -397,58 +409,76 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    // Prevent drag if positions are locked
-    if (isPositionsLocked) {
-      return;
+    try {
+      // Prevent drag if positions are locked
+      if (isPositionsLocked) {
+        setDraggedPlayer(null);
+        return;
+      }
+      
+      const dragId = event.active.id as string;
+      console.log('Drag started with ID:', dragId);
+      
+      // Extract player ID from drag ID
+      let playerId: string;
+      
+      if (dragId.includes('|')) {
+        // Format: "period-1|position|player123" or "period-1|substitutes|player123"
+        const parts = dragId.split('|');
+        playerId = parts[parts.length - 1]; // Always the last part
+      } else {
+        // Direct player ID from available players pool
+        playerId = dragId;
+      }
+      
+      const player = squadPlayers.find(p => p.id === playerId);
+      
+      if (!player) {
+        console.error('Player not found for drag:', playerId);
+        setDraggedPlayer(null);
+        return;
+      }
+      
+      console.log('Drag started for player:', player.name, 'with playerId:', playerId);
+      setDraggedPlayer(player);
+    } catch (error) {
+      console.error('Error in handleDragStart:', error);
+      setDraggedPlayer(null);
     }
-    
-    const dragId = event.active.id as string;
-    console.log('Drag started with ID:', dragId);
-    
-    // Extract player ID from drag ID
-    let playerId: string;
-    
-    if (dragId.includes('|')) {
-      // Format: "period-1|position|player123" or "period-1|substitutes|player123"
-      const parts = dragId.split('|');
-      playerId = parts[parts.length - 1]; // Always the last part
-    } else {
-      // Direct player ID from available players pool
-      playerId = dragId;
-    }
-    
-    const player = squadPlayers.find(p => p.id === playerId);
-    console.log('Drag started for player:', player?.name, 'with playerId:', playerId);
-    setDraggedPlayer(player || null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    // Prevent drop if positions are locked
-    if (isPositionsLocked) {
+    try {
+      // Prevent drop if positions are locked
+      if (isPositionsLocked) {
+        setDraggedPlayer(null);
+        return;
+      }
+      
+      const { active, over } = event;
+      
+      console.log('Drag ended:', { 
+        activeId: active.id, 
+        overId: over?.id,
+        draggedPlayer: draggedPlayer?.name
+      });
+      
+      // Store draggedPlayer reference before clearing state
+      const playerBeingDragged = draggedPlayer;
+      
+      // Clear drag state immediately
       setDraggedPlayer(null);
-      return;
-    }
-    
-    const { active, over } = event;
-    
-    console.log('Drag ended:', { 
-      activeId: active.id, 
-      overId: over?.id,
-      draggedPlayer: draggedPlayer?.name
-    });
-    
-    setDraggedPlayer(null);
-    
-    if (!over || !draggedPlayer) {
-      console.log('No drop target or dragged player - cancelling drag');
-      return;
-    }
+      
+      if (!over || !playerBeingDragged) {
+        console.log('No drop target or dragged player - cancelling drag');
+        return;
+      }
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
-    const playerId = draggedPlayer.id;
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      const playerId = playerBeingDragged.id;
 
-    console.log('Processing drop for player:', playerId, 'to target:', overId);
+      console.log('Processing drop for player:', playerId, 'to target:', overId);
 
     // Extract source period from drag ID
     const getSourcePeriodId = (id: string): string | null => {
@@ -476,15 +506,24 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       return { periodId: null, type: 'position' };
     };
 
-    const sourcePeriodId = getSourcePeriodId(activeId);
-    const targetInfo = getTargetInfo(overId);
+      const sourcePeriodId = getSourcePeriodId(activeId);
+      const targetInfo = getTargetInfo(overId);
 
-    console.log('Drag info:', { sourcePeriodId, targetInfo });
+      console.log('Drag info:', { sourcePeriodId, targetInfo });
 
-    if (targetInfo.type === 'position' && targetInfo.positionIndex !== undefined) {
-      movePlayerToPosition(playerId, targetInfo.periodId!, targetInfo.positionIndex, sourcePeriodId);
-    } else if (targetInfo.type === 'substitutes') {
-      movePlayerToSubstitutes(playerId, targetInfo.periodId!, sourcePeriodId);
+      if (!targetInfo.periodId) {
+        console.error('Invalid drop target - no period ID');
+        return;
+      }
+
+      if (targetInfo.type === 'position' && targetInfo.positionIndex !== undefined) {
+        movePlayerToPosition(playerId, targetInfo.periodId, targetInfo.positionIndex, sourcePeriodId);
+      } else if (targetInfo.type === 'substitutes') {
+        movePlayerToSubstitutes(playerId, targetInfo.periodId, sourcePeriodId);
+      }
+    } catch (error) {
+      console.error('Error in handleDragEnd:', error);
+      setDraggedPlayer(null);
     }
   };
 
@@ -911,16 +950,18 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         </div>
       </div>
 
-      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
-        {draggedPlayer && (
-          <PlayerIcon
-            player={draggedPlayer}
-            isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
-            nameDisplayOption={mappedNameDisplayOption}
-            isCircular={true}
-            isDragging={true}
-          />
-        )}
+      <DragOverlay dropAnimation={null} style={{ zIndex: 9999 }}>
+        {draggedPlayer ? (
+          <div style={{ cursor: 'grabbing' }}>
+            <PlayerIcon
+              player={draggedPlayer}
+              isCaptain={eventType === 'training' ? false : draggedPlayer.id === globalCaptainId}
+              nameDisplayOption={mappedNameDisplayOption}
+              isCircular={true}
+              isDragging={true}
+            />
+          </div>
+        ) : null}
       </DragOverlay>
     </DndContext>
   );

@@ -41,6 +41,10 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   } = useDraggable({
     id: dragId || player.id,
     disabled: !shouldEnableDrag,
+    data: {
+      player: player,
+      type: 'player'
+    }
   });
 
   const getDisplayName = () => {

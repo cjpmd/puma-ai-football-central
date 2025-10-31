@@ -21,6 +21,10 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
 }) => {
   const { isOver, setNodeRef } = useDroppable({
     id: id,
+    data: {
+      type: 'position',
+      position: position
+    }
   });
 
   // Helper function to get position group color
