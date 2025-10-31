@@ -8,7 +8,12 @@ import {
   TouchSensor,
   useSensor,
   useSensors,
-  closestCenter
+  closestCenter,
+  rectIntersection,
+  pointerWithin,
+  MeasuringStrategy,
+  type CollisionDetection,
+  type UniqueIdentifier
 } from '@dnd-kit/core';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,6 +79,35 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
       },
     })
   );
+
+  // Custom collision detection that prioritizes positions over large containers
+  const collisionDetectionStrategy: CollisionDetection = (args) => {
+    const getType = (id: UniqueIdentifier) => {
+      const container = args.droppableContainers.find(c => c.id === id);
+      return container?.data?.current?.type as string | undefined;
+    };
+
+    // 1) Prefer pointerWithin; filter to positions first
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) {
+      const positionFirst = pointerCollisions.filter(c => 
+        getType(c.id) === 'position' || (typeof c.id === 'string' && String(c.id).includes('-position-'))
+      );
+      return positionFirst.length > 0 ? positionFirst : pointerCollisions;
+    }
+
+    // 2) Fallback to rectIntersection; again prefer positions
+    const rectCollisions = rectIntersection(args);
+    if (rectCollisions.length > 0) {
+      const positionFirst = rectCollisions.filter(c => 
+        getType(c.id) === 'position' || (typeof c.id === 'string' && String(c.id).includes('-position-'))
+      );
+      return positionFirst.length > 0 ? positionFirst : rectCollisions;
+    }
+
+    // 3) Final fallback
+    return closestCenter(args);
+  };
   
   const gameFormatFormations = getFormationsByFormat(gameFormat as any);
   const mappedNameDisplayOption = mapNameDisplayOption(nameDisplayOption);
@@ -903,7 +937,8 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
   return (
     <DndContext 
       sensors={sensors} 
-      collisionDetection={closestCenter}
+      collisionDetection={collisionDetectionStrategy}
+      measuring={{ droppable: { strategy: MeasuringStrategy.Always } }}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
@@ -984,7 +1019,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         </div>
       </div>
 
-      <DragOverlay dropAnimation={null} style={{ zIndex: 9999 }} modifiers={[snapCenterToCursor]}>
+      <DragOverlay dropAnimation={null} style={{ zIndex: 9999, pointerEvents: 'none' }} modifiers={[snapCenterToCursor]}>
         {draggedPlayer ? (
           <div style={{ cursor: 'grabbing' }}>
             <PlayerIcon

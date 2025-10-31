@@ -56,7 +56,7 @@ export const PositionSlot: React.FC<PositionSlotProps> = ({
         absolute flex flex-col items-center justify-center
         ${isLarger ? 'w-20 h-20' : 'w-16 h-16'}
         rounded-full border-2 border-dashed
-        ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 scale-110 shadow-lg animate-pulse' : 
+        ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 shadow-lg' : 
           (player ? 'border-transparent bg-transparent' : 'border-white/60 bg-white/20 hover:border-white/80 hover:bg-white/30')}
         transition-all duration-300 ease-out backdrop-blur-sm
       `}
