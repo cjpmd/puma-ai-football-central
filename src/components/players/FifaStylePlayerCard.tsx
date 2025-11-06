@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { playStylesService } from '@/types/playStyles';
 import { PlayStylesManager } from '@/components/players/PlayStylesManager';
+import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -122,6 +123,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const { hasPermission, loading: authzLoading } = useAuthorization();
   const [canManageCard, setCanManageCard] = useState(false);
   const [isUserStaffContext, setIsUserStaffContext] = useState(false);
+
+  // Image editing state
+  const [showImageEditor, setShowImageEditor] = useState(false);
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
 
   // Updated parsePlayStyles function
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
@@ -340,9 +345,25 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && onUpdatePhoto) {
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setSelectedImageUrl(e.target?.result as string);
+        setShowImageEditor(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    // Reset input to allow same file selection
+    event.target.value = '';
+  };
+
+  const handleSaveEditedImage = (blob: Blob) => {
+    const file = new File([blob], 'player-photo.jpg', { type: 'image/jpeg' });
+    if (onUpdatePhoto) {
       onUpdatePhoto(player, file);
     }
+    setShowImageEditor(false);
+    setSelectedImageUrl(null);
   };
 
   const handleSaveDesign = (designId: string) => {
@@ -820,6 +841,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
         </div>
       </div>
 
+      {/* Image Editor Modal */}
+      {showImageEditor && selectedImageUrl && (
+        <MobileImageEditor
+          imageUrl={selectedImageUrl}
+          onSave={handleSaveEditedImage}
+          onCancel={() => {
+            setShowImageEditor(false);
+            setSelectedImageUrl(null);
+          }}
+        />
+      )}
     </div>
   );
 };
