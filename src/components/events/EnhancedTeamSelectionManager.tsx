@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard } from 'lucide-react';
+import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard, Sparkles } from 'lucide-react';
 import { DragDropFormationEditor } from './DragDropFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { TrainingPlanEditor } from './TrainingPlanEditor';
@@ -23,6 +23,7 @@ import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadMana
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
 import { StaffAccountLinkingModal } from '@/components/teams/StaffAccountLinkingModal';
+import { AITeamBuilderDialog } from './AITeamBuilderDialog';
 
 // Helper function to create a default period with the first available formation
 const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): FormationPeriod => {
@@ -74,6 +75,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [staffLinksRefresh, setStaffLinksRefresh] = useState(0);
   const [hasAutoSyncedFormation, setHasAutoSyncedFormation] = useState(false);
+  const [showAIBuilder, setShowAIBuilder] = useState(false);
 
   // Helper function to extract staff IDs from staff_selection
   const extractStaffIds = (staffSelection: any[]): string[] => {
@@ -598,6 +600,17 @@ const { data: teamData } = useQuery({
     }
   };
 
+  const handleApplyAISelection = (periods: FormationPeriod[], captainId?: string, reasoning?: string) => {
+    console.log('Applying AI selection:', { periods, captainId, reasoning });
+    updateCurrentTeam({ 
+      periods,
+      globalCaptainId: captainId
+    });
+    if (reasoning) {
+      toast.success(reasoning);
+    }
+  };
+
   const saveSelections = async () => {
     if (teamSelections.length === 0) {
       toast.error('Please create at least one team before saving');
@@ -863,6 +876,20 @@ return (
               </>
             )}
 
+            {/* AI Team Builder Button */}
+            {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
+              <Button
+                variant="outline"
+                size={isMobile ? "sm" : "default"}
+                onClick={() => setShowAIBuilder(true)}
+                className={`${isMobile ? 'h-8 px-2' : 'px-3'}`}
+                title="Generate team with AI"
+              >
+                <Sparkles className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4 mr-2'}`} />
+                {!isMobile && 'AI Builder'}
+              </Button>
+            )}
+
             {/* Position Lock Toggle */}
             {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
               <Button
@@ -1028,6 +1055,19 @@ return (
       teamId={teamId}
       teamName={(teamData as any)?.name || 'Team'}
     />
+
+    {/* AI Team Builder Dialog */}
+    {currentTeam && (
+      <AITeamBuilderDialog
+        isOpen={showAIBuilder}
+        onClose={() => setShowAIBuilder(false)}
+        onApply={handleApplyAISelection}
+        teamId={teamId}
+        eventId={event.id}
+        gameFormat={event.game_format || '11-a-side'}
+        gameDuration={event.game_duration || 90}
+      />
+    )}
   </>
 );
 };

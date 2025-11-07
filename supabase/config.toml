@@ -1,1 +1,4 @@
 project_id = "pdarngodvrzehnpvdrii"
+
+[functions.ai-team-builder]
+verify_jwt = true
