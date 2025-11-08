@@ -7,6 +7,8 @@ import { Sparkles, Loader2, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { FormationPeriod } from '@/types/teamSelection';
+import { getPositionsForFormation } from '@/utils/formationUtils';
+import type { GameFormat } from '@/types';
 
 interface AITeamBuilderDialogProps {
   isOpen: boolean;
@@ -119,26 +121,53 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
       return;
     }
 
-    // Convert AI output to FormationPeriod format
-    const formattedPeriods: FormationPeriod[] = previewData.periods.map((period: any) => ({
-      id: `period-${period.periodNumber}`,
-      periodNumber: period.periodNumber,
-      formation: period.formation,
-      duration: period.duration,
-      positions: period.positions.map((pos: any, idx: number) => ({
-        id: `position-${idx}`,
-        positionName: pos.positionName,
-        abbreviation: pos.positionName.split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2),
-        positionGroup: pos.positionName.toLowerCase().includes('goalkeeper') ? 'goalkeeper' :
-                       pos.positionName.toLowerCase().includes('back') || pos.positionName.toLowerCase().includes('def') ? 'defender' :
-                       pos.positionName.toLowerCase().includes('mid') ? 'midfielder' : 'forward',
-        x: 50,
-        y: 50,
-        playerId: pos.playerId,
-      })),
-      substitutes: period.substitutes || [],
-      captainId: period.captainId,
-    }));
+    // Convert AI output to FormationPeriod format with proper position coordinates
+    const formattedPeriods: FormationPeriod[] = previewData.periods.map((period: any) => {
+      // Get the formation template positions with coordinates
+      const formationPositions = getPositionsForFormation(period.formation, gameFormat as GameFormat);
+      
+      // Map AI positions to formation template
+      const positions = period.positions.map((aiPos: any) => {
+        // Find matching position in formation template
+        const templatePos = formationPositions.find(fp => {
+          // Normalize position names for matching
+          const normalizePos = (pos: string) => pos.toLowerCase().replace(/\s+/g, '');
+          return normalizePos(fp.position) === normalizePos(aiPos.positionName) ||
+                 normalizePos(fp.position).includes(normalizePos(aiPos.positionName)) ||
+                 normalizePos(aiPos.positionName).includes(normalizePos(fp.position));
+        });
+        
+        // Get abbreviation from position name
+        const abbreviation = aiPos.positionName
+          .split(' ')
+          .map((w: string) => w[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+        
+        return {
+          id: `position-${aiPos.playerId}`,
+          positionName: templatePos?.position || aiPos.positionName,
+          abbreviation,
+          positionGroup: aiPos.positionName.toLowerCase().includes('goalkeeper') ? 'goalkeeper' :
+                         aiPos.positionName.toLowerCase().includes('back') || aiPos.positionName.toLowerCase().includes('def') ? 'defender' :
+                         aiPos.positionName.toLowerCase().includes('mid') ? 'midfielder' : 'forward',
+          x: templatePos?.x || 50,
+          y: templatePos?.y || 50,
+          playerId: aiPos.playerId,
+        };
+      });
+
+      return {
+        id: `period-${period.periodNumber}`,
+        periodNumber: period.periodNumber,
+        formation: period.formation,
+        duration: period.duration,
+        positions,
+        substitutes: period.substitutes || [],
+        captainId: period.captainId,
+      };
+    });
 
     const captainId = previewData.periods[0]?.captainId;
     
