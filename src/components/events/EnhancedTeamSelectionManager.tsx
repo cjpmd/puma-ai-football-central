@@ -1066,6 +1066,9 @@ return (
         eventId={event.id}
         gameFormat={event.game_format || '11-a-side'}
         gameDuration={event.game_duration || 90}
+        teamNumber={currentTeam.teamNumber}
+        squadPlayers={currentTeam.squadPlayers}
+        currentFormation={currentTeam.periods[0]?.formation}
       />
     )}
   </>

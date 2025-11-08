@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { prompt, teamId, eventId, gameFormat, gameDuration } = await req.json();
+    const { prompt, teamId, eventId, gameFormat, gameDuration, teamNumber, squadPlayerIds, currentFormation } = await req.json();
     
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -24,12 +24,18 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch squad players
-    const { data: squadPlayers, error: squadError } = await supabase
+    // Fetch squad players - filter by squad if squadPlayerIds provided
+    let playersQuery = supabase
       .from("players")
       .select("id, name, match_stats")
       .eq("team_id", teamId)
       .eq("status", "active");
+    
+    if (squadPlayerIds && squadPlayerIds.length > 0) {
+      playersQuery = playersQuery.in("id", squadPlayerIds);
+    }
+    
+    const { data: squadPlayers, error: squadError } = await playersQuery;
 
     if (squadError) throw squadError;
 
@@ -64,14 +70,16 @@ serve(async (req) => {
 
     const systemPrompt = `You are an AI football coach assistant. Your job is to create line-ups and substitution plans.
 
-Available Squad (${playersContext.length} players):
+Available Squad (${playersContext.length} players)${teamNumber ? ` for Team ${teamNumber}` : ''}:
 ${JSON.stringify(playersContext, null, 2)}
 
 Game Format: ${gameFormat}
 Game Duration: ${gameDuration} minutes
+${currentFormation ? `Current Formation: ${currentFormation} (use this formation unless the user prompt specifies a different one)` : ''}
 
 Guidelines:
-- Always use valid formations for ${gameFormat} (e.g., 4-3-3, 3-5-2, 4-4-2 for 11-a-side; 2-3-1, 1-3-1 for 7-a-side)
+- ${currentFormation ? `Use the ${currentFormation} formation unless the user prompt explicitly requests a different formation` : `Use valid formations for ${gameFormat} (e.g., 4-3-3, 3-5-2, 4-4-2 for 11-a-side; 2-3-1, 1-3-1 for 7-a-side)`}
+- ONLY use players from the provided squad (${playersContext.length} players available)
 - Position players based on their historic positions when available
 - Ensure fair playing time distribution unless instructed otherwise
 - Use player IDs exactly as provided

@@ -16,6 +16,9 @@ interface AITeamBuilderDialogProps {
   eventId: string;
   gameFormat: string;
   gameDuration: number;
+  teamNumber: number;
+  squadPlayers: any[];
+  currentFormation?: string;
 }
 
 interface QuickAction {
@@ -41,6 +44,9 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
   eventId,
   gameFormat,
   gameDuration,
+  teamNumber,
+  squadPlayers,
+  currentFormation,
 }) => {
   const [prompt, setPrompt] = useState('');
   const [selectedActions, setSelectedActions] = useState<string[]>([]);
@@ -88,6 +94,9 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
           eventId,
           gameFormat,
           gameDuration,
+          teamNumber,
+          squadPlayerIds: squadPlayers.map(p => p.id),
+          currentFormation,
         },
       });
 
