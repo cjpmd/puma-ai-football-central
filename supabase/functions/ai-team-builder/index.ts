@@ -27,7 +27,7 @@ serve(async (req) => {
     // Fetch squad players
     const { data: squadPlayers, error: squadError } = await supabase
       .from("players")
-      .select("id, first_name, last_name, match_stats")
+      .select("id, name, match_stats")
       .eq("team_id", teamId)
       .eq("status", "active");
 
@@ -53,7 +53,7 @@ serve(async (req) => {
 
       return {
         id: player.id,
-        name: `${player.first_name} ${player.last_name}`,
+        name: player.name,
         totalGames: stats?.totalGames || 0,
         totalMinutes: stats?.totalMinutes || 0,
         captainGames: stats?.captainGames || 0,
