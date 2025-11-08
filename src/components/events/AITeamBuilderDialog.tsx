@@ -26,8 +26,11 @@ interface QuickAction {
 const quickActions: QuickAction[] = [
   { label: 'Even Rotation', prompt: 'Create a balanced lineup with even playing time for all players across multiple periods' },
   { label: 'Strongest XI', prompt: 'Select the strongest starting eleven based on total minutes and recent performance' },
-  { label: 'Youth Focus', prompt: 'Prioritize younger players and rotate positions for development' },
-  { label: 'Position Rotation', prompt: 'Rotate players between similar positions across periods while maintaining balance' },
+  { label: 'Exclude GK', prompt: 'Exclude goalkeeper from rotation' },
+  { label: 'Exclude Defence', prompt: 'Exclude all defenders from rotation' },
+  { label: 'Minimise Changes to Defence', prompt: 'Keep defensive positions stable with minimal rotation' },
+  { label: 'Only Rotate Midfield', prompt: 'Only rotate midfield positions, keep other positions stable' },
+  { label: 'Only Rotate Midfield and Attack', prompt: 'Only rotate midfield and attacking positions, keep defence and GK stable' },
 ];
 
 export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
@@ -40,16 +43,37 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
   gameDuration,
 }) => {
   const [prompt, setPrompt] = useState('');
+  const [selectedActions, setSelectedActions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [previewData, setPreviewData] = useState<any>(null);
 
   const handleQuickAction = (action: QuickAction) => {
-    setPrompt(action.prompt);
+    setSelectedActions(prev => {
+      const isSelected = prev.includes(action.label);
+      if (isSelected) {
+        return prev.filter(label => label !== action.label);
+      }
+      return [...prev, action.label];
+    });
+  };
+
+  const getFullPrompt = () => {
+    const selectedPrompts = quickActions
+      .filter(action => selectedActions.includes(action.label))
+      .map(action => action.prompt);
+    
+    if (selectedPrompts.length === 0 && !prompt) {
+      return "Create a balanced team lineup";
+    }
+    
+    return [prompt, ...selectedPrompts].filter(Boolean).join(". ");
   };
 
   const handleGenerate = async () => {
-    if (!prompt.trim()) {
-      toast.error('Please enter a prompt');
+    const fullPrompt = getFullPrompt();
+    
+    if (!fullPrompt.trim()) {
+      toast.error('Please enter a prompt or select quick actions');
       return;
     }
 
@@ -59,7 +83,7 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
     try {
       const { data, error } = await supabase.functions.invoke('ai-team-builder', {
         body: {
-          prompt,
+          prompt: fullPrompt,
           teamId,
           eventId,
           gameFormat,
@@ -116,6 +140,7 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
 
   const handleClose = () => {
     setPrompt('');
+    setSelectedActions([]);
     setPreviewData(null);
     onClose();
   };
@@ -141,8 +166,8 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
               {quickActions.map((action) => (
                 <Badge
                   key={action.label}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-accent"
+                  variant={selectedActions.includes(action.label) ? "default" : "outline"}
+                  className="cursor-pointer hover:bg-accent transition-colors"
                   onClick={() => handleQuickAction(action)}
                 >
                   {action.label}
@@ -194,7 +219,7 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
               Cancel
             </Button>
             {!previewData ? (
-              <Button onClick={handleGenerate} disabled={loading || !prompt.trim()}>
+              <Button onClick={handleGenerate} disabled={loading || (!prompt.trim() && selectedActions.length === 0)}>
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
