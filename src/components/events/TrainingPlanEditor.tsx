@@ -8,8 +8,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target } from 'lucide-react';
+import { Plus, Clock, Users, Play, Search, Filter, Upload, Tag, Trash2, Edit, Target, Sparkles } from 'lucide-react';
 import { RecommendedDrillsPanel } from '@/components/training/RecommendedDrillsPanel';
+import { AITrainingBuilderDialog } from '@/components/training/AITrainingBuilderDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
@@ -84,6 +85,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expandedDrills, setExpandedDrills] = useState<Set<string>>(new Set());
+  const [showAIBuilder, setShowAIBuilder] = useState(false);
 
   // Load drill tags
   const { data: drillTags = [] } = useQuery({
@@ -332,6 +334,41 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
     }
   };
 
+  const handleAISessionApply = (aiSession: any) => {
+    // Convert AI-generated drills to training session drills
+    const newDrills: TrainingSessionDrill[] = aiSession.drills.map((drill: any, index: number) => ({
+      id: crypto.randomUUID(),
+      drill_id: drill.drillId === 'custom' ? undefined : drill.drillId,
+      custom_drill_name: drill.drillId === 'custom' ? drill.name : undefined,
+      custom_drill_description: drill.drillId === 'custom' ? drill.description : undefined,
+      sequence_order: sessionDrills.length + index + 1,
+      duration_minutes: drill.duration,
+      notes: drill.notes || '',
+      selected_tags: drill.tags ? drill.tags.map((t: string) => ({ 
+        id: crypto.randomUUID(), 
+        name: t, 
+        color: 'blue' 
+      })) : [],
+      subgroups: []
+    }));
+
+    // Add to existing drills
+    setSessionDrills(prev => [...prev, ...newDrills]);
+
+    // Add equipment if provided
+    if (aiSession.equipment && aiSession.equipment.length > 0) {
+      const newEquipment: Equipment[] = aiSession.equipment.map((item: any) => ({
+        id: crypto.randomUUID(),
+        name: item.name,
+        quantity: item.quantity,
+        notes: ''
+      }));
+      setEquipment(prev => [...prev, ...newEquipment]);
+    }
+
+    toast.success(`Added ${newDrills.length} drills from AI builder`);
+  };
+
   return (
     <div className="space-y-6">
       {/* Training Plan Overview */}
@@ -350,6 +387,15 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
             className="flex items-center gap-1"
           >
             {saving ? 'Saving...' : 'Save Plan'}
+          </Button>
+          <Button
+            onClick={() => setShowAIBuilder(true)}
+            variant="outline"
+            size="sm"
+            className="bg-primary/5 hover:bg-primary/10 border-primary/20"
+          >
+            <Sparkles className="w-4 h-4 mr-1" />
+            AI Builder
           </Button>
           <Dialog open={showDrillLibrary} onOpenChange={setShowDrillLibrary}>
             <DialogTrigger asChild>
@@ -770,6 +816,14 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
       </Card>
         </div>
       </div>
+
+      <AITrainingBuilderDialog
+        open={showAIBuilder}
+        onClose={() => setShowAIBuilder(false)}
+        onApply={handleAISessionApply}
+        teamId={teamId}
+        eventId={eventId}
+      />
     </div>
   );
 };
