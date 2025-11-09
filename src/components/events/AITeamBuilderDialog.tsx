@@ -123,20 +123,72 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
 
     // Convert AI output to FormationPeriod format with proper position coordinates
     const formattedPeriods: FormationPeriod[] = previewData.periods.map((period: any) => {
-      // Get the formation template positions with coordinates
-      const formationPositions = getPositionsForFormation(period.formation, gameFormat as GameFormat);
-      
+      // Get the formation template positions with coordinates (fallback to currentFormation if needed)
+      const formationId = (currentFormation || period.formation) as string;
+      let formationPositions = getPositionsForFormation(formationId, gameFormat as GameFormat);
+      if (!formationPositions.length && period.formation && period.formation !== formationId) {
+        formationPositions = getPositionsForFormation(period.formation, gameFormat as GameFormat);
+      }
+
+      // Helper: normalize and map synonyms from AI names to our template names
+      const normalize = (s: string) => s.toLowerCase().replace(/-/g, ' ').replace(/\s+/g, ' ').trim();
+      const mapAiToTemplateName = (raw: string): string => {
+        const n = normalize(raw);
+        // Direct matches first
+        if (n === 'goalkeeper' || n === 'gk') return 'Goalkeeper';
+
+        // Common synonyms
+        if (n.includes('left back') || n === 'lb' || n.includes('full back left')) return 'Defender Left';
+        if (n.includes('right back') || n === 'rb' || n.includes('full back right')) return 'Defender Right';
+        if (n.includes('centre back') || n.includes('center back') || n === 'cb') return 'Defender Centre';
+
+        if (n.includes('left midfielder') || n === 'lm') return 'Midfielder Left';
+        if (n.includes('right midfielder') || n === 'rm') return 'Midfielder Right';
+        if (n.includes('central midfielder') || n.includes('centre midfielder') || n === 'cm' || n === 'midfielder centre') return 'Midfielder Centre';
+
+        if (n.includes('centre forward') || n.includes('center forward') || n === 'cf' || n.includes('striker')) {
+          if (n.includes('left')) return 'Striker Left';
+          if (n.includes('right')) return 'Striker Right';
+          return 'Striker Centre';
+        }
+
+        if (n.includes('attacking midfielder')) {
+          if (n.includes('left')) return 'Attacking Midfielder Left';
+          if (n.includes('right')) return 'Attacking Midfielder Right';
+          return 'Attacking Midfielder Centre';
+        }
+
+        // Generic token reordering: "left midfielder" -> "Midfielder Left"
+        const parts = n.split(' ');
+        const sides = ['left', 'right', 'centre', 'center'];
+        const side = parts.find(p => sides.includes(p));
+        const role = parts.find(p => ['defender','midfielder','striker','forward'].includes(p));
+        if (role && side) {
+          const sideCanon = side === 'center' ? 'Centre' : side.charAt(0).toUpperCase() + side.slice(1);
+          const roleCanon = role === 'forward' ? 'Striker' : role.charAt(0).toUpperCase() + role.slice(1);
+          return `${roleCanon} ${sideCanon}`;
+        }
+
+        // Fall back to raw (will try partial match below)
+        return raw;
+      };
+
       // Map AI positions to formation template
-      const positions = period.positions.map((aiPos: any) => {
-        // Find matching position in formation template
-        const templatePos = formationPositions.find(fp => {
-          // Normalize position names for matching
-          const normalizePos = (pos: string) => pos.toLowerCase().replace(/\s+/g, '');
-          return normalizePos(fp.position) === normalizePos(aiPos.positionName) ||
-                 normalizePos(fp.position).includes(normalizePos(aiPos.positionName)) ||
-                 normalizePos(aiPos.positionName).includes(normalizePos(fp.position));
-        });
-        
+      const positions = (period.positions || []).map((aiPos: any) => {
+        const targetName = mapAiToTemplateName(aiPos.positionName);
+
+        // Exact match first
+        let templatePos = formationPositions.find(fp => normalize(fp.position) === normalize(targetName));
+
+        // Loose match: share tokens
+        if (!templatePos) {
+          const tTokens = normalize(targetName).split(' ');
+          templatePos = formationPositions.find(fp => {
+            const fpTokens = normalize(fp.position).split(' ');
+            return tTokens.every(t => fpTokens.includes(t));
+          });
+        }
+
         // Get abbreviation from position name
         const abbreviation = aiPos.positionName
           .split(' ')
@@ -147,13 +199,13 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
         
         return {
           id: `position-${aiPos.playerId}`,
-          positionName: templatePos?.position || aiPos.positionName,
+          positionName: templatePos?.position || targetName || aiPos.positionName,
           abbreviation,
           positionGroup: aiPos.positionName.toLowerCase().includes('goalkeeper') ? 'goalkeeper' :
                          aiPos.positionName.toLowerCase().includes('back') || aiPos.positionName.toLowerCase().includes('def') ? 'defender' :
                          aiPos.positionName.toLowerCase().includes('mid') ? 'midfielder' : 'forward',
-          x: templatePos?.x || 50,
-          y: templatePos?.y || 50,
+          x: templatePos?.x ?? 50,
+          y: templatePos?.y ?? 50,
           playerId: aiPos.playerId,
         };
       });
@@ -161,7 +213,7 @@ export const AITeamBuilderDialog: React.FC<AITeamBuilderDialogProps> = ({
       return {
         id: `period-${period.periodNumber}`,
         periodNumber: period.periodNumber,
-        formation: period.formation,
+        formation: formationId,
         duration: period.duration,
         positions,
         substitutes: period.substitutes || [],
