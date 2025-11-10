@@ -173,27 +173,84 @@ const { data: teamData } = useQuery({
             return acc;
           }, {} as Record<number, any[]>);
 
+          // Helper function to determine position group
+          const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
+            const pos = positionName?.toLowerCase() || '';
+            
+            if (pos.includes('goalkeeper') || pos === 'gk' || pos === 'g') {
+              return 'goalkeeper';
+            } else if (pos.includes('defender') || pos.includes('defence') || pos.startsWith('d')) {
+              return 'defender';
+            } else if (pos.includes('midfielder') || pos.includes('mid') || pos.startsWith('m') || pos.includes('cam') || pos.includes('cdm')) {
+              return 'midfielder';
+            } else {
+              return 'forward';
+            }
+          };
+
           // Update team selections with existing data
           for (const [teamNum, selections] of Object.entries(groupedSelections)) {
             const teamIndex = parseInt(teamNum) - 1;
             if (teamIndex >= 0 && teamIndex < initialTeamSelections.length) {
-              const periods: FormationPeriod[] = selections.map(selection => ({
-                id: `period-${selection.period_number}`,
-                periodNumber: selection.period_number,
-                formation: selection.formation,
-                duration: selection.duration_minutes,
-                positions: (selection.player_positions || []).map((pos: any, index: number) => ({
-                  id: `position-${index}`,
-                  positionName: pos.position,
-                  abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
-                  positionGroup: pos.positionGroup || 'midfielder',
-                  x: pos.x || 50,
-                  y: pos.y || 50,
-                  playerId: pos.playerId || pos.player_id
-                })),
-                substitutes: selection.substitute_players || [],
-                captainId: selection.captain_id || undefined
-              }));
+              const periods: FormationPeriod[] = selections.map(selection => {
+                // First, create all position slots from the formation template
+                const formations = getFormationsByFormat(event.game_format as any);
+                const formationConfig = formations.find(f => f.id === selection.formation);
+                
+                let positions: any[] = [];
+                
+                if (formationConfig) {
+                  // Create full template positions with correct coordinates
+                  positions = formationConfig.positions.map((pos, index) => ({
+                    id: `position-${index}`,
+                    positionName: pos.position,
+                    abbreviation: pos.position?.substring(0, 2) || '',
+                    positionGroup: getPositionGroup(pos.position),
+                    x: pos.x,
+                    y: pos.y,
+                    playerId: undefined
+                  }));
+                  
+                  // Then overlay saved player assignments
+                  if (selection.player_positions && Array.isArray(selection.player_positions)) {
+                    selection.player_positions.forEach((savedPos: any) => {
+                      // Find matching template position by name
+                      const matchingIndex = positions.findIndex(
+                        p => p.positionName === savedPos.position
+                      );
+                      
+                      if (matchingIndex >= 0) {
+                        positions[matchingIndex] = {
+                          ...positions[matchingIndex],
+                          playerId: savedPos.playerId || savedPos.player_id,
+                          abbreviation: savedPos.abbreviation || positions[matchingIndex].abbreviation
+                        };
+                      }
+                    });
+                  }
+                } else {
+                  // Fallback: use saved positions if formation not found
+                  positions = (selection.player_positions || []).map((pos: any, index: number) => ({
+                    id: `position-${index}`,
+                    positionName: pos.position,
+                    abbreviation: pos.abbreviation || pos.position?.substring(0, 2) || '',
+                    positionGroup: getPositionGroup(pos.position),
+                    x: pos.x || 50,
+                    y: pos.y || 50,
+                    playerId: pos.playerId || pos.player_id
+                  }));
+                }
+                
+                return {
+                  id: `period-${selection.period_number}`,
+                  periodNumber: selection.period_number,
+                  formation: selection.formation,
+                  duration: selection.duration_minutes,
+                  positions,
+                  substitutes: selection.substitute_players || [],
+                  captainId: selection.captain_id || undefined
+                };
+              });
 
               initialTeamSelections[teamIndex] = {
                 ...initialTeamSelections[teamIndex],
