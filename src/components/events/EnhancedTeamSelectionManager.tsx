@@ -286,6 +286,53 @@ const { data: teamData } = useQuery({
     initializeData();
   }, [isOpen, event.id, teamId]);
 
+  // Subscribe to availability changes for real-time updates
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const channel = supabase
+      .channel('availability-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'event_availability',
+          filter: `event_id=eq.${event.id}`
+        },
+        (payload) => {
+          console.log('Availability changed, reloading selections');
+          // Trigger a reload of team selections
+          const initializeData = async () => {
+            try {
+              const { data: existingSelections, error } = await supabase
+                .from('event_selections')
+                .select('*')
+                .eq('event_id', event.id)
+                .eq('team_id', teamId)
+                .order('team_number', { ascending: true })
+                .order('period_number', { ascending: true });
+
+              if (error) throw error;
+
+              if (existingSelections && existingSelections.length > 0) {
+                // Re-process the selections similar to initial load
+                window.location.reload(); // Simple reload for now
+              }
+            } catch (error) {
+              console.error('Error reloading after availability change:', error);
+            }
+          };
+          initializeData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, event.id, teamId]);
+
   // Auto-sync formation coordinates when formation tab opens
   useEffect(() => {
     if (!isOpen || activeTab !== 'formation' || hasAutoSyncedFormation) return;

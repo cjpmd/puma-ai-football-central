@@ -74,7 +74,7 @@ export type Database = {
       audit_logs: {
         Row: {
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           new_data: Json | null
           old_data: Json | null
           operation: string
@@ -85,7 +85,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           operation: string
@@ -96,7 +96,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           new_data?: Json | null
           old_data?: Json | null
           operation?: string
@@ -2396,7 +2396,7 @@ export type Database = {
           blocked_until: string | null
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_id: string | null
           violation_count: number
           window_start: string
@@ -2406,7 +2406,7 @@ export type Database = {
           blocked_until?: string | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_id?: string | null
           violation_count?: number
           window_start?: string
@@ -2416,7 +2416,7 @@ export type Database = {
           blocked_until?: string | null
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_id?: string | null
           violation_count?: number
           window_start?: string
@@ -2465,7 +2465,7 @@ export type Database = {
           blocked_until: string | null
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           user_id: string | null
           window_start: string | null
         }
@@ -2475,7 +2475,7 @@ export type Database = {
           blocked_until?: string | null
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_id?: string | null
           window_start?: string | null
         }
@@ -2485,7 +2485,7 @@ export type Database = {
           blocked_until?: string | null
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           user_id?: string | null
           window_start?: string | null
         }
@@ -2584,7 +2584,7 @@ export type Database = {
           action_type: string
           created_at: string
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           metadata: Json | null
           new_data: Json | null
           old_data: Json | null
@@ -2598,7 +2598,7 @@ export type Database = {
           action_type: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_data?: Json | null
           old_data?: Json | null
@@ -2612,7 +2612,7 @@ export type Database = {
           action_type?: string
           created_at?: string
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           metadata?: Json | null
           new_data?: Json | null
           old_data?: Json | null
@@ -4041,7 +4041,7 @@ export type Database = {
           created_at: string | null
           expires_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           is_admin_session: boolean | null
           last_activity: string | null
           session_token: string
@@ -4052,7 +4052,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           is_admin_session?: boolean | null
           last_activity?: string | null
           session_token: string
@@ -4063,7 +4063,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           is_admin_session?: boolean | null
           last_activity?: string | null
           session_token?: string
@@ -4645,7 +4645,7 @@ export type Database = {
     }
     Functions: {
       backup_event_selections: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           backup_created_at: string
           backup_id: string
@@ -4662,10 +4662,7 @@ export type Database = {
           team_number: number
         }[]
       }
-      check_password_strength: {
-        Args: { password: string }
-        Returns: boolean
-      }
+      check_password_strength: { Args: { password: string }; Returns: boolean }
       check_rate_limit_enhanced: {
         Args: {
           p_action_type: string
@@ -4674,46 +4671,22 @@ export type Database = {
         }
         Returns: Json
       }
-      clean_and_regenerate_player_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_notification_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      clean_and_regenerate_player_stats: { Args: never; Returns: undefined }
+      cleanup_expired_notification_tokens: { Args: never; Returns: undefined }
       debug_player_positions: {
         Args: { p_player_id: string; p_player_name?: string }
         Returns: undefined
       }
-      format_file_size: {
-        Args: { size_bytes: number }
-        Returns: string
-      }
+      format_file_size: { Args: { size_bytes: number }; Returns: string }
       generate_club_join_code: {
         Args: { p_club_name: string; p_role_type: string }
         Returns: string
       }
-      generate_club_serial: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_parent_linking_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_secure_invitation_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_secure_notification_token: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_team_join_code: {
-        Args: { team_name: string }
-        Returns: string
-      }
+      generate_club_serial: { Args: never; Returns: string }
+      generate_parent_linking_code: { Args: never; Returns: string }
+      generate_secure_invitation_code: { Args: never; Returns: string }
+      generate_secure_notification_token: { Args: never; Returns: string }
+      generate_team_join_code: { Args: { team_name: string }; Returns: string }
       get_consolidated_team_staff: {
         Args: { p_team_id: string }
         Returns: {
@@ -4726,10 +4699,7 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_current_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_user_id: { Args: never; Returns: string }
       get_user_event_roles: {
         Args: { p_event_id: string; p_user_id: string }
         Returns: {
@@ -4746,14 +4716,8 @@ export type Database = {
         Args: { club_uuid: string; required_roles?: string[] }
         Returns: boolean
       }
-      is_global_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_global_admin_secure: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_global_admin: { Args: never; Returns: boolean }
+      is_global_admin_secure: { Args: never; Returns: boolean }
       is_team_member: {
         Args: { required_roles?: string[]; team_uuid: string }
         Returns: boolean
@@ -4784,13 +4748,11 @@ export type Database = {
         }
         Returns: undefined
       }
-      regenerate_all_event_player_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      regenerate_player_stats_batch_safe: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
+      regenerate_all_event_player_stats: { Args: never; Returns: undefined }
+      regenerate_player_stats_batch_safe: { Args: never; Returns: undefined }
+      remove_unavailable_player_from_event: {
+        Args: { p_event_id: string; p_player_id?: string; p_user_id: string }
+        Returns: Json
       }
       schedule_event_reminders: {
         Args: { p_event_id: string }
@@ -4812,10 +4774,7 @@ export type Database = {
         Args: { input_position: string }
         Returns: string
       }
-      update_all_completed_events_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      update_all_completed_events_stats: { Args: never; Returns: undefined }
       update_availability_status: {
         Args: {
           p_event_id: string
@@ -4837,10 +4796,7 @@ export type Database = {
         Args: { player_uuid: string }
         Returns: undefined
       }
-      user_is_global_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      user_is_global_admin: { Args: never; Returns: boolean }
       validate_authentication_input: {
         Args: { action_type?: string; email?: string; password?: string }
         Returns: Json
@@ -4870,10 +4826,7 @@ export type Database = {
         }
         Returns: Json
       }
-      validate_user_permissions: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      validate_user_permissions: { Args: { p_user_id: string }; Returns: Json }
       validate_user_role_access: {
         Args: {
           p_required_role: string

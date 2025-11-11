@@ -218,6 +218,35 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
       onStatusChange?.(role, status);
       
+      // If marking as unavailable and role is player, remove from squad and formation
+      if (status === 'unavailable' && role === 'player') {
+        try {
+          // Find linked player for this user
+          const { data: playerLink } = await supabase
+            .from('user_players')
+            .select('player_id')
+            .eq('user_id', user.id)
+            .single();
+          
+          if (playerLink?.player_id) {
+            const { data: result, error: rpcError } = await supabase.rpc('remove_unavailable_player_from_event', {
+              p_event_id: eventId,
+              p_user_id: user.id,
+              p_player_id: playerLink.player_id
+            });
+
+            if (rpcError) {
+              console.error('Error removing unavailable player:', rpcError);
+            } else {
+              console.log('Player removed from squad and formation:', result);
+            }
+          }
+        } catch (cleanupError) {
+          console.error('Error removing unavailable player:', cleanupError);
+          // Don't throw - availability was updated, cleanup is secondary
+        }
+      }
+      
       const roleLabel = role === 'staff' ? 'Coach' : 'Player';
       toast.success(`${roleLabel} availability set to ${status}`);
     } catch (error) {
