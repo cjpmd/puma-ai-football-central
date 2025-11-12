@@ -14,6 +14,7 @@ import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from 
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { EventActionButtons } from './EventActionButtons';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
+import { TrainingPackView } from '../training/TrainingPackView';
 
 interface EventsGridViewProps {
   events: DatabaseEvent[];
@@ -49,6 +50,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [userAvailability, setUserAvailability] = useState<UserAvailability[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
+  const [selectedTrainingPack, setSelectedTrainingPack] = useState<DatabaseEvent | null>(null);
   const { teams, user } = useAuth();
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const { currentView } = useSmartView();
@@ -442,6 +444,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                         onTeamSelection={onTeamSelection}
                         onPostGameEdit={onPostGameEdit}
                         onDeleteEvent={onDeleteEvent}
+                        onTrainingPack={setSelectedTrainingPack}
                         size="md"
                       />
                     </div>
@@ -724,6 +727,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
                       onTeamSelection={onTeamSelection}
                       onPostGameEdit={onPostGameEdit}
                       onDeleteEvent={onDeleteEvent}
+                      onTrainingPack={setSelectedTrainingPack}
                       size="sm"
                     />
                   </CardContent>
@@ -787,6 +791,13 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
           </CardContent>
         </Card>
       ))}
+
+      {selectedTrainingPack && (
+        <TrainingPackView
+          event={selectedTrainingPack}
+          onClose={() => setSelectedTrainingPack(null)}
+        />
+      )}
     </div>
   );
 };

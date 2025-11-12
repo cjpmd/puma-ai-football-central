@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { Edit, Users, Trophy, Trash2 } from 'lucide-react';
+import { Edit, Users, Trophy, Trash2, ClipboardList } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { useTeamPrivacy } from '@/hooks/useTeamPrivacy';
 import { ViewRole } from '@/contexts/SmartViewContext';
@@ -13,6 +13,7 @@ interface EventActionButtonsProps {
   onTeamSelection: (event: DatabaseEvent) => void;
   onPostGameEdit: (event: DatabaseEvent) => void;
   onDeleteEvent: (eventId: string) => void;
+  onTrainingPack?: (event: DatabaseEvent) => void;
   size?: 'xs' | 'sm' | 'md';
 }
 
@@ -25,10 +26,12 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   onTeamSelection,
   onPostGameEdit,
   onDeleteEvent,
+  onTrainingPack,
   size = 'xs'
 }) => {
   const { settings } = useTeamPrivacy(event.team_id);
   const isParent = currentView === 'parent';
+  const isTrainingEvent = event.event_type === 'training';
 
   // Determine button classes based on size
   const buttonClass = size === 'xs' ? "h-6 w-6 p-0" : size === 'sm' ? "h-8 w-8 p-0" : "";
@@ -80,6 +83,19 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
         >
           <Trophy className={iconClass} />
           {isFullSize && <span className="ml-2">Match Report</span>}
+        </Button>
+      )}
+
+      {isTrainingEvent && onTrainingPack && (
+        <Button
+          variant={isFullSize ? "outline" : "ghost"}
+          size="sm"
+          className={buttonClass}
+          onClick={() => onTrainingPack(event)}
+          title="Training Pack"
+        >
+          <ClipboardList className={iconClass} />
+          {isFullSize && <span className="ml-2">Training Pack</span>}
         </Button>
       )}
       

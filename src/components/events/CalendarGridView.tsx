@@ -10,6 +10,7 @@ import { WeatherService } from '@/services/weatherService';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TrainingPackView } from '../training/TrainingPackView';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
 import { MultiRoleAvailabilityControls } from './MultiRoleAvailabilityControls';
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
@@ -46,6 +47,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const [userAvailability, setUserAvailability] = useState<UserAvailabilityStatus[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
+  const [selectedTrainingPack, setSelectedTrainingPack] = useState<DatabaseEvent | null>(null);
   const { teams, user, connectedPlayers } = useAuth();
   const { currentView } = useSmartView();
 
@@ -543,6 +545,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             onTeamSelection={onTeamSelection}
                             onPostGameEdit={onPostGameEdit}
                             onDeleteEvent={onDeleteEvent}
+                            onTrainingPack={setSelectedTrainingPack}
                           />
                         </div>
                       );
@@ -605,6 +608,13 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
           );
         })}
       </div>
+
+      {selectedTrainingPack && (
+        <TrainingPackView
+          event={selectedTrainingPack}
+          onClose={() => setSelectedTrainingPack(null)}
+        />
+      )}
     </div>
   );
 };

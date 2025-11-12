@@ -3635,6 +3635,7 @@ export type Database = {
       }
       training_session_drills: {
         Row: {
+          actual_duration_minutes: number | null
           created_at: string | null
           custom_drill_description: string | null
           custom_drill_name: string | null
@@ -3642,10 +3643,12 @@ export type Database = {
           duration_minutes: number
           id: string
           notes: string | null
+          observed_notes: string | null
           sequence_order: number
           training_session_id: string | null
         }
         Insert: {
+          actual_duration_minutes?: number | null
           created_at?: string | null
           custom_drill_description?: string | null
           custom_drill_name?: string | null
@@ -3653,10 +3656,12 @@ export type Database = {
           duration_minutes: number
           id?: string
           notes?: string | null
+          observed_notes?: string | null
           sequence_order: number
           training_session_id?: string | null
         }
         Update: {
+          actual_duration_minutes?: number | null
           created_at?: string | null
           custom_drill_description?: string | null
           custom_drill_name?: string | null
@@ -3664,6 +3669,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           notes?: string | null
+          observed_notes?: string | null
           sequence_order?: number
           training_session_id?: string | null
         }
@@ -3731,25 +3737,37 @@ export type Database = {
       }
       training_sessions: {
         Row: {
+          coach_reflection: string | null
           created_at: string | null
           event_id: string | null
           id: string
+          session_intensity: string | null
+          session_objectives: string | null
+          session_rating: number | null
           team_id: string | null
           total_duration_minutes: number | null
           updated_at: string | null
         }
         Insert: {
+          coach_reflection?: string | null
           created_at?: string | null
           event_id?: string | null
           id?: string
+          session_intensity?: string | null
+          session_objectives?: string | null
+          session_rating?: number | null
           team_id?: string | null
           total_duration_minutes?: number | null
           updated_at?: string | null
         }
         Update: {
+          coach_reflection?: string | null
           created_at?: string | null
           event_id?: string | null
           id?: string
+          session_intensity?: string | null
+          session_objectives?: string | null
+          session_rating?: number | null
           team_id?: string | null
           total_duration_minutes?: number | null
           updated_at?: string | null
