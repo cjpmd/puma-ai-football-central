@@ -339,7 +339,6 @@ export const GameDayView: React.FC = () => {
                     .slice(0, i)
                     .reduce((sum, s) => sum + (s.duration_minutes || 25), 0);
                   const endMin = startMin + (sel.duration_minutes || 25);
-                  const label = i === 0 ? '1H' : i === 1 ? '2H' : `${i + 1}H`;
                   
                   return (
                     <button
@@ -347,8 +346,7 @@ export const GameDayView: React.FC = () => {
                       className={`period-time-button ${i === currentPeriodIndex ? 'active' : ''}`}
                       onClick={() => setCurrentPeriodIndex(i)}
                     >
-                      <div className="text-xs font-semibold">{label}</div>
-                      <div className="text-[10px]">{startMin}-{endMin}'</div>
+                      <div className="text-sm font-semibold">{startMin}-{endMin}'</div>
                     </button>
                   );
                 })}

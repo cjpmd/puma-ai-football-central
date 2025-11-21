@@ -100,6 +100,30 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
     }
   };
 
+  const getPositionAbbreviation = (position: string): string => {
+    const abbreviations: Record<string, string> = {
+      'Goalkeeper': 'GK',
+      'Left Back': 'LB',
+      'Right Back': 'RB',
+      'Centre Back': 'CB',
+      'Left Wing Back': 'LWB',
+      'Right Wing Back': 'RWB',
+      'Left Midfield': 'LM',
+      'Right Midfield': 'RM',
+      'Centre Midfield': 'CM',
+      'Defensive Midfield': 'CDM',
+      'Attacking Midfield': 'CAM',
+      'Left Wing': 'LW',
+      'Right Wing': 'RW',
+      'Centre Forward': 'CF',
+      'Striker': 'ST',
+      'Left Forward': 'LF',
+      'Right Forward': 'RF'
+    };
+    
+    return abbreviations[position] || position.substring(0, 2).toUpperCase();
+  };
+
   const renderPlayerBadges = (playerId: string, isCaptain?: boolean) => {
     const events = getPlayerEvents(playerId);
     const goals = events.filter(e => e.event_type === 'goal').length;
@@ -173,19 +197,24 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                   left: `${pos.x}%`,
                   top: `${pos.y}%`,
                   transform: 'translate(-50%, -50%)'
-                }}
-                {...longPressHandlers}
-              >
-                {pos.replacedPlayerName && (
-                  <div className="replaced-player-name">
-                    {pos.replacedPlayerName}
-                  </div>
-                )}
-                <div className={playerCircleClass}>
-                  {renderPlayerBadges(pos.playerId, pos.isCaptain)}
-                  <div className="player-number">#{pos.squadNumber}</div>
+              }}
+              {...longPressHandlers}
+            >
+              <div className="position-badge">
+                {getPositionAbbreviation(pos.position)}
+              </div>
+              
+              {pos.replacedPlayerName && (
+                <div className="replaced-player-name">
+                  ↻ {pos.replacedPlayerName}
                 </div>
-                <div className="player-name">{pos.playerName}</div>
+              )}
+              
+              <div className={playerCircleClass}>
+                {renderPlayerBadges(pos.playerId, pos.isCaptain)}
+                <div className="player-number">#{pos.squadNumber}</div>
+              </div>
+              <div className="player-name">{pos.playerName}</div>
                 {pos.minutesPlayed !== undefined && (
                   <div className="player-minutes">{pos.minutesPlayed}'</div>
                 )}
