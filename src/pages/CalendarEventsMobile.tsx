@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const tabs = [
 ];
 
 export default function CalendarEventsMobile() {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
   const [activeTab, setActiveTab] = useState('fixtures');
   const [loading, setLoading] = useState(true);
@@ -982,6 +984,19 @@ export default function CalendarEventsMobile() {
                   >
                     SQUAD
                   </Button>
+                  {(selectedEvent.event_type === 'match' || selectedEvent.event_type === 'friendly' || selectedEvent.event_type === 'fixture') && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowEventDetails(false);
+                        navigate(`/game-day/${selectedEvent.id}`);
+                      }}
+                    >
+                      GAME DAY
+                    </Button>
+                  )}
                   {isEventCompleted(selectedEvent) && (
                     <Button
                       variant="outline"
