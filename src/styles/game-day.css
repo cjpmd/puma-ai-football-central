@@ -101,6 +101,7 @@
     hsl(120, 45%, 22%) 100%
   );
   margin: 8px;
+  padding: 50px 20px;
   border-radius: 8px;
   overflow: hidden;
   border: 2px solid hsl(120, 40%, 20%);
