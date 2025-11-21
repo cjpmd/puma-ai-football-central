@@ -17,6 +17,8 @@ interface PlayerPosition {
   isCaptain?: boolean;
   minutesPlayed?: number;
   isSubstitute?: boolean;
+  replacedPlayerId?: string;
+  replacedPlayerName?: string;
 }
 
 interface GameDayFormationCardProps {
@@ -174,6 +176,11 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                 }}
                 {...longPressHandlers}
               >
+                {pos.replacedPlayerName && (
+                  <div className="replaced-player-name">
+                    {pos.replacedPlayerName}
+                  </div>
+                )}
                 <div className={playerCircleClass}>
                   {renderPlayerBadges(pos.playerId, pos.isCaptain)}
                   <div className="player-number">#{pos.squadNumber}</div>

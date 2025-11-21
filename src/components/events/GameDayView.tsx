@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,6 +59,29 @@ export const GameDayView: React.FC = () => {
     },
     retry: 1
   });
+
+  // Fetch players for enriching player data
+  const { data: players } = useQuery({
+    queryKey: ['team-players', event?.team_id],
+    enabled: !!event?.team_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('players')
+        .select('id, name, squad_number')
+        .eq('team_id', event.team_id);
+      if (error) throw error;
+      return data || [];
+    }
+  });
+
+  // Create player lookup map
+  const playerMap = useMemo(() => {
+    const map = new Map();
+    players?.forEach(p => {
+      map.set(p.id, { name: p.name, squadNumber: p.squad_number });
+    });
+    return map;
+  }, [players]);
 
   const gameDuration = event?.game_duration || 50;
   const {
@@ -172,48 +195,61 @@ export const GameDayView: React.FC = () => {
   const totalPeriods = eventSelections.length;
   const periodDuration = currentSelection?.duration_minutes || 25;
 
-  // Parse positions from player_positions JSON
+  // Parse positions from player_positions JSON with enriched data
   const positions = currentSelection?.player_positions 
     ? (() => {
         const playerPositions = currentSelection.player_positions;
         
         // Check if it's already an array
         if (Array.isArray(playerPositions)) {
-          return playerPositions.map((pos: any) => ({
-            playerId: pos.playerId,
-            playerName: pos.playerName || 'Unknown',
-            squadNumber: pos.squadNumber || 0,
-            position: pos.positionName || pos.position || 'Unknown',
-            positionGroup: pos.positionGroup || 'midfielder',
-            x: pos.x || 50,
-            y: pos.y || 50,
-            isCaptain: pos.playerId === currentSelection.captain_id
-          }));
+          return playerPositions.map((pos: any) => {
+            const playerInfo = playerMap.get(pos.playerId);
+            return {
+              playerId: pos.playerId,
+              playerName: playerInfo?.name || pos.playerName || 'Unknown',
+              squadNumber: playerInfo?.squadNumber ?? pos.squadNumber ?? 0,
+              position: pos.positionName || pos.position || 'Unknown',
+              positionGroup: pos.positionGroup || 'midfielder',
+              x: pos.x || 50,
+              y: pos.y || 50,
+              isCaptain: pos.playerId === currentSelection.captain_id,
+              replacedPlayerId: pos.replacedPlayerId,
+              replacedPlayerName: pos.replacedPlayerId ? playerMap.get(pos.replacedPlayerId)?.name : undefined
+            };
+          });
         }
         
         // It's an object - convert to array
-        return Object.entries(playerPositions as Record<string, any>).map(([key, pos]: [string, any]) => ({
-          playerId: pos.playerId,
-          playerName: pos.playerName || 'Unknown',
-          squadNumber: pos.squadNumber || 0,
-          position: pos.positionName || key,
-          positionGroup: pos.positionGroup || 'midfielder',
-          x: pos.x || 50,
-          y: pos.y || 50,
-          isCaptain: pos.playerId === currentSelection.captain_id
-        }));
+        return Object.entries(playerPositions as Record<string, any>).map(([key, pos]: [string, any]) => {
+          const playerInfo = playerMap.get(pos.playerId);
+          return {
+            playerId: pos.playerId,
+            playerName: playerInfo?.name || pos.playerName || 'Unknown',
+            squadNumber: playerInfo?.squadNumber ?? pos.squadNumber ?? 0,
+            position: pos.positionName || key,
+            positionGroup: pos.positionGroup || 'midfielder',
+            x: pos.x || 50,
+            y: pos.y || 50,
+            isCaptain: pos.playerId === currentSelection.captain_id,
+            replacedPlayerId: pos.replacedPlayerId,
+            replacedPlayerName: pos.replacedPlayerId ? playerMap.get(pos.replacedPlayerId)?.name : undefined
+          };
+        });
       })()
     : [];
 
-  // Parse substitutes
+  // Parse substitutes with enriched data
   const substitutes = currentSelection?.substitutes 
-    ? (currentSelection.substitutes as any[]).map((sub: any) => ({
-        id: sub.playerId || sub.id,
-        name: sub.playerName || sub.name || 'Unknown',
-        squad_number: sub.squadNumber || 0,
-        position: sub.position || 'SUB',
-        isUsed: false
-      }))
+    ? (currentSelection.substitutes as any[]).map((sub: any) => {
+        const playerInfo = playerMap.get(sub.playerId || sub.id);
+        return {
+          id: sub.playerId || sub.id,
+          name: playerInfo?.name || sub.playerName || sub.name || 'Unknown',
+          squad_number: playerInfo?.squadNumber ?? sub.squadNumber ?? 0,
+          position: sub.position || 'SUB',
+          isUsed: false
+        };
+      })
     : [];
 
   const handlePlayerLongPress = (playerId: string) => {
@@ -222,82 +258,49 @@ export const GameDayView: React.FC = () => {
 
   return (
     <div className="game-day-container">
-      {/* Header */}
-      <div className="game-day-header">
-        <div className="flex items-center justify-between mb-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+      {/* Compact Header */}
+      <div className="game-day-header-compact">
+        <div className="flex items-center justify-between px-2 py-1">
+          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+            <ArrowLeft className="h-4 w-4" />
           </Button>
-          
-          <div className="text-center">
-            <h1 className="text-lg font-bold">{event.title}</h1>
-            <p className="text-sm text-muted-foreground">
+          <div className="text-center flex-1">
+            <h1 className="text-base font-bold leading-tight">{event.title}</h1>
+            <p className="text-xs text-muted-foreground">
               {event.opponent ? `vs ${event.opponent}` : 'Training'}
             </p>
           </div>
-          
-          <div className="w-20" />
+          <div className="w-8" />
         </div>
-
-        {/* Score and Timer */}
-        <div className="flex items-center justify-between">
-          <div className="text-center flex-1">
-            <div className="match-timer">{displayTime}</div>
-          </div>
-          
+        
+        <div className="flex items-center justify-center gap-4 py-1">
+          <div className="match-timer-compact">{displayTime}</div>
           {event.scores && (
-            <div className="text-center flex-1">
-              <div className="match-score">
-                {(event.scores as any)?.home || 0} - {(event.scores as any)?.away || 0}
-              </div>
+            <div className="match-score-compact">
+              {(event.scores as any)?.home || 0} - {(event.scores as any)?.away || 0}
             </div>
           )}
         </div>
-
-        {/* Timer Controls */}
-        <div className="flex gap-2 justify-center mt-3">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={isRunning ? pause : start}
-          >
-            {isRunning ? (
-              <>
-                <Pause className="h-4 w-4 mr-2" />
-                Pause
-              </>
-            ) : (
-              <>
-                <Play className="h-4 w-4 mr-2" />
-                Start
-              </>
-            )}
+        
+        <div className="flex gap-1 justify-center pb-1">
+          <Button size="sm" variant="ghost" onClick={isRunning ? pause : start}>
+            {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </Button>
-          
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={reset}
-          >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Reset
+          <Button size="sm" variant="ghost" onClick={reset}>
+            <RotateCcw className="h-3 w-3" />
           </Button>
         </div>
       </div>
 
       {/* Content */}
       <div className="game-day-content">
-        {/* Timeline */}
-        <div className="p-4">
+        {/* Compact Timeline */}
+        <div className="px-2 py-1">
           <GameDayTimeline
             matchEvents={matchEvents}
             periodDuration={periodDuration}
             totalPeriods={totalPeriods}
+            compact={true}
           />
         </div>
 
@@ -317,35 +320,48 @@ export const GameDayView: React.FC = () => {
             />
           </div>
 
-          {/* Period Navigation */}
+          {/* Period Navigation with Time Ranges */}
           {totalPeriods > 1 && (
-            <div className="flex items-center justify-center gap-4 mt-4">
+            <div className="flex items-center justify-center gap-2 mt-2 px-2">
               <Button
                 variant="outline"
                 size="icon"
+                className="h-7 w-7"
                 onClick={handlePreviousPeriod}
                 disabled={currentPeriodIndex === 0}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3 w-3" />
               </Button>
               
-              <div className="period-indicators">
-                {Array.from({ length: totalPeriods }).map((_, i) => (
-                  <button
-                    key={i}
-                    className={`period-dot ${i === currentPeriodIndex ? 'active' : ''}`}
-                    onClick={() => setCurrentPeriodIndex(i)}
-                  />
-                ))}
+              <div className="flex gap-1 flex-1 justify-center overflow-x-auto">
+                {eventSelections.map((sel, i) => {
+                  const startMin = eventSelections
+                    .slice(0, i)
+                    .reduce((sum, s) => sum + (s.duration_minutes || 25), 0);
+                  const endMin = startMin + (sel.duration_minutes || 25);
+                  const label = i === 0 ? '1H' : i === 1 ? '2H' : `${i + 1}H`;
+                  
+                  return (
+                    <button
+                      key={i}
+                      className={`period-time-button ${i === currentPeriodIndex ? 'active' : ''}`}
+                      onClick={() => setCurrentPeriodIndex(i)}
+                    >
+                      <div className="text-xs font-semibold">{label}</div>
+                      <div className="text-[10px]">{startMin}-{endMin}'</div>
+                    </button>
+                  );
+                })}
               </div>
               
               <Button
                 variant="outline"
                 size="icon"
+                className="h-7 w-7"
                 onClick={handleNextPeriod}
                 disabled={currentPeriodIndex === totalPeriods - 1}
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-3 w-3" />
               </Button>
             </div>
           )}

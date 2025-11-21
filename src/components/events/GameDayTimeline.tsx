@@ -6,12 +6,14 @@ interface GameDayTimelineProps {
   matchEvents: MatchEvent[];
   periodDuration: number;
   totalPeriods: number;
+  compact?: boolean;
 }
 
 export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
   matchEvents,
   periodDuration,
-  totalPeriods
+  totalPeriods,
+  compact = false
 }) => {
   const totalMinutes = periodDuration * totalPeriods;
 
@@ -48,6 +50,49 @@ export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
         return 'bg-gray-500';
     }
   };
+
+  if (compact) {
+    return (
+      <div className="w-full">
+        <div className="relative">
+          {/* Timeline bar */}
+          <div className="h-1 bg-muted rounded-full relative overflow-hidden">
+            {/* Period markers */}
+            {Array.from({ length: totalPeriods - 1 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute top-0 bottom-0 w-px bg-border"
+                style={{ left: `${((i + 1) * periodDuration / totalMinutes) * 100}%` }}
+              />
+            ))}
+          </div>
+
+          {/* Event markers */}
+          <div className="relative h-4 mt-0.5">
+            {matchEvents.map((event, index) => {
+              const minute = event.minute || 0;
+              const position = (minute / totalMinutes) * 100;
+
+              return (
+                <div
+                  key={event.id}
+                  className="absolute"
+                  style={{
+                    left: `${Math.min(Math.max(position, 0), 100)}%`,
+                    transform: 'translateX(-50%)',
+                    top: '0'
+                  }}
+                >
+                  <div className={`w-3 h-3 rounded-full ${getEventColor(event.event_type)} flex items-center justify-center shadow-sm`}>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full p-4 bg-card rounded-lg border">
