@@ -21,21 +21,21 @@
 
 .game-day-header-compact {
   background: hsl(var(--card));
-  padding: 8px;
+  padding: 4px 0;
   border-bottom: 1px solid hsl(var(--border));
   flex-shrink: 0;
 }
 
 /* Timer and controls inline */
 .match-timer-compact {
-  font-size: 2.5rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: hsl(var(--foreground));
   text-align: center;
 }
 
 .match-score-compact {
-  font-size: 1.5rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: hsl(var(--foreground));
   text-align: center;
@@ -101,9 +101,9 @@
     hsl(120, 45%, 22%) 100%
   );
   margin: 8px;
-  padding: 50px 20px;
+  padding: 40px 20px;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible; /* allow replacement label and badges to extend slightly */
   border: 2px solid hsl(120, 40%, 20%);
 }
 
@@ -391,7 +391,7 @@
   justify-content: center;
   flex: 1;
   min-width: 0;
-  padding: 8px 4px;
+  padding: 6px 4px;
   border: 2px solid hsl(var(--border));
   border-radius: 6px;
   background: hsl(var(--background));
@@ -399,7 +399,7 @@
   font-weight: 600;
   transition: all 0.2s;
   cursor: pointer;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
