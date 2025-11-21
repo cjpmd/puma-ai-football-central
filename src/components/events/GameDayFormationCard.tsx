@@ -160,9 +160,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
 
   return (
     <div className="period-card">
-      <div className="text-center mb-2">
-        <h3 className="text-lg font-semibold">Period {periodNumber}</h3>
-        <p className="text-sm text-muted-foreground">{formation}</p>
+      <div className="text-center mb-1">
+        <p className="text-xs font-semibold text-muted-foreground">
+          {formation}
+        </p>
       </div>
 
       <div className="formation-pitch">

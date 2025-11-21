@@ -241,19 +241,29 @@ export const GameDayView: React.FC = () => {
       })()
     : [];
 
-  // Get ALL substitute players (from substitute_players array)
-  const allSubstituteIds = (currentSelection?.substitute_players as string[]) || [];
-  
+  // Collect ALL substitute players from all periods for this event
+  const allSubstituteIdsSet = new Set<string>();
+
+  eventSelections.forEach((sel: any) => {
+    const subs = (sel.substitute_players as string[] | null) || [];
+    subs.forEach((id) => {
+      if (id) allSubstituteIdsSet.add(id);
+    });
+  });
+
+  const allSubstituteIds = Array.from(allSubstituteIdsSet);
+
+  // Build substitute objects and mark as used if currently on the pitch
   const substitutes = allSubstituteIds.map((subId: string) => {
     const playerInfo = playerMap.get(subId);
-    const isOnPitch = positions.some(p => p.playerId === subId);
-    
+    const isOnPitch = positions.some((p) => p.playerId === subId);
+
     return {
       id: subId,
       name: playerInfo?.name || 'Unknown',
       squad_number: playerInfo?.squadNumber || 0,
       position: 'SUB',
-      isUsed: isOnPitch  // Mark as used if currently on the pitch
+      isUsed: isOnPitch, // highlighted if currently on pitch in this period
     };
   });
 
@@ -265,35 +275,58 @@ export const GameDayView: React.FC = () => {
     <div className="game-day-container">
       {/* Compact Header */}
       <div className="game-day-header-compact">
-        <div className="flex items-center justify-between px-2 py-1">
-          <Button variant="ghost" size="sm" onClick={() => navigate(-1)}>
+        {/* Row 1: back + title/opponent + compact controls */}
+        <div className="flex items-center justify-between px-2 py-1 gap-2">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div className="text-center flex-1">
-            <h1 className="text-base font-bold leading-tight">{event.title}</h1>
-            <p className="text-xs text-muted-foreground">
+
+          <div className="flex-1 text-center">
+            <h1 className="text-xs font-semibold leading-tight truncate">
+              {event.title}
+            </h1>
+            <p className="text-[10px] text-muted-foreground truncate">
               {event.opponent ? `vs ${event.opponent}` : 'Training'}
             </p>
           </div>
-          <div className="w-8" />
+
+          <div className="flex items-center gap-1">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={isRunning ? pause : start}
+            >
+              {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-7 w-7"
+              onClick={reset}
+            >
+              <RotateCcw className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
-        
-        <div className="flex items-center justify-center gap-4 py-1">
-          <div className="match-timer-compact">{displayTime}</div>
-          {event.scores && (
-            <div className="match-score-compact">
-              {(event.scores as any)?.home || 0} - {(event.scores as any)?.away || 0}
+
+        {/* Row 2: small period/formation + compact timer/score */}
+        <div className="flex items-center justify-between px-2 pb-1">
+          <div className="text-[10px] text-muted-foreground">
+            Period {currentSelection.period_number}
+            {currentSelection.formation && ` • ${currentSelection.formation}`}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="match-timer-compact text-xl leading-none">
+              {displayTime}
             </div>
-          )}
-        </div>
-        
-        <div className="flex gap-1 justify-center pb-1">
-          <Button size="sm" variant="ghost" onClick={isRunning ? pause : start}>
-            {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={reset}>
-            <RotateCcw className="h-3 w-3" />
-          </Button>
+            {event.scores && (
+              <div className="match-score-compact text-sm leading-none">
+                {(event.scores as any)?.home || 0} - {(event.scores as any)?.away || 0}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
