@@ -154,7 +154,13 @@ const { data: teamData } = useQuery({
       try {
         const { data: existingSelections, error } = await supabase
           .from('event_selections')
-          .select('*')
+          .select(`
+            *,
+            performance_categories (
+              id,
+              name
+            )
+          `)
           .eq('event_id', event.id)
           .eq('team_id', teamId)
           .order('team_number', { ascending: true })
