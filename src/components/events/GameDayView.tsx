@@ -49,11 +49,7 @@ export const GameDayView: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('event_selections')
-        .select(`
-          *,
-          captain:captain_id(id, name, squad_number),
-          performance_category:performance_category_id(id, name, color)
-        `)
+        .select('*')
         .eq('event_id', eventId)
         .order('team_number', { ascending: true })
         .order('period_number', { ascending: true });
