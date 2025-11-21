@@ -19,22 +19,33 @@ export const GameDayView: React.FC = () => {
   const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
   
-  const { data: event } = useQuery({
+  const { 
+    data: event, 
+    error: eventError, 
+    isLoading: eventLoading 
+  } = useQuery({
     queryKey: ['event', eventId],
+    enabled: !!eventId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('events')
         .select('*')
         .eq('id', eventId)
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
       return data;
-    }
+    },
+    retry: 1
   });
 
-  const { data: eventSelections } = useQuery({
+  const { 
+    data: eventSelections, 
+    error: selectionsError, 
+    isLoading: selectionsLoading 
+  } = useQuery({
     queryKey: ['event-selections', eventId],
+    enabled: !!eventId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('event_selections')
@@ -49,7 +60,8 @@ export const GameDayView: React.FC = () => {
       
       if (error) throw error;
       return data || [];
-    }
+    },
+    retry: 1
   });
 
   const gameDuration = event?.game_duration || 50;
@@ -94,15 +106,71 @@ export const GameDayView: React.FC = () => {
     }
   };
 
-  if (!event || !eventSelections) {
+  // Handle loading state
+  if (eventLoading || selectionsLoading) {
     return (
       <div className="game-day-container">
         <div className="flex items-center justify-center h-full">
-          <p>Loading...</p>
+          <p className="text-sm text-muted-foreground">Loading game details...</p>
         </div>
       </div>
     );
   }
+
+  // Handle errors
+  if (eventError || selectionsError) {
+    console.error('GameDayView error', { eventError, selectionsError, eventId });
+    return (
+      <div className="game-day-container">
+        <div className="flex flex-col items-center justify-center h-full text-center px-4 gap-4">
+          <p className="text-sm text-destructive">
+            Sorry, we couldn't load Game Day for this event.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Please check the team selection and try again.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            Back to Events
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle event not found
+  if (!event) {
+    return (
+      <div className="game-day-container">
+        <div className="flex flex-col items-center justify-center h-full text-center px-4 gap-4">
+          <p className="text-sm">Event not found.</p>
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            Back to Calendar
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle no team selections
+  if (!eventSelections || eventSelections.length === 0) {
+    return (
+      <div className="game-day-container">
+        <div className="flex flex-col items-center justify-center h-full text-center px-4 gap-4">
+          <p className="text-sm font-medium">No Game Day data found for this event.</p>
+          <p className="text-xs text-muted-foreground">
+            Please set up your team and periods in the Squad / Team Selection view first.
+          </p>
+          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            Back to Events
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Debug logging
+  console.log('GameDayView - event', event);
+  console.log('GameDayView - eventSelections count', eventSelections.length);
 
   const currentSelection = eventSelections[currentPeriodIndex];
   const totalPeriods = eventSelections.length;
