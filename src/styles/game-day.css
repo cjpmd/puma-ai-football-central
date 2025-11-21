@@ -1,85 +1,106 @@
-/* Game Day Mobile Optimizations */
+/* Game Day View - Mobile-Optimized Real-Time Match Interface */
 
+/* Main container - no scrolling */
 .game-day-container {
   height: 100vh;
+  height: 100dvh;
   width: 100vw;
-  overflow: hidden;
-  background: hsl(var(--background));
   display: flex;
   flex-direction: column;
-}
-
-.game-day-header {
-  flex-shrink: 0;
-  background: hsl(var(--card));
-  border-bottom: 1px solid hsl(var(--border));
-  padding: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  background: #1a1a1a;
 }
 
 /* Compact header */
-.game-day-header-compact {
+.game-day-header {
+  background: hsl(210, 30%, 20%);
+  padding: 12px;
+  border-bottom: 1px solid hsl(210, 20%, 30%);
   flex-shrink: 0;
-  background: hsl(var(--card));
-  border-bottom: 1px solid hsl(var(--border));
-  padding: 0;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+.game-day-header-compact {
+  background: hsl(210, 30%, 20%);
+  padding: 8px;
+  border-bottom: 1px solid hsl(210, 20%, 30%);
+  flex-shrink: 0;
+}
+
+/* Timer and controls inline */
 .match-timer-compact {
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: hsl(var(--foreground));
+  color: white;
+  text-align: center;
 }
 
 .match-score-compact {
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: hsl(var(--foreground));
+  color: white;
+  text-align: center;
 }
 
+/* Main content area */
 .game-day-content {
   flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
+/* Periods carousel - horizontal scrolling */
 .periods-carousel {
+  flex: 1;
   display: flex;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  height: 100%;
 }
 
 .periods-carousel::-webkit-scrollbar {
   display: none;
 }
 
+/* Individual period card */
 .period-card {
-  min-width: 100vw;
-  scroll-snap-align: center;
+  flex: 0 0 100vw;
+  width: 100vw;
   display: flex;
   flex-direction: column;
-  padding: 1rem;
-  gap: 1rem;
-}
-
-.formation-pitch {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 3/4;
-  background: linear-gradient(135deg, hsl(120, 60%, 25%) 0%, hsl(120, 55%, 30%) 100%);
-  border-radius: 12px;
-  border: 2px solid hsl(var(--border));
+  scroll-snap-align: start;
   overflow: hidden;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
+/* Period title */
+.period-title {
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 8px;
+  color: white;
+  background: rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
+}
+
+/* Formation pitch - takes most space */
+.formation-pitch {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(
+    to bottom,
+    #2d5016 0%,
+    #3d6b1f 50%,
+    #2d5016 100%
+  );
+  margin: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* Pitch markings */
 .formation-pitch::before {
   content: '';
   position: absolute;
@@ -88,6 +109,7 @@
   right: 0;
   height: 2px;
   background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-50%);
 }
 
 .formation-pitch::after {
@@ -95,297 +117,344 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
+/* Player position container */
 .player-position {
   position: absolute;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
+/* Player circles - match reference colors */
 .player-circle {
-  position: relative;
-  width: 52px;
-  height: 52px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
-  background: hsl(var(--card));
-  border: 3px solid hsl(var(--primary));
+  background: #3b82f6; /* Blue by default */
+  border: 3px solid white;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s;
 }
 
 .player-circle:active {
   transform: scale(0.95);
 }
 
+/* Position-specific colors - all blue in reference */
 .player-circle.goalkeeper {
-  border-color: hsl(45, 100%, 50%);
+  background: #3b82f6;
 }
 
 .player-circle.defender {
-  border-color: hsl(210, 100%, 50%);
+  background: #3b82f6;
 }
 
 .player-circle.midfielder {
-  border-color: hsl(120, 60%, 40%);
+  background: #3b82f6;
 }
 
 .player-circle.forward {
-  border-color: hsl(0, 80%, 50%);
+  background: #3b82f6;
 }
 
+/* Card statuses - border colors */
 .player-circle.has-red-card {
-  opacity: 0.5;
-  border-color: hsl(0, 80%, 50%);
+  border-color: #ef4444;
   border-width: 4px;
 }
 
-.player-circle.substituted-off {
-  border-color: hsl(30, 100%, 50%);
+.player-circle.has-yellow-red {
+  border-color: #f97316;
+  border-width: 4px;
 }
 
-.player-circle.substituted-on {
-  border-color: hsl(200, 100%, 50%);
+/* Substituted out - cyan/light blue border */
+.player-circle.substituted {
+  border-color: #06b6d4;
+  border-width: 4px;
 }
 
-.player-number {
-  font-size: 0.75rem;
+/* Position badge inside circle at top */
+.position-badge-inline {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 9px;
   font-weight: 700;
-  color: hsl(var(--foreground));
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
   line-height: 1;
 }
 
+/* Squad number - large and centered */
+.player-number {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: white;
+  margin: 0;
+  line-height: 1;
+  z-index: 1;
+}
+
+/* Minutes inside circle at bottom */
+.player-minutes-inline {
+  position: absolute;
+  bottom: 2px;
+  font-size: 10px;
+  color: white;
+  font-weight: 600;
+  line-height: 1;
+}
+
+/* Player name below circle - white and bold */
 .player-name {
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 80px;
+  max-width: 70px;
   text-align: center;
+  margin-top: 4px;
 }
 
+/* Replaced player label - YELLOW BOX like reference */
+.replaced-player-label {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #eab308;  /* Yellow background */
+  color: #000;           /* Black text */
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Player badges (goals, assists, cards, captain) */
 .player-badges {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  top: -6px;
+  right: -6px;
   display: flex;
   gap: 2px;
+  z-index: 2;
 }
 
 .event-badge {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 10px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .event-badge.goal {
-  background: hsl(120, 60%, 40%);
+  background: #10b981;
 }
 
 .event-badge.assist {
-  background: hsl(210, 80%, 50%);
-}
-
-.event-badge.save {
-  background: hsl(270, 60%, 50%);
+  background: #3b82f6;
 }
 
 .event-badge.yellow-card {
-  background: hsl(45, 100%, 50%);
+  background: #eab308;
 }
 
 .event-badge.red-card {
-  background: hsl(0, 80%, 50%);
+  background: #ef4444;
 }
 
 .event-badge.captain {
-  background: hsl(45, 100%, 50%);
+  background: #8b5cf6;
+  font-size: 12px;
 }
 
-.player-minutes {
-  font-size: 0.625rem;
-  color: hsl(var(--muted-foreground));
-  margin-top: 2px;
-}
-
+/* Substitute bench - horizontal scrolling */
 .substitute-bench {
   display: flex;
-  gap: 0.5rem;
+  gap: 8px;
+  padding: 8px;
   overflow-x: auto;
-  padding: 0.5rem;
-  background: hsl(var(--muted) / 0.3);
-  border-radius: 8px;
-  scrollbar-width: none;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.2);
+  scrollbar-width: thin;
 }
 
 .substitute-bench::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.substitute-bench::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.substitute-bench::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
 }
 
 .substitute-card {
   flex-shrink: 0;
-  min-width: 60px;
-  padding: 0.5rem;
-  background: hsl(var(--card));
-  border: 2px solid hsl(var(--border));
-  border-radius: 8px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: transform 0.2s, border-color 0.2s;
+  width: 70px;
+  text-align: center;
+  padding: 4px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  transition: opacity 0.2s;
 }
 
-.substitute-card:active {
-  transform: scale(0.95);
+.substitute-card .player-circle {
+  width: 50px;
+  height: 50px;
+  margin: 0 auto 4px;
+  font-size: 0.875rem;
+}
+
+.substitute-card .player-name {
+  font-size: 0.625rem;
+  max-width: 70px;
 }
 
 .substitute-card.used {
-  opacity: 0.6;
-  border-color: hsl(var(--muted));
+  opacity: 0.4;
 }
 
+/* Period indicators */
 .period-indicators {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
+  gap: 8px;
+  padding: 8px;
+  flex-shrink: 0;
 }
 
 .period-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: hsl(var(--muted));
-  transition: background 0.2s, width 0.2s;
+  background: rgba(255, 255, 255, 0.3);
+  transition: all 0.3s;
 }
 
 .period-dot.active {
+  background: #3b82f6;
   width: 24px;
   border-radius: 4px;
-  background: hsl(var(--primary));
 }
 
-/* Period time buttons */
+/* Period navigation - minute labels only */
 .period-time-button {
   display: flex;
-  flex-direction: row;
   align-items: center;
   justify-content: center;
   min-width: 60px;
-  padding: 6px 12px;
-  border: 1px solid hsl(var(--border));
+  padding: 8px 12px;
+  border: 2px solid hsl(210, 20%, 40%);
   border-radius: 6px;
-  background: hsl(var(--background));
+  background: hsl(210, 30%, 15%);
+  color: white;
+  font-weight: 600;
   transition: all 0.2s;
   cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
 }
 
 .period-time-button.active {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
-  border-color: hsl(var(--primary));
+  background: #3b82f6;
+  border-color: #3b82f6;
 }
 
 .period-time-button:not(.active):hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--accent-foreground));
+  background: hsl(210, 30%, 25%);
 }
 
-.period-time-button:not(.active):active {
-  transform: scale(0.95);
-}
-
+/* Match timer */
 .match-timer {
-  font-size: 1.5rem;
+  font-size: 3rem;
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  color: hsl(var(--foreground));
+  color: white;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
+/* Match score */
 .match-score {
   font-size: 2rem;
-  font-weight: 700;
-  color: hsl(var(--foreground));
-}
-
-/* Replaced player name */
-.replaced-player-name {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 11px;
   font-weight: 600;
-  color: hsl(30, 100%, 60%);
-  white-space: nowrap;
-  margin-bottom: 4px;
-  opacity: 1;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-}
-
-/* Position badge */
-.position-badge {
-  position: absolute;
-  top: -24px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.7);
   color: white;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-  z-index: 1;
+  text-align: center;
 }
 
-/* Touch optimizations */
+/* Timeline - minimal */
+.game-day-timeline-compact {
+  height: 24px;
+  background: rgba(0, 0, 0, 0.2);
+  margin: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+/* Touch optimization for mobile */
 @media (hover: none) and (pointer: coarse) {
-  .player-position,
-  .substitute-card {
-    min-height: 48px;
+  .player-circle {
+    min-width: 56px;
+    min-height: 56px;
+  }
+
+  .substitute-card .player-circle {
     min-width: 48px;
+    min-height: 48px;
   }
 }
 
 /* Landscape mode adjustments */
 @media (orientation: landscape) and (max-height: 500px) {
   .formation-pitch {
-    aspect-ratio: 4/3;
+    aspect-ratio: 16/9;
   }
-  
+
   .period-card {
     flex-direction: row;
   }
-  
+
   .substitute-bench {
     flex-direction: column;
+    width: 80px;
     overflow-y: auto;
-    overflow-x: visible;
+    overflow-x: hidden;
   }
 }

@@ -199,17 +199,27 @@ export const GameDayView: React.FC = () => {
   const positions = currentSelection?.player_positions 
     ? (() => {
         const playerPositions = currentSelection.player_positions;
+        const previousSelection = currentPeriodIndex > 0 ? eventSelections[currentPeriodIndex - 1] : null;
+        const previousPositions = previousSelection?.player_positions || [];
         
-        // Debug: Log the raw player positions to see structure
-        console.log('Raw player_positions for period', currentPeriodIndex, playerPositions);
+        // Create a map of position -> playerId from previous period
+        const previousPositionMap = new Map();
+        if (Array.isArray(previousPositions)) {
+          previousPositions.forEach((pos: any) => {
+            const posKey = `${pos.positionGroup}-${Math.round(pos.x)}-${Math.round(pos.y)}`;
+            previousPositionMap.set(posKey, pos.playerId);
+          });
+        }
         
         // Check if it's already an array
         if (Array.isArray(playerPositions)) {
           return playerPositions.map((pos: any) => {
             const playerInfo = playerMap.get(pos.playerId);
             
-            // Debug: Check if replacedPlayerId exists
-            console.log('Position for player', pos.playerId, '- replacedPlayerId:', pos.replacedPlayerId);
+            // Check if this position had a different player in previous period
+            const posKey = `${pos.positionGroup}-${Math.round(pos.x)}-${Math.round(pos.y)}`;
+            const previousPlayerId = previousPositionMap.get(posKey);
+            const wasReplaced = previousPlayerId && previousPlayerId !== pos.playerId;
             
             return {
               playerId: pos.playerId,
@@ -220,44 +230,32 @@ export const GameDayView: React.FC = () => {
               x: pos.x || 50,
               y: pos.y || 50,
               isCaptain: pos.playerId === currentSelection.captain_id,
-              replacedPlayerId: pos.replacedPlayerId,
-              replacedPlayerName: pos.replacedPlayerId ? playerMap.get(pos.replacedPlayerId)?.name : undefined
+              replacedPlayerId: wasReplaced ? previousPlayerId : undefined,
+              replacedPlayerName: wasReplaced ? playerMap.get(previousPlayerId)?.name : undefined,
+              minutesPlayed: pos.minutesPlayed
             };
           });
         }
         
-        // It's an object - convert to array
-        return Object.entries(playerPositions as Record<string, any>).map(([key, pos]: [string, any]) => {
-          const playerInfo = playerMap.get(pos.playerId);
-          return {
-            playerId: pos.playerId,
-            playerName: playerInfo?.name || pos.playerName || 'Unknown',
-            squadNumber: playerInfo?.squadNumber ?? pos.squadNumber ?? 0,
-            position: pos.positionName || key,
-            positionGroup: pos.positionGroup || 'midfielder',
-            x: pos.x || 50,
-            y: pos.y || 50,
-            isCaptain: pos.playerId === currentSelection.captain_id,
-            replacedPlayerId: pos.replacedPlayerId,
-            replacedPlayerName: pos.replacedPlayerId ? playerMap.get(pos.replacedPlayerId)?.name : undefined
-          };
-        });
+        return [];
       })()
     : [];
 
-  // Parse substitutes with enriched data
-  const substitutes = currentSelection?.substitutes 
-    ? (currentSelection.substitutes as any[]).map((sub: any) => {
-        const playerInfo = playerMap.get(sub.playerId || sub.id);
-        return {
-          id: sub.playerId || sub.id,
-          name: playerInfo?.name || sub.playerName || sub.name || 'Unknown',
-          squad_number: playerInfo?.squadNumber ?? sub.squadNumber ?? 0,
-          position: sub.position || 'SUB',
-          isUsed: false
-        };
-      })
-    : [];
+  // Get ALL substitute players (from substitute_players array)
+  const allSubstituteIds = (currentSelection?.substitute_players as string[]) || [];
+  
+  const substitutes = allSubstituteIds.map((subId: string) => {
+    const playerInfo = playerMap.get(subId);
+    const isOnPitch = positions.some(p => p.playerId === subId);
+    
+    return {
+      id: subId,
+      name: playerInfo?.name || 'Unknown',
+      squad_number: playerInfo?.squadNumber || 0,
+      position: 'SUB',
+      isUsed: isOnPitch  // Mark as used if currently on the pitch
+    };
+  });
 
   const handlePlayerLongPress = (playerId: string) => {
     toast.info('Long press a player on the pitch to log events');
