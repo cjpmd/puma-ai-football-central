@@ -197,27 +197,35 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                   left: `${pos.x}%`,
                   top: `${pos.y}%`,
                   transform: 'translate(-50%, -50%)'
-              }}
-              {...longPressHandlers}
-            >
-              <div className="position-badge">
-                {getPositionAbbreviation(pos.position)}
-              </div>
-              
-              {pos.replacedPlayerName && (
-                <div className="replaced-player-name">
-                  ↻ {pos.replacedPlayerName}
-                </div>
-              )}
-              
-              <div className={playerCircleClass}>
-                {renderPlayerBadges(pos.playerId, pos.isCaptain)}
-                <div className="player-number">#{pos.squadNumber}</div>
-              </div>
-              <div className="player-name">{pos.playerName}</div>
-                {pos.minutesPlayed !== undefined && (
-                  <div className="player-minutes">{pos.minutesPlayed}'</div>
+                }}
+                {...longPressHandlers}
+              >
+                {/* Show replaced player name in yellow box */}
+                {pos.replacedPlayerName && (
+                  <div className="replaced-player-label">
+                    {pos.replacedPlayerName}
+                  </div>
                 )}
+                
+                <div className={playerCircleClass}>
+                  {/* Position badge inside circle at top */}
+                  <div className="position-badge-inline">
+                    {getPositionAbbreviation(pos.position)}
+                  </div>
+                  
+                  {renderPlayerBadges(pos.playerId, pos.isCaptain)}
+                  
+                  {/* Squad number in center */}
+                  <div className="player-number">{pos.squadNumber}</div>
+                  
+                  {/* Minutes at bottom of circle */}
+                  {pos.minutesPlayed !== undefined && (
+                    <div className="player-minutes-inline">{pos.minutesPlayed}'</div>
+                  )}
+                </div>
+                
+                {/* Player name below circle */}
+                <div className="player-name">{pos.playerName}</div>
               </div>
             </GameDayPlayerEventMenu>
           );
