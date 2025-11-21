@@ -1,0 +1,305 @@
+/* Game Day Mobile Optimizations */
+
+.game-day-container {
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: hsl(var(--background));
+  display: flex;
+  flex-direction: column;
+}
+
+.game-day-header {
+  flex-shrink: 0;
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 1rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.game-day-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0;
+}
+
+.periods-carousel {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  height: 100%;
+}
+
+.periods-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.period-card {
+  min-width: 100vw;
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 1rem;
+}
+
+.formation-pitch {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: linear-gradient(135deg, hsl(120, 60%, 25%) 0%, hsl(120, 55%, 30%) 100%);
+  border-radius: 12px;
+  border: 2px solid hsl(var(--border));
+  overflow: hidden;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.formation-pitch::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.formation-pitch::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+}
+
+.player-position {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.player-circle {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: hsl(var(--card));
+  border: 3px solid hsl(var(--primary));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.player-circle:active {
+  transform: scale(0.95);
+}
+
+.player-circle.goalkeeper {
+  border-color: hsl(45, 100%, 50%);
+}
+
+.player-circle.defender {
+  border-color: hsl(210, 100%, 50%);
+}
+
+.player-circle.midfielder {
+  border-color: hsl(120, 60%, 40%);
+}
+
+.player-circle.forward {
+  border-color: hsl(0, 80%, 50%);
+}
+
+.player-circle.has-red-card {
+  opacity: 0.5;
+  border-color: hsl(0, 80%, 50%);
+  border-width: 4px;
+}
+
+.player-circle.substituted-off {
+  border-color: hsl(30, 100%, 50%);
+}
+
+.player-circle.substituted-on {
+  border-color: hsl(200, 100%, 50%);
+}
+
+.player-number {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+  line-height: 1;
+}
+
+.player-name {
+  font-size: 0.625rem;
+  color: hsl(var(--foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 60px;
+  text-align: center;
+}
+
+.player-badges {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  display: flex;
+  gap: 2px;
+}
+
+.event-badge {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.event-badge.goal {
+  background: hsl(120, 60%, 40%);
+}
+
+.event-badge.assist {
+  background: hsl(210, 80%, 50%);
+}
+
+.event-badge.save {
+  background: hsl(270, 60%, 50%);
+}
+
+.event-badge.yellow-card {
+  background: hsl(45, 100%, 50%);
+}
+
+.event-badge.red-card {
+  background: hsl(0, 80%, 50%);
+}
+
+.event-badge.captain {
+  background: hsl(45, 100%, 50%);
+}
+
+.player-minutes {
+  font-size: 0.625rem;
+  color: hsl(var(--muted-foreground));
+  margin-top: 2px;
+}
+
+.substitute-bench {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.5rem;
+  background: hsl(var(--muted) / 0.3);
+  border-radius: 8px;
+  scrollbar-width: none;
+}
+
+.substitute-bench::-webkit-scrollbar {
+  display: none;
+}
+
+.substitute-card {
+  flex-shrink: 0;
+  min-width: 60px;
+  padding: 0.5rem;
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.substitute-card:active {
+  transform: scale(0.95);
+}
+
+.substitute-card.used {
+  opacity: 0.6;
+  border-color: hsl(var(--muted));
+}
+
+.period-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+}
+
+.period-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: hsl(var(--muted));
+  transition: background 0.2s, width 0.2s;
+}
+
+.period-dot.active {
+  width: 24px;
+  border-radius: 4px;
+  background: hsl(var(--primary));
+}
+
+.match-timer {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+}
+
+.match-score {
+  font-size: 2rem;
+  font-weight: 700;
+  color: hsl(var(--foreground));
+}
+
+/* Touch optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .player-position,
+  .substitute-card {
+    min-height: 48px;
+    min-width: 48px;
+  }
+}
+
+/* Landscape mode adjustments */
+@media (orientation: landscape) and (max-height: 500px) {
+  .formation-pitch {
+    aspect-ratio: 4/3;
+  }
+  
+  .period-card {
+    flex-direction: row;
+  }
+  
+  .substitute-bench {
+    flex-direction: column;
+    overflow-y: auto;
+    overflow-x: visible;
+  }
+}
