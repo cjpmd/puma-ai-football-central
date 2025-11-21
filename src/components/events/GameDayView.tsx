@@ -110,16 +110,35 @@ export const GameDayView: React.FC = () => {
 
   // Parse positions from player_positions JSON
   const positions = currentSelection?.player_positions 
-    ? Object.entries(currentSelection.player_positions as Record<string, any>).map(([key, pos]: [string, any]) => ({
-        playerId: pos.playerId,
-        playerName: pos.playerName || 'Unknown',
-        squadNumber: pos.squadNumber || 0,
-        position: pos.positionName || key,
-        positionGroup: pos.positionGroup || 'midfielder',
-        x: pos.x || 50,
-        y: pos.y || 50,
-        isCaptain: pos.playerId === currentSelection.captain_id
-      }))
+    ? (() => {
+        const playerPositions = currentSelection.player_positions;
+        
+        // Check if it's already an array
+        if (Array.isArray(playerPositions)) {
+          return playerPositions.map((pos: any) => ({
+            playerId: pos.playerId,
+            playerName: pos.playerName || 'Unknown',
+            squadNumber: pos.squadNumber || 0,
+            position: pos.positionName || pos.position || 'Unknown',
+            positionGroup: pos.positionGroup || 'midfielder',
+            x: pos.x || 50,
+            y: pos.y || 50,
+            isCaptain: pos.playerId === currentSelection.captain_id
+          }));
+        }
+        
+        // It's an object - convert to array
+        return Object.entries(playerPositions as Record<string, any>).map(([key, pos]: [string, any]) => ({
+          playerId: pos.playerId,
+          playerName: pos.playerName || 'Unknown',
+          squadNumber: pos.squadNumber || 0,
+          position: pos.positionName || key,
+          positionGroup: pos.positionGroup || 'midfielder',
+          x: pos.x || 50,
+          y: pos.y || 50,
+          isCaptain: pos.playerId === currentSelection.captain_id
+        }));
+      })()
     : [];
 
   // Parse substitutes
