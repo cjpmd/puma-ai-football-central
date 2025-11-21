@@ -8,21 +8,21 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #1a1a1a;
+  background: hsl(var(--background));
 }
 
 /* Compact header */
 .game-day-header {
-  background: hsl(210, 30%, 20%);
+  background: hsl(var(--card));
   padding: 12px;
-  border-bottom: 1px solid hsl(210, 20%, 30%);
+  border-bottom: 1px solid hsl(var(--border));
   flex-shrink: 0;
 }
 
 .game-day-header-compact {
-  background: hsl(210, 30%, 20%);
+  background: hsl(var(--card));
   padding: 8px;
-  border-bottom: 1px solid hsl(210, 20%, 30%);
+  border-bottom: 1px solid hsl(var(--border));
   flex-shrink: 0;
 }
 
@@ -30,14 +30,14 @@
 .match-timer-compact {
   font-size: 2.5rem;
   font-weight: 700;
-  color: white;
+  color: hsl(var(--foreground));
   text-align: center;
 }
 
 .match-score-compact {
   font-size: 1.5rem;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--foreground));
   text-align: center;
 }
 
@@ -72,6 +72,7 @@
   flex-direction: column;
   scroll-snap-align: start;
   overflow: hidden;
+  padding: 8px;
 }
 
 /* Period title */
@@ -80,8 +81,8 @@
   font-size: 1rem;
   font-weight: 600;
   padding: 8px;
-  color: white;
-  background: rgba(0, 0, 0, 0.2);
+  color: hsl(var(--foreground));
+  background: hsl(var(--muted) / 0.3);
   flex-shrink: 0;
 }
 
@@ -91,13 +92,14 @@
   position: relative;
   background: linear-gradient(
     to bottom,
-    #2d5016 0%,
-    #3d6b1f 50%,
-    #2d5016 100%
+    hsl(120, 45%, 22%) 0%,
+    hsl(120, 50%, 28%) 50%,
+    hsl(120, 45%, 22%) 100%
   );
   margin: 8px;
   border-radius: 8px;
   overflow: hidden;
+  border: 2px solid hsl(120, 40%, 20%);
 }
 
 /* Pitch markings */
@@ -108,7 +110,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: rgba(255, 255, 255, 0.3);
+  background: hsla(0, 0%, 100%, 0.3);
   transform: translateY(-50%);
 }
 
@@ -119,7 +121,7 @@
   left: 50%;
   width: 60px;
   height: 60px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid hsla(0, 0%, 100%, 0.3);
   border-radius: 50%;
   transform: translate(-50%, -50%);
 }
@@ -142,14 +144,14 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: #3b82f6; /* Blue by default */
-  border: 3px solid white;
+  background: hsl(217, 91%, 60%); /* Blue by default */
+  border: 3px solid hsl(0, 0%, 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px hsla(0, 0%, 0%, 0.3);
   transition: transform 0.2s;
 }
 
@@ -159,35 +161,35 @@
 
 /* Position-specific colors - all blue in reference */
 .player-circle.goalkeeper {
-  background: #3b82f6;
+  background: hsl(217, 91%, 60%);
 }
 
 .player-circle.defender {
-  background: #3b82f6;
+  background: hsl(217, 91%, 60%);
 }
 
 .player-circle.midfielder {
-  background: #3b82f6;
+  background: hsl(217, 91%, 60%);
 }
 
 .player-circle.forward {
-  background: #3b82f6;
+  background: hsl(217, 91%, 60%);
 }
 
 /* Card statuses - border colors */
 .player-circle.has-red-card {
-  border-color: #ef4444;
+  border-color: hsl(0, 84%, 60%);
   border-width: 4px;
 }
 
 .player-circle.has-yellow-red {
-  border-color: #f97316;
+  border-color: hsl(25, 95%, 53%);
   border-width: 4px;
 }
 
 /* Substituted out - cyan/light blue border */
 .player-circle.substituted {
-  border-color: #06b6d4;
+  border-color: hsl(188, 94%, 43%);
   border-width: 4px;
 }
 
@@ -197,8 +199,8 @@
   top: -2px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
+  background: hsla(0, 0%, 0%, 0.8);
+  color: hsl(0, 0%, 100%);
   font-size: 9px;
   font-weight: 700;
   padding: 1px 4px;
@@ -211,7 +213,7 @@
 .player-number {
   font-size: 1.25rem;
   font-weight: 700;
-  color: white;
+  color: hsl(0, 0%, 100%);
   margin: 0;
   line-height: 1;
   z-index: 1;
@@ -222,7 +224,7 @@
   position: absolute;
   bottom: 2px;
   font-size: 10px;
-  color: white;
+  color: hsl(0, 0%, 100%);
   font-weight: 600;
   line-height: 1;
 }
@@ -231,8 +233,8 @@
 .player-name {
   font-size: 0.75rem;
   font-weight: 600;
-  color: white;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  color: hsl(0, 0%, 100%);
+  text-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.9);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -247,15 +249,15 @@
   bottom: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
-  background: #eab308;  /* Yellow background */
-  color: #000;           /* Black text */
+  background: hsl(45, 93%, 47%);  /* Yellow background */
+  color: hsl(0, 0%, 0%);           /* Black text */
   font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 4px;
   white-space: nowrap;
   z-index: 10;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.3);
 }
 
 /* Player badges (goals, assists, cards, captain) */
@@ -277,28 +279,28 @@
   justify-content: center;
   font-size: 10px;
   font-weight: 700;
-  color: white;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  color: hsl(0, 0%, 100%);
+  box-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.3);
 }
 
 .event-badge.goal {
-  background: #10b981;
+  background: hsl(142, 71%, 45%);
 }
 
 .event-badge.assist {
-  background: #3b82f6;
+  background: hsl(217, 91%, 60%);
 }
 
 .event-badge.yellow-card {
-  background: #eab308;
+  background: hsl(45, 93%, 47%);
 }
 
 .event-badge.red-card {
-  background: #ef4444;
+  background: hsl(0, 84%, 60%);
 }
 
 .event-badge.captain {
-  background: #8b5cf6;
+  background: hsl(258, 90%, 66%);
   font-size: 12px;
 }
 
@@ -309,7 +311,7 @@
   padding: 8px;
   overflow-x: auto;
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.2);
+  background: hsl(var(--muted) / 0.3);
   scrollbar-width: thin;
 }
 
@@ -318,11 +320,11 @@
 }
 
 .substitute-bench::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
+  background: hsla(0, 0%, 100%, 0.1);
 }
 
 .substitute-bench::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
+  background: hsla(0, 0%, 100%, 0.3);
   border-radius: 2px;
 }
 
@@ -332,7 +334,8 @@
   text-align: center;
   padding: 4px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
+  background: hsl(var(--card));
+  border: 2px solid hsl(var(--border));
   transition: opacity 0.2s;
 }
 
@@ -346,6 +349,7 @@
 .substitute-card .player-name {
   font-size: 0.625rem;
   max-width: 70px;
+  color: hsl(var(--foreground));
 }
 
 .substitute-card.used {
@@ -365,12 +369,12 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: hsl(var(--muted));
   transition: all 0.3s;
 }
 
 .period-dot.active {
-  background: #3b82f6;
+  background: hsl(var(--primary));
   width: 24px;
   border-radius: 4px;
 }
@@ -382,10 +386,10 @@
   justify-content: center;
   min-width: 60px;
   padding: 8px 12px;
-  border: 2px solid hsl(210, 20%, 40%);
+  border: 2px solid hsl(var(--border));
   border-radius: 6px;
-  background: hsl(210, 30%, 15%);
-  color: white;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
   font-weight: 600;
   transition: all 0.2s;
   cursor: pointer;
@@ -394,35 +398,37 @@
 }
 
 .period-time-button.active {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
 }
 
 .period-time-button:not(.active):hover {
-  background: hsl(210, 30%, 25%);
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 /* Match timer */
 .match-timer {
   font-size: 3rem;
   font-weight: 700;
-  color: white;
+  color: hsl(var(--foreground));
   text-align: center;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  text-shadow: 0 2px 4px hsla(0, 0%, 0%, 0.3);
 }
 
 /* Match score */
 .match-score {
   font-size: 2rem;
   font-weight: 600;
-  color: white;
+  color: hsl(var(--foreground));
   text-align: center;
 }
 
 /* Timeline - minimal */
 .game-day-timeline-compact {
   height: 24px;
-  background: rgba(0, 0, 0, 0.2);
+  background: hsl(var(--muted) / 0.3);
   margin: 4px 8px;
   border-radius: 4px;
   flex-shrink: 0;
