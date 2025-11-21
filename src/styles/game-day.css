@@ -171,12 +171,14 @@
 }
 
 .player-name {
-  font-size: 0.625rem;
-  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 60px;
+  max-width: 80px;
   text-align: center;
 }
 
@@ -291,11 +293,11 @@
 /* Period time buttons */
 .period-time-button {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  min-width: 50px;
-  padding: 4px 8px;
+  min-width: 60px;
+  padding: 6px 12px;
   border: 1px solid hsl(var(--border));
   border-radius: 6px;
   background: hsl(var(--background));
@@ -337,11 +339,29 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 9px;
-  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(30, 100%, 60%);
   white-space: nowrap;
-  margin-bottom: 2px;
-  opacity: 0.8;
+  margin-bottom: 4px;
+  opacity: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* Position badge */
+.position-badge {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 1;
 }
 
 /* Touch optimizations */
