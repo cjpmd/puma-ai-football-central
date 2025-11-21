@@ -17,6 +17,29 @@
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+/* Compact header */
+.game-day-header-compact {
+  flex-shrink: 0;
+  background: hsl(var(--card));
+  border-bottom: 1px solid hsl(var(--border));
+  padding: 0;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.match-timer-compact {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+}
+
+.match-score-compact {
+  font-size: 1.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--foreground));
+}
+
 .game-day-content {
   flex: 1;
   overflow-y: auto;
@@ -265,6 +288,36 @@
   background: hsl(var(--primary));
 }
 
+/* Period time buttons */
+.period-time-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 50px;
+  padding: 4px 8px;
+  border: 1px solid hsl(var(--border));
+  border-radius: 6px;
+  background: hsl(var(--background));
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.period-time-button.active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.period-time-button:not(.active):hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+}
+
+.period-time-button:not(.active):active {
+  transform: scale(0.95);
+}
+
 .match-timer {
   font-size: 1.5rem;
   font-weight: 700;
@@ -276,6 +329,19 @@
   font-size: 2rem;
   font-weight: 700;
   color: hsl(var(--foreground));
+}
+
+/* Replaced player name */
+.replaced-player-name {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+  margin-bottom: 2px;
+  opacity: 0.8;
 }
 
 /* Touch optimizations */
