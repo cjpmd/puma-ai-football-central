@@ -200,10 +200,17 @@ export const GameDayView: React.FC = () => {
     ? (() => {
         const playerPositions = currentSelection.player_positions;
         
+        // Debug: Log the raw player positions to see structure
+        console.log('Raw player_positions for period', currentPeriodIndex, playerPositions);
+        
         // Check if it's already an array
         if (Array.isArray(playerPositions)) {
           return playerPositions.map((pos: any) => {
             const playerInfo = playerMap.get(pos.playerId);
+            
+            // Debug: Check if replacedPlayerId exists
+            console.log('Position for player', pos.playerId, '- replacedPlayerId:', pos.replacedPlayerId);
+            
             return {
               playerId: pos.playerId,
               playerName: playerInfo?.name || pos.playerName || 'Unknown',
