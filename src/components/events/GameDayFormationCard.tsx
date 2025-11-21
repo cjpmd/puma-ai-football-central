@@ -203,7 +203,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                 {/* Show replaced player name in yellow box */}
                 {pos.replacedPlayerName && (
                   <div className="replaced-player-label">
-                    {pos.replacedPlayerName}
+                    {pos.replacedPlayerName.split(' ')[0]}
                   </div>
                 )}
                 
@@ -225,7 +225,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                 </div>
                 
                 {/* Player name below circle */}
-                <div className="player-name">{pos.playerName}</div>
+                <div className="player-name">{pos.playerName.split(' ')[0]}</div>
               </div>
             </GameDayPlayerEventMenu>
           );
