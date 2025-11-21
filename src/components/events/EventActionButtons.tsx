@@ -34,7 +34,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   const { settings } = useTeamPrivacy(event.team_id);
   const isParent = currentView === 'parent';
   const isTrainingEvent = event.event_type === 'training';
-  const isMatchEvent = event.event_type === 'match' || event.event_type === 'friendly';
+  const isMatchEvent = event.event_type === 'match' || event.event_type === 'friendly' || event.event_type === 'fixture';
 
   // Determine button classes based on size
   const buttonClass = size === 'xs' ? "h-6 w-6 p-0" : size === 'sm' ? "h-8 w-8 p-0" : "";
