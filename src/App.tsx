@@ -41,6 +41,7 @@ import SubscriptionManagement from "./pages/SubscriptionManagement";
 import SubscriptionManagementMobile from "./pages/SubscriptionManagementMobile";
 import ChildProgress from "./pages/ChildProgress";
 import ChildProgressMobile from "./pages/ChildProgressMobile";
+import GameDayMobile from "./pages/GameDayMobile";
 
 const queryClient = new QueryClient();
 
@@ -196,13 +197,21 @@ const App = () => (
                        mobileComponent={<ChildProgressMobile />}
                      />
                    </ProtectedRoute>
-                  }
-                />
-                <Route path="/data-recovery" element={<DataRecovery />} />
-               <Route path="/email-test" element={<EmailTestPage />} />
-               <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
-               <Route path="*" element={<NotFound />} />
-              </Routes>
+                   }
+                 />
+                 <Route 
+                   path="/game-day/:eventId" 
+                   element={
+                     <ProtectedRoute>
+                       <GameDayMobile />
+                     </ProtectedRoute>
+                   }
+                 />
+                 <Route path="/data-recovery" element={<DataRecovery />} />
+                <Route path="/email-test" element={<EmailTestPage />} />
+                <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
+                <Route path="*" element={<NotFound />} />
+               </Routes>
             </SmartViewProvider>
           </AuthorizationProvider>
         </AuthProvider>

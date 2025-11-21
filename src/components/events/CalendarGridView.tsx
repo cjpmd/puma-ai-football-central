@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +42,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   onPostGameEdit,
   onDeleteEvent
 }) => {
+  const navigate = useNavigate();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventWeather, setEventWeather] = useState<{ [eventId: string]: WeatherData }>({});
   const [performanceCategories, setPerformanceCategories] = useState<{[key: string]: string}>({});
@@ -546,6 +548,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             onPostGameEdit={onPostGameEdit}
                             onDeleteEvent={onDeleteEvent}
                             onTrainingPack={setSelectedTrainingPack}
+                            onGameDay={(event) => navigate(`/game-day/${event.id}`)}
                           />
                         </div>
                       );
