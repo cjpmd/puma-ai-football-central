@@ -71,8 +71,9 @@
   display: flex;
   flex-direction: column;
   scroll-snap-align: start;
-  overflow: hidden;
+  overflow: visible;
   padding: 8px;
+  min-height: 0;
 }
 
 /* Period title */
@@ -86,10 +87,13 @@
   flex-shrink: 0;
 }
 
-/* Formation pitch - takes most space */
+/* Formation pitch - takes most space with aspect ratio */
 .formation-pitch {
-  flex: 1;
   position: relative;
+  width: 100%;
+  min-height: 400px;
+  max-height: 60vh;
+  aspect-ratio: 3/4;
   background: linear-gradient(
     to bottom,
     hsl(120, 45%, 22%) 0%,
