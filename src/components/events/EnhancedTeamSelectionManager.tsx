@@ -644,22 +644,25 @@ const { data: teamData } = useQuery({
       teamNumber 
     });
     
-    try {
-      // Ensure event_selection record exists first
-      const { data: existingSelection, error: checkError } = await supabase
-        .from('event_selections')
-        .select('id')
-        .eq('event_id', event.id)
-        .eq('team_id', teamId)
-        .eq('team_number', teamNumber)
-        .maybeSingle();
+      try {
+        // Ensure event_selection record exists first
+        const { data: existingSelections, error: checkError } = await supabase
+          .from('event_selections')
+          .select('id')
+          .eq('event_id', event.id)
+          .eq('team_id', teamId)
+          .eq('team_number', teamNumber);
 
-      if (checkError) {
-        console.error('Error checking existing selection:', checkError);
-        throw checkError;
-      }
+        if (checkError) {
+          console.error('Error checking existing selection:', checkError);
+          throw checkError;
+        }
 
-      if (existingSelection) {
+        const existingSelection = Array.isArray(existingSelections)
+          ? existingSelections[0]
+          : existingSelections || null;
+
+        if (existingSelection) {
         // Update existing record
         const { error: updateError } = await supabase
           .from('event_selections')
