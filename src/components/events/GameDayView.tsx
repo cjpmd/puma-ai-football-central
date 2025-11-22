@@ -316,22 +316,27 @@ export const GameDayView: React.FC = () => {
 
   const allSubstituteIds = Array.from(allSubstituteIdsSet);
 
-  // Build substitute objects
-  const substitutes = allSubstituteIds.map((subId: string) => {
-    const playerInfo = playerMap.get(subId);
-    const isOnPitch = positions.some((p) => p.playerId === subId);
-    const replacedPlayerId = substituteReplacementMap.get(subId);
-    const replacedPlayerInfo = replacedPlayerId ? playerMap.get(replacedPlayerId) : null;
+  // Build substitute objects - ONLY show non-playing substitutes
+  const substitutes = allSubstituteIds
+    .filter((subId: string) => {
+      // Only show if NOT currently on the pitch
+      const isOnPitch = positions.some((p) => p.playerId === subId);
+      return !isOnPitch;
+    })
+    .map((subId: string) => {
+      const playerInfo = playerMap.get(subId);
+      const replacedPlayerId = substituteReplacementMap.get(subId);
+      const replacedPlayerInfo = replacedPlayerId ? playerMap.get(replacedPlayerId) : null;
 
-    return {
-      id: subId,
-      name: playerInfo?.name || 'Unknown',
-      squad_number: playerInfo?.squadNumber || 0,
-      position: 'SUB',
-      isUsed: isOnPitch,
-      replacedPlayerName: replacedPlayerInfo?.name,
-    };
-  });
+      return {
+        id: subId,
+        name: playerInfo?.name || 'Unknown',
+        squad_number: playerInfo?.squadNumber || 0,
+        position: 'SUB',
+        isUsed: false, // Always false since we filtered out used ones
+        replacedPlayerName: replacedPlayerInfo?.name,
+      };
+    });
 
   const handlePlayerLongPress = (playerId: string) => {
     toast.info('Long press a player on the pitch to log events');
