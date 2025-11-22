@@ -7,6 +7,7 @@ interface SubstitutePlayer {
   squad_number: number;
   position: string;
   isUsed?: boolean;
+  replacedPlayerName?: string;
 }
 
 interface GameDaySubstituteBenchProps {
@@ -39,15 +40,20 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
             className={`substitute-card ${player.isUsed ? 'used' : ''}`}
             {...longPressHandlers}
           >
-            <div className="text-lg font-bold">#{player.squad_number}</div>
-            <div className="text-xs font-medium text-center line-clamp-1">
-              {player.name}
+            {player.replacedPlayerName && (
+              <div className="replaced-by-label">
+                {player.replacedPlayerName.split(' ')[0]}
+              </div>
+            )}
+            <div className="player-circle">
+              <div className="player-circle-name">{player.name.split(' ')[0]}</div>
+              <div className="player-number">#{player.squad_number}</div>
             </div>
-            <div className="text-xs text-muted-foreground">
+            <div className="substitute-name">
               {player.position}
             </div>
             {player.isUsed && (
-              <div className="text-xs text-muted-foreground">Used</div>
+              <div className="text-[9px] text-muted-foreground">On Pitch</div>
             )}
           </div>
         );

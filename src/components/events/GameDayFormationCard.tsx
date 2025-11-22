@@ -160,13 +160,15 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
 
   return (
     <div className="period-card">
-      <div className="text-center mb-1">
+      <div className="text-center py-1">
         <p className="text-xs font-semibold text-muted-foreground">
           {formation}
         </p>
       </div>
 
       <div className="formation-pitch">
+        <div className="goal-box-top"></div>
+        <div className="goal-box-bottom"></div>
         {positions.map((pos) => {
           const cardStatus = playerCardStatuses[pos.playerId] || { hasYellow: false, hasRed: false };
           const isGoalkeeper = pos.positionGroup === 'goalkeeper';
@@ -216,7 +218,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                   
                   {renderPlayerBadges(pos.playerId, pos.isCaptain)}
                   
-                  {/* Squad number in center */}
+                  {/* Player name inside circle */}
+                  <div className="player-circle-name">{pos.playerName.split(' ')[0]}</div>
+                  
+                  {/* Squad number below name */}
                   <div className="player-number">{pos.squadNumber}</div>
                   
                   {/* Minutes at bottom of circle */}
@@ -224,9 +229,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                     <div className="player-minutes-inline">{pos.minutesPlayed}'</div>
                   )}
                 </div>
-                
-                {/* Player name below circle */}
-                <div className="player-name">{pos.playerName.split(' ')[0]}</div>
               </div>
             </GameDayPlayerEventMenu>
           );

@@ -74,6 +74,21 @@ export const GameDayView: React.FC = () => {
     }
   });
 
+  // Fetch team for logo/badge
+  const { data: team } = useQuery({
+    queryKey: ['team', event?.team_id],
+    enabled: !!event?.team_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('teams')
+        .select('id, name, logo_url')
+        .eq('id', event.team_id)
+        .single();
+      if (error) throw error;
+      return data;
+    }
+  });
+
   // Create player lookup map
   const playerMap = useMemo(() => {
     const map = new Map();
@@ -109,8 +124,31 @@ export const GameDayView: React.FC = () => {
     }
   };
 
-  const handleEventCreated = (newEvent: MatchEvent) => {
+  const handleEventCreated = async (newEvent: MatchEvent) => {
     setMatchEvents(prev => [...prev, newEvent]);
+    
+    // Trigger stats update
+    try {
+      const { playerStatsService } = await import('@/services/playerStatsService');
+      await playerStatsService.updateEventPlayerStats(eventId!);
+    } catch (error) {
+      console.error('Error updating stats:', error);
+    }
+  };
+
+  const handleEventDelete = async (eventToDelete: MatchEvent) => {
+    try {
+      await matchEventService.deleteMatchEvent(eventToDelete.id);
+      setMatchEvents(prev => prev.filter(e => e.id !== eventToDelete.id));
+      toast.success('Event deleted');
+      
+      // Trigger stats recalculation
+      const { playerStatsService } = await import('@/services/playerStatsService');
+      await playerStatsService.updateEventPlayerStats(eventId!);
+    } catch (error) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+    }
   };
 
   const handlePreviousPeriod = () => {
@@ -221,6 +259,10 @@ export const GameDayView: React.FC = () => {
             const previousPlayerId = previousPositionMap.get(posKey);
             const wasReplaced = previousPlayerId && previousPlayerId !== pos.playerId;
             
+            // Shift all non-goalkeeper Y positions down by 8% to prevent striker label clipping
+            const isGoalkeeper = pos.positionGroup === 'goalkeeper';
+            const adjustedY = isGoalkeeper ? pos.y : Math.min(pos.y + 8, 92);
+            
             return {
               playerId: pos.playerId,
               playerName: playerInfo?.name || pos.playerName || 'Unknown',
@@ -228,7 +270,7 @@ export const GameDayView: React.FC = () => {
               position: pos.positionName || pos.position || 'Unknown',
               positionGroup: pos.positionGroup || 'midfielder',
               x: pos.x || 50,
-              y: pos.y || 50,
+              y: adjustedY || 50,
               isCaptain: pos.playerId === currentSelection.captain_id,
               replacedPlayerId: wasReplaced ? previousPlayerId : undefined,
               replacedPlayerName: wasReplaced ? playerMap.get(previousPlayerId)?.name : undefined,
@@ -241,29 +283,53 @@ export const GameDayView: React.FC = () => {
       })()
     : [];
 
-  // Collect ALL substitute players from all periods for this event
+  // Collect ALL substitute players from all periods
   const allSubstituteIdsSet = new Set<string>();
+  const substituteReplacementMap = new Map<string, string>(); // subId -> replacedPlayerId
 
-  eventSelections.forEach((sel: any) => {
+  eventSelections.forEach((sel: any, index: number) => {
     const subs = (sel.substitute_players as string[] | null) || [];
     subs.forEach((id) => {
       if (id) allSubstituteIdsSet.add(id);
     });
+
+    // Track who each substitute replaced by comparing to previous period
+    if (index > 0) {
+      const prevSel = eventSelections[index - 1];
+      const prevPositions = (prevSel.player_positions as any[]) || [];
+      const currPositions = (sel.player_positions as any[]) || [];
+
+      currPositions.forEach((currPos: any) => {
+        const matchingPrevPos = prevPositions.find((prevPos: any) => 
+          prevPos.positionGroup === currPos.positionGroup &&
+          Math.abs(prevPos.x - currPos.x) < 5 &&
+          Math.abs(prevPos.y - currPos.y) < 10
+        );
+
+        if (matchingPrevPos && matchingPrevPos.playerId !== currPos.playerId) {
+          // currPos.playerId came on for matchingPrevPos.playerId
+          substituteReplacementMap.set(currPos.playerId, matchingPrevPos.playerId);
+        }
+      });
+    }
   });
 
   const allSubstituteIds = Array.from(allSubstituteIdsSet);
 
-  // Build substitute objects and mark as used if currently on the pitch
+  // Build substitute objects
   const substitutes = allSubstituteIds.map((subId: string) => {
     const playerInfo = playerMap.get(subId);
     const isOnPitch = positions.some((p) => p.playerId === subId);
+    const replacedPlayerId = substituteReplacementMap.get(subId);
+    const replacedPlayerInfo = replacedPlayerId ? playerMap.get(replacedPlayerId) : null;
 
     return {
       id: subId,
       name: playerInfo?.name || 'Unknown',
       squad_number: playerInfo?.squadNumber || 0,
       position: 'SUB',
-      isUsed: isOnPitch, // highlighted if currently on pitch in this period
+      isUsed: isOnPitch,
+      replacedPlayerName: replacedPlayerInfo?.name,
     };
   });
 
@@ -275,29 +341,40 @@ export const GameDayView: React.FC = () => {
     <div className="game-day-container">
       {/* Compact Header */}
       <div className="game-day-header-compact">
-        {/* Row 1: back + title/opponent + compact controls */}
+        {/* Row 1: back + team badge + title/opponent + compact controls */}
         <div className="flex items-center justify-between px-2 py-1 gap-2">
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
 
-          <div className="flex-1 text-center">
-            <h1 className="text-xs font-semibold leading-tight truncate">
-              {event.title}
-            </h1>
-            <p className="text-[10px] text-muted-foreground truncate">
-              {event.opponent ? `vs ${event.opponent}` : 'Training'}
-            </p>
+          <div className="flex-1 flex items-center justify-center gap-2">
+            {team?.logo_url && (
+              <img 
+                src={team.logo_url} 
+                alt={team.name}
+                className="h-8 w-8 object-contain rounded"
+              />
+            )}
+            <div className="text-center">
+              <h1 className="text-sm font-bold leading-tight truncate">
+                {event.title}
+              </h1>
+              {event.opponent && (
+                <p className="text-xs font-semibold text-foreground truncate">
+                  vs {event.opponent}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex items-center gap-1">
             <Button
               size="icon"
-              variant="ghost"
-              className="h-7 w-7"
+              variant={isRunning ? "ghost" : "default"}
+              className="h-10 w-10"
               onClick={isRunning ? pause : start}
             >
-              {isRunning ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+              {isRunning ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
             </Button>
             <Button
               size="icon"
@@ -339,6 +416,7 @@ export const GameDayView: React.FC = () => {
             periodDuration={periodDuration}
             totalPeriods={totalPeriods}
             compact={true}
+            onEventDelete={handleEventDelete}
           />
         </div>
 
@@ -403,15 +481,12 @@ export const GameDayView: React.FC = () => {
           )}
         </div>
 
-        {/* Substitutes */}
+        {/* Substitutes - no extra wrapper, just the bench */}
         {substitutes.length > 0 && (
-          <div className="p-4">
-            <h3 className="text-sm font-semibold mb-2">Substitutes</h3>
-            <GameDaySubstituteBench
-              substitutes={substitutes}
-              onPlayerLongPress={handlePlayerLongPress}
-            />
-          </div>
+          <GameDaySubstituteBench
+            substitutes={substitutes}
+            onPlayerLongPress={handlePlayerLongPress}
+          />
         )}
       </div>
     </div>
