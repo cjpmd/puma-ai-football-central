@@ -1,34 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MatchEvent } from '@/types/matchEvent';
-import { Trophy, HandHeart, Shield, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Circle, HandHeart, Shield, Square } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface GameDayTimelineProps {
   matchEvents: MatchEvent[];
   periodDuration: number;
   totalPeriods: number;
   compact?: boolean;
+  onEventDelete?: (event: MatchEvent) => void;
 }
 
 export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
   matchEvents,
   periodDuration,
   totalPeriods,
-  compact = false
+  compact = false,
+  onEventDelete
 }) => {
+  const [eventToDelete, setEventToDelete] = useState<MatchEvent | null>(null);
   const totalMinutes = periodDuration * totalPeriods;
 
   const getEventIcon = (eventType: string) => {
     switch (eventType) {
       case 'goal':
-        return <Trophy className="h-3 w-3 text-green-500" />;
+        return <Circle className="h-3 w-3 text-green-500 fill-green-500" />;
       case 'assist':
         return <HandHeart className="h-3 w-3 text-blue-500" />;
       case 'save':
         return <Shield className="h-3 w-3 text-purple-500" />;
       case 'yellow_card':
-        return <AlertCircle className="h-3 w-3 text-yellow-500" />;
+        return <Square className="h-3 w-3 text-yellow-500 fill-yellow-500" />;
       case 'red_card':
-        return <AlertTriangle className="h-3 w-3 text-red-500" />;
+        return <Square className="h-3 w-3 text-red-500 fill-red-500" />;
       default:
         return null;
     }
@@ -127,7 +140,10 @@ export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
                   top: index % 2 === 0 ? '0' : '16px'
                 }}
               >
-                <div className={`w-6 h-6 rounded-full ${getEventColor(event.event_type)} flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110`}>
+                <div 
+                  className={`w-6 h-6 rounded-full ${getEventColor(event.event_type)} flex items-center justify-center shadow-md cursor-pointer transition-transform hover:scale-110`}
+                  onClick={() => onEventDelete && setEventToDelete(event)}
+                >
                   {getEventIcon(event.event_type)}
                 </div>
                 
@@ -138,6 +154,9 @@ export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
                     <div className="text-muted-foreground">
                       {event.event_type.replace('_', ' ')} - {event.minute}'
                     </div>
+                    {onEventDelete && (
+                      <div className="text-destructive text-[10px] mt-1">Tap to delete</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -159,7 +178,11 @@ export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
       {matchEvents.length > 0 && (
         <div className="mt-4 space-y-2 max-h-40 overflow-y-auto">
           {matchEvents.map((event) => (
-            <div key={event.id} className="flex items-center gap-2 text-sm">
+            <div 
+              key={event.id} 
+              className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent/50 p-1 rounded"
+              onClick={() => onEventDelete && setEventToDelete(event)}
+            >
               <span className="text-muted-foreground font-mono w-8">{event.minute}'</span>
               <div className="flex items-center gap-1">
                 {getEventIcon(event.event_type)}
@@ -172,6 +195,33 @@ export const GameDayTimeline: React.FC<GameDayTimelineProps> = ({
           ))}
         </div>
       )}
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={!!eventToDelete} onOpenChange={(open) => !open && setEventToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Delete {eventToDelete?.event_type.replace('_', ' ')} for {eventToDelete?.players?.name} at {eventToDelete?.minute}'?
+              This will recalculate player statistics.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (eventToDelete && onEventDelete) {
+                  onEventDelete(eventToDelete);
+                }
+                setEventToDelete(null);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

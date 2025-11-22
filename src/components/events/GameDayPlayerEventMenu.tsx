@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MatchEventType, PlayerCardStatus } from '@/types/matchEvent';
-import { Trophy, HandHeart, Shield, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Circle, HandHeart, Shield, Square } from 'lucide-react';
 
 interface GameDayPlayerEventMenuProps {
   playerId: string;
@@ -42,7 +42,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
             className="w-full justify-start gap-2 h-12"
             onClick={() => handleEventClick('goal')}
           >
-            <Trophy className="h-5 w-5 text-green-500" />
+            <Circle className="h-5 w-5 text-green-500 fill-green-500" />
             <span>Goal</span>
           </Button>
 
@@ -76,7 +76,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
                   className="w-full justify-start gap-2 h-12 text-red-600"
                   onClick={() => handleEventClick('yellow_card')}
                 >
-                  <AlertTriangle className="h-5 w-5" />
+                  <Square className="h-5 w-5 fill-red-600" />
                   <span>2nd Yellow (Red)</span>
                 </Button>
               ) : (
@@ -85,7 +85,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
                   className="w-full justify-start gap-2 h-12 text-yellow-600"
                   onClick={() => handleEventClick('yellow_card')}
                 >
-                  <AlertCircle className="h-5 w-5" />
+                  <Square className="h-5 w-5 fill-yellow-500" />
                   <span>Yellow Card</span>
                 </Button>
               )}
@@ -95,7 +95,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
                 className="w-full justify-start gap-2 h-12 text-red-600"
                 onClick={() => handleEventClick('red_card')}
               >
-                <AlertTriangle className="h-5 w-5" />
+                <Square className="h-5 w-5 fill-red-600" />
                 <span>Red Card</span>
               </Button>
             </>

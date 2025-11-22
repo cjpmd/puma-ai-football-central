@@ -64,7 +64,7 @@
   display: none;
 }
 
-/* Individual period card */
+/* Individual period card - no padding for full width */
 .period-card {
   flex: 0 0 100vw;
   width: 100vw;
@@ -72,7 +72,7 @@
   flex-direction: column;
   scroll-snap-align: start;
   overflow: visible;
-  padding: 8px;
+  padding: 0;
   min-height: 0;
 }
 
@@ -87,27 +87,31 @@
   flex-shrink: 0;
 }
 
-/* Formation pitch - takes most space with aspect ratio */
+/* Formation pitch - full width with striped grass effect */
 .formation-pitch {
   position: relative;
   width: 100%;
-  min-height: 400px;
-  max-height: 60vh;
+  min-height: 500px;
+  max-height: 70vh;
   aspect-ratio: 3/4;
-  background: linear-gradient(
-    to bottom,
-    hsl(120, 45%, 22%) 0%,
-    hsl(120, 50%, 28%) 50%,
-    hsl(120, 45%, 22%) 100%
-  );
-  margin: 8px;
-  padding: 40px 20px;
-  border-radius: 8px;
-  overflow: visible; /* allow replacement label and badges to extend slightly */
-  border: 2px solid hsl(120, 40%, 20%);
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      hsl(120, 40%, 35%) 0px,
+      hsl(120, 40%, 35%) 40px,
+      hsl(120, 45%, 38%) 40px,
+      hsl(120, 45%, 38%) 80px
+    );
+  margin: 0;
+  padding: 60px 20px 30px;
+  border-radius: 0;
+  overflow: visible;
+  border: none;
+  border-top: 2px solid hsl(120, 40%, 30%);
+  border-bottom: 2px solid hsl(120, 40%, 30%);
 }
 
-/* Pitch markings */
+/* Pitch markings - enhanced with goal boxes */
 .formation-pitch::before {
   content: '';
   position: absolute;
@@ -115,7 +119,7 @@
   left: 0;
   right: 0;
   height: 2px;
-  background: hsla(0, 0%, 100%, 0.3);
+  background: hsla(0, 0%, 100%, 0.5);
   transform: translateY(-50%);
 }
 
@@ -124,11 +128,35 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 60px;
-  height: 60px;
-  border: 2px solid hsla(0, 0%, 100%, 0.3);
+  width: 80px;
+  height: 80px;
+  border: 2px solid hsla(0, 0%, 100%, 0.5);
   border-radius: 50%;
   transform: translate(-50%, -50%);
+}
+
+/* Goal box at top */
+.formation-pitch .goal-box-top {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 40px;
+  border: 2px solid hsla(0, 0%, 100%, 0.4);
+  border-top: none;
+}
+
+/* Goal box at bottom */
+.formation-pitch .goal-box-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40%;
+  height: 40px;
+  border: 2px solid hsla(0, 0%, 100%, 0.4);
+  border-bottom: none;
 }
 
 /* Player position container */
@@ -144,12 +172,12 @@
   -webkit-touch-callout: none;
 }
 
-/* Player circles - match reference colors */
+/* Player circles - name inside, number below */
 .player-circle {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: hsl(217, 91%, 60%); /* Blue by default */
+  background: hsl(217, 91%, 60%);
   border: 3px solid hsl(0, 0%, 100%);
   display: flex;
   flex-direction: column;
@@ -158,6 +186,7 @@
   position: relative;
   box-shadow: 0 2px 8px hsla(0, 0%, 0%, 0.3);
   transition: transform 0.2s;
+  padding: 18px 4px 4px;
 }
 
 .player-circle:active {
@@ -214,9 +243,23 @@
   line-height: 1;
 }
 
-/* Squad number - large and centered */
+/* Player name inside circle */
+.player-circle-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: hsl(0, 0%, 100%);
+  text-align: center;
+  line-height: 1;
+  max-width: 52px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+/* Squad number below name inside circle */
 .player-number {
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   font-weight: 700;
   color: hsl(0, 0%, 100%);
   margin: 0;
@@ -234,19 +277,7 @@
   line-height: 1;
 }
 
-/* Player name below circle - white and bold */
-.player-name {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: hsl(0, 0%, 100%);
-  text-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.9);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70px;
-  text-align: center;
-  margin-top: 4px;
-}
+/* No external player name - name is inside circle */
 
 /* Replaced player label - YELLOW BOX like reference */
 .replaced-player-label {
@@ -309,56 +340,74 @@
   font-size: 12px;
 }
 
-/* Substitute bench - horizontal scrolling */
+/* Substitute bench - wrapped grid, no scrolling */
 .substitute-bench {
   display: flex;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 8px;
-  overflow-x: auto;
   flex-shrink: 0;
   background: hsl(var(--muted) / 0.3);
-  scrollbar-width: thin;
-}
-
-.substitute-bench::-webkit-scrollbar {
-  height: 4px;
-}
-
-.substitute-bench::-webkit-scrollbar-track {
-  background: hsla(0, 0%, 100%, 0.1);
-}
-
-.substitute-bench::-webkit-scrollbar-thumb {
-  background: hsla(0, 0%, 100%, 0.3);
-  border-radius: 2px;
+  justify-content: center;
+  align-items: flex-start;
 }
 
 .substitute-card {
   flex-shrink: 0;
-  width: 70px;
+  width: 60px;
   text-align: center;
   padding: 4px;
   border-radius: 6px;
   background: hsl(var(--card));
   border: 2px solid hsl(var(--border));
   transition: opacity 0.2s;
+  position: relative;
 }
 
 .substitute-card .player-circle {
-  width: 50px;
-  height: 50px;
+  width: 40px;
+  height: 40px;
   margin: 0 auto 4px;
+  font-size: 0.75rem;
+  padding: 14px 2px 2px;
+}
+
+.substitute-card .player-circle-name {
+  font-size: 8px;
+  max-width: 36px;
+}
+
+.substitute-card .player-number {
   font-size: 0.875rem;
 }
 
-.substitute-card .player-name {
+.substitute-card .substitute-name {
   font-size: 0.625rem;
-  max-width: 70px;
   color: hsl(var(--foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.substitute-card .replaced-by-label {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: hsl(45, 93%, 47%);
+  color: hsl(0, 0%, 0%);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  z-index: 10;
+  box-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.2);
 }
 
 .substitute-card.used {
-  opacity: 0.4;
+  opacity: 0.5;
 }
 
 /* Period indicators */
