@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MatchEventType, PlayerCardStatus } from '@/types/matchEvent';
-import { Circle, HandHeart, Shield, Square } from 'lucide-react';
+import { HandHeart, Shield, Square } from 'lucide-react';
+import { FootballIcon } from './icons/FootballIcon';
 
 interface GameDayPlayerEventMenuProps {
   playerId: string;
@@ -21,15 +22,18 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
   onEventSelect,
   children
 }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
   const handleEventClick = (eventType: MatchEventType) => {
     onEventSelect(eventType);
+    setIsOpen(false); // Close immediately after selection
   };
 
   const isCardDisabled = cardStatus.hasRed;
   const showSecondYellow = cardStatus.hasYellow && !cardStatus.hasRed;
 
   return (
-    <Popover>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         {children}
       </PopoverTrigger>
@@ -42,7 +46,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
             className="w-full justify-start gap-2 h-12"
             onClick={() => handleEventClick('goal')}
           >
-            <Circle className="h-5 w-5 text-green-500 fill-green-500" />
+            <FootballIcon className="h-5 w-5 text-green-500" />
             <span>Goal</span>
           </Button>
 
