@@ -3,6 +3,7 @@ import { useLongPress } from '@/hooks/useLongPress';
 import { GameDayPlayerEventMenu } from './GameDayPlayerEventMenu';
 import { MatchEvent, MatchEventType, PlayerCardStatus } from '@/types/matchEvent';
 import { matchEventService } from '@/services/matchEventService';
+import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
 import { Trophy, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -74,10 +75,20 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
 
       toast.success(`${eventType.replace('_', ' ')} recorded!`);
       onEventCreated(newEvent);
+      await playerMatchStatsService.updateEventPlayerStats(eventId);
       setSelectedPlayer(null);
     } catch (error) {
       console.error('Error creating match event:', error);
       toast.error('Failed to record event');
+    }
+  };
+
+  const handleEventDelete = async () => {
+    try {
+      await playerMatchStatsService.updateEventPlayerStats(eventId);
+      toast.success('Event deleted');
+    } catch (error) {
+      console.error('Error updating stats after delete:', error);
     }
   };
 
@@ -188,11 +199,13 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
           return (
             <GameDayPlayerEventMenu
               key={pos.playerId}
+              eventId={eventId}
               playerId={pos.playerId}
               playerName={pos.playerName}
               isGoalkeeper={isGoalkeeper}
               cardStatus={cardStatus}
               onEventSelect={(eventType) => handleEventSelect(pos.playerId, eventType)}
+              onEventDelete={handleEventDelete}
             >
               <div
                 className="player-position"
