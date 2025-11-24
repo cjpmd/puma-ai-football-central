@@ -60,10 +60,9 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
 
   const topPositions = getTopPositions();
 
-  // Get play style icons
-  const getPlayStyleIcons = () => {
-    if (!child.position) return null;
-    
+  // Load play style icons
+  const [playStyleIcons, setPlayStyleIcons] = React.useState<string[]>([]);
+
   React.useEffect(() => {
     if (!child.position) return;
     
@@ -78,8 +77,6 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
       setPlayStyleIcons(icons);
     });
   }, [child.position]);
-
-  const [playStyleIcons, setPlayStyleIcons] = React.useState<string[]>([]);
 
   return (
     <Card className="overflow-hidden">

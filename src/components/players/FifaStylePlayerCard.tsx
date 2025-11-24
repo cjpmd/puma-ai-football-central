@@ -111,11 +111,21 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
 }) => {
   const { toast } = useToast();
   const [flipped, setFlipped] = useState(false);
+  const [playStyles, setPlayStyles] = useState<PlayStyle[]>([]);
+  const [isLoadingStyles, setIsLoadingStyles] = useState(true);
   
   const { user, profile, loading: authLoading } = useAuth();
   const { hasPermission, loading: authzLoading } = useAuthorization();
   const [canManageCard, setCanManageCard] = useState(false);
   const [isUserStaffContext, setIsUserStaffContext] = useState(false);
+
+  // Load play styles from database
+  useEffect(() => {
+    playStylesService.getAllPlayStyles().then(styles => {
+      setPlayStyles(styles);
+      setIsLoadingStyles(false);
+    });
+  }, []);
 
   // Image editing state
   const [showImageEditor, setShowImageEditor] = useState(false);
