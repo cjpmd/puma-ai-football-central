@@ -122,5 +122,77 @@ export const matchEventService = {
 
     if (error) throw error;
     return (data || []) as MatchEvent[];
+  },
+
+  /**
+   * Get aggregated match events summary for an event
+   */
+  async getEventMatchEventsSummary(eventId: string): Promise<{
+    goals: Array<{ playerId: string; playerName: string; count: number }>;
+    assists: Array<{ playerId: string; playerName: string; count: number }>;
+    saves: Array<{ playerId: string; playerName: string; count: number }>;
+    yellowCards: Array<{ playerId: string; playerName: string; count: number }>;
+    redCards: Array<{ playerId: string; playerName: string; count: number }>;
+  }> {
+    const { data, error } = await supabase
+      .from('match_events')
+      .select(`
+        *,
+        players (
+          id,
+          name,
+          squad_number
+        )
+      `)
+      .eq('event_id', eventId);
+
+    if (error) throw error;
+
+    const events = (data || []) as MatchEvent[];
+
+    // Aggregate by event type and player
+    const aggregateByType = (eventType: MatchEventType) => {
+      const playerMap = new Map<string, { playerId: string; playerName: string; count: number }>();
+      
+      events
+        .filter(e => e.event_type === eventType)
+        .forEach(event => {
+          const playerId = event.player_id;
+          const playerName = event.players?.name || 'Unknown';
+          
+          if (playerMap.has(playerId)) {
+            playerMap.get(playerId)!.count++;
+          } else {
+            playerMap.set(playerId, { playerId, playerName, count: 1 });
+          }
+        });
+      
+      return Array.from(playerMap.values()).sort((a, b) => b.count - a.count);
+    };
+
+    return {
+      goals: aggregateByType('goal'),
+      assists: aggregateByType('assist'),
+      saves: aggregateByType('save'),
+      yellowCards: aggregateByType('yellow_card'),
+      redCards: aggregateByType('red_card'),
+    };
+  },
+
+  /**
+   * Calculate score from match events
+   */
+  async calculateEventScore(eventId: string): Promise<{ team_1: string; team_2: string }> {
+    const { data, error } = await supabase
+      .rpc('calculate_event_score', { event_uuid: eventId });
+
+    if (error) throw error;
+    
+    // Ensure we return the correct type
+    if (data && typeof data === 'object' && 'team_1' in data && 'team_2' in data) {
+      return data as { team_1: string; team_2: string };
+    }
+    
+    return { team_1: '0', team_2: '0' };
   }
 };
