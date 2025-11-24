@@ -269,15 +269,24 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       setCalculatingScore(true);
       const calculatedScore = await matchEventService.calculateEventScore(eventId);
       
-      setScores(prev => ({
-        ...prev,
-        team_1: calculatedScore.team_1,
-        team_2: calculatedScore.team_2
-      }));
+      // Only update scores for teams that exist
+      const newScores: any = { ...scores };
+      if (calculatedScore.team_1 !== undefined) {
+        newScores.team_1 = calculatedScore.team_1;
+      }
+      if (calculatedScore.team_2 !== undefined) {
+        newScores.team_2 = calculatedScore.team_2;
+      }
+      
+      setScores(newScores);
+      
+      const scoreDescription = calculatedScore.team_2 !== undefined 
+        ? `${calculatedScore.team_1}-${calculatedScore.team_2}`
+        : calculatedScore.team_1 || '0';
       
       toast({
         title: 'Score Calculated',
-        description: `Score updated to ${calculatedScore.team_1}-${calculatedScore.team_2} from match events`,
+        description: `Score updated to ${scoreDescription} from match events`,
       });
     } catch (error: any) {
       console.error('Error calculating score:', error);

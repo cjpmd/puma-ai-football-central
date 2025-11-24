@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { PerformanceAnalytics } from './PerformanceAnalytics';
 import { TrainingRecommendationsCard } from './TrainingRecommendationsCard';
 import { PostGameAnalysisService } from '@/services/postGameAnalysisService';
+import { AnalyticsEventDetails } from './AnalyticsEventDetails';
 
 interface ResultsSummaryProps {
   selectedTeamId: string;
@@ -66,6 +67,8 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   } | null>(null);
   const [trainingRecommendations, setTrainingRecommendations] = useState<any[]>([]);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
 
   useEffect(() => {
     if (selectedTeamId) {
@@ -546,7 +549,14 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
                   result.teams
                     .filter(team => selectedTeam === 'all' || team.teamName === selectedTeam)
                     .map((team, teamIndex) => (
-                    <TableRow key={`${result.id}-${team.teamNumber}`}>
+                    <TableRow 
+                      key={`${result.id}-${team.teamNumber}`}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => {
+                        setSelectedEventId(result.id);
+                        setEventDetailsOpen(true);
+                      }}
+                    >
                       {teamIndex === 0 && (
                         <>
                           <TableCell rowSpan={selectedTeam === 'all' ? result.teams.length : 1} className="border-r">
@@ -599,6 +609,15 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
           )}
         </CardContent>
       </Card>
+
+      {/* Event Details Dialog */}
+      {selectedEventId && (
+        <AnalyticsEventDetails
+          eventId={selectedEventId}
+          open={eventDetailsOpen}
+          onOpenChange={setEventDetailsOpen}
+        />
+      )}
     </div>
   );
 };

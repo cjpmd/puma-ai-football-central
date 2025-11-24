@@ -181,18 +181,19 @@ export const matchEventService = {
 
   /**
    * Calculate score from match events
+   * Returns flexible score object - only includes teams that exist
    */
-  async calculateEventScore(eventId: string): Promise<{ team_1: string; team_2: string }> {
+  async calculateEventScore(eventId: string): Promise<{ team_1?: string; team_2?: string; [key: string]: any }> {
     const { data, error } = await supabase
       .rpc('calculate_event_score', { event_uuid: eventId });
 
     if (error) throw error;
     
-    // Ensure we return the correct type
-    if (data && typeof data === 'object' && 'team_1' in data && 'team_2' in data) {
-      return data as { team_1: string; team_2: string };
+    // Return the actual data from RPC - don't fabricate teams
+    if (data && typeof data === 'object') {
+      return data;
     }
     
-    return { team_1: '0', team_2: '0' };
+    return {};
   }
 };
