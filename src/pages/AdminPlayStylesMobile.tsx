@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function AdminPlayStylesMobile() {
-  const { user } = useAuth();
+  const { user, profile, loading: profileLoading } = useAuth();
   const { isGlobalAdmin, loading: authzLoading } = useAuthorization();
   const navigate = useNavigate();
   
@@ -45,7 +45,8 @@ export default function AdminPlayStylesMobile() {
       return;
     }
     
-    if (authzLoading) return;
+    // Wait for both profile AND authorization to load
+    if (authzLoading || profileLoading || !profile) return;
     
     if (!isGlobalAdmin) {
       toast.error('Unauthorized');
@@ -54,7 +55,7 @@ export default function AdminPlayStylesMobile() {
     }
 
     loadPlayStyles();
-  }, [user, isGlobalAdmin, authzLoading, navigate]);
+  }, [user, profile, profileLoading, isGlobalAdmin, authzLoading, navigate]);
 
   const loadPlayStyles = async () => {
     setLoading(true);
@@ -194,7 +195,7 @@ export default function AdminPlayStylesMobile() {
     return acc;
   }, {} as Record<string, PlayStyle[]>);
 
-  if (authzLoading || loading) {
+  if (authzLoading || profileLoading || !profile || loading) {
     return (
       <div className="p-4">
         <div className="flex items-center justify-center h-64">
