@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { YearGroupForm } from "./YearGroupForm";
 import { YearGroupCard } from "./YearGroupCard";
+import { SplitTeamWizard } from "./SplitTeamWizard";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +36,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
   const [submitting, setSubmitting] = useState(false);
   const [selectedYearGroup, setSelectedYearGroup] = useState<YearGroup | null>(null);
   const [showTeamManagement, setShowTeamManagement] = useState(false);
+  const [splittingYearGroup, setSplittingYearGroup] = useState<YearGroup | null>(null);
   const { toast } = useToast();
 
   const loadYearGroups = async () => {
@@ -204,6 +206,10 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
     setShowTeamManagement(true);
   };
 
+  const handleSplitTeam = (yearGroup: YearGroup) => {
+    setSplittingYearGroup(yearGroup);
+  };
+
   const handleCancel = () => {
     setShowForm(false);
     setEditingYearGroup(null);
@@ -309,6 +315,7 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
               onEdit={handleEdit}
               onDelete={setDeletingYearGroup}
               onManageTeams={handleManageTeams}
+              onSplitTeam={handleSplitTeam}
             />
           ))}
         </div>
@@ -384,6 +391,16 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Split Team Wizard */}
+      {splittingYearGroup && (
+        <SplitTeamWizard
+          yearGroup={splittingYearGroup}
+          isOpen={!!splittingYearGroup}
+          onClose={() => setSplittingYearGroup(null)}
+          onComplete={loadYearGroups}
+        />
+      )}
     </div>
   );
 };
