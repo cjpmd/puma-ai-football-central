@@ -386,14 +386,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       .slice(0, 2);
   };
 
-  const getPlayStyleIcon = (styleValue: string) => {
+  const getPlayStyleIcon = (styleValue: string): React.ReactNode => {
     const style = playStyles.find(s => s.value === styleValue);
-    if (!style) return "";
+    if (!style) return null;
     
     if (style.icon_type === 'image' && style.icon_image_url) {
-      return `<img src="${style.icon_image_url}" alt="${style.label}" class="w-4 h-4 inline-block" />`;
+      return <img src={style.icon_image_url} alt={style.label} className="w-4 h-4 inline-block" />;
     }
-    return style.icon_emoji || "";
+    return style.icon_emoji || null;
   };
 
   const cardStyle = { 
