@@ -42,6 +42,8 @@ import SubscriptionManagementMobile from "./pages/SubscriptionManagementMobile";
 import ChildProgress from "./pages/ChildProgress";
 import ChildProgressMobile from "./pages/ChildProgressMobile";
 import GameDayMobile from "./pages/GameDayMobile";
+import AdminPlayStyles from "./pages/AdminPlayStyles";
+import AdminPlayStylesMobile from "./pages/AdminPlayStylesMobile";
 
 const queryClient = new QueryClient();
 
@@ -206,8 +208,19 @@ const App = () => (
                        <GameDayMobile />
                      </ProtectedRoute>
                    }
-                 />
-                 <Route path="/data-recovery" element={<DataRecovery />} />
+                  />
+                  <Route 
+                    path="/admin/play-styles" 
+                    element={
+                      <ProtectedRoute>
+                        <ResponsiveRoute
+                          desktopComponent={<AdminPlayStyles />}
+                          mobileComponent={<AdminPlayStylesMobile />}
+                        />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="/data-recovery" element={<DataRecovery />} />
                 <Route path="/email-test" element={<EmailTestPage />} />
                 <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
                 <Route path="*" element={<NotFound />} />
