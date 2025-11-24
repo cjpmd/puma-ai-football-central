@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export default function AdminPlayStyles() {
   const { user } = useAuth();
-  const { isGlobalAdmin } = useAuthorization();
+  const { isGlobalAdmin, loading: authzLoading } = useAuthorization();
   const navigate = useNavigate();
   
   const [playStyles, setPlayStyles] = useState<PlayStyle[]>([]);
@@ -45,6 +45,8 @@ export default function AdminPlayStyles() {
       return;
     }
     
+    if (authzLoading) return;
+    
     if (!isGlobalAdmin) {
       toast.error('Unauthorized', {
         description: 'Only global admins can access this page',
@@ -54,7 +56,7 @@ export default function AdminPlayStyles() {
     }
 
     loadPlayStyles();
-  }, [user, isGlobalAdmin, navigate]);
+  }, [user, isGlobalAdmin, authzLoading, navigate]);
 
   const loadPlayStyles = async () => {
     setLoading(true);
@@ -195,7 +197,7 @@ export default function AdminPlayStyles() {
     return acc;
   }, {} as Record<string, PlayStyle[]>);
 
-  if (loading) {
+  if (authzLoading || loading) {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">

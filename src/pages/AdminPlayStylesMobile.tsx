@@ -17,7 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 export default function AdminPlayStylesMobile() {
   const { user } = useAuth();
-  const { isGlobalAdmin } = useAuthorization();
+  const { isGlobalAdmin, loading: authzLoading } = useAuthorization();
   const navigate = useNavigate();
   
   const [playStyles, setPlayStyles] = useState<PlayStyle[]>([]);
@@ -45,6 +45,8 @@ export default function AdminPlayStylesMobile() {
       return;
     }
     
+    if (authzLoading) return;
+    
     if (!isGlobalAdmin) {
       toast.error('Unauthorized');
       navigate('/dashboard-mobile');
@@ -52,7 +54,7 @@ export default function AdminPlayStylesMobile() {
     }
 
     loadPlayStyles();
-  }, [user, isGlobalAdmin, navigate]);
+  }, [user, isGlobalAdmin, authzLoading, navigate]);
 
   const loadPlayStyles = async () => {
     setLoading(true);
@@ -192,7 +194,7 @@ export default function AdminPlayStylesMobile() {
     return acc;
   }, {} as Record<string, PlayStyle[]>);
 
-  if (loading) {
+  if (authzLoading || loading) {
     return (
       <div className="p-4">
         <div className="flex items-center justify-center h-64">
