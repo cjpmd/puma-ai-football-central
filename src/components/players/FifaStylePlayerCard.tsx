@@ -10,8 +10,7 @@ import { Settings, Camera, Crown, ArrowLeft, User, Calendar, Hash, Shirt, Award,
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
-import { playStylesService } from '@/types/playStyles';
-import { PlayStylesManager } from '@/components/players/PlayStylesManager';
+import { playStylesService, PlayStyle } from '@/types/playStyles';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 
 interface FifaStylePlayerCardProps {
@@ -90,12 +89,6 @@ const cardDesigns: Record<string, CardDesign> = {
   }
 };
 
-// Get all available play styles (default + custom)
-const playStylesWithIcons = playStylesService.getAllPlayStyles();
-
-// Create a list of valid play style values for easier filtering
-const validPlayStyleValues = playStylesWithIcons.map(s => s.value);
-
 export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   player,
   team,
@@ -152,6 +145,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     }
     
     // Filter for valid and unique styles from the known list, and limit to 3
+    const validPlayStyleValues = playStyles.map(s => s.value);
     const uniqueFilteredStyles = [...new Set(rawStyles.filter(style => validPlayStyleValues.includes(style)))];
     return uniqueFilteredStyles.slice(0, 3);
   };
@@ -383,8 +377,13 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   };
 
   const getPlayStyleIcon = (styleValue: string) => {
-    const style = playStylesWithIcons.find(s => s.value === styleValue);
-    return style ? style.icon : "";
+    const style = playStyles.find(s => s.value === styleValue);
+    if (!style) return "";
+    
+    if (style.icon_type === 'image' && style.icon_image_url) {
+      return `<img src="${style.icon_image_url}" alt="${style.label}" class="w-4 h-4 inline-block" />`;
+    }
+    return style.icon_emoji || "";
   };
 
   const cardStyle = { 
@@ -780,21 +779,29 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             {/* Play Style Selector */}
             <div className="border-t border-white/20 pt-3">
               <label className="text-sm font-medium mb-2 block text-white">Play Styles (Max 3)</label>
-              <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
-                {playStylesWithIcons.map(style => (
-                  <Button
-                    key={style.value}
-                    variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => togglePlayStyle(style.value)}
-                    disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
-                    className="text-sm p-1 h-6 w-6"
-                    title={style.label}
-                  >
-                    {style.icon}
-                  </Button>
-                ))}
-              </div>
+              {isLoadingStyles ? (
+                <div className="text-white/60 text-xs">Loading...</div>
+              ) : (
+                <div className="grid grid-cols-5 gap-1 max-h-16 overflow-y-auto">
+                  {playStyles.map(style => (
+                    <Button
+                      key={style.value}
+                      variant={selectedPlayStyles.includes(style.value) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => togglePlayStyle(style.value)}
+                      disabled={!selectedPlayStyles.includes(style.value) && selectedPlayStyles.length >= 3}
+                      className="text-sm p-1 h-6 w-6"
+                      title={style.label}
+                    >
+                      {style.icon_type === 'image' && style.icon_image_url ? (
+                        <img src={style.icon_image_url} alt={style.label} className="w-4 h-4" />
+                      ) : (
+                        <span>{style.icon_emoji}</span>
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <div className="text-xs text-gray-400 mt-1">
                 Selected: {selectedPlayStyles.length}/3
               </div>

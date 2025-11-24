@@ -19,7 +19,6 @@ import { TeamHeaderSettings } from './settings/TeamHeaderSettings';
 import { TeamLogoSettings } from './settings/TeamLogoSettings';
 import { Settings, Trophy, Star, Wifi, Target, Package, Shield, Wrench, User, Monitor, Image, Palette } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { PlayStylesManager } from '@/components/players/PlayStylesManager';
 
 interface TeamSettingsModalProps {
   team: Team;
@@ -119,15 +118,8 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
     }
   ];
 
-  // Add Play Styles tab only for the specific user
-  if (user?.email === 'chrisjpmcdonald@gmail.com') {
-    settingsTabs.push({
-      id: 'play-styles',
-      label: 'Play Styles',
-      icon: <Palette className="h-4 w-4" />,
-      component: <PlayStylesManager />
-    });
-  }
+  // Play Styles management moved to /admin/play-styles for global admins only
+  
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[900px] h-[90vh] max-h-[800px] flex flex-col overflow-hidden">

@@ -64,18 +64,22 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
   const getPlayStyleIcons = () => {
     if (!child.position) return null;
     
-    const allPlayStyles = playStylesService.getAllPlayStyles();
-    const playerStyleTexts = child.position.split(',').map(s => s.trim());
+  React.useEffect(() => {
+    if (!child.position) return;
     
-    return playerStyleTexts
-      .map(styleText => {
-        const style = allPlayStyles.find(s => s.label.toLowerCase() === styleText.toLowerCase());
-        return style?.icon;
-      })
-      .filter(Boolean);
-  };
+    playStylesService.getAllPlayStyles().then(allPlayStyles => {
+      const playerStyleTexts = child.position!.split(',').map(s => s.trim());
+      const icons = playerStyleTexts
+        .map(styleText => {
+          const style = allPlayStyles.find(s => s.label.toLowerCase() === styleText.toLowerCase());
+          return style?.icon_emoji || '';
+        })
+        .filter(Boolean);
+      setPlayStyleIcons(icons);
+    });
+  }, [child.position]);
 
-  const playStyleIcons = getPlayStyleIcons();
+  const [playStyleIcons, setPlayStyleIcons] = React.useState<string[]>([]);
 
   return (
     <Card className="overflow-hidden">

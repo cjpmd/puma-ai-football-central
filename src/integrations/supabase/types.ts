@@ -2123,6 +2123,66 @@ export type Database = {
           },
         ]
       }
+      play_styles: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          icon_emoji: string | null
+          icon_image_url: string | null
+          icon_type: string | null
+          id: string
+          is_active: boolean | null
+          label: string
+          updated_at: string | null
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          icon_emoji?: string | null
+          icon_image_url?: string | null
+          icon_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          label: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          icon_emoji?: string | null
+          icon_image_url?: string | null
+          icon_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          updated_at?: string | null
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "play_styles_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "all_user_roles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "play_styles_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "all_user_roles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       player_attribute_history: {
         Row: {
           attribute_group: string
