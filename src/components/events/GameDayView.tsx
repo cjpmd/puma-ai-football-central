@@ -140,10 +140,30 @@ export const GameDayView: React.FC = () => {
         if (newEvent.event_type === 'goal') {
           const calculatedScore = await matchEventService.calculateEventScore(eventId!);
           
+          // Get current event scores
+          const { data: currentEvent } = await supabase
+            .from('events')
+            .select('scores')
+            .eq('id', eventId)
+            .single();
+          
+          // Merge calculated scores with existing scores
+          const currentScores = (currentEvent?.scores && typeof currentEvent.scores === 'object') 
+            ? currentEvent.scores as Record<string, any>
+            : {};
+          const updatedScores: Record<string, any> = { ...currentScores };
+          
+          if (calculatedScore.team_1 !== undefined) {
+            updatedScores.team_1 = calculatedScore.team_1;
+          }
+          if (calculatedScore.team_2 !== undefined) {
+            updatedScores.team_2 = calculatedScore.team_2;
+          }
+          
           // Update event scores in database
           await supabase
             .from('events')
-            .update({ scores: calculatedScore })
+            .update({ scores: updatedScores })
             .eq('id', eventId);
             
           // Refresh event data to show updated score
