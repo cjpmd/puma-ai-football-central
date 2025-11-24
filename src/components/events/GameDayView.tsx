@@ -22,7 +22,8 @@ export const GameDayView: React.FC = () => {
   const { 
     data: event, 
     error: eventError, 
-    isLoading: eventLoading 
+    isLoading: eventLoading,
+    refetch: refetchEvent
   } = useQuery({
     queryKey: ['event', eventId],
     enabled: !!eventId,
@@ -125,26 +126,34 @@ export const GameDayView: React.FC = () => {
   };
 
   const handleEventCreated = async (newEvent: MatchEvent) => {
+    // Always add to UI immediately
     setMatchEvents(prev => [...prev, newEvent]);
     
-    // Trigger stats update
-    try {
-      const { playerStatsService } = await import('@/services/playerStatsService');
-      await playerStatsService.updateEventPlayerStats(eventId!);
-      
-      // Auto-update score if it's a goal
-      if (newEvent.event_type === 'goal') {
-        const calculatedScore = await matchEventService.calculateEventScore(eventId!);
+    // Stats update and score calculation in background
+    // Don't block or show error to user if this fails
+    setTimeout(async () => {
+      try {
+        const { playerStatsService } = await import('@/services/playerStatsService');
+        await playerStatsService.updateEventPlayerStats(eventId!);
         
-        // Update event scores in database
-        await supabase
-          .from('events')
-          .update({ scores: calculatedScore })
-          .eq('id', eventId);
+        // Auto-update score if it's a goal
+        if (newEvent.event_type === 'goal') {
+          const calculatedScore = await matchEventService.calculateEventScore(eventId!);
+          
+          // Update event scores in database
+          await supabase
+            .from('events')
+            .update({ scores: calculatedScore })
+            .eq('id', eventId);
+            
+          // Refresh event data to show updated score
+          refetchEvent();
+        }
+      } catch (error) {
+        // Silently log - don't block user workflow
+        console.error('Background stats update failed:', error);
       }
-    } catch (error) {
-      console.error('Error updating stats:', error);
-    }
+    }, 100);
   };
 
   const handleEventDelete = async (eventToDelete: MatchEvent) => {

@@ -308,6 +308,15 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       console.log('Saving scores:', scores);
       console.log('Saving POTM by team:', playerOfMatchByTeam);
 
+      // Try to update player stats before saving
+      try {
+        const { playerStatsService } = await import('@/services/playerStatsService');
+        await playerStatsService.updateEventPlayerStats(eventId);
+      } catch (statsError) {
+        console.warn('Stats update failed, continuing with save:', statsError);
+        // Don't block the save
+      }
+
       // Prepare scores data with POTM for each team and performance analysis
       const updatedScores = { ...scores };
       Object.entries(playerOfMatchByTeam).forEach(([teamNumber, playerId]) => {
