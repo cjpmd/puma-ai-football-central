@@ -131,6 +131,17 @@ export const GameDayView: React.FC = () => {
     try {
       const { playerStatsService } = await import('@/services/playerStatsService');
       await playerStatsService.updateEventPlayerStats(eventId!);
+      
+      // Auto-update score if it's a goal
+      if (newEvent.event_type === 'goal') {
+        const calculatedScore = await matchEventService.calculateEventScore(eventId!);
+        
+        // Update event scores in database
+        await supabase
+          .from('events')
+          .update({ scores: calculatedScore })
+          .eq('id', eventId);
+      }
     } catch (error) {
       console.error('Error updating stats:', error);
     }

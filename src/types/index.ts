@@ -189,6 +189,11 @@ export type Player = {
   matchStats?: {
     totalGames: number;
     totalMinutes: number;
+    totalGoals?: number;
+    totalAssists?: number;
+    totalSaves?: number;
+    yellowCards?: number;
+    redCards?: number;
     captainGames: number;
     playerOfTheMatchCount: number;
     minutesByPosition: Record<string, number>;

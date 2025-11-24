@@ -9,8 +9,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PerformanceAnalysisSection } from './PerformanceAnalysisSection';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
+import { matchEventService } from '@/services/matchEventService';
+import { Trophy, Target, Shield, Calculator } from 'lucide-react';
 
 interface PostGameEditorProps {
   eventId: string;
@@ -76,6 +79,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     challenges: { on_ball: [], off_ball: [] }
   });
   const [drillTags, setDrillTags] = useState<DrillTag[]>([]);
+  const [matchEventsSummary, setMatchEventsSummary] = useState<any>(null);
+  const [calculatingScore, setCalculatingScore] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -86,6 +91,7 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
       loadEventData();
       loadTeamSelections();
       loadDrillTags();
+      loadMatchEventsSummary();
     }
   }, [eventId, isOpen]);
 
@@ -249,6 +255,42 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
     }
   };
 
+  const loadMatchEventsSummary = async () => {
+    try {
+      const summary = await matchEventService.getEventMatchEventsSummary(eventId);
+      setMatchEventsSummary(summary);
+    } catch (error) {
+      console.error('Error loading match events summary:', error);
+    }
+  };
+
+  const handleCalculateScore = async () => {
+    try {
+      setCalculatingScore(true);
+      const calculatedScore = await matchEventService.calculateEventScore(eventId);
+      
+      setScores(prev => ({
+        ...prev,
+        team_1: calculatedScore.team_1,
+        team_2: calculatedScore.team_2
+      }));
+      
+      toast({
+        title: 'Score Calculated',
+        description: `Score updated to ${calculatedScore.team_1}-${calculatedScore.team_2} from match events`,
+      });
+    } catch (error: any) {
+      console.error('Error calculating score:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to calculate score',
+        variant: 'destructive',
+      });
+    } finally {
+      setCalculatingScore(false);
+    }
+  };
+
   const handleScoreChange = (field: string, value: string) => {
     setScores(prev => ({ ...prev, [field]: value }));
   };
@@ -349,6 +391,81 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
           <p className="text-sm text-gray-600">vs {event.opponent}</p>
         )}
       </div>
+
+      {/* Match Events Summary Section */}
+      {matchEventsSummary && (matchEventsSummary.goals.length > 0 || matchEventsSummary.assists.length > 0 || matchEventsSummary.saves.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Match Events Summary</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCalculateScore}
+                disabled={calculatingScore}
+                className="flex items-center gap-2"
+              >
+                <Calculator className="h-4 w-4" />
+                {calculatingScore ? 'Calculating...' : 'Calculate Score from Events'}
+              </Button>
+            </CardTitle>
+            <CardDescription>
+              Events logged during the match
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {matchEventsSummary.goals && matchEventsSummary.goals.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Trophy className="h-4 w-4" />
+                    Goals ({matchEventsSummary.goals.reduce((sum: number, g: any) => sum + g.count, 0)})
+                  </h4>
+                  <div className="space-y-1">
+                    {matchEventsSummary.goals.map((g: any) => (
+                      <div key={g.playerId} className="text-sm">
+                        • {g.playerName} ({g.count})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {matchEventsSummary.assists && matchEventsSummary.assists.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Target className="h-4 w-4" />
+                    Assists ({matchEventsSummary.assists.reduce((sum: number, a: any) => sum + a.count, 0)})
+                  </h4>
+                  <div className="space-y-1">
+                    {matchEventsSummary.assists.map((a: any) => (
+                      <div key={a.playerId} className="text-sm">
+                        • {a.playerName} ({a.count})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {matchEventsSummary.saves && matchEventsSummary.saves.length > 0 && (
+                <div>
+                  <h4 className="font-semibold mb-2 flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Saves ({matchEventsSummary.saves.reduce((sum: number, s: any) => sum + s.count, 0)})
+                  </h4>
+                  <div className="space-y-1">
+                    {matchEventsSummary.saves.map((s: any) => (
+                      <div key={s.playerId} className="text-sm">
+                        • {s.playerName} ({s.count})
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Only show team results if we have actual team selections */}
       {teamSelections.length > 0 ? (

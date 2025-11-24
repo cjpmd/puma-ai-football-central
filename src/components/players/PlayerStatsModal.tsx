@@ -23,7 +23,10 @@ import {
   Users, 
   Timer, 
   Award, 
-  BarChart3 
+  BarChart3,
+  Target,
+  Shield,
+  Square
 } from 'lucide-react';
 import { playerStatsService } from '@/services/playerStatsService';
 import { availabilityService } from '@/services/availabilityService';
@@ -340,21 +343,53 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">0</div>
+                    <div className="text-2xl font-bold">{stats.totalGoals || 0}</div>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                      <Award className="h-4 w-4" />
+                      <Target className="h-4 w-4" />
                       Assists
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">0</div>
+                    <div className="text-2xl font-bold">{stats.totalAssists || 0}</div>
                   </CardContent>
                 </Card>
+
+                {player.type === 'goalkeeper' && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <Shield className="h-4 w-4" />
+                        Saves
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats.totalSaves || 0}</div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {(stats.yellowCards || stats.redCards) ? (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                        <Square className="h-4 w-4 text-yellow-500" />
+                        Cards
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2 items-baseline">
+                        <div className="text-xl font-bold text-yellow-500">{stats.yellowCards || 0}</div>
+                        <span className="text-xs text-muted-foreground">/</span>
+                        <div className="text-xl font-bold text-red-500">{stats.redCards || 0}</div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
 
                 <Card>
                   <CardHeader className="pb-2">
@@ -654,6 +689,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                           <TableHead>Opponent</TableHead>
                           <TableHead>Performance Category</TableHead>
                           <TableHead>Minutes</TableHead>
+                          <TableHead>Stats</TableHead>
                           <TableHead>Position(s)</TableHead>
                           <TableHead>Awards</TableHead>
                         </TableRow>
@@ -684,6 +720,31 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                               <div className="flex items-center gap-1">
                                 <Timer className="h-3 w-3 text-muted-foreground" />
                                 <span>{game.minutes || 0}'</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2 text-xs">
+                                {(game.goals && game.goals > 0) && (
+                                  <span className="flex items-center gap-1">
+                                    <Trophy className="h-3 w-3" />
+                                    {game.goals}
+                                  </span>
+                                )}
+                                {(game.assists && game.assists > 0) && (
+                                  <span className="flex items-center gap-1">
+                                    <Target className="h-3 w-3" />
+                                    {game.assists}
+                                  </span>
+                                )}
+                                {(game.saves && game.saves > 0) && (
+                                  <span className="flex items-center gap-1">
+                                    <Shield className="h-3 w-3" />
+                                    {game.saves}
+                                  </span>
+                                )}
+                                {(!game.goals && !game.assists && !game.saves) && (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
                               </div>
                             </TableCell>
                             <TableCell>
