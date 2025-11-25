@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Users, Trophy, Plus, TrendingUp, User, Link2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -25,6 +26,7 @@ interface LiveStats {
 
 export default function DashboardMobile() {
   const { teams, allTeams, connectedPlayers, profile, user } = useAuth();
+  const { currentTeam, viewMode, availableTeams } = useTeamContext();
   const { toast } = useToast();
   const [stats, setStats] = useState<LiveStats>({
     playersCount: 0,
@@ -37,8 +39,6 @@ export default function DashboardMobile() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
-
-  const currentTeam = teams?.[0];
 
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
     // Update the local state to reflect the change
@@ -64,15 +64,18 @@ export default function DashboardMobile() {
 
   useEffect(() => {
     loadLiveData();
-  }, [allTeams, connectedPlayers]);
+  }, [allTeams, connectedPlayers, currentTeam, viewMode, availableTeams]);
 
   const loadLiveData = async () => {
     if (!user) return;
 
     try {
-      // Use teams from allTeams if available, otherwise fallback to teams
-      const teamsToUse = allTeams?.length ? allTeams : (teams || []);
-      console.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })));
+      // Determine which teams to query based on view mode
+      const teamsToUse = viewMode === 'all' 
+        ? (availableTeams.length ? availableTeams : (allTeams?.length ? allTeams : (teams || [])))
+        : (currentTeam ? [currentTeam] : []);
+      
+      console.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })), 'View mode:', viewMode);
       
       if (!teamsToUse.length) {
         console.log('No teams available for loading data');

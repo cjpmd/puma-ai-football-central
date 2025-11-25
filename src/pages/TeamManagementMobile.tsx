@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 
 interface Team {
   id: string;
@@ -29,6 +30,7 @@ export default function TeamManagementMobile() {
   const { toast } = useToast();
   const { user } = useAuth();
   const { filteredTeams: clubTeams } = useClubContext();
+  const { currentTeam } = useTeamContext();
   const [teamsData, setTeamsData] = useState<Team[]>([]);
 
   useEffect(() => {

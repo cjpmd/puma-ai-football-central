@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { EventForm } from '@/components/events/EventForm';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
@@ -62,6 +63,7 @@ export default function CalendarEventsMobile() {
   const { toast } = useToast();
   const { user, profile } = useAuth();
   const { filteredTeams: teams } = useClubContext();
+  const { currentTeam, viewMode, availableTeams } = useTeamContext();
   const { hasPermission } = useAuthorization();
 
   // Swipe detection state
@@ -115,7 +117,7 @@ export default function CalendarEventsMobile() {
 
   useEffect(() => {
     loadEvents();
-  }, [teams]);
+  }, [currentTeam, viewMode, availableTeams]);
 
   useEffect(() => {
     if (events.length > 0 && user?.id) {
@@ -187,16 +189,21 @@ export default function CalendarEventsMobile() {
 
   const loadEvents = async () => {
     try {
-      if (!teams || teams.length === 0) return;
+      // Determine which teams to query based on view mode
+      const teamsToQuery = viewMode === 'all' ? availableTeams : (currentTeam ? [currentTeam] : []);
+      
+      if (teamsToQuery.length === 0) return;
+
+      const teamIds = teamsToQuery.map(t => t.id);
 
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('team_id', teams[0].id)
+        .in('team_id', teamIds)
         .order('date', { ascending: false });
 
       if (error) throw error;
-      console.log('Loaded events:', data?.length);
+      console.log('Loaded events:', data?.length, 'View mode:', viewMode);
       setEvents((data || []) as DatabaseEvent[]);
       
       // Load event selections to get proper performance category mappings
@@ -205,10 +212,11 @@ export default function CalendarEventsMobile() {
         .select(`
           event_id,
           team_number,
+          team_id,
           performance_category_id,
           performance_categories!inner(name)
         `)
-        .eq('team_id', teams[0].id);
+        .in('team_id', teamIds);
 
       if (selectionsError) throw selectionsError;
       
