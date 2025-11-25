@@ -346,11 +346,30 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         const newPositions = createPositionSlots(formation);
         const preservedPositions = preservePlayerAssignments(period.positions, newPositions);
         
+        // Find orphaned players who couldn't be placed in new formation
+        const assignedPlayerIds = new Set(
+          preservedPositions.filter(p => p.playerId).map(p => p.playerId)
+        );
+        const previousPlayerIds = period.positions
+          .filter(p => p.playerId)
+          .map(p => p.playerId!);
+        
+        const orphanedPlayerIds = previousPlayerIds.filter(id => !assignedPlayerIds.has(id));
+        
+        // Add orphaned players to substitutes (avoid duplicates)
+        const updatedSubstitutes = [
+          ...period.substitutes.filter(id => !orphanedPlayerIds.includes(id)),
+          ...orphanedPlayerIds
+        ];
+        
         console.log('Created new positions for formation:', formation, preservedPositions);
+        console.log('Orphaned players moved to substitutes:', orphanedPlayerIds);
+        
         return {
           ...period,
           formation,
-          positions: preservedPositions
+          positions: preservedPositions,
+          substitutes: updatedSubstitutes
         };
       }
       return period;
@@ -866,7 +885,7 @@ export const DragDropFormationEditor: React.FC<DragDropFormationEditorProps> = (
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className="relative bg-green-100 rounded-lg p-4 h-[350px] print:h-[300px]">
+          <div className="relative bg-green-100 rounded-lg p-4 h-[400px] print:h-[300px]">
             <div className="absolute inset-0 bg-gradient-to-b from-green-200 to-green-300 rounded-lg opacity-30" />
             
             <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full opacity-50" />
