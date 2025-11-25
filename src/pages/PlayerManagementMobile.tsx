@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
 import { Player, Team } from '@/types';
 
@@ -58,6 +59,7 @@ export default function PlayerManagementMobile() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { filteredTeams: teams } = useClubContext();
+  const { currentTeam, viewMode } = useTeamContext();
 
   // Modal states
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -73,16 +75,21 @@ export default function PlayerManagementMobile() {
 
   useEffect(() => {
     loadPlayers();
-  }, [teams]);
+  }, [currentTeam, viewMode]);
 
   const loadPlayers = async () => {
     try {
-      if (!teams || teams.length === 0) return;
+      // Use current team if in single mode, otherwise don't load players
+      if (viewMode === 'all' || !currentTeam) {
+        setPlayers([]);
+        setLoading(false);
+        return;
+      }
       
       const { data, error } = await supabase
         .from('players')
         .select('*')
-        .eq('team_id', teams[0].id)
+        .eq('team_id', currentTeam.id)
         .order('squad_number', { ascending: true });
 
       if (error) throw error;
@@ -135,8 +142,8 @@ export default function PlayerManagementMobile() {
     player.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Mock team data for the cards - complete Team object with all required properties
-  const currentTeam: Team = teams[0] || {
+  // Mock team data for the cards - use current team from context
+  const teamForCard: Team = currentTeam || {
     id: 'mock-team-id',
     name: 'Team',
     logoUrl: undefined,
@@ -476,7 +483,7 @@ export default function PlayerManagementMobile() {
                     <div className="w-full max-w-[300px] relative">
                       <FifaStylePlayerCard
                         player={player}
-                        team={currentTeam}
+                        team={teamForCard}
                         onEdit={handleEditPlayer}
                         onManageParents={handleManageParents}
                         onRemoveFromSquad={handleRemoveFromSquad}
