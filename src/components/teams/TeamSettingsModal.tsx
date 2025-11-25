@@ -17,8 +17,10 @@ import { TeamPrivacySettings } from './settings/TeamPrivacySettings';
 import { TeamNameDisplaySettings } from './settings/TeamNameDisplaySettings';
 import { TeamHeaderSettings } from './settings/TeamHeaderSettings';
 import { TeamLogoSettings } from './settings/TeamLogoSettings';
-import { Settings, Trophy, Star, Wifi, Target, Package, Shield, Wrench, User, Monitor, Image, Palette } from 'lucide-react';
+import { TeamSplitSettings } from './settings/TeamSplitSettings';
+import { Settings, Trophy, Star, Wifi, Target, Package, Shield, Wrench, User, Monitor, Image, GitBranch } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 
 interface TeamSettingsModalProps {
   team: Team;
@@ -36,6 +38,9 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState('basic');
   const [isSaving, setIsSaving] = useState(false);
   const { user } = useAuth();
+  const { isTeamManager, isGlobalAdmin } = useAuthorization();
+  
+  const canSplitTeam = isGlobalAdmin || isTeamManager(team.id);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -115,7 +120,13 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       label: 'Privacy',
       icon: <Shield className="h-4 w-4" />,
       component: <TeamPrivacySettings team={team} onUpdate={onUpdate} />
-    }
+    },
+    ...(canSplitTeam ? [{
+      id: 'split',
+      label: 'Split',
+      icon: <GitBranch className="h-4 w-4" />,
+      component: <TeamSplitSettings team={team} onUpdate={onUpdate} />
+    }] : [])
   ];
 
   // Play Styles management moved to /admin/play-styles for global admins only
@@ -131,14 +142,20 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
         </DialogHeader>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <TabsList className={`grid w-full flex-shrink-0 mb-4 ${user?.email === 'chrisjpmcdonald@gmail.com' ? 'grid-cols-12' : 'grid-cols-11'}`}>
-            {settingsTabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id} className="flex flex-col items-center gap-1 text-xs p-2">
-                {tab.icon}
-                <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="w-full flex-shrink-0 overflow-x-auto">
+            <TabsList className="inline-flex h-auto items-center justify-start w-full gap-1 mb-4 p-1">
+              {settingsTabs.map((tab) => (
+                <TabsTrigger 
+                  key={tab.id} 
+                  value={tab.id} 
+                  className="flex flex-col items-center justify-center gap-1 text-xs p-2 min-w-[70px] h-auto data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  {tab.icon}
+                  <span className="text-[10px] sm:text-xs whitespace-nowrap">{tab.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
           
           <div className="flex-1 overflow-hidden">
             {settingsTabs.map((tab) => (
