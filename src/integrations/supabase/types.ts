@@ -3545,6 +3545,7 @@ export type Database = {
           name: string
           name_display_option: string | null
           performance_categories: string[] | null
+          player_attributes: Json | null
           season_end: string
           season_start: string
           subscription_type: string | null
@@ -3574,6 +3575,7 @@ export type Database = {
           name: string
           name_display_option?: string | null
           performance_categories?: string[] | null
+          player_attributes?: Json | null
           season_end: string
           season_start: string
           subscription_type?: string | null
@@ -3603,6 +3605,7 @@ export type Database = {
           name?: string
           name_display_option?: string | null
           performance_categories?: string[] | null
+          player_attributes?: Json | null
           season_end?: string
           season_start?: string
           subscription_type?: string | null
