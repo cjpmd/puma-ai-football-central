@@ -125,7 +125,7 @@ export const eventsService = {
         if (playersResult.error) throw playersResult.error;
         const players = playersResult.data;
         
-        // Get all active staff for the team  
+        // Get all active staff for the team from team_staff table
         // @ts-ignore - Supabase type inference causes excessive depth
         const staffResult: any = await supabase
           .from('team_staff')
@@ -136,6 +136,17 @@ export const eventsService = {
         if (staffResult.error) throw staffResult.error;
         const staff = staffResult.data;
         
+        // Also get staff from user_teams (users with staff-like roles)
+        // @ts-ignore - Supabase type inference causes excessive depth
+        const userTeamsStaffResult: any = await supabase
+          .from('user_teams')
+          .select('user_id, role')
+          .eq('team_id', teamId)
+          .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'manager', 'coach', 'staff', 'helper', 'team_helper']);
+        
+        if (userTeamsStaffResult.error) throw userTeamsStaffResult.error;
+        const userTeamsStaff = userTeamsStaffResult.data || [];
+        
         // Get user IDs for players
         const playerUsersResult: any = await supabase
           .from('user_players')
@@ -144,13 +155,19 @@ export const eventsService = {
         if (playerUsersResult.error) throw playerUsersResult.error;
         const playerUsers = playerUsersResult.data || [];
         
-        // Get user IDs for staff
+        // Get user IDs for team_staff
         const staffUsersResult: any = await supabase
           .from('user_staff')
           .select('user_id, staff_id')
           .in('staff_id', (staff || []).map((s: any) => s.id));
         if (staffUsersResult.error) throw staffUsersResult.error;
         const staffUsers = staffUsersResult.data || [];
+        
+        // Add user_teams staff to staffUsers (they already have user_id)
+        const userTeamsStaffUsers = userTeamsStaff.map((uts: any) => ({
+          user_id: uts.user_id,
+          staff_id: null // No staff_id for user_teams entries
+        }));
         
         // Create invitation records for players (with or without linked users)
         const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
@@ -173,7 +190,7 @@ export const eventsService = {
           }
         });
         
-        // Create invitation records for staff (with or without linked users)
+        // Create invitation records for team_staff (with or without linked users)
         const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
         staffUsers.forEach((su: any) => {
           invitationRecords.push({
@@ -192,6 +209,16 @@ export const eventsService = {
               staff_id: s.id
             });
           }
+        });
+        
+        // Create invitation records for user_teams staff (already have user_id, no staff_id)
+        userTeamsStaffUsers.forEach((su: any) => {
+          invitationRecords.push({
+            event_id: eventId,
+            user_id: su.user_id,
+            invitee_type: 'staff',
+            staff_id: null
+          });
         });
       } else {
         // Pick squad - use selected IDs
