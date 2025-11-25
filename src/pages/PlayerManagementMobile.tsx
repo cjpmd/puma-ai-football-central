@@ -7,6 +7,7 @@ import { Search, Plus, Filter, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
 import { Player, Team } from '@/types';
 
@@ -56,7 +57,7 @@ export default function PlayerManagementMobile() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const { teams } = useAuth();
+  const { filteredTeams: teams } = useClubContext();
 
   // Modal states
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);

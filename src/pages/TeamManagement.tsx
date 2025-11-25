@@ -14,6 +14,7 @@ import { StaffManagementButton } from '@/components/teams/StaffManagementButton'
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useSmartView } from '@/contexts/SmartViewContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Team, Club, SubscriptionType, GameFormat } from '@/types/index';
@@ -25,7 +26,8 @@ interface ExtendedTeam extends Team {
 }
 
 const TeamManagement = () => {
-  const { teams, clubs, refreshUserData, user } = useAuth();
+  const { clubs, refreshUserData, user } = useAuth();
+  const { filteredTeams: teams } = useClubContext();
   const { isGlobalAdmin, isClubAdmin } = useAuthorization();
   const { currentView } = useSmartView();
   const [allTeams, setAllTeams] = useState<ExtendedTeam[]>([]);

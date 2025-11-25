@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useSmartView } from '@/contexts/SmartViewContext';
 import { EntityHeader } from '@/components/shared/EntityHeader';
 import { RoleContextSwitcher } from './RoleContextSwitcher';
+import { ClubSwitcher } from './ClubSwitcher';
 import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 import { 
   Menu,
@@ -227,13 +228,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             )}
           </div>
           
-          {/* Role Context Switcher */}
-          <div className="flex items-center gap-4">
+          {/* Club and Role Switchers */}
+          <div className="flex items-center gap-3">
             {isMultiRoleUser && (
               <Badge variant="outline" className="text-xs">
                 Multi-Role User
               </Badge>
             )}
+            {/* Club Switcher */}
+            <ClubSwitcher />
             {/* Only show role switcher if SmartView context is available */}
             {typeof useSmartView !== 'undefined' && (
               <RoleContextSwitcher />
