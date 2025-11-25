@@ -63,45 +63,22 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
   // Initialize attributes when modal opens
   useEffect(() => {
     if (isOpen && player) {
-      // Priority 1: Player's existing attributes
-      if (player.attributes && player.attributes.length > 0) {
-        setAttributes([...player.attributes]);
-        setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
-        return;
-      }
-      
-      // Priority 2: Team's configured attributes (if available)
-      if (teamAttributes) {
-        const teamConfiguredAttrs = Object.values(teamAttributes)
-          .flat()
-          .filter(attr => attr.enabled);
-        
-        // Filter by player type
-        const filteredAttrs = player.type === 'goalkeeper' 
-          ? teamConfiguredAttrs.filter(attr => attr.group === 'goalkeeping')
-          : teamConfiguredAttrs.filter(attr => attr.group !== 'goalkeeping');
-        
-        setAttributes(filteredAttrs);
-        setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
-        return;
-      }
-      
-      // Priority 3: Use comprehensive standard attributes
-      let defaultAttributes: PlayerAttribute[] = [];
+      // Start with ALL standard attributes based on player type
+      let baseAttributes: PlayerAttribute[] = [];
       
       if (player.type === 'goalkeeper') {
-        defaultAttributes = STANDARD_PLAYER_ATTRIBUTES
+        baseAttributes = STANDARD_PLAYER_ATTRIBUTES
           .filter(attr => attr.group === 'goalkeeping')
           .map((attr) => ({
             id: attr.id,
             name: attr.name,
-            group: "goalkeeping" as const,
+            group: attr.group,
             value: 5,
             enabled: true
           }));
       } else {
-        // For outfield players, add all non-goalkeeping attributes
-        defaultAttributes = STANDARD_PLAYER_ATTRIBUTES
+        // For outfield players, include all non-goalkeeping attributes
+        baseAttributes = STANDARD_PLAYER_ATTRIBUTES
           .filter(attr => attr.group !== 'goalkeeping')
           .map((attr) => ({
             id: attr.id,
@@ -112,7 +89,31 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
           }));
       }
       
-      setAttributes(defaultAttributes);
+      // Apply team configuration if available (only affects enabled/disabled state)
+      if (teamAttributes) {
+        const teamConfig = Object.values(teamAttributes).flat();
+        baseAttributes = baseAttributes.map(baseAttr => {
+          const teamAttr = teamConfig.find(ta => ta.id === baseAttr.id || ta.name === baseAttr.name);
+          return teamAttr ? { ...baseAttr, enabled: teamAttr.enabled } : baseAttr;
+        });
+      }
+      
+      // Apply player's saved values if they exist
+      if (player.attributes && player.attributes.length > 0) {
+        const savedAttrs = player.attributes;
+        baseAttributes = baseAttributes.map(baseAttr => {
+          const savedAttr = savedAttrs.find(sa => sa.id === baseAttr.id || sa.name === baseAttr.name);
+          return savedAttr ? { ...baseAttr, value: savedAttr.value, enabled: savedAttr.enabled } : baseAttr;
+        });
+        
+        // Add any custom attributes from player that aren't in standard list
+        const customAttrs = savedAttrs.filter(sa => 
+          !baseAttributes.some(ba => ba.id === sa.id || ba.name === sa.name)
+        );
+        baseAttributes = [...baseAttributes, ...customAttrs];
+      }
+      
+      setAttributes(baseAttributes);
       setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
     }
   }, [isOpen, player, teamAttributes]);
