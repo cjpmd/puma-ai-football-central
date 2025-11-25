@@ -11,13 +11,16 @@ export const STANDARD_PLAYER_ATTRIBUTES: PlayerAttribute[] = [
   { id: 'aerial_reach', name: 'Aerial Reach', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'command_of_area', name: 'Command of Area', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'communication', name: 'Communication', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'cross_handling', name: 'Cross Handling', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'distribution', name: 'Distribution', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'eccentricity', name: 'Eccentricity', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'footwork', name: 'Footwork', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'handling', name: 'Handling', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'kicking', name: 'Kicking', group: 'goalkeeping', value: 5, enabled: true },
-  { id: 'one_on_ones', name: 'One on Ones', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'punching', name: 'Punching', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'reflexes', name: 'Reflexes', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'rushing_out', name: 'Rushing Out', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'shot_stopping', name: 'Shot Stopping', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'throwing', name: 'Throwing', group: 'goalkeeping', value: 5, enabled: true },
 
   // MENTAL
