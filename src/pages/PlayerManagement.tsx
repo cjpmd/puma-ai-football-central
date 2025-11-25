@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { Users, BookOpen } from 'lucide-react';
 import { PlayerManagement } from '@/components/players/PlayerManagement';
 import { IndividualTrainingDashboard } from '@/components/individual-training/IndividualTrainingDashboard';
@@ -12,7 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Team } from '@/types';
 
 const PlayerManagementPage = () => {
-  const { teams, user, connectedPlayers } = useAuth();
+  const { user, connectedPlayers } = useAuth();
+  const { filteredTeams: teams } = useClubContext();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
   // Update selectedTeamId when teams load

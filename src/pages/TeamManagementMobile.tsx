@@ -10,6 +10,7 @@ import { Search, Plus, Settings, Users, Trophy, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 
 interface Team {
   id: string;
@@ -23,19 +24,26 @@ interface Team {
 }
 
 export default function TeamManagementMobile() {
-  const [teams, setTeams] = useState<Team[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { filteredTeams: clubTeams } = useClubContext();
+  const [teamsData, setTeamsData] = useState<Team[]>([]);
 
   useEffect(() => {
-    loadTeams();
-  }, [user]);
+    loadTeamsData();
+  }, [clubTeams]);
 
-  const loadTeams = async () => {
+  const loadTeamsData = async () => {
     try {
-      if (!user) return;
+      if (!clubTeams || clubTeams.length === 0) {
+        setTeamsData([]);
+        setLoading(false);
+        return;
+      }
+      
+      const teamIds = clubTeams.map(t => t.id);
       
       const { data, error } = await supabase
         .from('teams')
@@ -48,6 +56,7 @@ export default function TeamManagementMobile() {
           season_end,
           players(count)
         `)
+        .in('id', teamIds)
         .order('name');
 
       if (error) throw error;
@@ -63,7 +72,7 @@ export default function TeamManagementMobile() {
         season_end: team.season_end
       }));
       
-      setTeams(transformedTeams);
+      setTeamsData(transformedTeams);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -75,7 +84,7 @@ export default function TeamManagementMobile() {
     }
   };
 
-  const filteredTeams = teams.filter(team =>
+  const filteredTeams = teamsData.filter(team =>
     team.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     team.age_group.toLowerCase().includes(searchTerm.toLowerCase())
   );

@@ -9,6 +9,7 @@ import { format, isSameDay, isToday, isPast, parseISO, startOfDay } from 'date-f
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { EventForm } from '@/components/events/EventForm';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
@@ -59,7 +60,8 @@ export default function CalendarEventsMobile() {
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
-  const { teams, user, profile } = useAuth();
+  const { user, profile } = useAuth();
+  const { filteredTeams: teams } = useClubContext();
   const { hasPermission } = useAuthorization();
 
   // Swipe detection state

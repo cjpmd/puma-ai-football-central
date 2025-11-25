@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { AuthorizationProvider } from "@/contexts/AuthorizationContext";
 import { SmartViewProvider } from "@/contexts/SmartViewContext";
+import { ClubProvider } from "@/contexts/ClubContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ResponsiveRoute } from "@/components/routing/ResponsiveRoute";
 import Index from "./pages/Index";
@@ -55,8 +56,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AuthorizationProvider>
-            <SmartViewProvider>
-              <Routes>
+            <ClubProvider>
+              <SmartViewProvider>
+                <Routes>
               <Route path="/" element={<Navigate to="/auth" replace />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/login" element={<Navigate to="/auth" replace />} />
@@ -224,8 +226,9 @@ const App = () => (
                 <Route path="/email-test" element={<EmailTestPage />} />
                 <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
                 <Route path="*" element={<NotFound />} />
-               </Routes>
-            </SmartViewProvider>
+                </Routes>
+              </SmartViewProvider>
+            </ClubProvider>
           </AuthorizationProvider>
         </AuthProvider>
       </BrowserRouter>

@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { EventForm } from '@/components/events/EventForm';
 import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
@@ -36,7 +37,8 @@ export default function CalendarEvents() {
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const { toast } = useToast();
-  const { teams, connectedPlayers } = useAuth();
+  const { connectedPlayers } = useAuth();
+  const { filteredTeams: teams } = useClubContext();
 
   useEffect(() => {
     loadEvents();
