@@ -33,31 +33,28 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
   const [activeTab, setActiveTab] = useState<string>(player?.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
   const [teamAttributes, setTeamAttributes] = useState<Record<string, PlayerAttribute[]> | null>(null);
   
-  // Fetch team attributes configuration
+  // Initialize attributes when modal opens - fetch team config first to avoid race condition
   useEffect(() => {
-    const fetchTeamAttributes = async () => {
-      if (!teamId) return;
+    const initializeAttributes = async () => {
+      if (!isOpen || !player) return;
+
+      // Step 1: Fetch team configuration first
+      let teamConfig: Record<string, PlayerAttribute[]> | null = null;
       
-      const { data, error } = await supabase
-        .from('teams')
-        .select('player_attributes')
-        .eq('id', teamId)
-        .single();
-      
-      if (!error && data?.player_attributes) {
-        setTeamAttributes(data.player_attributes as Record<string, PlayerAttribute[]>);
+      if (teamId) {
+        const { data, error } = await supabase
+          .from('teams')
+          .select('player_attributes')
+          .eq('id', teamId)
+          .single();
+
+        if (!error && data?.player_attributes) {
+          teamConfig = data.player_attributes as Record<string, PlayerAttribute[]>;
+          setTeamAttributes(teamConfig);
+        }
       }
-    };
-    
-    if (isOpen) {
-      fetchTeamAttributes();
-    }
-  }, [isOpen, teamId]);
-  
-  // Initialize attributes when modal opens
-  useEffect(() => {
-    if (isOpen && player) {
-      // Start with ALL standard attributes based on player type
+
+      // Step 2: Build attributes with team config available
       let baseAttributes: PlayerAttribute[] = [];
       
       if (player.type === 'goalkeeper') {
@@ -84,10 +81,10 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
       }
       
       // Apply team configuration if available (only affects enabled/disabled state)
-      if (teamAttributes) {
-        const teamConfig = Object.values(teamAttributes).flat();
+      if (teamConfig) {
+        const teamConfigFlat = Object.values(teamConfig).flat();
         baseAttributes = baseAttributes.map(baseAttr => {
-          const teamAttr = teamConfig.find(ta => ta.id === baseAttr.id || ta.name === baseAttr.name);
+          const teamAttr = teamConfigFlat.find(ta => ta.id === baseAttr.id || ta.name === baseAttr.name);
           return teamAttr ? { ...baseAttr, enabled: teamAttr.enabled } : baseAttr;
         });
       }
@@ -112,8 +109,10 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
       
       setAttributes(baseAttributes);
       setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
-    }
-  }, [isOpen, player, teamAttributes]);
+    };
+
+    initializeAttributes();
+  }, [isOpen, player, teamId]);
 
   // Don't render the modal if there's no player
   if (!player) {

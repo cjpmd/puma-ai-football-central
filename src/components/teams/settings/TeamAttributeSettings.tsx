@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -55,6 +55,11 @@ export const TeamAttributeSettings: React.FC<TeamAttributeSettingsProps> = ({
     physical: true,
     technical: true
   });
+
+  // Sync state when team.playerAttributes changes (e.g., after save and modal reopen)
+  useEffect(() => {
+    setAttributes(getInitialAttributes());
+  }, [team.playerAttributes]);
 
   const addAttribute = () => {
     if (newAttribute.name.trim()) {
