@@ -148,34 +148,34 @@ const formations11ASide: FormationConfig[] = [
     id: "1-4-2-3-1",
     name: "1-4-2-3-1",
     positions: [
-      { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 8, y: 70 },
-      { position: "Defender Centre Left", x: 32, y: 70 },
-      { position: "Defender Centre Right", x: 68, y: 70 },
-      { position: "Defender Right", x: 92, y: 70 },
-      { position: "Defensive Midfielder Left", x: 33, y: 54 },
-      { position: "Defensive Midfielder Right", x: 67, y: 54 },
-      { position: "Attacking Midfielder Left", x: 15, y: 32 },
-      { position: "Attacking Midfielder Centre", x: 50, y: 32 },
-      { position: "Attacking Midfielder Right", x: 85, y: 32 },
-      { position: "Striker Centre", x: 50, y: 12 }
+      { position: "Goalkeeper", x: 50, y: 92 },
+      { position: "Defender Left", x: 8, y: 72 },
+      { position: "Defender Centre Left", x: 32, y: 72 },
+      { position: "Defender Centre Right", x: 68, y: 72 },
+      { position: "Defender Right", x: 92, y: 72 },
+      { position: "Defensive Midfielder Left", x: 33, y: 48 },
+      { position: "Defensive Midfielder Right", x: 67, y: 48 },
+      { position: "Attacking Midfielder Left", x: 12, y: 25 },
+      { position: "Attacking Midfielder Centre", x: 50, y: 25 },
+      { position: "Attacking Midfielder Right", x: 88, y: 25 },
+      { position: "Striker Centre", x: 50, y: 5 }
     ]
   },
   {
     id: "1-4-1-4-1",
     name: "1-4-1-4-1",
     positions: [
-      { position: "Goalkeeper", x: 50, y: 90 },
-      { position: "Defender Left", x: 8, y: 70 },
-      { position: "Defender Centre Left", x: 32, y: 70 },
-      { position: "Defender Centre Right", x: 68, y: 70 },
-      { position: "Defender Right", x: 92, y: 70 },
-      { position: "Defensive Midfielder Centre", x: 50, y: 54 },
-      { position: "Attacking Midfielder Left", x: 8, y: 32 },
-      { position: "Attacking Midfielder Centre Left", x: 33, y: 32 },
-      { position: "Attacking Midfielder Centre Right", x: 67, y: 32 },
-      { position: "Attacking Midfielder Right", x: 92, y: 32 },
-      { position: "Striker Centre", x: 50, y: 12 }
+      { position: "Goalkeeper", x: 50, y: 92 },
+      { position: "Defender Left", x: 8, y: 73 },
+      { position: "Defender Centre Left", x: 32, y: 73 },
+      { position: "Defender Centre Right", x: 68, y: 73 },
+      { position: "Defender Right", x: 92, y: 73 },
+      { position: "Defensive Midfielder Centre", x: 50, y: 50 },
+      { position: "Attacking Midfielder Left", x: 8, y: 28 },
+      { position: "Attacking Midfielder Centre Left", x: 33, y: 28 },
+      { position: "Attacking Midfielder Centre Right", x: 67, y: 28 },
+      { position: "Attacking Midfielder Right", x: 92, y: 28 },
+      { position: "Striker Centre", x: 50, y: 5 }
     ]
   }
 ];
