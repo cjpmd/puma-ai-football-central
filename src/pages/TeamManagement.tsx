@@ -393,7 +393,7 @@ const TeamManagement = () => {
           .insert({
             user_id: user.id,
             team_id: data.id,
-            role: 'admin'
+            role: 'team_manager'
           });
       }
 
