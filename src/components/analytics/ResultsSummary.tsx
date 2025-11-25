@@ -69,6 +69,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [eventDetailsOpen, setEventDetailsOpen] = useState(false);
+  const [teamName, setTeamName] = useState<string>('Team 1');
 
   useEffect(() => {
     if (selectedTeamId) {
@@ -86,6 +87,17 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
   const loadResults = async () => {
     try {
       setLoading(true);
+
+      // Fetch team name
+      const { data: teamData } = await supabase
+        .from('teams')
+        .select('name')
+        .eq('id', selectedTeamId)
+        .single();
+      
+      if (teamData?.name) {
+        setTeamName(teamData.name);
+      }
 
       // Get events with scores for the selected team
       const { data: events, error: eventsError } = await supabase
@@ -179,11 +191,11 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
           else if (ourScore < opponentScore) outcomeIcon = '❌';
           else outcomeIcon = '🤝';
           
-          const teamName = eventCategories['1'] || 'Team 1';
+          const displayTeamName = eventCategories['1'] || teamName;
           
           teams.push({
             teamNumber: 1,
-            teamName,
+            teamName: displayTeamName,
             ourScore,
             opponentScore,
             outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',

@@ -243,6 +243,10 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
     const scoresData = event.scores as any;
     const eventCategories = performanceCategoryNames[event.id] || {};
     
+    // Find team name from context for single-team events
+    const eventTeam = teams?.find(t => t.id === event.team_id);
+    const defaultTeamName = eventTeam?.name || 'Team 1';
+    
     let teamNumber = 1;
     while (scoresData[`team_${teamNumber}`] !== undefined) {
       const ourScore = scoresData[`team_${teamNumber}`];
@@ -276,7 +280,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
       else if (ourScore < opponentScore) outcomeIcon = '❌';
       else outcomeIcon = '🤝';
       
-      const teamName = eventCategories['1'] || 'Team 1';
+      const teamName = eventCategories['1'] || defaultTeamName;
       
       scores.push({
         teamNumber: 1,

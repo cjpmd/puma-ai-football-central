@@ -30,6 +30,7 @@ interface EventResult {
 export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> = ({ selectedTeamId }) => {
   const [results, setResults] = useState<EventResult[]>([]);
   const [loading, setLoading] = useState(true);
+  const [teamName, setTeamName] = useState<string>('Team 1');
 
   useEffect(() => {
     if (selectedTeamId) {
@@ -40,6 +41,17 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
   const loadResults = async () => {
     try {
       setLoading(true);
+
+      // Fetch team name
+      const { data: teamData } = await supabase
+        .from('teams')
+        .select('name')
+        .eq('id', selectedTeamId)
+        .single();
+      
+      if (teamData?.name) {
+        setTeamName(teamData.name);
+      }
 
       // Get events with scores for the selected team
       const { data: events, error: eventsError } = await supabase
@@ -126,11 +138,11 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
           else if (ourScore < opponentScore) outcomeIcon = '❌';
           else outcomeIcon = '🤝';
           
-          const teamName = eventCategories['1'] || 'Team 1';
+          const displayTeamName = eventCategories['1'] || teamName;
           
           teams.push({
             teamNumber: 1,
-            teamName,
+            teamName: displayTeamName,
             ourScore,
             opponentScore,
             outcome: ourScore > opponentScore ? 'win' : ourScore < opponentScore ? 'loss' : 'draw',
