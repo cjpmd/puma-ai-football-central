@@ -260,20 +260,38 @@ const StaffManagement = () => {
     try {
       console.log('Updating team staff:', editingStaff.id, formData);
       
-      const { error: updateError } = await supabase
-        .from('team_staff')
-        .update({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone || null,
-          role: formData.role,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingStaff.id);
+      // Check if this staff member has a user_id (came from user_teams)
+      if (editingStaff.userId) {
+        // This is a user_teams record - update the role in user_teams
+        const { error: updateError } = await supabase
+          .from('user_teams')
+          .update({
+            role: formData.role
+          })
+          .eq('user_id', editingStaff.userId)
+          .eq('team_id', selectedTeam);
 
-      if (updateError) {
-        console.error('Update staff error:', updateError);
-        throw updateError;
+        if (updateError) {
+          console.error('Update user_teams error:', updateError);
+          throw updateError;
+        }
+      } else {
+        // This is a team_staff record - update team_staff table
+        const { error: updateError } = await supabase
+          .from('team_staff')
+          .update({
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone || null,
+            role: formData.role,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingStaff.id);
+
+        if (updateError) {
+          console.error('Update staff error:', updateError);
+          throw updateError;
+        }
       }
 
       toast.success('Staff member updated successfully');
