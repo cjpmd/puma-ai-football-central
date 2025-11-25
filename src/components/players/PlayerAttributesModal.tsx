@@ -107,6 +107,9 @@ export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
         baseAttributes = [...baseAttributes, ...customAttrs];
       }
       
+      // Filter out disabled attributes (hidden by team configuration)
+      baseAttributes = baseAttributes.filter(attr => attr.enabled);
+      
       setAttributes(baseAttributes);
       setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
     }
