@@ -7,95 +7,109 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { Player, PlayerAttribute } from '@/types';
+import { Player, PlayerAttribute, Team } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { DEFAULT_PLAYER_ATTRIBUTES } from '@/types/team';
+import { STANDARD_PLAYER_ATTRIBUTES } from '@/types/playerAttributes';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PlayerAttributesModalProps {
   player: Player | null;
   isOpen: boolean;
   onClose: () => void;
   onSave: (attributes: PlayerAttribute[]) => void;
+  teamId?: string;
 }
 
 export const PlayerAttributesModal: React.FC<PlayerAttributesModalProps> = ({
   player,
   isOpen,
   onClose,
-  onSave
+  onSave,
+  teamId
 }) => {
   const { toast } = useToast();
   const [attributes, setAttributes] = useState<PlayerAttribute[]>([]);
   const [activeTab, setActiveTab] = useState<string>(player?.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
+  const [teamAttributes, setTeamAttributes] = useState<Record<string, PlayerAttribute[]> | null>(null);
+  
+  // Fetch team attributes configuration
+  useEffect(() => {
+    const fetchTeamAttributes = async () => {
+      if (!teamId) return;
+      
+      const { data, error } = await supabase
+        .from('teams')
+        .select('player_attributes')
+        .eq('id', teamId)
+        .single();
+      
+      if (!error && data?.player_attributes) {
+        setTeamAttributes(data.player_attributes as Record<string, PlayerAttribute[]>);
+      }
+    };
+    
+    if (isOpen) {
+      fetchTeamAttributes();
+    }
+  }, [isOpen, teamId]);
   
   // Initialize attributes when modal opens
   useEffect(() => {
     if (isOpen && player) {
-      // If player has attributes, use those
+      // Priority 1: Player's existing attributes
       if (player.attributes && player.attributes.length > 0) {
         setAttributes([...player.attributes]);
-      } else {
-        // Otherwise, create default attributes based on player type
-        let defaultAttributes: PlayerAttribute[] = [];
-        
-        // Always add goalkeeping attributes for goalkeepers
-        if (player.type === 'goalkeeper') {
-          defaultAttributes = [
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
-              id: `gk-${index}`,
-              name: attr.name,
-              group: "goalkeeping" as const,
-              value: 5,
-              enabled: true
-            }))
-          ];
-        } else {
-          // For outfield players, add technical, physical, and mental attributes
-          defaultAttributes = [
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'technical').map((attr, index) => ({
-              id: `tech-${index}`,
-              name: attr.name,
-              group: "technical" as const,
-              value: 5,
-              enabled: true
-            })),
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'physical').map((attr, index) => ({
-              id: `phys-${index}`,
-              name: attr.name,
-              group: "physical" as const,
-              value: 5,
-              enabled: true
-            })),
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'mental').map((attr, index) => ({
-              id: `ment-${index}`,
-              name: attr.name,
-              group: "mental" as const,
-              value: 5,
-              enabled: true
-            }))
-          ];
-          
-          // Optionally add goalkeeping attributes for outfield players (disabled by default)
-          defaultAttributes = [
-            ...defaultAttributes,
-            ...DEFAULT_PLAYER_ATTRIBUTES.filter(attr => attr.group === 'goalkeeping').map((attr, index) => ({
-              id: `gk-${index}`,
-              name: attr.name,
-              group: "goalkeeping" as const,
-              value: 5,
-              enabled: false
-            }))
-          ];
-        }
-        
-        setAttributes(defaultAttributes);
+        setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
+        return;
       }
       
-      // Set active tab based on player type
+      // Priority 2: Team's configured attributes (if available)
+      if (teamAttributes) {
+        const teamConfiguredAttrs = Object.values(teamAttributes)
+          .flat()
+          .filter(attr => attr.enabled);
+        
+        // Filter by player type
+        const filteredAttrs = player.type === 'goalkeeper' 
+          ? teamConfiguredAttrs.filter(attr => attr.group === 'goalkeeping')
+          : teamConfiguredAttrs.filter(attr => attr.group !== 'goalkeeping');
+        
+        setAttributes(filteredAttrs);
+        setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
+        return;
+      }
+      
+      // Priority 3: Use comprehensive standard attributes
+      let defaultAttributes: PlayerAttribute[] = [];
+      
+      if (player.type === 'goalkeeper') {
+        defaultAttributes = STANDARD_PLAYER_ATTRIBUTES
+          .filter(attr => attr.group === 'goalkeeping')
+          .map((attr, index) => ({
+            id: `${attr.id || `gk-${index}`}`,
+            name: attr.name,
+            group: "goalkeeping" as const,
+            value: 5,
+            enabled: true
+          }));
+      } else {
+        // For outfield players, add all non-goalkeeping attributes
+        defaultAttributes = STANDARD_PLAYER_ATTRIBUTES
+          .filter(attr => attr.group !== 'goalkeeping')
+          .map((attr, index) => ({
+            id: `${attr.id || `attr-${index}`}`,
+            name: attr.name,
+            group: attr.group,
+            value: 5,
+            enabled: true
+          }));
+      }
+      
+      setAttributes(defaultAttributes);
       setActiveTab(player.type === 'goalkeeper' ? 'goalkeeping' : 'technical');
     }
-  }, [isOpen, player]);
+  }, [isOpen, player, teamAttributes]);
 
   // Don't render the modal if there's no player
   if (!player) {
