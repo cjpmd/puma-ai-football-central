@@ -17,6 +17,7 @@ export const STANDARD_PLAYER_ATTRIBUTES: PlayerAttribute[] = [
   { id: 'footwork', name: 'Footwork', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'handling', name: 'Handling', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'kicking', name: 'Kicking', group: 'goalkeeping', value: 5, enabled: true },
+  { id: 'one_on_one', name: 'One-on-One', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'punching', name: 'Punching', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'reflexes', name: 'Reflexes', group: 'goalkeeping', value: 5, enabled: true },
   { id: 'rushing_out', name: 'Rushing Out', group: 'goalkeeping', value: 5, enabled: true },
