@@ -48,26 +48,19 @@ export const StaffSelectionSection: React.FC<StaffSelectionSectionProps> = ({
   const loadTeamStaff = async () => {
     try {
       setLoading(true);
-      // Get staff with their linked user accounts (left join to include all staff)
-      const { data, error } = await supabase
-        .from('team_staff')
-        .select(`
-          id,
-          name,
-          email,
-          role,
-          user_staff(user_id)
-        `)
-        .eq('team_id', teamId);
+      
+      // Use consolidated function that combines team_staff and user_teams
+      const { data: consolidatedStaff, error } = await supabase
+        .rpc('get_consolidated_team_staff', { p_team_id: teamId });
 
       if (error) throw error;
 
-      const transformedStaff: StaffMember[] = (data || []).map(staff => ({
+      const transformedStaff: StaffMember[] = (consolidatedStaff || []).map((staff: any) => ({
         id: staff.id,
         name: staff.name,
         email: staff.email,
         role: staff.role,
-        user_id: staff.user_staff?.[0]?.user_id
+        user_id: staff.is_linked ? staff.user_id : undefined
       }));
 
       setStaff(transformedStaff);
