@@ -384,6 +384,17 @@ export const ClubManagement = () => {
                     >
                       ← Back to Clubs
                     </Button>
+                    {selectedClubData.logoUrl ? (
+                      <img 
+                        src={selectedClubData.logoUrl} 
+                        alt={selectedClubData.name}
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-border"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                        <Building className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    )}
                     <h2 className="text-xl font-semibold">{selectedClubData.name}</h2>
                     {selectedClubData.isReadOnly && (
                       <Badge variant="outline">Read-only</Badge>
