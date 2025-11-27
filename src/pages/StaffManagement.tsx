@@ -262,14 +262,13 @@ const StaffManagement = () => {
       
       // Check if this staff member has a user_id (came from user_teams)
       if (editingStaff.userId) {
-        // This is a user_teams record - update the role in user_teams
+        // This is a user_teams record - update the role in user_teams using the unique id
         const { error: updateError } = await supabase
           .from('user_teams')
           .update({
             role: formData.role
           })
-          .eq('user_id', editingStaff.userId)
-          .eq('team_id', selectedTeam);
+          .eq('id', editingStaff.id);
 
         if (updateError) {
           console.error('Update user_teams error:', updateError);
