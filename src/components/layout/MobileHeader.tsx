@@ -32,43 +32,48 @@ export function MobileHeader({ title }: MobileHeaderProps) {
     }
 
     return (
-      <div className="flex items-center gap-2">
-        {/* Club Switcher (if multi-club) */}
-        {isMultiClubUser && (
+      <div className="flex items-center gap-3">
+        {/* Club Display/Switcher (if multi-club) */}
+        {isMultiClubUser && currentClub && (
           <button
             onClick={() => setShowClubSwitcher(true)}
-            className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 transition-all hover:bg-white/20 border border-white/20"
+            className="flex items-center gap-2 transition-all hover:opacity-80 active:scale-95"
           >
-            {currentClub?.logoUrl ? (
+            {currentClub.logoUrl ? (
               <img 
                 src={currentClub.logoUrl} 
                 alt={currentClub.name}
-                className="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0 ring-2 ring-white/30"
               />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <Building2 className="h-3.5 w-3.5 text-white" />
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 ring-2 ring-white/30">
+                <Building2 className="h-4 w-4 text-white" />
               </div>
             )}
-            <span className="text-xs font-medium text-white max-w-[80px] truncate">
-              {currentClub?.name || 'Select Club'}
-            </span>
-            <ChevronDown className="h-3.5 w-3.5 text-white/80 flex-shrink-0" />
+            <div className="flex flex-col items-start">
+              <span className="text-xs font-medium text-white/90 truncate max-w-[120px]">
+                {currentClub.name}
+              </span>
+              <ChevronDown className="h-3 w-3 text-white/70" />
+            </div>
           </button>
         )}
 
-        {/* Team Switcher */}
+        {/* Team Display/Switcher */}
         {isMultiTeamUser && availableTeams.length > 0 ? (
           <button
             onClick={() => setShowTeamSwitcher(true)}
-            className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-lg px-2.5 py-1.5 transition-all hover:bg-white/20 border border-white/20"
+            className="flex items-center gap-2 transition-all hover:opacity-80 active:scale-95"
           >
             {viewMode === 'all' ? (
               <>
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <Users className="h-3.5 w-3.5 text-white" />
+                <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0 ring-2 ring-white/30">
+                  <Users className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-xs font-medium text-white">All Teams</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-semibold text-white">All Teams</span>
+                  <ChevronDown className="h-3 w-3 text-white/70" />
+                </div>
               </>
             ) : currentTeam ? (
               <>
@@ -76,20 +81,22 @@ export function MobileHeader({ title }: MobileHeaderProps) {
                   <img 
                     src={currentTeam.logoUrl} 
                     alt={currentTeam.name}
-                    className="w-6 h-6 rounded-full flex-shrink-0 object-cover"
+                    className="w-8 h-8 rounded-full flex-shrink-0 object-cover ring-2 ring-white/30"
                   />
                 ) : (
-                  <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0 text-white">
+                  <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ring-2 ring-white/30">
                     {getInitials(currentTeam.name)}
                   </div>
                 )}
-                <span className="text-xs font-medium text-white max-w-[100px] truncate">{currentTeam.name}</span>
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-semibold text-white truncate max-w-[120px]">{currentTeam.name}</span>
+                  <ChevronDown className="h-3 w-3 text-white/70" />
+                </div>
               </>
             ) : null}
-            <ChevronDown className="h-3.5 w-3.5 text-white/80 flex-shrink-0" />
           </button>
         ) : (
-          // Single team display
+          // Single team display (not clickable)
           (() => {
             const teamToDisplay = currentTeam || teams?.[0];
             if (teamToDisplay) {
@@ -99,10 +106,10 @@ export function MobileHeader({ title }: MobileHeaderProps) {
                     <img 
                       src={teamToDisplay.logoUrl} 
                       alt={teamToDisplay.name}
-                      className="w-7 h-7 rounded-full flex-shrink-0 object-cover"
+                      className="w-8 h-8 rounded-full flex-shrink-0 object-cover ring-2 ring-white/30"
                     />
                   ) : (
-                    <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0 text-white">
+                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ring-2 ring-white/30">
                       {getInitials(teamToDisplay.name)}
                     </div>
                   )}

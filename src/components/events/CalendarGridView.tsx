@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Edit, Users, Trophy, Trash2, Target, Clock, MapPin } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, isToday, isPast } from 'date-fns';
+import { isEventPast, formatTime } from '@/utils/eventUtils';
 import { WeatherService } from '@/services/weatherService';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -194,19 +195,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
-    const today = new Date();
-    const eventDate = new Date(event.date);
-    
-    if (eventDate < today) return true;
-    
-    if (isSameDay(eventDate, today) && event.end_time) {
-      const [hours, minutes] = event.end_time.split(':').map(Number);
-      const eventEndTime = new Date();
-      eventEndTime.setHours(hours, minutes, 0, 0);
-      return new Date() > eventEndTime;
-    }
-    
-    return false;
+    return isEventPast(event);
   };
 
   const isMatchType = (eventType: string) => {

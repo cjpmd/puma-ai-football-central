@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, isSameDay, isToday, isPast, parseISO, startOfDay } from 'date-fns';
+import { isEventPast, formatTime } from '@/utils/eventUtils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -380,19 +381,7 @@ export default function CalendarEventsMobile() {
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
-    const today = new Date();
-    const eventDate = new Date(event.date);
-    
-    if (eventDate < today) return true;
-    
-    if (isSameDay(eventDate, today) && event.end_time) {
-      const [hours, minutes] = event.end_time.split(':').map(Number);
-      const eventEndTime = new Date();
-      eventEndTime.setHours(hours, minutes, 0, 0);
-      return new Date() > eventEndTime;
-    }
-    
-    return false;
+    return isEventPast(event);
   };
 
   const getAllTeamScores = (event: DatabaseEvent) => {

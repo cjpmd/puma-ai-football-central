@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Edit, Users, Trophy, Trash2, Target, Clock } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { format, isSameDay, isToday, isPast } from 'date-fns';
+import { isEventPast, formatTime } from '@/utils/eventUtils';
 import { supabase } from '@/integrations/supabase/client';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { useAuth } from '@/contexts/AuthContext';
@@ -217,19 +218,7 @@ export const EventsGridView: React.FC<EventsGridViewProps> = ({
   };
 
   const isEventCompleted = (event: DatabaseEvent) => {
-    const today = new Date();
-    const eventDate = new Date(event.date);
-    
-    if (eventDate < today) return true;
-    
-    if (isSameDay(eventDate, today) && event.end_time) {
-      const [hours, minutes] = event.end_time.split(':').map(Number);
-      const eventEndTime = new Date();
-      eventEndTime.setHours(hours, minutes, 0, 0);
-      return new Date() > eventEndTime;
-    }
-    
-    return false;
+    return isEventPast(event);
   };
 
   const isMatchType = (eventType: string) => {
