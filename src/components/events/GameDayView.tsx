@@ -13,11 +13,18 @@ import { ArrowLeft, Play, Pause, RotateCcw, ChevronLeft, ChevronRight } from 'lu
 import { toast } from 'sonner';
 import '@/styles/game-day.css';
 
+interface LiveSubstitution {
+  playerOffId: string;
+  playerOnId: string;
+  periodNumber: number;
+}
+
 export const GameDayView: React.FC = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const [currentPeriodIndex, setCurrentPeriodIndex] = useState(0);
   const [matchEvents, setMatchEvents] = useState<MatchEvent[]>([]);
+  const [liveSubstitutions, setLiveSubstitutions] = useState<LiveSubstitution[]>([]);
   
   const { 
     data: event, 
@@ -192,10 +199,12 @@ export const GameDayView: React.FC = () => {
   };
 
   const handleSubstitution = (playerOffId: string, playerOnId: string) => {
-    // Reload to reflect substitution in UI
-    setTimeout(() => {
-      window.location.reload();
-    }, 500);
+    // Add to live substitutions for current period
+    setLiveSubstitutions(prev => [...prev, {
+      playerOffId,
+      playerOnId,
+      periodNumber: currentSelection.period_number
+    }]);
   };
 
   const handlePreviousPeriod = () => {
@@ -281,7 +290,7 @@ export const GameDayView: React.FC = () => {
   const periodDuration = currentSelection?.duration_minutes || 25;
 
   // Parse positions from player_positions JSON with enriched data
-  const positions = currentSelection?.player_positions 
+  let positions = currentSelection?.player_positions 
     ? (() => {
         const playerPositions = currentSelection.player_positions;
         const previousSelection = currentPeriodIndex > 0 ? eventSelections[currentPeriodIndex - 1] : null;
@@ -330,6 +339,25 @@ export const GameDayView: React.FC = () => {
       })()
     : [];
 
+  // Apply live substitutions for the current period
+  const currentPeriodLiveSubstitutions = liveSubstitutions.filter(
+    sub => sub.periodNumber === currentSelection.period_number
+  );
+
+  currentPeriodLiveSubstitutions.forEach(sub => {
+    const indexToReplace = positions.findIndex(p => p.playerId === sub.playerOffId);
+    if (indexToReplace !== -1) {
+      const playerOnInfo = playerMap.get(sub.playerOnId);
+      // Keep same position/coordinates, just swap player info
+      positions[indexToReplace] = {
+        ...positions[indexToReplace],
+        playerId: sub.playerOnId,
+        playerName: playerOnInfo?.name || 'Unknown',
+        squadNumber: playerOnInfo?.squadNumber || 0,
+      };
+    }
+  });
+
   // Collect ALL substitute players from all periods
   const allSubstituteIdsSet = new Set<string>();
   const substituteReplacementMap = new Map<string, string>(); // subId -> replacedPlayerId
@@ -363,12 +391,24 @@ export const GameDayView: React.FC = () => {
 
   const allSubstituteIds = Array.from(allSubstituteIdsSet);
 
-  // Build substitute objects - ONLY show non-playing substitutes
+  // Get all players who came on via live substitutions in current period
+  const liveSubsOnIds = new Set(
+    currentPeriodLiveSubstitutions.map(sub => sub.playerOnId)
+  );
+  
+  // Get all players who went off via live substitutions in current period
+  const liveSubsOffIds = new Set(
+    currentPeriodLiveSubstitutions.map(sub => sub.playerOffId)
+  );
+
+  // Build substitute objects - show non-playing substitutes and players who were subbed off
   const substitutes = allSubstituteIds
     .filter((subId: string) => {
-      // Only show if NOT currently on the pitch
+      // Show if NOT currently on the pitch
       const isOnPitch = positions.some((p) => p.playerId === subId);
-      return !isOnPitch;
+      // OR if they came on via live sub (filter them out)
+      const cameOnViaLiveSub = liveSubsOnIds.has(subId);
+      return !isOnPitch && !cameOnViaLiveSub;
     })
     .map((subId: string) => {
       const playerInfo = playerMap.get(subId);
@@ -380,10 +420,25 @@ export const GameDayView: React.FC = () => {
         name: playerInfo?.name || 'Unknown',
         squad_number: playerInfo?.squadNumber || 0,
         position: 'SUB',
-        isUsed: false, // Always false since we filtered out used ones
+        isUsed: false,
         replacedPlayerName: replacedPlayerInfo?.name,
       };
     });
+
+  // Add players who were subbed off via live subs to the substitutes area
+  currentPeriodLiveSubstitutions.forEach(sub => {
+    const playerOffInfo = playerMap.get(sub.playerOffId);
+    if (playerOffInfo && !substitutes.some(s => s.id === sub.playerOffId)) {
+      substitutes.push({
+        id: sub.playerOffId,
+        name: playerOffInfo.name,
+        squad_number: playerOffInfo.squadNumber || 0,
+        position: 'SUB',
+        isUsed: true,
+        replacedPlayerName: undefined,
+      });
+    }
+  });
 
   const handlePlayerLongPress = (playerId: string) => {
     toast.info('Long press a player on the pitch to log events');
