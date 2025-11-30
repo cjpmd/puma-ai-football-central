@@ -321,6 +321,25 @@
 
 .event-badge.goal {
   background: hsl(142, 71%, 45%);
+  padding: 2px;
+}
+
+.goal-badges-container {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.goal-badges-container .event-badge:not(:first-child) {
+  margin-left: -4px;
+}
+
+.event-badge.substitution-in {
+  background: hsl(142, 71%, 45%);
+}
+
+.event-badge.substitution-out {
+  background: hsl(0, 0%, 50%);
 }
 
 .event-badge.assist {

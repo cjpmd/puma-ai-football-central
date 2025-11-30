@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLongPress } from '@/hooks/useLongPress';
 import { GameDayPlayerEventMenu } from './GameDayPlayerEventMenu';
-import { MatchEvent, MatchEventType, PlayerCardStatus } from '@/types/matchEvent';
+import { MatchEvent, MatchEventType, PlayerCardStatus, SubstitutionData } from '@/types/matchEvent';
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
-import { Trophy, Star } from 'lucide-react';
+import { FootballIcon } from './icons/FootballIcon';
+import { Star, ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PlayerPosition {
@@ -22,6 +23,14 @@ interface PlayerPosition {
   replacedPlayerName?: string;
 }
 
+interface SubstitutePlayer {
+  id: string;
+  name: string;
+  squad_number: number;
+  position: string;
+  isUsed?: boolean;
+}
+
 interface GameDayFormationCardProps {
   eventId: string;
   teamId: string;
@@ -29,8 +38,10 @@ interface GameDayFormationCardProps {
   formation: string;
   positions: PlayerPosition[];
   periodDuration: number;
+  substitutes: SubstitutePlayer[];
   matchEvents: MatchEvent[];
   onEventCreated: (event: MatchEvent) => void;
+  onSubstitution?: (playerOffId: string, playerOnId: string) => void;
   currentMinute?: number;
 }
 
@@ -41,8 +52,10 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   formation,
   positions,
   periodDuration,
+  substitutes,
   matchEvents,
   onEventCreated,
+  onSubstitution,
   currentMinute = 0
 }) => {
   const [playerCardStatuses, setPlayerCardStatuses] = useState<Record<string, PlayerCardStatus>>({});
@@ -89,6 +102,32 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       toast.success('Event deleted');
     } catch (error) {
       console.error('Error updating stats after delete:', error);
+    }
+  };
+
+  const handleSubstitution = async (playerOffId: string, playerOnId: string, playerOffName: string, playerOnName: string) => {
+    try {
+      await matchEventService.createSubstitution({
+        eventId,
+        playerOffId,
+        playerOnId,
+        playerOffName,
+        playerOnName,
+        teamId,
+        minute: currentMinute,
+        periodNumber
+      });
+      toast.success(`${playerOffName} → ${playerOnName}`);
+      
+      if (onSubstitution) {
+        onSubstitution(playerOffId, playerOnId);
+      }
+      
+      // Reload the view
+      window.location.reload();
+    } catch (error) {
+      console.error('Error creating substitution:', error);
+      toast.error("Failed to create substitution");
     }
   };
 
@@ -140,8 +179,23 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
     const goals = events.filter(e => e.event_type === 'goal').length;
     const assists = events.filter(e => e.event_type === 'assist').length;
     const saves = events.filter(e => e.event_type === 'save').length;
+    const substitutions = events.filter(e => e.event_type === 'substitution');
     const hasYellow = events.some(e => e.event_type === 'yellow_card');
     const hasRed = events.some(e => e.event_type === 'red_card');
+
+    // Check if this player was substituted off or on
+    const wasSubbedOff = substitutions.some(e => e.player_id === playerId);
+    let wasSubbedOn = false;
+    substitutions.forEach(sub => {
+      try {
+        const subData: SubstitutionData = JSON.parse(sub.notes || '{}');
+        if (subData.playerOnId === playerId) {
+          wasSubbedOn = true;
+        }
+      } catch (e) {
+        // Invalid JSON, skip
+      }
+    });
 
     return (
       <div className="player-badges">
@@ -151,18 +205,45 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
           </div>
         )}
         {goals > 0 && (
-          <div className="event-badge goal">
-            <Trophy className="h-2 w-2" />
+          <div className="goal-badges-container">
+            {Array.from({ length: Math.min(goals, 5) }).map((_, idx) => (
+              <div key={`goal-${idx}`} className="event-badge goal">
+                <FootballIcon className="h-3 w-3" />
+              </div>
+            ))}
+            {goals > 5 && (
+              <span className="text-xs font-bold ml-1">+{goals - 5}</span>
+            )}
+          </div>
+        )}
+        {assists > 0 && (
+          <div className="event-badge assist ml-1">
+            <span className="text-[8px] font-bold">{assists}A</span>
+          </div>
+        )}
+        {saves > 0 && (
+          <div className="event-badge save ml-1">
+            <span className="text-[8px] font-bold">{saves}S</span>
           </div>
         )}
         {hasYellow && !hasRed && (
-          <div className="event-badge yellow-card">
+          <div className="event-badge yellow-card ml-1">
             <span className="text-[8px] font-bold">Y</span>
           </div>
         )}
         {hasRed && (
-          <div className="event-badge red-card">
+          <div className="event-badge red-card ml-1">
             <span className="text-[8px] font-bold text-white">R</span>
+          </div>
+        )}
+        {wasSubbedOff && (
+          <div className="event-badge substitution-out ml-1">
+            <ArrowLeftRight className="h-3 w-3" />
+          </div>
+        )}
+        {wasSubbedOn && (
+          <div className="event-badge substitution-in ml-1">
+            <ArrowLeftRight className="h-3 w-3" />
           </div>
         )}
       </div>
@@ -202,10 +283,13 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
               eventId={eventId}
               playerId={pos.playerId}
               playerName={pos.playerName}
+              teamId={teamId}
               isGoalkeeper={isGoalkeeper}
               cardStatus={cardStatus}
+              availableSubstitutes={substitutes.filter(s => !s.isUsed)}
               onEventSelect={(eventType) => handleEventSelect(pos.playerId, eventType)}
               onEventDelete={handleEventDelete}
+              onSubstitution={handleSubstitution}
             >
               <div
                 className="player-position"

@@ -1,4 +1,4 @@
-export type MatchEventType = 'goal' | 'assist' | 'save' | 'yellow_card' | 'red_card';
+export type MatchEventType = 'goal' | 'assist' | 'save' | 'yellow_card' | 'red_card' | 'substitution';
 
 export interface MatchEvent {
   id: string;
@@ -21,4 +21,11 @@ export interface MatchEvent {
 export interface PlayerCardStatus {
   hasYellow: boolean;
   hasRed: boolean;
+}
+
+export interface SubstitutionData {
+  playerOffId: string;
+  playerOnId: string;
+  playerOffName?: string;
+  playerOnName?: string;
 }
