@@ -107,7 +107,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
 
   const handleSubstitution = async (playerOffId: string, playerOnId: string, playerOffName: string, playerOnName: string) => {
     try {
-      await matchEventService.createSubstitution({
+      const newEvent = await matchEventService.createSubstitution({
         eventId,
         playerOffId,
         playerOnId,
@@ -123,8 +123,9 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
         onSubstitution(playerOffId, playerOnId);
       }
       
-      // Reload the view
-      window.location.reload();
+      // Add event to UI and close menu
+      onEventCreated(newEvent);
+      setSelectedPlayer(null);
     } catch (error) {
       console.error('Error creating substitution:', error);
       toast.error("Failed to create substitution");
