@@ -191,6 +191,13 @@ export const GameDayView: React.FC = () => {
     }
   };
 
+  const handleSubstitution = (playerOffId: string, playerOnId: string) => {
+    // Reload to reflect substitution in UI
+    setTimeout(() => {
+      window.location.reload();
+    }, 500);
+  };
+
   const handlePreviousPeriod = () => {
     if (currentPeriodIndex > 0) {
       setCurrentPeriodIndex(prev => prev - 1);
@@ -475,8 +482,10 @@ export const GameDayView: React.FC = () => {
               formation={currentSelection.formation}
               positions={positions}
               periodDuration={periodDuration}
+              substitutes={substitutes}
               matchEvents={matchEvents}
               onEventCreated={handleEventCreated}
+              onSubstitution={handleSubstitution}
               currentMinute={currentMinute}
             />
           </div>

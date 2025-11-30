@@ -180,6 +180,73 @@ export const matchEventService = {
   },
 
   /**
+   * Create a substitution event
+   */
+  async createSubstitution(eventData: {
+    eventId: string;
+    playerOffId: string;
+    playerOnId: string;
+    playerOffName?: string;
+    playerOnName?: string;
+    teamId: string;
+    minute?: number;
+    periodNumber?: number;
+  }): Promise<MatchEvent> {
+    const substitutionData = {
+      playerOffId: eventData.playerOffId,
+      playerOnId: eventData.playerOnId,
+      playerOffName: eventData.playerOffName,
+      playerOnName: eventData.playerOnName,
+    };
+
+    const { data, error } = await supabase
+      .from('match_events')
+      .insert([{
+        event_id: eventData.eventId,
+        player_id: eventData.playerOffId, // Player going off
+        team_id: eventData.teamId,
+        event_type: 'substitution',
+        minute: eventData.minute,
+        period_number: eventData.periodNumber,
+        notes: JSON.stringify(substitutionData)
+      }])
+      .select(`
+        *,
+        players (
+          id,
+          name,
+          squad_number
+        )
+      `)
+      .single();
+
+    if (error) throw error;
+    return data as MatchEvent;
+  },
+
+  /**
+   * Get active substitutions for an event
+   */
+  async getEventSubstitutions(eventId: string): Promise<MatchEvent[]> {
+    const { data, error } = await supabase
+      .from('match_events')
+      .select(`
+        *,
+        players (
+          id,
+          name,
+          squad_number
+        )
+      `)
+      .eq('event_id', eventId)
+      .eq('event_type', 'substitution')
+      .order('minute', { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as MatchEvent[];
+  },
+
+  /**
    * Calculate score from match events
    * Returns flexible score object - only includes teams that exist
    */
