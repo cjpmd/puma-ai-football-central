@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingUp, Users, Trophy, Target, Calendar, BarChart3 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface AnalyticsData {
@@ -21,8 +21,9 @@ interface AnalyticsData {
 }
 
 export default function AnalyticsMobile() {
-  const { teams } = useAuth();
+  const { filteredTeams } = useClubContext();
   const { toast } = useToast();
+  const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalWins: 0,
     totalDraws: 0,
@@ -36,10 +37,24 @@ export default function AnalyticsMobile() {
   });
   const [loading, setLoading] = useState(true);
 
-  const currentTeam = teams?.[0];
+  // Update selectedTeamId when filteredTeams change (club switch)
+  useEffect(() => {
+    if (filteredTeams.length > 0) {
+      const isCurrentValid = filteredTeams.some(t => t.id === selectedTeamId);
+      if (!isCurrentValid) {
+        setSelectedTeamId(filteredTeams[0].id);
+      }
+    } else {
+      setSelectedTeamId('');
+    }
+  }, [filteredTeams]);
+
+  const currentTeam = filteredTeams.find(t => t.id === selectedTeamId);
 
   useEffect(() => {
-    loadAnalyticsData();
+    if (currentTeam) {
+      loadAnalyticsData();
+    }
   }, [currentTeam]);
 
   const loadAnalyticsData = async () => {
