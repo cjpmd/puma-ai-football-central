@@ -2,7 +2,7 @@
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, Users, Trophy, Target, Calendar, BarChart3 } from 'lucide-react';
+import { TrendingUp, Users, Trophy, Target, Calendar, BarChart3, Shield, AlertTriangle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useClubContext } from '@/contexts/ClubContext';
@@ -18,6 +18,13 @@ interface AnalyticsData {
   possession: number;
   recentResults: any[];
   topPerformers: any[];
+  totalGoals: number;
+  totalAssists: number;
+  totalSaves: number;
+  yellowCards: number;
+  redCards: number;
+  topScorers: any[];
+  topAssisters: any[];
 }
 
 export default function AnalyticsMobile() {
@@ -33,7 +40,14 @@ export default function AnalyticsMobile() {
     goalsConceded: 0,
     possession: 0,
     recentResults: [],
-    topPerformers: []
+    topPerformers: [],
+    totalGoals: 0,
+    totalAssists: 0,
+    totalSaves: 0,
+    yellowCards: 0,
+    redCards: 0,
+    topScorers: [],
+    topAssisters: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -145,6 +159,64 @@ export default function AnalyticsMobile() {
         .sort((a, b) => b.appearances - a.appearances)
         .slice(0, 3);
 
+      // Load match events for stats
+      const { data: players } = await supabase
+        .from('players')
+        .select('id, name, match_stats')
+        .eq('team_id', currentTeam.id)
+        .eq('status', 'active');
+
+      // Calculate match event totals with proper type casting
+      const totalGoals = players?.reduce((sum, p) => {
+        const stats = p.match_stats as any;
+        return sum + (stats?.totalGoals || 0);
+      }, 0) || 0;
+      
+      const totalAssists = players?.reduce((sum, p) => {
+        const stats = p.match_stats as any;
+        return sum + (stats?.totalAssists || 0);
+      }, 0) || 0;
+      
+      const totalSaves = players?.reduce((sum, p) => {
+        const stats = p.match_stats as any;
+        return sum + (stats?.totalSaves || 0);
+      }, 0) || 0;
+      
+      const yellowCards = players?.reduce((sum, p) => {
+        const stats = p.match_stats as any;
+        return sum + (stats?.yellowCards || 0);
+      }, 0) || 0;
+      
+      const redCards = players?.reduce((sum, p) => {
+        const stats = p.match_stats as any;
+        return sum + (stats?.redCards || 0);
+      }, 0) || 0;
+
+      // Top scorers and assisters
+      const topScorers = [...(players || [])]
+        .filter(p => {
+          const stats = p.match_stats as any;
+          return (stats?.totalGoals || 0) > 0;
+        })
+        .sort((a, b) => {
+          const aStats = a.match_stats as any;
+          const bStats = b.match_stats as any;
+          return (bStats?.totalGoals || 0) - (aStats?.totalGoals || 0);
+        })
+        .slice(0, 3);
+
+      const topAssisters = [...(players || [])]
+        .filter(p => {
+          const stats = p.match_stats as any;
+          return (stats?.totalAssists || 0) > 0;
+        })
+        .sort((a, b) => {
+          const aStats = a.match_stats as any;
+          const bStats = b.match_stats as any;
+          return (bStats?.totalAssists || 0) - (aStats?.totalAssists || 0);
+        })
+        .slice(0, 3);
+
       setAnalytics({
         totalWins: wins,
         totalDraws: draws,
@@ -154,7 +226,14 @@ export default function AnalyticsMobile() {
         goalsConceded: goalsAgainst,
         possession: 0, // This would need to be tracked separately
         recentResults: events.slice(0, 3),
-        topPerformers
+        topPerformers,
+        totalGoals,
+        totalAssists,
+        totalSaves,
+        yellowCards,
+        redCards,
+        topScorers,
+        topAssisters
       });
     } catch (error: any) {
       toast({
@@ -217,6 +296,47 @@ export default function AnalyticsMobile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Match Events Stats */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center">
+              <Target className="h-5 w-5 mr-2" />
+              Match Events
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="text-center p-3 bg-blue-50 rounded-lg">
+                <Target className="h-6 w-6 mx-auto mb-1 text-blue-600" />
+                <div className="text-xl font-bold">{analytics.totalGoals}</div>
+                <div className="text-xs text-muted-foreground">Goals</div>
+              </div>
+              <div className="text-center p-3 bg-green-50 rounded-lg">
+                <Target className="h-6 w-6 mx-auto mb-1 text-green-600" />
+                <div className="text-xl font-bold">{analytics.totalAssists}</div>
+                <div className="text-xs text-muted-foreground">Assists</div>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-lg">
+                <Shield className="h-6 w-6 mx-auto mb-1 text-purple-600" />
+                <div className="text-xl font-bold">{analytics.totalSaves}</div>
+                <div className="text-xs text-muted-foreground">Saves</div>
+              </div>
+              <div className="text-center p-3 bg-yellow-50 rounded-lg">
+                <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-yellow-600" />
+                <div className="text-xl font-bold">{analytics.yellowCards}</div>
+                <div className="text-xs text-muted-foreground">Yellow Cards</div>
+              </div>
+            </div>
+            {analytics.redCards > 0 && (
+              <div className="mt-3 text-center p-3 bg-red-50 rounded-lg">
+                <AlertTriangle className="h-6 w-6 mx-auto mb-1 text-red-600" />
+                <div className="text-xl font-bold text-red-600">{analytics.redCards}</div>
+                <div className="text-xs text-muted-foreground">Red Cards</div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Team Performance */}
         <Card>
@@ -305,25 +425,85 @@ export default function AnalyticsMobile() {
           </CardContent>
         </Card>
 
+        {/* Top Scorers */}
+        {analytics.topScorers.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <Target className="h-5 w-5 mr-2" />
+                Top Scorers
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {analytics.topScorers.map((player, index) => {
+                const stats = player.match_stats as any;
+                return (
+                  <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                    <div>
+                      <div className="font-medium">{player.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {stats?.totalGames || 0} games
+                      </div>
+                    </div>
+                    <Badge className="bg-blue-500">
+                      {stats?.totalGoals || 0} goals
+                    </Badge>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Top Assisters */}
+        {analytics.topAssisters.length > 0 && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center">
+                <Target className="h-5 w-5 mr-2" />
+                Top Assisters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {analytics.topAssisters.map((player, index) => {
+                const stats = player.match_stats as any;
+                return (
+                  <div key={index} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div>
+                      <div className="font-medium">{player.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {stats?.totalGames || 0} games
+                      </div>
+                    </div>
+                    <Badge className="bg-green-500">
+                      {stats?.totalAssists || 0} assists
+                    </Badge>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Top Performers */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center">
               <Users className="h-5 w-5 mr-2" />
-              Top Performers
+              Most Appearances
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {analytics.topPerformers.length > 0 ? (
               analytics.topPerformers.map((player, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div key={index} className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
                   <div>
                     <div className="font-medium">{player.name}</div>
                     <div className="text-sm text-muted-foreground">
                       {player.appearances} appearances
                     </div>
                   </div>
-                  <Badge className="bg-blue-500">
+                  <Badge className="bg-purple-500">
                     {Math.round(player.totalMinutes / player.appearances)} min avg
                   </Badge>
                 </div>
