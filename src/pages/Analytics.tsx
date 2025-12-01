@@ -3,7 +3,7 @@ import { SafeDashboardLayout } from '@/components/layout/SafeDashboardLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useAuth } from '@/contexts/AuthContext';
+import { useClubContext } from '@/contexts/ClubContext';
 import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
 import { Player } from '@/types';
@@ -12,15 +12,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { ResultsSummary } from '@/components/analytics/ResultsSummary';
 
 const Analytics = () => {
-  const { teams } = useAuth();
+  const { filteredTeams } = useClubContext();
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
 
-  // Update selectedTeamId when teams load
+  // Update selectedTeamId when filteredTeams change (club switch)
   useEffect(() => {
-    if (teams.length > 0 && !selectedTeamId) {
-      setSelectedTeamId(teams[0].id);
+    if (filteredTeams.length > 0) {
+      const isCurrentValid = filteredTeams.some(t => t.id === selectedTeamId);
+      if (!isCurrentValid) {
+        setSelectedTeamId(filteredTeams[0].id);
+      }
+    } else {
+      setSelectedTeamId('');
     }
-  }, [teams, selectedTeamId]);
+  }, [filteredTeams, selectedTeamId]);
 
   // Fetch active players
   const { data: players = [], isLoading } = useQuery({
@@ -29,7 +34,7 @@ const Analytics = () => {
     enabled: !!selectedTeamId,
   });
 
-  const selectedTeam = teams.find(t => t.id === selectedTeamId);
+  const selectedTeam = filteredTeams.find(t => t.id === selectedTeamId);
 
   // Calculate team statistics
   const teamStats = {
@@ -81,14 +86,14 @@ const Analytics = () => {
               Team and player performance insights
             </p>
           </div>
-          {teams.length > 1 && (
+          {filteredTeams.length > 1 && (
             <div className="min-w-[250px]">
               <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select team" />
                 </SelectTrigger>
                 <SelectContent>
-                  {teams.map((team) => (
+                  {filteredTeams.map((team) => (
                     <SelectItem key={team.id} value={team.id}>
                       {team.name}
                     </SelectItem>
