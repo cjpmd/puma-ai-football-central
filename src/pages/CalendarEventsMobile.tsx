@@ -62,7 +62,7 @@ export default function CalendarEventsMobile() {
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const { toast } = useToast();
-  const { user, profile } = useAuth();
+  const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode, availableTeams } = useTeamContext();
   const { hasPermission } = useAuthorization();
@@ -190,8 +190,11 @@ export default function CalendarEventsMobile() {
 
   const loadEvents = async () => {
     try {
-      // Determine which teams to query based on view mode
-      const teamsToQuery = viewMode === 'all' ? availableTeams : (currentTeam ? [currentTeam] : []);
+      // For "all" view mode, use ALL teams from AuthContext (across all clubs)
+      // For single team mode, use currentTeam directly
+      const teamsToQuery = viewMode === 'all' 
+        ? (authTeams?.length ? authTeams : allTeams || [])
+        : (currentTeam ? [currentTeam] : []);
       
       if (teamsToQuery.length === 0) return;
 
