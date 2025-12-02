@@ -16,6 +16,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
 import { useTeamContext } from '@/contexts/TeamContext';
 import { useSmartView } from '@/contexts/SmartViewContext';
@@ -26,6 +27,7 @@ interface HeaderEntitySwitcherProps {
 }
 
 export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitcherProps) {
+  const { teams: allUserTeams } = useAuth();
   const { currentClub, availableClubs, setCurrentClub } = useClubContext();
   const { currentTeam, availableTeams, setCurrentTeam, viewMode, setViewMode } = useTeamContext();
   const { currentView } = useSmartView();
@@ -39,10 +41,14 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
   const isClubBasedRole = currentView === 'club_admin' || currentView === 'global_admin';
   const displayType = isClubBasedRole ? 'club' : 'team';
   
+  // For team-based roles, show ALL teams across all clubs (not filtered by current club)
+  // For club-based roles, show club-filtered teams
+  const teamsToShow = isClubBasedRole ? availableTeams : allUserTeams;
+  
   // Show switcher if role is club-based with multiple clubs, or team-based with multiple teams
   const showSwitcher = isClubBasedRole 
     ? availableClubs.length > 1
-    : availableTeams.length > 1;
+    : teamsToShow.length > 1;
 
   // Get display entity
   const displayEntity = displayType === 'club' ? currentClub : (viewMode === 'all' ? null : currentTeam);
@@ -234,7 +240,7 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
                     />
                   </CommandItem>
 
-                  {availableTeams.map((team) => (
+                  {teamsToShow.map((team) => (
                     <CommandItem
                       key={team.id}
                       onSelect={() => {
@@ -414,7 +420,7 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
                 </button>
 
                 {/* Individual teams */}
-                {availableTeams.map((team) => {
+                {teamsToShow.map((team) => {
                   const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
                   return (
                     <button
