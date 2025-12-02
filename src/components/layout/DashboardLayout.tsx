@@ -7,9 +7,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSmartView } from '@/contexts/SmartViewContext';
-import { EntityHeader } from '@/components/shared/EntityHeader';
+import { HeaderEntitySwitcher } from './HeaderEntitySwitcher';
 import { RoleContextSwitcher } from './RoleContextSwitcher';
-import { ClubSwitcher } from './ClubSwitcher';
 import { useSmartNavigation } from '@/hooks/useSmartNavigation';
 import { 
   Menu,
@@ -214,29 +213,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         {/* Top header with entity logo, name, and role switcher */}
         <div className="h-16 border-b bg-background flex items-center px-6">
           <div className="flex-1">
-            {headerEntity ? (
-              <EntityHeader 
-                logoUrl={headerEntity.logoUrl}
-                entityName={headerEntity.name}
-                entityType={headerEntity.type}
-              />
-            ) : (
-              <EntityHeader 
-                entityName="Team Manager"
-                entityType="team"
-              />
-            )}
+            <HeaderEntitySwitcher variant="desktop" />
           </div>
           
-          {/* Club and Role Switchers */}
+          {/* Role Switcher */}
           <div className="flex items-center gap-3">
             {isMultiRoleUser && (
               <Badge variant="outline" className="text-xs">
                 Multi-Role User
               </Badge>
             )}
-            {/* Club Switcher */}
-            <ClubSwitcher />
             {/* Only show role switcher if SmartView context is available */}
             {typeof useSmartView !== 'undefined' && (
               <RoleContextSwitcher />
