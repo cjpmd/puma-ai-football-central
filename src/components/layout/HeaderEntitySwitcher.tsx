@@ -62,6 +62,13 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
     if (team === null) {
       setViewMode('all');
     } else {
+      // If switching to a team from a different club, update the club too
+      if (team.clubId && team.clubId !== currentClub?.id) {
+        const newClub = availableClubs.find(c => c.id === team.clubId);
+        if (newClub) {
+          setCurrentClub(newClub);
+        }
+      }
       setCurrentTeam(team);
     }
     setOpen(false);
@@ -244,6 +251,13 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
                     <CommandItem
                       key={team.id}
                       onSelect={() => {
+                        // If switching to a team from a different club, update the club too
+                        if (team.clubId && team.clubId !== currentClub?.id) {
+                          const newClub = availableClubs.find(c => c.id === team.clubId);
+                          if (newClub) {
+                            setCurrentClub(newClub);
+                          }
+                        }
                         setCurrentTeam(team);
                         setOpen(false);
                       }}
