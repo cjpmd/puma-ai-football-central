@@ -37,7 +37,7 @@ export default function CalendarEvents() {
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const { toast } = useToast();
-  const { connectedPlayers } = useAuth();
+  const { connectedPlayers, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
 
   useEffect(() => {
@@ -51,11 +51,13 @@ export default function CalendarEvents() {
 
   const loadEvents = async () => {
     try {
-      if (!teams || teams.length === 0) return;
+      // Use all teams from AuthContext for integrated calendar view across all clubs
+      const teamsToUse = authTeams?.length ? authTeams : allTeams || [];
+      if (!teamsToUse || teamsToUse.length === 0) return;
 
-      console.log('Loading events for teams:', teams.map(t => ({ id: t.id, name: t.name })));
+      console.log('Loading events for teams:', teamsToUse.map(t => ({ id: t.id, name: t.name })));
 
-      const teamIds = teams.map(team => team.id);
+      const teamIds = teamsToUse.map(team => team.id);
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -329,7 +331,7 @@ export default function CalendarEvents() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Teams</SelectItem>
-                    {teams.map((team) => (
+                    {(authTeams?.length ? authTeams : allTeams || []).map((team) => (
                       <SelectItem key={team.id} value={team.id}>
                         {team.name}
                       </SelectItem>
