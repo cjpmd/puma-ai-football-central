@@ -18,6 +18,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useClubContext } from '@/contexts/ClubContext';
 import { useTeamContext } from '@/contexts/TeamContext';
+import { useSmartView } from '@/contexts/SmartViewContext';
 import { Team } from '@/types';
 
 interface HeaderEntitySwitcherProps {
@@ -25,17 +26,23 @@ interface HeaderEntitySwitcherProps {
 }
 
 export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitcherProps) {
-  const { currentClub, availableClubs, setCurrentClub, isMultiClubUser } = useClubContext();
-  const { currentTeam, availableTeams, setCurrentTeam, viewMode, setViewMode, isMultiTeamUser } = useTeamContext();
+  const { currentClub, availableClubs, setCurrentClub } = useClubContext();
+  const { currentTeam, availableTeams, setCurrentTeam, viewMode, setViewMode } = useTeamContext();
+  const { currentView } = useSmartView();
   const [open, setOpen] = useState(false);
 
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Determine what to display and what switcher to show
-  const displayType = isMultiClubUser ? 'club' : 'team';
-  const showSwitcher = isMultiClubUser || isMultiTeamUser;
+  // Club-based roles show clubs, team-based roles show teams
+  const isClubBasedRole = currentView === 'club_admin' || currentView === 'global_admin';
+  const displayType = isClubBasedRole ? 'club' : 'team';
+  
+  // Show switcher if role is club-based with multiple clubs, or team-based with multiple teams
+  const showSwitcher = isClubBasedRole 
+    ? availableClubs.length > 1
+    : availableTeams.length > 1;
 
   // Get display entity
   const displayEntity = displayType === 'club' ? currentClub : (viewMode === 'all' ? null : currentTeam);
