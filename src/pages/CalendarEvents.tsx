@@ -43,7 +43,7 @@ export default function CalendarEvents() {
   useEffect(() => {
     loadEvents();
     loadIndividualTrainingSessions();
-  }, [teams, connectedPlayers, selectedTeam]);
+  }, [authTeams, allTeams, connectedPlayers, selectedTeam]);
 
   useEffect(() => {
     filterEvents();
