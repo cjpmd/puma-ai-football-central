@@ -84,29 +84,43 @@ export const getPlayerMatchHistory = async (playerId: string) => {
     console.log('=== FETCHING MATCH HISTORY FROM AUTHORITATIVE SOURCE ===');
     console.log('Player ID:', playerId);
 
-    // Get match history directly from event_selections (the authoritative source)
-    const { data: eventSelections, error: selectionsError } = await supabase
-      .from('event_selections')
-      .select(`
-        *,
-        events!inner(
-          id,
-          date,
-          opponent,
-          title,
-          start_time,
-          player_of_match_id,
-          event_type,
-          end_time
-        ),
-        performance_categories(name)
-      `)
-      .order('events(date)', { ascending: false })
-      .order('events(start_time)', { ascending: false });
+    // Fetch event_selections and match_events in parallel
+    const [selectionsResult, matchEventsResult] = await Promise.all([
+      supabase
+        .from('event_selections')
+        .select(`
+          *,
+          events!inner(
+            id,
+            date,
+            opponent,
+            title,
+            start_time,
+            player_of_match_id,
+            event_type,
+            end_time
+          ),
+          performance_categories(name)
+        `)
+        .order('events(date)', { ascending: false })
+        .order('events(start_time)', { ascending: false }),
+      
+      supabase
+        .from('match_events')
+        .select('event_id, event_type, minute, period_number')
+        .eq('player_id', playerId)
+    ]);
+
+    const { data: eventSelections, error: selectionsError } = selectionsResult;
+    const { data: matchEvents, error: matchEventsError } = matchEventsResult;
 
     if (selectionsError) {
       console.error('Error fetching event selections:', selectionsError);
       return [];
+    }
+
+    if (matchEventsError) {
+      console.error('Error fetching match events:', matchEventsError);
     }
 
     if (!eventSelections || eventSelections.length === 0) {
@@ -115,6 +129,19 @@ export const getPlayerMatchHistory = async (playerId: string) => {
     }
 
     console.log(`Found ${eventSelections.length} event selections to process`);
+    console.log(`Found ${matchEvents?.length || 0} match events for player`);
+
+    // Group match events by event_id for quick lookup
+    const matchEventsByEventId = new Map<string, { goals: number; assists: number; saves: number; yellowCards: number; redCards: number }>();
+    for (const event of matchEvents || []) {
+      const stats = matchEventsByEventId.get(event.event_id) || { goals: 0, assists: 0, saves: 0, yellowCards: 0, redCards: 0 };
+      if (event.event_type === 'goal') stats.goals++;
+      else if (event.event_type === 'assist') stats.assists++;
+      else if (event.event_type === 'save') stats.saves++;
+      else if (event.event_type === 'yellow_card') stats.yellowCards++;
+      else if (event.event_type === 'red_card') stats.redCards++;
+      matchEventsByEventId.set(event.event_id, stats);
+    }
 
     // Group selections by event_id to aggregate positions
     const eventMap = new Map<string, any>();
@@ -151,9 +178,10 @@ export const getPlayerMatchHistory = async (playerId: string) => {
             existingEvent.captain = true;
           }
         } else {
-          // Create new event entry
+          // Create new event entry with match stats
           const isCaptain = selection.captain_id === playerId;
           const isPlayerOfTheMatch = selection.events?.player_of_match_id === playerId;
+          const matchStats = matchEventsByEventId.get(eventId) || { goals: 0, assists: 0, saves: 0, yellowCards: 0, redCards: 0 };
           
           eventMap.set(eventId, {
             id: eventId,
@@ -166,6 +194,7 @@ export const getPlayerMatchHistory = async (playerId: string) => {
             captain: isCaptain,
             playerOfTheMatch: isPlayerOfTheMatch,
             wasSubstitute: playerInSelection.isSubstitute || false,
+            matchStats,
           });
         }
       }
