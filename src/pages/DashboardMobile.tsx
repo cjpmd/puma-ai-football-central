@@ -71,8 +71,9 @@ export default function DashboardMobile() {
 
     try {
       // Determine which teams to query based on view mode
+      // Use teams directly from AuthContext for accurate data across club switches
       const teamsToUse = viewMode === 'all' 
-        ? (availableTeams.length ? availableTeams : (allTeams?.length ? allTeams : (teams || [])))
+        ? (teams?.length ? teams : allTeams || [])
         : (currentTeam ? [currentTeam] : []);
       
       console.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })), 'View mode:', viewMode);
