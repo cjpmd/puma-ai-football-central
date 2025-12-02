@@ -43,7 +43,7 @@ export default function CalendarEvents() {
   useEffect(() => {
     loadEvents();
     loadIndividualTrainingSessions();
-  }, [teams, connectedPlayers]);
+  }, [teams, connectedPlayers, selectedTeam]);
 
   useEffect(() => {
     filterEvents();
@@ -51,13 +51,22 @@ export default function CalendarEvents() {
 
   const loadEvents = async () => {
     try {
-      // Use all teams from AuthContext for integrated calendar view across all clubs
-      const teamsToUse = authTeams?.length ? authTeams : allTeams || [];
-      if (!teamsToUse || teamsToUse.length === 0) return;
+      // Determine which teams to query based on selectedTeam filter
+      const allUserTeams = authTeams?.length ? authTeams : allTeams || [];
+      
+      let teamIds: string[];
+      if (selectedTeam === 'all') {
+        // Integrated view - all teams across all clubs
+        teamIds = allUserTeams.map(team => team.id);
+      } else {
+        // Single team selected - only query that team
+        teamIds = [selectedTeam];
+      }
+      
+      if (teamIds.length === 0) return;
 
-      console.log('Loading events for teams:', teamsToUse.map(t => ({ id: t.id, name: t.name })));
+      console.log('Loading events for teams:', teamIds);
 
-      const teamIds = teamsToUse.map(team => team.id);
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -108,10 +117,8 @@ export default function CalendarEvents() {
   const filterEvents = () => {
     let filtered = events;
 
-    if (selectedTeam !== 'all') {
-      filtered = filtered.filter(event => event.team_id === selectedTeam);
-    }
-
+    // Team filtering is now done at query level in loadEvents
+    // Only filter by event type here
     if (selectedEventType !== 'all') {
       filtered = filtered.filter(event => event.event_type === selectedEventType);
     }
