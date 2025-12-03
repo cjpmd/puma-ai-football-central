@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
+import { useTeamContext } from '@/contexts/TeamContext';
 import { EventForm } from '@/components/events/EventForm';
 import { EnhancedTeamSelectionManager } from '@/components/events/EnhancedTeamSelectionManager';
 import { PostGameEditor } from '@/components/events/PostGameEditor';
@@ -21,7 +22,7 @@ import { GameFormat } from '@/types';
 import { eventsService } from '@/services/eventsService';
 import { IndividualTrainingService } from '@/services/individualTrainingService';
 
-type ViewMode = 'grid' | 'calendar' | 'list';
+type CalendarViewMode = 'grid' | 'calendar' | 'list';
 
 export default function CalendarEvents() {
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
@@ -33,17 +34,32 @@ export default function CalendarEvents() {
   const [showEventForm, setShowEventForm] = useState(false);
   const [showTeamSelection, setShowTeamSelection] = useState(false);
   const [showPostGameEdit, setShowPostGameEdit] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('grid');
-  const [selectedTeam, setSelectedTeam] = useState<string>('all');
+  const [calendarViewMode, setCalendarViewMode] = useState<CalendarViewMode>('grid');
   const [selectedEventType, setSelectedEventType] = useState<string>('all');
   const { toast } = useToast();
   const { connectedPlayers, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
+  const { currentTeam, viewMode: teamViewMode, setCurrentTeam, setViewMode: setTeamViewMode, availableTeams } = useTeamContext();
+
+  // Derive selectedTeam from TeamContext
+  const selectedTeam = teamViewMode === 'all' ? 'all' : (currentTeam?.id || 'all');
+
+  // Handle team selection change - update TeamContext
+  const handleTeamFilterChange = (value: string) => {
+    if (value === 'all') {
+      setTeamViewMode('all');
+    } else {
+      const team = availableTeams.find(t => t.id === value) || (authTeams?.length ? authTeams : allTeams || []).find(t => t.id === value);
+      if (team) {
+        setCurrentTeam(team);
+      }
+    }
+  };
 
   useEffect(() => {
     loadEvents();
     loadIndividualTrainingSessions();
-  }, [authTeams, allTeams, connectedPlayers, selectedTeam]);
+  }, [authTeams, allTeams, connectedPlayers, teamViewMode, currentTeam?.id]);
 
   useEffect(() => {
     filterEvents();
@@ -304,25 +320,25 @@ export default function CalendarEvents() {
                 <span className="text-sm font-medium">View:</span>
                 <div className="flex rounded-lg border">
                   <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    variant={calendarViewMode === 'grid' ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setViewMode('grid')}
+                    onClick={() => setCalendarViewMode('grid')}
                     className="rounded-r-none"
                   >
                     <Grid3X3 className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant={viewMode === 'calendar' ? 'default' : 'ghost'}
+                    variant={calendarViewMode === 'calendar' ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setViewMode('calendar')}
+                    onClick={() => setCalendarViewMode('calendar')}
                     className="rounded-none border-x"
                   >
                     <Calendar className="h-4 w-4" />
                   </Button>
                   <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    variant={calendarViewMode === 'list' ? 'default' : 'ghost'}
                     size="sm"
-                    onClick={() => setViewMode('list')}
+                    onClick={() => setCalendarViewMode('list')}
                     className="rounded-l-none"
                   >
                     <List className="h-4 w-4" />
@@ -332,7 +348,7 @@ export default function CalendarEvents() {
 
               {/* Filters */}
               <div className="flex gap-4 flex-1">
-                <Select value={selectedTeam} onValueChange={setSelectedTeam}>
+                <Select value={selectedTeam} onValueChange={handleTeamFilterChange}>
                   <SelectTrigger className="w-[200px]">
                     <SelectValue placeholder="Filter by team" />
                   </SelectTrigger>
@@ -428,7 +444,7 @@ export default function CalendarEvents() {
           </Card>
         ) : (
           <>
-            {viewMode === 'grid' && (
+            {calendarViewMode === 'grid' && (
               <EventsGridView
                 events={filteredEvents}
                 individualTrainingSessions={filteredIndividualSessions}
@@ -440,7 +456,7 @@ export default function CalendarEvents() {
               />
             )}
             
-            {viewMode === 'calendar' && (
+            {calendarViewMode === 'calendar' && (
               <CalendarGridView
                 events={filteredEvents}
                 individualTrainingSessions={filteredIndividualSessions}
