@@ -33,6 +33,9 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
     <div className="substitute-bench">
       {substitutes.map((player) => {
         const longPressHandlers = createLongPressHandler(player.id);
+        const firstName = player.name.split(' ')[0];
+        // Dynamic font size: smaller for longer names
+        const fontSize = firstName.length <= 4 ? 14 : firstName.length <= 6 ? 12 : 10;
         
         return (
           <div
@@ -46,7 +49,9 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
               </div>
             )}
             <div className="player-circle">
-              <div className="player-name-in-circle">{player.name.split(' ')[0]}</div>
+              <div className="player-name-in-circle" style={{ fontSize: `${fontSize}px` }}>
+                {firstName}
+              </div>
             </div>
             <div className="substitute-number">#{player.squad_number}</div>
             <div className="substitute-position">{player.position}</div>
