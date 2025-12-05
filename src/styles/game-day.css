@@ -395,10 +395,12 @@
   height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   box-shadow: 0 2px 4px hsla(0, 0%, 0%, 0.2);
+  padding: 0 !important;
+  flex-direction: row !important;
 }
 
 .substitute-card .player-name-in-circle {
@@ -406,6 +408,9 @@
   color: hsl(var(--primary-foreground));
   text-align: center;
   line-height: 1;
+  width: auto;
+  margin: 0;
+  padding: 0;
 }
 
 .substitute-card .substitute-number {
