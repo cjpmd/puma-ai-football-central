@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,39 +9,30 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { EnhancedSignupModal } from '@/components/auth/EnhancedSignupModal';
-import { LogIn, UserPlus } from 'lucide-react';
+import { UnifiedSignupWizard } from '@/components/auth/UnifiedSignupWizard';
+import { LogIn, UserPlus, Users } from 'lucide-react';
 
 const Auth = () => {
-  console.log(`[Auth.tsx] Component is EXECUTING. Timestamp: ${new Date().toISOString()}`);
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showEnhancedSignup, setShowEnhancedSignup] = useState(false);
+  const [showUnifiedSignup, setShowUnifiedSignup] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
-  // Use the useSearchParams hook for a more reliable way to get URL parameters
   const [searchParams] = useSearchParams();
   const invitationCode = searchParams.get('invitation');
 
-  console.log(`[Auth.tsx] Full URL: ${window.location.href}`);
-  console.log(`[Auth.tsx] Search params from hook: ${searchParams.toString()}`);
-  console.log(`[Auth.tsx] Parsed invitation code: '${invitationCode}'`);
-
   useEffect(() => {
-    console.log('[Auth.tsx] useEffect triggered. Dependencies:', { user: !!user, loading, invitationCode });
-    // Wait for auth loading to finish before redirecting
     if (!loading && user && !invitationCode) {
-      console.log('[Auth.tsx] User is logged in and no invitation code, redirecting to /dashboard');
       navigate('/dashboard');
     }
   }, [user, loading, navigate, invitationCode]);
 
   // If there's an invitation code, render the modal directly.
   if (invitationCode) {
-    console.log('[Auth.tsx] INVITATION CODE DETECTED. Rendering EnhancedSignupModal.');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <EnhancedSignupModal
@@ -54,12 +44,8 @@ const Auth = () => {
     );
   }
 
-  console.log('[Auth.tsx] No invitation code. Proceeding to render login/signup tabs.');
-
-  // Avoid rendering login form while auth state is loading or if user is logged in
   if (loading || user) {
-    console.log(`[Auth.tsx] Auth is loading (${loading}) or user exists (${!!user}). Rendering null.`);
-    return null; // Or a loading spinner
+    return null;
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -74,7 +60,6 @@ const Auth = () => {
     }
 
     setIsLoading(true);
-    console.log('[Auth.tsx] Starting login process.');
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -89,7 +74,6 @@ const Auth = () => {
         description: 'You have been successfully logged in.',
       });
       
-      console.log('[Auth.tsx] Login successful, redirecting to /dashboard.');
       navigate('/dashboard');
     } catch (error: any) {
       console.error('Login error:', error);
@@ -103,15 +87,13 @@ const Auth = () => {
     }
   };
 
-  console.log('[Auth.tsx] Rendering standard login/signup UI.');
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">Welcome</CardTitle>
           <CardDescription className="text-center">
-            Sign in to your account or create a new one
+            Sign in to your account or join a team
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -162,17 +144,44 @@ const Auth = () => {
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
-              <div className="space-y-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Account creation is by invitation only.
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Choose how you'd like to join
                 </p>
+                
+                {/* Primary option: Team Code */}
+                <Button
+                  onClick={() => setShowUnifiedSignup(true)}
+                  className="w-full"
+                  variant="default"
+                  size="lg"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  I have a Team Code
+                </Button>
+                <p className="text-xs text-muted-foreground text-center">
+                  Get the team code from your team manager to join as a player, parent, or staff
+                </p>
+                
+                {/* Secondary option: Invitation code (legacy) */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or
+                    </span>
+                  </div>
+                </div>
+                
                 <Button
                   onClick={() => setShowEnhancedSignup(true)}
                   className="w-full"
-                  variant="default"
+                  variant="outline"
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Have an invitation code?
+                  I have an Invitation Code
                 </Button>
               </div>
             </TabsContent>
@@ -180,6 +189,20 @@ const Auth = () => {
         </CardContent>
       </Card>
 
+      {/* Unified Team Code Signup Wizard */}
+      <UnifiedSignupWizard
+        isOpen={showUnifiedSignup}
+        onClose={() => setShowUnifiedSignup(false)}
+        onSuccess={() => {
+          setShowUnifiedSignup(false);
+          navigate('/dashboard');
+        }}
+        onSwitchToLogin={() => {
+          setShowUnifiedSignup(false);
+        }}
+      />
+
+      {/* Legacy Invitation Code Signup */}
       <EnhancedSignupModal
         isOpen={showEnhancedSignup}
         onClose={() => setShowEnhancedSignup(false)}
