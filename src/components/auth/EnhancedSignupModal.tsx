@@ -144,19 +144,17 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
         const result = await userInvitationService.processUserInvitation(email);
         console.log('Invitation processing result:', result);
         
-        if (result.processed) {
-          toast({
-            title: 'Account Created Successfully',
-            description: 'Your account has been created and you have been added to your team!',
-          });
-        } else {
-          toast({
-            title: 'Account Created',
-            description: 'Your account has been created. Team associations will be processed shortly.',
-          });
-        }
+        toast({
+          title: 'Welcome!',
+          description: 'Your account has been created. Redirecting to dashboard...',
+        });
         
         onClose();
+        
+        // Auto-redirect to dashboard
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 500);
       }
     } catch (error: any) {
       console.error('Signup error:', error);

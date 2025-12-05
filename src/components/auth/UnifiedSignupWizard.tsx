@@ -259,12 +259,10 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
 
       setStep("complete");
       
-      // If user was auto-logged in, call success
-      if (authData.session) {
-        setTimeout(() => {
-          onSuccess();
-        }, 2000);
-      }
+      // Auto-redirect to dashboard after brief success message
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
     } catch (error) {
       console.error("Signup error:", error);
       toast.error("Something went wrong", {
@@ -568,17 +566,15 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
                 <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Account Created!</h3>
+                <h3 className="font-semibold text-lg">Welcome to {teamInfo?.name}!</h3>
                 <p className="text-muted-foreground text-sm mt-1">
-                  You've successfully joined {teamInfo?.name} as a {selectedRole}.
+                  You've successfully joined as a {selectedRole}.
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">
-                Please check your email to verify your account.
+                Redirecting you to your dashboard...
               </p>
-              <Button onClick={handleClose} className="w-full">
-                Get Started
-              </Button>
+              <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
             </div>
           )}
         </div>
