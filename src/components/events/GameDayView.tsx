@@ -450,7 +450,7 @@ export const GameDayView: React.FC = () => {
       <div className="game-day-header-compact">
         {/* Row 1: back + team badge + title/opponent + compact controls */}
         <div className="flex items-center justify-between px-2 py-1 gap-2">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/calendar/${eventId}`)}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
 
