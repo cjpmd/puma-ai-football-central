@@ -46,12 +46,10 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
               </div>
             )}
             <div className="player-circle">
-              <div className="player-circle-name">{player.name.split(' ')[0]}</div>
-              <div className="player-number">#{player.squad_number}</div>
+              <div className="player-number-large">#{player.squad_number}</div>
             </div>
-            <div className="substitute-name">
-              {player.position}
-            </div>
+            <div className="substitute-name">{player.name.split(' ')[0]}</div>
+            <div className="substitute-position">{player.position}</div>
             {player.isUsed && (
               <div className="text-[9px] text-muted-foreground">On Pitch</div>
             )}
