@@ -401,19 +401,21 @@
   box-shadow: 0 2px 4px hsla(0, 0%, 0%, 0.2);
 }
 
-.substitute-card .player-number-large {
-  font-size: 16px;
+.substitute-card .player-name-in-circle {
+  font-size: 12px;
   font-weight: 700;
   color: hsl(var(--primary-foreground));
+  text-align: center;
+  max-width: 44px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.substitute-card .substitute-name {
-  font-size: 11px;
-  font-weight: 600;
+.substitute-card .substitute-number {
+  font-size: 14px;
+  font-weight: 700;
   color: hsl(var(--foreground));
   margin-top: 6px;
-  text-align: center;
-  white-space: nowrap;
 }
 
 .substitute-card .substitute-position {
