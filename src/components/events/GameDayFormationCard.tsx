@@ -287,7 +287,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
               teamId={teamId}
               isGoalkeeper={isGoalkeeper}
               cardStatus={cardStatus}
-              availableSubstitutes={substitutes.filter(s => !s.isUsed)}
+              availableSubstitutes={substitutes}
               onEventSelect={(eventType) => handleEventSelect(pos.playerId, eventType)}
               onEventDelete={handleEventDelete}
               onSubstitution={handleSubstitution}

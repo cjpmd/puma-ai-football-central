@@ -56,7 +56,7 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
             <div className="substitute-number">#{player.squad_number}</div>
             <div className="substitute-position">{player.position}</div>
             {player.isUsed && (
-              <div className="text-[9px] text-muted-foreground">On Pitch</div>
+              <div className="text-[9px] text-green-600 dark:text-green-400 font-medium">Available</div>
             )}
           </div>
         );
