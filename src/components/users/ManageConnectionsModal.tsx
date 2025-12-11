@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Link2, UserPlus, Building2, Users, X, QrCode, Hash } from 'lucide-react';
+import { Link2, Building2, X, QrCode, Hash } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -40,9 +40,7 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
   const { user, profile, teams, clubs, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [teamCode, setTeamCode] = useState('');
   const [clubCode, setClubCode] = useState('');
-  const [playerCode, setPlayerCode] = useState('');
   const [availablePlayers, setAvailablePlayers] = useState<LinkablePlayer[]>([]);
   const [connectedPlayers, setConnectedPlayers] = useState<ConnectedPlayer[]>([]);
   const [teamJoinModalOpen, setTeamJoinModalOpen] = useState(false);
@@ -146,51 +144,6 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
     }
   };
 
-  const handleTeamConnection = async () => {
-    if (!teamCode.trim()) return;
-    
-    setLoading(true);
-    try {
-      // Find team staff with this linking code
-      const { data: staffData, error: staffError } = await supabase
-        .from('team_staff')
-        .select('*, teams(name)')
-        .eq('linking_code', teamCode.trim())
-        .single();
-
-      if (staffError || !staffData) {
-        throw new Error('Invalid team connection code');
-      }
-
-      // Link user to staff member
-      const { error: linkError } = await supabase
-        .from('user_staff')
-        .insert({
-          user_id: user.id,
-          staff_id: staffData.id,
-          relationship: 'self'
-        });
-
-      if (linkError) throw linkError;
-
-      toast({
-        title: 'Success',
-        description: `Connected to ${(staffData.teams as any)?.name || 'team'} as ${staffData.role}`
-      });
-
-      setTeamCode('');
-      await refreshUserData();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleClubConnection = async () => {
     if (!clubCode.trim()) return;
     
@@ -225,52 +178,6 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
 
       setClubCode('');
       await refreshUserData();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePlayerConnection = async () => {
-    if (!playerCode.trim()) return;
-    
-    setLoading(true);
-    try {
-      // Find player with this linking code
-      const { data: playerData, error: playerError } = await supabase
-        .from('players')
-        .select('*, teams(name)')
-        .eq('linking_code', playerCode.trim())
-        .single();
-
-      if (playerError || !playerData) {
-        throw new Error('Invalid player connection code');
-      }
-
-      // Link user as parent to player
-      const { error: linkError } = await supabase
-        .from('user_players')
-        .insert({
-          user_id: user.id,
-          player_id: playerData.id,
-          relationship: 'parent'
-        });
-
-      if (linkError) throw linkError;
-
-      toast({
-        title: 'Success',
-        description: `Connected as parent to ${playerData.name}`
-      });
-
-      setPlayerCode('');
-      await refreshUserData();
-      await loadConnectedPlayers();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -341,29 +248,6 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
               </CardContent>
             </Card>
 
-            {/* Legacy Team Connection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Users className="h-5 w-5" />
-                  Connect to Team (Legacy)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label htmlFor="teamCode">Team Connection Code</Label>
-                  <Input
-                    id="teamCode"
-                    value={teamCode}
-                    onChange={(e) => setTeamCode(e.target.value)}
-                    placeholder="Enter team staff linking code"
-                  />
-                </div>
-                <Button onClick={handleTeamConnection} disabled={loading || !teamCode.trim()}>
-                  Connect to Team
-                </Button>
-              </CardContent>
-            </Card>
 
             {/* Club Connection */}
             <Card>
@@ -389,29 +273,6 @@ export const ManageConnectionsModal: React.FC<ManageConnectionsModalProps> = ({
               </CardContent>
             </Card>
 
-            {/* Legacy Player Connection */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <UserPlus className="h-5 w-5" />
-                  Connect as Parent (Legacy)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <Label htmlFor="playerCode">Player Linking Code</Label>
-                  <Input
-                    id="playerCode"
-                    value={playerCode}
-                    onChange={(e) => setPlayerCode(e.target.value)}
-                    placeholder="Enter player linking code"
-                  />
-                </div>
-                <Button onClick={handlePlayerConnection} disabled={loading || !playerCode.trim()}>
-                  Connect as Parent
-                </Button>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           <TabsContent value="current" className="space-y-4">
