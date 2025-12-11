@@ -624,42 +624,68 @@ export default function CalendarEventsMobile() {
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {/* Pending Availability - First Priority */}
-        {pendingAvailability.length > 0 && (
-          <Card className="border-orange-200 bg-orange-50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
-                Availability Requests
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {pendingAvailability.slice(0, 2).map((availability) => (
-                <div key={availability.id} className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200">
-                  <div>
-                    <div className="font-medium">
-                      {availability.events.event_type === 'training' 
-                        ? availability.events.title 
-                        : `vs ${availability.events.opponent || 'TBD'}`}
+        {/* Pending Availability - First Priority (filtered to exclude past events) */}
+        {(() => {
+          const futurePendingAvailability = pendingAvailability.filter(availability => {
+            const eventData: DatabaseEvent = {
+              ...availability.events,
+              id: availability.events.id,
+              date: availability.events.date,
+              start_time: availability.events.start_time,
+              end_time: availability.events.end_time,
+            };
+            return !isEventPast(eventData);
+          });
+          
+          if (futurePendingAvailability.length === 0) return null;
+          
+          const handleAvailabilityClick = (availability: any) => {
+            // Find the full event from events array or create a minimal one from availability data
+            const fullEvent = events.find(e => e.id === availability.event_id) || availability.events;
+            setSelectedEvent(fullEvent);
+            setShowEventDetails(true);
+          };
+          
+          return (
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
+                  Availability Requests
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {futurePendingAvailability.slice(0, 2).map((availability) => (
+                  <div 
+                    key={availability.id} 
+                    className="flex items-center justify-between p-3 rounded-lg bg-white border border-orange-200 cursor-pointer hover:bg-orange-50 transition-colors"
+                    onClick={() => handleAvailabilityClick(availability)}
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {availability.events.event_type === 'training' 
+                          ? availability.events.title 
+                          : `vs ${availability.events.opponent || 'TBD'}`}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(availability.events.date).toLocaleDateString()}
+                        {availability.events.start_time && `, ${formatTime(availability.events.start_time)}`}
+                      </div>
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(availability.events.date).toLocaleDateString()}
-                      {availability.events.start_time && `, ${availability.events.start_time}`}
-                    </div>
+                    <Badge variant="outline" className="bg-orange-100 text-orange-700">
+                      Response Needed
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="bg-orange-100 text-orange-700">
-                    Response Needed
-                  </Badge>
-                </div>
-              ))}
-              {pendingAvailability.length > 2 && (
-                <p className="text-sm text-center text-muted-foreground">
-                  +{pendingAvailability.length - 2} more requests
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        )}
+                ))}
+                {futurePendingAvailability.length > 2 && (
+                  <p className="text-sm text-center text-muted-foreground">
+                    +{futurePendingAvailability.length - 2} more requests
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         {loading ? (
           <div className="text-center py-8">
