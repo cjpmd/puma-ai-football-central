@@ -109,7 +109,7 @@ export function RecommendedDrillsPanel({
   }
 
   return (
-    <Card className={className}>
+    <Card className={`overflow-hidden max-w-full ${className}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -163,9 +163,9 @@ export function RecommendedDrillsPanel({
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 overflow-hidden">
         {recommendations.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
+          <div className="text-center py-6 text-muted-foreground overflow-hidden">
             <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p className="text-sm break-words max-w-full px-2">
               {!usePlayerObjectives && !useRecentNotes 
