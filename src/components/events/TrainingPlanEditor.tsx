@@ -490,9 +490,9 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
       </div>
 
       {/* Main Content Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 overflow-hidden max-w-full">
         {/* Recommendations Panel */}
-        <div className="lg:col-span-1">
+        <div className="lg:col-span-1 overflow-hidden min-w-0">
           <RecommendedDrillsPanel 
             teamId={teamId}
             onAddDrill={addDrillFromLibrary}
@@ -808,7 +808,7 @@ export const TrainingPlanEditor: React.FC<TrainingPlanEditorProps> = ({
               ))}
             </div>
           ) : (
-            <p className="text-center text-muted-foreground py-4">
+          <p className="text-center text-muted-foreground py-4 break-words px-2">
               No equipment added. Click "Add Equipment" to specify what's needed for training.
             </p>
           )}
