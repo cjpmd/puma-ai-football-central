@@ -144,22 +144,90 @@ export default function DashboardMobile() {
         .lt('date', new Date().toISOString().split('T')[0])
         .not('scores', 'is', null)
         .order('date', { ascending: false })
-        .limit(5);
+        .limit(10);
 
       if (recentError) {
         console.error('Error loading recent results:', recentError);
       }
       console.log('Recent results data:', recentResultsData?.length, recentResultsData);
 
-      const recentResults = recentResultsData?.map(event => ({
-        ...event,
-        team_context: {
+      // Fetch performance categories for these events
+      const eventIdsForCategories = recentResultsData?.map(e => e.id) || [];
+      const { data: eventSelectionsData } = await supabase
+        .from('event_selections')
+        .select(`
+          event_id,
+          team_number,
+          performance_category_id,
+          performance_categories(name)
+        `)
+        .in('event_id', eventIdsForCategories);
+
+      // Create a lookup map for performance categories by event_id and team_number
+      const categoryMap: Record<string, Record<number, string>> = {};
+      eventSelectionsData?.forEach(selection => {
+        if (!categoryMap[selection.event_id]) {
+          categoryMap[selection.event_id] = {};
+        }
+        const categoryName = (selection.performance_categories as any)?.name;
+        if (categoryName && selection.team_number) {
+          categoryMap[selection.event_id][selection.team_number] = categoryName;
+        }
+      });
+
+      // Expand events into individual team entries
+      const recentResults: any[] = [];
+      recentResultsData?.forEach(event => {
+        const scores = event.scores as any;
+        const eventCategories = categoryMap[event.id] || {};
+        const teamContext = {
           name: event.teams.name,
           logo_url: event.teams.logo_url,
           club_name: event.teams.clubs?.name,
           club_logo_url: event.teams.clubs?.logo_url
+        };
+
+        // Check for multi-team format (team_1, team_2, etc.)
+        let teamNumber = 1;
+        let hasMultiTeam = false;
+        while (scores && scores[`team_${teamNumber}`] !== undefined) {
+          hasMultiTeam = true;
+          const ourScore = scores[`team_${teamNumber}`];
+          const opponentScore = scores[`opponent_${teamNumber}`];
+          const categoryName = eventCategories[teamNumber];
+          
+          recentResults.push({
+            id: `${event.id}_team_${teamNumber}`,
+            ...event,
+            team_number: teamNumber,
+            category_name: categoryName,
+            our_score: ourScore,
+            opponent_score: opponentScore,
+            team_context: teamContext,
+            display_name: categoryName 
+              ? `${teamContext.name} - ${categoryName}`
+              : teamContext.name
+          });
+          teamNumber++;
         }
-      })) || [];
+        
+        // Fallback for simple home/away format
+        if (!hasMultiTeam && scores) {
+          recentResults.push({
+            id: event.id,
+            ...event,
+            team_number: 1,
+            our_score: scores.home,
+            opponent_score: scores.away,
+            team_context: teamContext,
+            display_name: teamContext.name
+          });
+        }
+      });
+
+      // Sort by date and limit
+      recentResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const limitedRecentResults = recentResults.slice(0, 6);
 
       // Load pending availability for current user with team context
       // First, get all upcoming events that might need availability confirmation
@@ -214,7 +282,7 @@ export default function DashboardMobile() {
         playersCount: playersCount || 0,
         eventsCount: eventsCount || 0,
         upcomingEvents: upcomingEvents || [],
-        recentResults: recentResults || [],
+        recentResults: limitedRecentResults || [],
         pendingAvailability: pendingAvailabilityData
       });
     } catch (error: any) {
@@ -237,31 +305,12 @@ export default function DashboardMobile() {
     }
   };
 
-  const getResultFromScores = (scores: any) => {
-    if (!scores) return null;
+  const getResultFromScores = (ourScore: number | undefined, opponentScore: number | undefined) => {
+    if (ourScore === undefined || opponentScore === undefined) return null;
     
-    // Handle team scores (team_1, team_2, etc.)
-    if (scores.team_1 !== undefined && scores.opponent_1 !== undefined) {
-      const ourScore = scores.team_1;
-      const opponentScore = scores.opponent_1;
-      
-      if (ourScore > opponentScore) return { result: 'Win', color: 'bg-green-500' };
-      if (ourScore < opponentScore) return { result: 'Loss', color: 'bg-red-500' };
-      return { result: 'Draw', color: 'bg-gray-500' };
-    }
-    
-    // Handle home/away scores
-    if (scores.home !== undefined && scores.away !== undefined) {
-      // Assume we're home team for now - this should be determined by event.is_home
-      const ourScore = scores.home;
-      const opponentScore = scores.away;
-      
-      if (ourScore > opponentScore) return { result: 'Win', color: 'bg-green-500' };
-      if (ourScore < opponentScore) return { result: 'Loss', color: 'bg-red-500' };
-      return { result: 'Draw', color: 'bg-gray-500' };
-    }
-    
-    return null;
+    if (ourScore > opponentScore) return { result: 'Win', color: 'bg-green-500' };
+    if (ourScore < opponentScore) return { result: 'Loss', color: 'bg-red-500' };
+    return { result: 'Draw', color: 'bg-gray-500' };
   };
 
   // Check if user can manage teams (not just parent or player)
@@ -542,7 +591,7 @@ export default function DashboardMobile() {
             {stats.recentResults.length > 0 ? (
               <div className="space-y-3">
                 {stats.recentResults.map((event) => {
-                  const result = getResultFromScores(event.scores);
+                  const result = getResultFromScores(event.our_score, event.opponent_score);
                   return (
                     <div key={event.id} className="flex items-center justify-between">
                       <div className="flex-1">
@@ -558,11 +607,23 @@ export default function DashboardMobile() {
                               {event.team_context?.name?.slice(0, 2).toUpperCase()}
                             </div>
                           )}
-                          <span className="text-xs text-muted-foreground">
-                            {event.team_context?.name}
+                          <span className="text-xs text-muted-foreground truncate">
+                            {event.display_name || event.team_context?.name}
                           </span>
+                          {event.category_name && (
+                            <Badge variant="outline" className="text-xs px-1 py-0">
+                              {event.category_name}
+                            </Badge>
+                          )}
                         </div>
-                        <span className="text-sm font-medium">vs {event.opponent}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">vs {event.opponent}</span>
+                          {event.our_score !== undefined && event.opponent_score !== undefined && (
+                            <span className="text-xs text-muted-foreground">
+                              ({event.our_score} - {event.opponent_score})
+                            </span>
+                          )}
+                        </div>
                         <div className="text-xs text-muted-foreground">
                           {new Date(event.date).toLocaleDateString()}
                         </div>
