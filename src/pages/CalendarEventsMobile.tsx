@@ -863,13 +863,13 @@ export default function CalendarEventsMobile() {
 
       {/* Event Details Modal */}
       <Dialog open={showEventDetails} onOpenChange={setShowEventDetails}>
-        <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-full sm:max-w-[425px] max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <DialogTitle>Event Details</DialogTitle>
           </DialogHeader>
           {selectedEvent && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="space-y-4 overflow-x-hidden">
+              <div className="flex items-center gap-2 flex-wrap">
                 <Badge className={`text-white ${getEventTypeBadgeColor(selectedEvent.event_type)}`}>
                   {selectedEvent.event_type.charAt(0).toUpperCase() + selectedEvent.event_type.slice(1)}
                 </Badge>
@@ -879,7 +879,7 @@ export default function CalendarEventsMobile() {
               </div>
               
               <div>
-                <h3 className="font-semibold text-lg">
+                <h3 className="font-semibold text-lg break-words">
                   {isMatchType(selectedEvent.event_type) && selectedEvent.opponent 
                     ? `${teams?.[0]?.name} vs ${selectedEvent.opponent}`
                     : selectedEvent.title
@@ -919,10 +919,10 @@ export default function CalendarEventsMobile() {
                   <h4 className="font-medium mb-2">Scores</h4>
                   <div className="space-y-2">
                     {getAllTeamScores(selectedEvent).map((score, index) => (
-                      <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                        <span className="text-sm font-medium">{score.teamName}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{score.ourScore} - {score.opponentScore}</span>
+                      <div key={index} className="flex items-center justify-between gap-2 p-2 bg-muted rounded min-w-0">
+                        <span className="text-sm font-medium truncate min-w-0 flex-1">{score.teamName}</span>
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          <span className="text-sm whitespace-nowrap">{score.ourScore} - {score.opponentScore}</span>
                           <Badge 
                             variant={score.outcome === 'win' ? 'default' : score.outcome === 'loss' ? 'destructive' : 'secondary'}
                             className="text-xs"
@@ -995,11 +995,10 @@ export default function CalendarEventsMobile() {
               )}
               
               {canEditEvents() && (
-                <div className="flex gap-2 mt-6">
+                <div className="grid grid-cols-2 gap-2 mt-6">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
                     onClick={() => handleEventAction(selectedEvent, 'setup')}
                   >
                     SETUP
@@ -1007,7 +1006,6 @@ export default function CalendarEventsMobile() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
                     onClick={() => handleEventAction(selectedEvent, 'squad')}
                   >
                     SQUAD
@@ -1016,7 +1014,6 @@ export default function CalendarEventsMobile() {
                     <Button
                       variant="default"
                       size="sm"
-                      className="flex-1"
                       onClick={() => {
                         setShowEventDetails(false);
                         navigate(`/game-day/${selectedEvent.id}`);
@@ -1029,7 +1026,6 @@ export default function CalendarEventsMobile() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1"
                       onClick={() => handleEventAction(selectedEvent, 'report')}
                     >
                       REPORT
