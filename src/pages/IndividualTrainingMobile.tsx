@@ -4,55 +4,62 @@ import { IndividualTrainingDashboard } from '@/components/individual-training/In
 import { useAuth } from '@/contexts/AuthContext';
 import { playersService } from '@/services/playersService';
 
-const IndividualTrainingMobile = () => {
-  const { user, connectedPlayers, teams } = useAuth();
-  
-  // Team players for coach/staff roles
-  const [coachPlayers, setCoachPlayers] = useState<Array<{ id: string; name: string; team_id: string }>>([]);
+// Staff/coach roles that can see all team players
+const STAFF_ROLES = [
+  'admin', 'manager', 'team_manager', 'team_assistant_manager',
+  'team_coach', 'team_helper', 'coach', 'staff', 
+  'global_admin', 'club_admin', 'club_chair', 'club_secretary'
+];
 
+const hasStaffRole = (roles: string[] = []) => {
+  return roles.some(role => STAFF_ROLES.includes(role));
+};
+
+const IndividualTrainingMobile = () => {
+  const { user, connectedPlayers, profile, teams } = useAuth();
+  const [teamPlayers, setTeamPlayers] = useState<Array<{ id: string; name: string; team_id: string }>>([]);
+
+  const isStaff = hasStaffRole(profile?.roles || []);
+
+  // Load all team players for staff roles only
   useEffect(() => {
     const loadTeamPlayers = async () => {
-      if (!teams || teams.length === 0) {
-        setCoachPlayers([]);
+      if (!isStaff || !teams || teams.length === 0) {
+        setTeamPlayers([]);
         return;
       }
       try {
         const teamIds = Array.from(new Set(teams.map(t => t.id)));
         const results = await Promise.all(teamIds.map(id => playersService.getActivePlayersByTeamId(id)));
         const flat = results.flat();
-        // Map to minimal shape and dedupe by id
         const mapped = flat.map(p => ({ id: (p as any).id, name: (p as any).name, team_id: (p as any).teamId || (p as any).team_id }));
         const map = new Map<string, { id: string; name: string; team_id: string }>();
         mapped.forEach(p => map.set(p.id, p));
-        setCoachPlayers(Array.from(map.values()));
+        setTeamPlayers(Array.from(map.values()));
       } catch (e) {
-        console.error('Failed to load team players for coach:', e);
-        setCoachPlayers([]);
+        console.error('Failed to load team players:', e);
+        setTeamPlayers([]);
       }
     };
     loadTeamPlayers();
-  }, [teams, user?.id]);
+  }, [teams, isStaff]);
 
-  // Connected players (parent links)
-  const parentLinkedPlayers = connectedPlayers?.map(cp => ({
+  // Connected players for parent/player roles
+  const linkedPlayers = connectedPlayers?.map(cp => ({
     id: cp.id,
     name: cp.name,
     team_id: cp.team?.id || ''
   })) || [];
 
-  // Combine coach team players and parent-linked players
-  const combinedPlayers = (() => {
-    const map = new Map<string, { id: string; name: string; team_id: string }>();
-    [...coachPlayers, ...parentLinkedPlayers].forEach(p => map.set(p.id, p));
-    return Array.from(map.values());
-  })();
+  // Show all team players for staff, only linked players for parent/player
+  const userPlayers = isStaff ? teamPlayers : linkedPlayers;
 
   return (
     <MobileLayout showTabs={false}>
       <div className="space-y-4">
         <IndividualTrainingDashboard 
           userId={user?.id || ''} 
-          userPlayers={combinedPlayers}
+          userPlayers={userPlayers}
         />
       </div>
     </MobileLayout>
