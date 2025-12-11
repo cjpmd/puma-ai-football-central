@@ -74,7 +74,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
         </SheetHeader>
         
         <Tabs defaultValue="summary" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-5 mx-4 mt-4 h-12 text-xs">
+          <TabsList className="grid grid-cols-5 mt-4 h-12 text-xs w-[calc(100%-2rem)] mx-auto">
             <TabsTrigger value="summary" className="flex flex-col items-center gap-0.5 px-1">
               <Target className="h-3 w-3" />
               <span className="text-xs">Sum</span>
