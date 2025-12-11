@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -114,8 +113,8 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <ScrollArea className="flex-1 px-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="flex-1 overflow-y-auto px-6">
             <div className="space-y-4 pb-4">
               <div>
                 <Label htmlFor="name">Name</Label>
@@ -182,7 +181,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 <PushNotificationSetup />
               </div>
             </div>
-          </ScrollArea>
+          </div>
           
           <div className="flex gap-3 px-6 py-4 border-t bg-background">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
