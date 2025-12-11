@@ -593,46 +593,43 @@ export default function DashboardMobile() {
                 {stats.recentResults.map((event) => {
                   const result = getResultFromScores(event.our_score, event.opponent_score);
                   return (
-                    <div key={event.id} className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                    <div key={event.id} className="p-3 bg-muted/30 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
                           {event.team_context?.logo_url ? (
                             <img 
                               src={event.team_context.logo_url} 
-                              alt={event.team_context.name}
-                              className="w-4 h-4 rounded-full"
+                              alt=""
+                              className="w-4 h-4 rounded-full object-cover shrink-0"
                             />
                           ) : (
-                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold shrink-0">
                               {event.team_context?.name?.slice(0, 2).toUpperCase()}
                             </div>
                           )}
                           <span className="text-xs text-muted-foreground truncate">
-                            {event.display_name || event.team_context?.name}
+                            {event.team_context?.name || 'Unknown Team'}
                           </span>
-                          {event.category_name && (
-                            <Badge variant="outline" className="text-xs px-1 py-0">
-                              {event.category_name}
-                            </Badge>
-                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium">vs {event.opponent}</span>
-                          {event.our_score !== undefined && event.opponent_score !== undefined && (
-                            <span className="text-xs text-muted-foreground">
-                              ({event.our_score} - {event.opponent_score})
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(event.date).toLocaleDateString()}
-                        </div>
+                        {event.category_name && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {event.category_name}
+                          </Badge>
+                        )}
                       </div>
-                      {result && (
-                        <Badge className={`text-white ${result.color}`}>
-                          {result.result}
-                        </Badge>
-                      )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium truncate">
+                          vs {event.opponent} ({event.our_score}-{event.opponent_score})
+                        </span>
+                        {result && (
+                          <Badge className={`${result.color} text-white shrink-0`}>
+                            {result.result}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(event.date).toLocaleDateString()}
+                      </p>
                     </div>
                   );
                 })}

@@ -644,54 +644,44 @@ export const EnhancedDashboardContent = () => {
                 {stats.recentResults.map((event) => {
                   const result = getResultFromScores(event.our_score, event.opponent_score);
                   return (
-                    <Card key={event.id} className="hover:shadow-md transition-all duration-200 hover:border-primary/50 bg-gradient-to-r from-background to-muted/20">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              {event.team_context?.logo_url ? (
-                                <img 
-                                  src={event.team_context.logo_url} 
-                                  alt={event.team_context.name}
-                                  className="w-6 h-6 rounded-full border"
-                                />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold border">
-                                  {event.team_context?.name?.slice(0, 2).toUpperCase()}
-                                </div>
-                              )}
-                              <span className="text-sm font-medium text-muted-foreground truncate">
-                                {event.display_name || event.team_context?.name}
-                              </span>
-                              {event.category_name && (
-                                <Badge variant="outline" className="text-xs">
-                                  {event.category_name}
-                                </Badge>
-                              )}
+                    <div key={event.id} className="p-3 bg-muted/50 rounded-lg space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {event.team_context?.logo_url ? (
+                            <img 
+                              src={event.team_context.logo_url} 
+                              alt=""
+                              className="w-5 h-5 rounded-full object-cover shrink-0"
+                            />
+                          ) : (
+                            <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {event.team_context?.name?.slice(0, 2).toUpperCase()}
                             </div>
-                            <h4 className="font-semibold truncate">
-                              vs {event.opponent || 'Unknown'}
-                            </h4>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(event.date).toLocaleDateString()}
-                            </p>
-                            {event.our_score !== undefined && event.opponent_score !== undefined && (
-                              <p className="text-sm font-medium mt-1">
-                                Score: {event.our_score} - {event.opponent_score}
-                              </p>
-                            )}
-                          </div>
-                          {result && (
-                            <Badge 
-                              variant="secondary" 
-                              className={`ml-3 ${result.color} text-white font-medium`}
-                            >
-                              {result.result}
-                            </Badge>
                           )}
+                          <span className="text-xs text-muted-foreground truncate">
+                            {event.team_context?.name || 'Unknown Team'}
+                          </span>
                         </div>
-                      </CardContent>
-                    </Card>
+                        {event.category_name && (
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {event.category_name}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium truncate">
+                          vs {event.opponent} ({event.our_score}-{event.opponent_score})
+                        </span>
+                        {result && (
+                          <Badge className={`${result.color} text-white shrink-0`}>
+                            {result.result}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(event.date).toLocaleDateString()}
+                      </p>
+                    </div>
                   );
                 })}
               </div>
