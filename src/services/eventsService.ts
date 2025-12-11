@@ -120,7 +120,7 @@ export const eventsService = {
           .from('players')
           .select('id')
           .eq('team_id', teamId)
-          .eq('is_active', true);
+          .eq('status', 'active');
           
         if (playersResult.error) throw playersResult.error;
         const players = playersResult.data;
@@ -130,8 +130,7 @@ export const eventsService = {
         const staffResult: any = await supabase
           .from('team_staff')
           .select('id')
-          .eq('team_id', teamId)
-          .eq('is_active', true);
+          .eq('team_id', teamId);
           
         if (staffResult.error) throw staffResult.error;
         const staff = staffResult.data;
