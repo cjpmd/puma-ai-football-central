@@ -519,11 +519,6 @@ export const PlayerParentsModal: React.FC<PlayerParentsModalProps> = ({
           </div>
         </ScrollArea>
 
-        <div className="border-t p-4">
-          <Button onClick={onClose} className="w-full">
-            Close
-          </Button>
-        </div>
       </SheetContent>
     </Sheet>
   );

@@ -916,10 +916,10 @@ return (
           </div>
 
           {/* Team Selection */}
-          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4 flex-wrap'} ${isMobile ? 'mt-2' : 'mt-4'} overflow-x-hidden`}>
-            <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
+          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4 flex-wrap'} ${isMobile ? 'mt-2' : 'mt-4'} overflow-hidden max-w-full`}>
+            <div className="flex items-center gap-2 flex-wrap min-w-0 w-full">
               <Label className="text-xs font-medium shrink-0">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
-               <div className="flex gap-1 flex-wrap">
+               <div className="flex gap-1 flex-wrap flex-1 min-w-0">
                  {teamSelections.map((team, index) => (
                    <div key={team.teamNumber} className="flex items-center">
                      <Button
@@ -951,12 +951,12 @@ return (
                      )}
                    </div>
                  ))}
-                 <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1">
+                 <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1 shrink-0">
                    <Plus className="h-3 w-3" />
                  </Button>
                </div>
               {isMobile && (
-                <Button onClick={saveSelections} disabled={saving} size="sm" className="h-8 px-3 ml-auto">
+                <Button onClick={saveSelections} disabled={saving} size="sm" className="h-8 px-3 shrink-0">
                   {saving ? (
                     <Loader2 className="h-3 w-3 animate-spin" />
                   ) : (
