@@ -1,9 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// VAPID public key - this will be provided via environment or config
-// For now using a placeholder that should be replaced with actual VAPID key
-const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+// VAPID public key for Web Push authentication
+const VAPID_PUBLIC_KEY = 'BE4Vc8geGw97zYpakiIVudhgrdgnU75q-ddHwrsFRUX0NbJHd3VAYClF_kjIFaqwss4LDmryMqreKtnw0xgBvgE';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - base64String.length % 4) % 4);
