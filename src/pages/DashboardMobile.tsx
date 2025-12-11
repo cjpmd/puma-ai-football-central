@@ -2,7 +2,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users, Trophy, Plus, TrendingUp, User, Link2, AlertCircle } from 'lucide-react';
+import { Calendar, Users, Trophy, Plus, TrendingUp, User, Link2, AlertCircle, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
@@ -26,7 +26,7 @@ interface LiveStats {
 
 export default function DashboardMobile() {
   const { teams, allTeams, connectedPlayers, profile, user } = useAuth();
-  const { currentTeam, viewMode, availableTeams } = useTeamContext();
+  const { currentTeam, viewMode, availableTeams, setCurrentTeam, setViewMode } = useTeamContext();
   const { toast } = useToast();
   const [stats, setStats] = useState<LiveStats>({
     playersCount: 0,
@@ -346,27 +346,56 @@ export default function DashboardMobile() {
           
           {/* Teams and Players Section */}
           <div className="space-y-4">
-            {/* Connected Teams */}
+            {/* Connected Teams - Interactive */}
             {(allTeams?.length || teams?.length) && (
               <div className="bg-card rounded-lg p-4 border">
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Teams</h3>
                 <div className="space-y-2">
-                  {(allTeams?.length ? allTeams : teams)?.map((team) => (
-                    <div key={team.id} className="flex items-center gap-3 bg-muted/50 rounded-lg px-4 py-3">
-                      {team.logoUrl ? (
-                        <img 
-                          src={team.logoUrl} 
-                          alt={team.name}
-                          className="w-8 h-8 rounded-full flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                          {getInitials(team.name)}
-                        </div>
-                      )}
-                      <span className="text-sm font-medium">{team.name}</span>
+                  {/* All Teams option */}
+                  <button
+                    onClick={() => setViewMode('all')}
+                    className={`w-full flex items-center justify-between gap-3 rounded-lg px-4 py-3 transition-colors ${
+                      viewMode === 'all' ? 'bg-primary/10 border-2 border-primary' : 'bg-muted/50 hover:bg-muted border-2 border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                        <Users className="w-4 h-4 text-muted-foreground" />
+                      </div>
+                      <span className="text-sm font-medium">All Teams</span>
                     </div>
-                  ))}
+                    {viewMode === 'all' && <Check className="w-5 h-5 text-primary shrink-0" />}
+                  </button>
+                  
+                  {/* Individual teams */}
+                  {(allTeams?.length ? allTeams : teams)?.map((team) => {
+                    const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
+                    return (
+                      <button
+                        key={team.id}
+                        onClick={() => setCurrentTeam(team)}
+                        className={`w-full flex items-center justify-between gap-3 rounded-lg px-4 py-3 transition-colors ${
+                          isSelected ? 'bg-primary/10 border-2 border-primary' : 'bg-muted/50 hover:bg-muted border-2 border-transparent'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {team.logoUrl ? (
+                            <img 
+                              src={team.logoUrl} 
+                              alt={team.name}
+                              className="w-8 h-8 rounded-full flex-shrink-0"
+                            />
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                              {getInitials(team.name)}
+                            </div>
+                          )}
+                          <span className="text-sm font-medium text-left">{team.name}</span>
+                        </div>
+                        {isSelected && <Check className="w-5 h-5 text-primary shrink-0" />}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
