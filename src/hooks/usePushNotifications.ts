@@ -1,23 +1,50 @@
 
 import { useEffect, useState } from 'react';
-import { pushNotificationService } from '@/services/pushNotificationService';
-import { useAuth } from '@/contexts/AuthContext';
 import { Capacitor } from '@capacitor/core';
+import { pushNotificationService } from '@/services/pushNotificationService';
+import { webPushService } from '@/services/webPushService';
+import { useAuth } from '@/contexts/AuthContext';
+
+export type NotificationPlatform = 'capacitor' | 'web-push' | 'none';
 
 export const usePushNotifications = () => {
   const [isInitialized, setIsInitialized] = useState(false);
   const [permissionGranted, setPermissionGranted] = useState(false);
+  const [platform, setPlatform] = useState<NotificationPlatform>('none');
   const { user } = useAuth();
 
+  // Detect platform on mount
   useEffect(() => {
-    if (user && !isInitialized && Capacitor.isNativePlatform()) {
+    if (Capacitor.isNativePlatform()) {
+      setPlatform('capacitor');
+    } else if (webPushService.isSupported()) {
+      setPlatform('web-push');
+      // Check existing permission for web
+      const permission = webPushService.getPermissionStatus();
+      if (permission === 'granted') {
+        setPermissionGranted(true);
+        setIsInitialized(true);
+      }
+    }
+  }, []);
+
+  // Auto-initialize for native platforms
+  useEffect(() => {
+    if (user && !isInitialized && platform === 'capacitor') {
       initializeNotifications();
     }
-  }, [user, isInitialized]);
+  }, [user, isInitialized, platform]);
 
   const initializeNotifications = async () => {
     try {
-      const granted = await pushNotificationService.initializePushNotifications();
+      let granted = false;
+      
+      if (platform === 'capacitor') {
+        granted = await pushNotificationService.initializePushNotifications();
+      } else if (platform === 'web-push') {
+        granted = await webPushService.initializeWebPush();
+      }
+      
       setPermissionGranted(granted);
       setIsInitialized(true);
     } catch (error) {
@@ -27,19 +54,25 @@ export const usePushNotifications = () => {
   };
 
   const requestPermissions = async () => {
-    if (!Capacitor.isNativePlatform()) {
-      console.log('Push notifications not supported on web platform');
+    if (platform === 'none') {
+      console.log('Push notifications not supported on this platform');
       return false;
     }
     
-    const granted = await pushNotificationService.initializePushNotifications();
-    setPermissionGranted(granted);
-    return granted;
+    const granted = await initializeNotifications();
+    return permissionGranted;
+  };
+
+  const sendTestNotification = async () => {
+    return webPushService.sendTestNotification();
   };
 
   return {
     isInitialized,
     permissionGranted,
-    requestPermissions
+    platform,
+    requestPermissions,
+    sendTestNotification,
+    isSupported: platform !== 'none'
   };
 };
