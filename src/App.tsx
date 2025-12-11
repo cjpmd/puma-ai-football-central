@@ -11,6 +11,7 @@ import { ClubProvider } from "@/contexts/ClubContext";
 import { TeamProvider } from "@/contexts/TeamContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ResponsiveRoute } from "@/components/routing/ResponsiveRoute";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AccountLinking from "./pages/AccountLinking";
@@ -229,6 +230,7 @@ const App = () => (
                 <Route path="/availability-confirmation" element={<AvailabilityConfirmation />} />
                 <Route path="*" element={<NotFound />} />
                   </Routes>
+                  <PWAInstallPrompt />
                 </SmartViewProvider>
               </TeamProvider>
             </ClubProvider>

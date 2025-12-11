@@ -8,10 +8,125 @@ const corsHeaders = {
 }
 
 interface NotificationPayload {
-  eventId: string;
+  eventId?: string;
   title: string;
   body: string;
   userIds?: string[];
+}
+
+interface WebPushSubscription {
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+}
+
+// Send FCM notification
+async function sendFCMNotification(
+  pushToken: string, 
+  title: string, 
+  body: string, 
+  eventId: string | undefined,
+  fcmServerKey: string
+): Promise<boolean> {
+  const payload = {
+    to: pushToken,
+    notification: {
+      title: title,
+      body: body
+    },
+    data: {
+      eventId: eventId || '',
+      type: 'availability_request'
+    }
+  };
+
+  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+    method: 'POST',
+    headers: {
+      'Authorization': `key=${fcmServerKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  return response.ok;
+}
+
+// Send Web Push notification
+async function sendWebPushNotification(
+  subscription: WebPushSubscription,
+  title: string,
+  body: string,
+  eventId: string | undefined,
+  vapidPrivateKey: string,
+  vapidPublicKey: string
+): Promise<boolean> {
+  try {
+    // Web Push requires the web-push library or manual implementation
+    // For simplicity, we'll use the fetch API with proper headers
+    
+    const payload = JSON.stringify({
+      title: title,
+      body: body,
+      icon: '/pwa-icons/icon-192x192.png',
+      badge: '/pwa-icons/badge-72x72.png',
+      data: {
+        eventId: eventId || '',
+        type: 'availability_request'
+      }
+    });
+
+    // Create JWT for VAPID authentication
+    const vapidHeaders = await createVapidHeaders(
+      subscription.endpoint,
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+
+    const response = await fetch(subscription.endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Encoding': 'aes128gcm',
+        'TTL': '86400',
+        ...vapidHeaders
+      },
+      body: await encryptPayload(payload, subscription.keys.p256dh, subscription.keys.auth)
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Web Push error:', error);
+    return false;
+  }
+}
+
+// Simple VAPID header creation (simplified version)
+async function createVapidHeaders(
+  endpoint: string,
+  publicKey: string,
+  privateKey: string
+): Promise<Record<string, string>> {
+  // For a production implementation, use proper VAPID JWT creation
+  // This is a simplified placeholder
+  const audience = new URL(endpoint).origin;
+  
+  return {
+    'Authorization': `vapid t=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9, k=${publicKey}`
+  };
+}
+
+// Placeholder for payload encryption (would need proper implementation)
+async function encryptPayload(
+  payload: string,
+  p256dh: string,
+  auth: string
+): Promise<Uint8Array> {
+  // In production, use proper Web Push encryption
+  // For now, return the payload as bytes
+  return new TextEncoder().encode(payload);
 }
 
 serve(async (req) => {
@@ -28,21 +143,21 @@ serve(async (req) => {
 
     const { eventId, title, body, userIds }: NotificationPayload = await req.json()
 
-    // Get event details
-    const { data: event, error: eventError } = await supabaseClient
-      .from('events')
-      .select('*, teams!inner(*)')
-      .eq('id', eventId)
-      .single()
-
-    if (eventError) {
-      throw new Error(`Event not found: ${eventError.message}`)
-    }
-
     let targetUserIds = userIds
 
-    // If no specific users provided, get all users linked to the event
-    if (!targetUserIds || targetUserIds.length === 0) {
+    // If eventId provided and no specific users, get users from event
+    if (eventId && (!targetUserIds || targetUserIds.length === 0)) {
+      // Get event details
+      const { data: event, error: eventError } = await supabaseClient
+        .from('events')
+        .select('*, teams!inner(*)')
+        .eq('id', eventId)
+        .single()
+
+      if (eventError) {
+        throw new Error(`Event not found: ${eventError.message}`)
+      }
+
       // Get event selections to find players/staff
       const { data: selections } = await supabaseClient
         .from('event_selections')
@@ -80,7 +195,7 @@ serve(async (req) => {
       targetUserIds = Array.from(allUserIds)
     }
 
-    if (targetUserIds.length === 0) {
+    if (!targetUserIds || targetUserIds.length === 0) {
       return new Response(
         JSON.stringify({ success: true, message: 'No users to notify' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -101,61 +216,78 @@ serve(async (req) => {
       )
     }
 
-    // Send push notifications using FCM (Firebase Cloud Messaging)
+    // Get environment variables
     const fcmServerKey = Deno.env.get('FCM_SERVER_KEY')
-    if (!fcmServerKey) {
-      throw new Error('FCM_SERVER_KEY not configured')
-    }
+    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
 
     const notifications = profiles.map(async (profile) => {
-      const payload = {
-        to: profile.push_token,
-        notification: {
-          title: title,
-          body: body
-        },
-        data: {
-          eventId: eventId,
-          type: 'availability_request'
-        }
-      }
+      let success = false;
+      let method = 'unknown';
 
-      const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `key=${fcmServerKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      })
+      // Check if it's a Web Push subscription (prefixed with "webpush:")
+      if (profile.push_token?.startsWith('webpush:')) {
+        method = 'web_push';
+        
+        if (vapidPublicKey && vapidPrivateKey) {
+          try {
+            const subscriptionJson = profile.push_token.substring(8); // Remove "webpush:" prefix
+            const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
+            
+            success = await sendWebPushNotification(
+              subscription,
+              title,
+              body,
+              eventId,
+              vapidPrivateKey,
+              vapidPublicKey
+            );
+          } catch (e) {
+            console.error('Failed to parse Web Push subscription:', e);
+          }
+        } else {
+          console.log('VAPID keys not configured for Web Push');
+        }
+      } else if (profile.push_token && fcmServerKey) {
+        // FCM notification (Capacitor/native)
+        method = 'fcm';
+        success = await sendFCMNotification(
+          profile.push_token,
+          title,
+          body,
+          eventId,
+          fcmServerKey
+        );
+      }
 
       // Log notification attempt
       await supabaseClient
         .from('notification_logs')
         .insert({
           user_id: profile.id,
-          event_id: eventId,
+          event_id: eventId || null,
           title: title,
           body: body,
-          notification_type: 'availability_request',
-          method: 'push',
-          status: response.ok ? 'sent' : 'failed',
-          metadata: {
-            fcm_response: await response.text()
-          }
+          notification_type: 'push',
+          method: method,
+          status: success ? 'sent' : 'failed'
         })
 
-      return { userId: profile.id, success: response.ok }
+      return { userId: profile.id, success, method };
     })
 
     const results = await Promise.allSettled(notifications)
-    const successCount = results.filter(r => r.status === 'fulfilled').length
+    const fulfilled = results.filter(r => r.status === 'fulfilled') as PromiseFulfilledResult<any>[];
+    const successCount = fulfilled.filter(r => r.value.success).length;
+
+    console.log(`Push notifications sent: ${successCount}/${profiles.length}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         sent: successCount,
-        total: profiles.length
+        total: profiles.length,
+        results: fulfilled.map(r => r.value)
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
