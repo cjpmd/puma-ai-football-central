@@ -901,22 +901,22 @@ return (
                   </Button>
                 </>
               )}
-              <Button onClick={saveSelections} disabled={saving} size={isMobile ? "sm" : "default"}>
+              <Button onClick={saveSelections} disabled={saving} size="sm" className={isMobile ? "h-8 px-2" : ""}>
                 {saving ? (
                   <>
-                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                    Saving...
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    {!isMobile && <span className="ml-1">Saving...</span>}
                   </>
                 ) : (
                   <>
-                    <Save className="h-3 w-3 mr-1" />
-                    Save
+                    <Save className="h-3 w-3" />
+                    {!isMobile && <span className="ml-1">Save</span>}
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={onClose} size={isMobile ? "sm" : "default"}>
-                <X className="h-3 w-3 mr-1" />
-                Close
+              <Button variant="outline" onClick={onClose} size="sm" className={isMobile ? "h-8 px-2" : ""}>
+                <X className="h-3 w-3" />
+                {!isMobile && <span className="ml-1">Close</span>}
               </Button>
             </div>
           </div>
