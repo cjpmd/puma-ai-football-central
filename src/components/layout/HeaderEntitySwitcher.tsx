@@ -37,16 +37,16 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
 
-  // Club-based roles show clubs, team-based roles show teams
+  // Club-based roles show clubs on desktop, team-based roles show teams
+  // Mobile always shows teams for easier navigation
   const isClubBasedRole = currentView === 'club_admin' || currentView === 'global_admin';
-  const displayType = isClubBasedRole ? 'club' : 'team';
+  const displayType = (variant === 'mobile') ? 'team' : (isClubBasedRole ? 'club' : 'team');
   
-  // For team-based roles, show ALL teams across all clubs (not filtered by current club)
-  // For club-based roles, show club-filtered teams
-  const teamsToShow = isClubBasedRole ? availableTeams : allUserTeams;
+  // For team display, show ALL teams across all clubs
+  const teamsToShow = allUserTeams;
   
   // Show switcher if role is club-based with multiple clubs, or team-based with multiple teams
-  const showSwitcher = isClubBasedRole 
+  const showSwitcher = displayType === 'club' 
     ? availableClubs.length > 1
     : teamsToShow.length > 1;
 
