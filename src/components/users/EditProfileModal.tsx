@@ -7,6 +7,7 @@ import { User } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -155,6 +156,11 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                 />
               </div>
             </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <h4 className="font-medium mb-3">Notifications</h4>
+            <PushNotificationSetup />
           </div>
 
           <div className="flex gap-3 pt-4">
