@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Player } from '@/types';
-import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3, TrendingUp, History, CheckCircle } from 'lucide-react';
+import { Clock, Target, Crown, Trophy, MapPin, Calendar, BarChart3, TrendingUp, History, CheckCircle, Goal, Shield, Square } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { availabilityService } from '@/services/availabilityService';
 import { format as formatDate } from 'date-fns';
@@ -154,6 +154,74 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                     <p className="text-xs text-muted-foreground">Player of the Match</p>
                   </CardContent>
                 </Card>
+
+                {/* Game Day Stats */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Goal className="h-4 w-4" />
+                      Goals
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalGoals || 0}</div>
+                    <p className="text-xs text-muted-foreground">Total goals scored</p>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Target className="h-4 w-4" />
+                      Assists
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalAssists || 0}</div>
+                    <p className="text-xs text-muted-foreground">Total assists</p>
+                  </CardContent>
+                </Card>
+
+                {/* Saves - typically for goalkeepers */}
+                {(stats.totalSaves || 0) > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        Saves
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{stats.totalSaves || 0}</div>
+                      <p className="text-xs text-muted-foreground">Total saves</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Cards */}
+                {((stats.yellowCards || 0) > 0 || (stats.redCards || 0) > 0) && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Square className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                        Cards
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          <Square className="h-4 w-4 fill-yellow-500 text-yellow-500" />
+                          <span className="text-xl font-bold">{stats.yellowCards || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Square className="h-4 w-4 fill-red-500 text-red-500" />
+                          <span className="text-xl font-bold">{stats.redCards || 0}</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Yellow / Red</p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
 
               {/* Top Positions */}
