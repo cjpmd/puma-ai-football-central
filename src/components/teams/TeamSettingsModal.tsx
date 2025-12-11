@@ -184,11 +184,6 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
           </div>
         </Tabs>
         
-        <div className="flex justify-end gap-2 pt-4 border-t flex-shrink-0 mt-4">
-          <Button variant="outline" onClick={onClose}>
-            Close
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );

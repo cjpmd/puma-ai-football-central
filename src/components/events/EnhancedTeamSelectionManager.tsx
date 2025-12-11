@@ -866,64 +866,58 @@ return (
                 {event.date} • {event.game_format} • {isTrainingEvent ? 'Group Selection' : 'Team Selection'}
               </p>
             </div>
-            <div className={`flex items-center gap-1 ${isMobile ? 'flex-wrap justify-end' : ''}`}>
-              {!isMobile && (
-                <>
-                  <Badge variant="outline" className="text-xs">
-                    {teamSelections.length} {isTrainingEvent ? (teamSelections.length === 1 ? 'group' : 'groups') : (teamSelections.length === 1 ? 'team' : 'teams')}
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {currentTeam?.squadPlayers.length || 0} players
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {(currentTeam?.selectedStaff || []).length} staff
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {currentTeam?.periods.length || 0} period(s)
-                  </Badge>
-                  <Button 
-                    onClick={handleCopyTeams}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1.5"
-                  >
-                    <Clipboard className="h-3 w-3" />
-                    Copy Teams
-                  </Button>
-                  <Button 
-                    onClick={() => setShowMatchDayPack(true)}
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-1.5"
-                  >
-                    <FileText className="h-3 w-3" />
-                    📦 Pack
-                  </Button>
-                </>
-              )}
-              <Button onClick={saveSelections} disabled={saving} size="sm" className={isMobile ? "h-8 px-2" : ""}>
-                {saving ? (
-                  <>
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    {!isMobile && <span className="ml-1">Saving...</span>}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-3 w-3" />
-                    {!isMobile && <span className="ml-1">Save</span>}
-                  </>
-                )}
-              </Button>
-              <Button variant="outline" onClick={onClose} size="sm" className={isMobile ? "h-8 px-2" : ""}>
-                <X className="h-3 w-3" />
-                {!isMobile && <span className="ml-1">Close</span>}
-              </Button>
-            </div>
+            {!isMobile && (
+              <div className="flex items-center gap-1">
+                <Badge variant="outline" className="text-xs">
+                  {teamSelections.length} {isTrainingEvent ? (teamSelections.length === 1 ? 'group' : 'groups') : (teamSelections.length === 1 ? 'team' : 'teams')}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {currentTeam?.squadPlayers.length || 0} players
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {(currentTeam?.selectedStaff || []).length} staff
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {currentTeam?.periods.length || 0} period(s)
+                </Badge>
+                <Button 
+                  onClick={handleCopyTeams}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1.5"
+                >
+                  <Clipboard className="h-3 w-3" />
+                  Copy Teams
+                </Button>
+                <Button 
+                  onClick={() => setShowMatchDayPack(true)}
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center gap-1.5"
+                >
+                  <FileText className="h-3 w-3" />
+                  📦 Pack
+                </Button>
+                <Button onClick={saveSelections} disabled={saving} size="sm">
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span className="ml-1">Saving...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-3 w-3" />
+                      <span className="ml-1">Save</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
 
           {/* Team Selection */}
           <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4 flex-wrap'} ${isMobile ? 'mt-2' : 'mt-4'} overflow-x-hidden`}>
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
               <Label className="text-xs font-medium shrink-0">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
                <div className="flex gap-1 flex-wrap">
                  {teamSelections.map((team, index) => (
@@ -961,6 +955,18 @@ return (
                    <Plus className="h-3 w-3" />
                  </Button>
                </div>
+              {isMobile && (
+                <Button onClick={saveSelections} disabled={saving} size="sm" className="h-8 px-3 ml-auto">
+                  {saving ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="h-3 w-3 mr-1" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
 
             {/* Performance Category Selection for Current Team */}

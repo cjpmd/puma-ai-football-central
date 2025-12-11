@@ -792,9 +792,6 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
             </TabsContent>
           </Tabs>
           
-          <div className="flex justify-end mt-4">
-            <Button onClick={onClose}>Close</Button>
-          </div>
         </DialogContent>
       </Dialog>
     </TooltipProvider>
