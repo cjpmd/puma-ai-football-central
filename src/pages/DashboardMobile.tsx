@@ -455,7 +455,7 @@ export default function DashboardMobile() {
                   <Link to="/players" className="contents">
                     <Button className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                       <Users className="h-6 w-6" />
-                      <span className="text-sm">Manage Players</span>
+                      <span className="text-sm">Team</span>
                     </Button>
                   </Link>
                 </>
