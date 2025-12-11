@@ -326,9 +326,6 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
           </TabsContent>
         </Tabs>
         
-        <div className="flex justify-end mt-4">
-          <Button onClick={onClose}>Close</Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
