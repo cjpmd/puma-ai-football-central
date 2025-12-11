@@ -167,7 +167,7 @@ export function RecommendedDrillsPanel({
         {recommendations.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
             <Target className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">
+            <p className="text-sm break-words max-w-full px-2">
               {!usePlayerObjectives && !useRecentNotes 
                 ? 'Enable some options above to get recommendations'
                 : 'No recommendations available. Try adjusting your settings or add more player objectives and event notes.'
