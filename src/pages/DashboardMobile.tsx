@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
-import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
+
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
@@ -289,9 +289,6 @@ export default function DashboardMobile() {
   return (
     <MobileLayout>
       <div className="space-y-6 pb-safe-bottom">
-        {/* Push Notification Setup */}
-        <PushNotificationSetup />
-        
         {/* Welcome Message */}
         <div className="text-center">
           <h2 className="text-xl font-semibold text-foreground mb-2">
@@ -304,17 +301,17 @@ export default function DashboardMobile() {
             {(allTeams?.length || teams?.length) && (
               <div className="bg-card rounded-lg p-4 border">
                 <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Teams</h3>
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="space-y-2">
                   {(allTeams?.length ? allTeams : teams)?.map((team) => (
-                    <div key={team.id} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                    <div key={team.id} className="flex items-center gap-3 bg-muted/50 rounded-lg px-4 py-3">
                       {team.logoUrl ? (
                         <img 
                           src={team.logoUrl} 
                           alt={team.name}
-                          className="w-6 h-6 rounded-full"
+                          className="w-8 h-8 rounded-full flex-shrink-0"
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
                           {getInitials(team.name)}
                         </div>
                       )}
@@ -444,41 +441,40 @@ export default function DashboardMobile() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {canManageTeam() && (
-              <>
-                <Button 
-                  className="w-full h-12 justify-start text-left" 
-                  variant="outline"
-                  onClick={() => setShowMobileEventForm(true)}
-                >
-                  <Plus className="h-5 w-5 mr-3" />
-                  Create Event
-                </Button>
-                <Link to="/players">
-                  <Button className="w-full h-12 justify-start text-left" variant="outline">
-                    <Users className="h-5 w-5 mr-3" />
-                    Manage Players
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              {canManageTeam() && (
+                <>
+                  <Button 
+                    className="h-20 flex-col gap-2 bg-green-600 hover:bg-green-700 text-white" 
+                    onClick={() => setShowMobileEventForm(true)}
+                  >
+                    <Plus className="h-6 w-6" />
+                    <span className="text-sm">Create Event</span>
                   </Button>
-                </Link>
-              </>
-            )}
-            <Button 
-              className="w-full h-12 justify-start text-left" 
-              variant="outline"
-              onClick={() => setShowEditProfile(true)}
-            >
-              <User className="h-5 w-5 mr-3" />
-              Edit Profile
-            </Button>
-            <Button 
-              className="w-full h-12 justify-start text-left" 
-              variant="outline"
-              onClick={() => setShowManageConnections(true)}
-            >
-              <Link2 className="h-5 w-5 mr-3" />
-              Manage Connections
-            </Button>
+                  <Link to="/players" className="contents">
+                    <Button className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                      <Users className="h-6 w-6" />
+                      <span className="text-sm">Manage Players</span>
+                    </Button>
+                  </Link>
+                </>
+              )}
+              <Button 
+                className="h-20 flex-col gap-2 bg-purple-600 hover:bg-purple-700 text-white" 
+                onClick={() => setShowEditProfile(true)}
+              >
+                <User className="h-6 w-6" />
+                <span className="text-sm">Edit Profile</span>
+              </Button>
+              <Button 
+                className="h-20 flex-col gap-2 bg-orange-600 hover:bg-orange-700 text-white" 
+                onClick={() => setShowManageConnections(true)}
+              >
+                <Link2 className="h-6 w-6" />
+                <span className="text-sm">Connections</span>
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
