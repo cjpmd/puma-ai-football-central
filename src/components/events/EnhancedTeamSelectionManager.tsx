@@ -858,15 +858,15 @@ return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0">
         <div className="h-[85vh] flex flex-col bg-background rounded-xl min-h-0">
-          <div className={`border-b ${isMobile ? 'p-3' : 'p-6'}`}>
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className={`font-bold ${isMobile ? 'text-lg' : 'text-2xl'}`}>{event.title}</h2>
-              <p className={`text-muted-foreground ${isMobile ? 'text-xs' : 'text-sm'}`}>
+          <div className={`border-b ${isMobile ? 'p-3' : 'p-6'} overflow-x-hidden`}>
+          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
+            <div className="min-w-0 flex-1">
+              <h2 className={`font-bold truncate ${isMobile ? 'text-lg' : 'text-2xl'}`}>{event.title}</h2>
+              <p className={`text-muted-foreground truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>
                 {event.date} • {event.game_format} • {isTrainingEvent ? 'Group Selection' : 'Team Selection'}
               </p>
             </div>
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 ${isMobile ? 'flex-wrap justify-end' : ''}`}>
               {!isMobile && (
                 <>
                   <Badge variant="outline" className="text-xs">
@@ -922,9 +922,9 @@ return (
           </div>
 
           {/* Team Selection */}
-          <div className={`flex items-center gap-4 flex-wrap ${isMobile ? 'mt-2' : 'mt-4'}`}>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Label className="text-xs font-medium">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
+          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4 flex-wrap'} ${isMobile ? 'mt-2' : 'mt-4'} overflow-x-hidden`}>
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              <Label className="text-xs font-medium shrink-0">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
                <div className="flex gap-1 flex-wrap">
                  {teamSelections.map((team, index) => (
                    <div key={team.teamNumber} className="flex items-center">
@@ -938,7 +938,7 @@ return (
                        }}
                        className="text-xs px-2 py-1 rounded-r-none border-r-0"
                      >
-                       {isTrainingEvent ? 'Group' : 'Team'} {team.teamNumber}
+                       {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
                        {team.squadPlayers.length > 0 && (
                          <Badge variant="secondary" className="ml-1 text-xs">
                            {team.squadPlayers.length}

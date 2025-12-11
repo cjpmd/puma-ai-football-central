@@ -356,7 +356,7 @@ useEffect(() => {
           Select staff members for this event and track their availability
         </p>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 overflow-x-hidden">
         {staff.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
             No staff members found for this team.
@@ -364,40 +364,41 @@ useEffect(() => {
         ) : (
           <div className="space-y-3">
             {staff.map((staffMember) => (
-              <div key={staffMember.id} className={`flex items-center justify-between p-3 border rounded-lg ${
+              <div key={staffMember.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 border rounded-lg gap-2 ${
                 staffMember.availabilityStatus === 'available' && selectedStaff.includes(staffMember.id) 
                   ? 'bg-green-50 border-green-200' 
                   : ''
               }`}>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0">
                   <Checkbox
                     id={`staff-${staffMember.id}`}
                     checked={selectedStaff.includes(staffMember.id)}
                     onCheckedChange={() => handleStaffToggle(staffMember.id)}
+                    className="shrink-0"
                   />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <label 
                         htmlFor={`staff-${staffMember.id}`} 
-                        className="font-medium cursor-pointer"
+                        className="font-medium cursor-pointer truncate"
                       >
                         {formatPlayerName(staffMember.name, 'firstName')}
                       </label>
-                      <Badge variant="outline" className="text-xs">
+                      <Badge variant="outline" className="text-xs shrink-0">
                         {formatRole(staffMember.role)}
                       </Badge>
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-muted-foreground truncate">
                       {staffMember.email}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap sm:shrink-0 ml-7 sm:ml-0">
                   {/* Availability Status */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     {getAvailabilityIcon(staffMember.availabilityStatus)}
-                    <span className="text-sm">
+                    <span className="text-xs sm:text-sm">
                       {getAvailabilityLabel(staffMember.availabilityStatus)}
                     </span>
                   </div>
@@ -410,12 +411,13 @@ useEffect(() => {
                         size="sm"
                         variant="outline"
                         onClick={() => sendAvailabilityNotification(staffMember)}
+                        className="text-xs px-2"
                       >
-                        Send Reminder
+                        Remind
                       </Button>
                     )
                   ) : (
-                    <Badge variant="outline" className="text-orange-600">
+                    <Badge variant="outline" className="text-orange-600 text-xs">
                       Not Linked
                     </Badge>
                   )}
