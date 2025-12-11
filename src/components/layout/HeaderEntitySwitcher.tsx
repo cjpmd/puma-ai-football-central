@@ -315,7 +315,7 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
             {getInitials(displayName)}
           </div>
         )}
-        <span className="text-sm font-semibold text-white truncate">{displayName}</span>
+        <span className="text-sm font-semibold text-white">{displayName}</span>
       </div>
     );
   }
@@ -357,7 +357,7 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
           </div>
         )}
         <div className="flex flex-col items-start">
-          <span className="text-sm font-semibold text-white truncate max-w-[150px]">{displayName}</span>
+          <span className="text-sm font-semibold text-white">{displayName}</span>
           <ChevronDown className="h-3 w-3 text-white/70" />
         </div>
       </button>
