@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query';
 interface MobileTeamSelectionViewProps {
   event: DatabaseEvent;
   teamId: string;
+  teamName?: string;
   onOpenFullManager: () => void;
   onClose?: () => void;
   isExpanded?: boolean;
@@ -33,10 +34,28 @@ interface TrainingDrill {
 export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = ({
   event,
   teamId,
+  teamName,
   onOpenFullManager,
   onClose,
   isExpanded = false
 }) => {
+  // Helper to get display name for a team
+  const getTeamDisplayName = (team: TeamSelection, index: number): string => {
+    const isTraining = event.event_type === 'training';
+    
+    // If performance category is set, use it
+    if (team.performanceCategory && team.performanceCategory !== 'No category') {
+      return team.performanceCategory;
+    }
+    
+    // If only one team and we have a team name, use the full team name
+    if (teamSelections.length === 1 && teamName) {
+      return teamName;
+    }
+    
+    // Fallback to Team X or Group X
+    return isTraining ? `Group ${team.teamNumber}` : `Team ${team.teamNumber}`;
+  };
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
@@ -269,7 +288,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               onClick={() => setCurrentTeamIndex(index)}
               className="flex-shrink-0 text-xs px-2 py-1"
             >
-              {event.event_type === 'training' ? `Group ${team.teamNumber}` : `Team ${team.teamNumber}`}
+              {getTeamDisplayName(team, index)}
             </Button>
           ))}
         </div>
@@ -280,7 +299,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           <CardHeader className="pb-2 px-3 pt-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
-                {event.event_type === 'training' ? `Group ${currentTeam.teamNumber}` : `Team ${currentTeam.teamNumber}`}
+                {getTeamDisplayName(currentTeam, currentTeamIndex)}
               </CardTitle>
               {!isExpanded && (
                 <Button variant="outline" size="sm" onClick={onOpenFullManager} className="text-xs px-2 py-1">
@@ -297,11 +316,6 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 <Badge variant="outline" className="text-xs">
                   <Gamepad2 className="h-3 w-3 mr-1" />
                   {currentTeam.periods.length} period{currentTeam.periods.length !== 1 ? 's' : ''}
-                </Badge>
-              )}
-              {currentTeam.performanceCategory !== 'No category' && (
-                <Badge variant="secondary" className="text-xs">
-                  {currentTeam.performanceCategory}
                 </Badge>
               )}
             </div>
