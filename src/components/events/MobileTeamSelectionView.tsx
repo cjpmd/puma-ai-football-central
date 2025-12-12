@@ -3,8 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Gamepad2, User, Star, X, ChevronLeft, Timer } from 'lucide-react';
+import { Users, Gamepad2, Star, ChevronLeft, Timer } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -41,6 +40,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
+  const [captainNames, setCaptainNames] = useState<Record<string, string>>({});
 
   // Load performance categories for display names
   const { data: performanceCategories = [] } = useQuery({
@@ -127,7 +127,28 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           team.squadPlayers = allPlayerIds.size;
         });
 
-        setTeamSelections(Object.values(groupedSelections));
+        const teamsArray = Object.values(groupedSelections);
+        setTeamSelections(teamsArray);
+
+        // Fetch captain names
+        const captainIds = teamsArray
+          .map(team => team.periods[0]?.captain_id)
+          .filter(Boolean) as string[];
+        
+        if (captainIds.length > 0) {
+          const { data: players } = await supabase
+            .from('players')
+            .select('id, name')
+            .in('id', captainIds);
+          
+          if (players) {
+            const namesMap: Record<string, string> = {};
+            players.forEach(p => {
+              namesMap[p.id] = p.name;
+            });
+            setCaptainNames(namesMap);
+          }
+        }
       } catch (error) {
         console.error('Error loading team selections:', error);
       }
@@ -287,107 +308,57 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           </CardHeader>
 
           <CardContent className="space-y-3 px-3 pb-3">
-            <Tabs defaultValue="overview" className="w-full">
-              {event.event_type === 'training' ? (
-                <TabsList className="grid w-full grid-cols-1 h-8">
-                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-                </TabsList>
-              ) : (
-                <TabsList className="grid w-full grid-cols-2 h-8">
-                  <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-                  <TabsTrigger value="periods" className="text-xs">Periods</TabsTrigger>
-                </TabsList>
-              )}
-
-              <TabsContent value="overview" className="space-y-3 mt-3">
-                {event.event_type === 'training' ? (
-                  <div className="text-sm">
-                    <h4 className="font-medium mb-2 text-sm flex items-center gap-1">
-                      <Timer className="h-3 w-3" />
-                      Training Drills
-                    </h4>
-                    {trainingDrills.length > 0 ? (
-                      <div className="space-y-2">
-                        {trainingDrills.map((drill, index) => (
-                          <div key={drill.id} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
-                            <span className="font-medium">{drill.name}</span>
-                            <span className="text-muted-foreground">{drill.duration_minutes}min</span>
-                          </div>
-                        ))}
+            {event.event_type === 'training' ? (
+              <div className="text-sm">
+                <h4 className="font-medium mb-2 text-sm flex items-center gap-1">
+                  <Timer className="h-3 w-3" />
+                  Training Drills
+                </h4>
+                {trainingDrills.length > 0 ? (
+                  <div className="space-y-2">
+                    {trainingDrills.map((drill) => (
+                      <div key={drill.id} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
+                        <span className="font-medium">{drill.name}</span>
+                        <span className="text-muted-foreground">{drill.duration_minutes}min</span>
                       </div>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">No drills added yet</p>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <div className="text-sm">
-                      <h4 className="font-medium mb-2 text-sm">Formation Summary</h4>
-                      {currentTeam.periods.length > 0 ? (
-                        <div className="space-y-2">
-                          {currentTeam.periods.map((period, index) => (
-                            <div key={index} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
-                              <span className="font-medium">Period {period.period_number}</span>
-                              <div className="flex items-center gap-2 text-xs">
-                                <span>{period.formation}</span>
-                                <span>•</span>
-                                <span>{period.duration_minutes}min</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-muted-foreground text-xs">No periods configured</p>
-                      )}
-                    </div>
-
-                    {currentTeam.periods[0]?.captain_id && (
-                      <div className="text-sm">
-                        <h4 className="font-medium mb-2 flex items-center gap-1 text-sm">
-                          <Star className="h-3 w-3" />
-                          Captain Selected
-                        </h4>
-                        <p className="text-muted-foreground text-xs">Team captain has been assigned</p>
-                      </div>
-                    )}
-                  </>
-                )}
-              </TabsContent>
-
-              {event.event_type !== 'training' && (
-                <TabsContent value="periods" className="space-y-2 mt-3">
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {currentTeam.periods.map((period, index) => (
-                      <Card key={index} className="w-full">
-                        <CardContent className="p-2">
-                          <div className="flex justify-between items-start mb-2">
-                            <h5 className="font-medium text-xs">Period {period.period_number}</h5>
-                            <Badge variant="outline" className="text-xs">
-                              {period.formation}
-                            </Badge>
-                          </div>
-                          
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <div className="flex justify-between">
-                              <span>Duration:</span>
-                              <span>{period.duration_minutes} minutes</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Starting XI:</span>
-                              <span>{period.player_positions?.length || 0} players</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Substitutes:</span>
-                              <span>{period.substitute_players?.length || 0} players</span>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
                     ))}
                   </div>
-                </TabsContent>
-              )}
-            </Tabs>
+                ) : (
+                  <p className="text-muted-foreground text-xs">No drills added yet</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="text-sm">
+                  <h4 className="font-medium mb-2 text-sm">Formation Summary</h4>
+                  {currentTeam.periods.length > 0 ? (
+                    <div className="space-y-2">
+                      {currentTeam.periods.map((period, index) => (
+                        <div key={index} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
+                          <span className="font-medium">Period {period.period_number}</span>
+                          <div className="flex items-center gap-2 text-xs">
+                            <span>{period.formation}</span>
+                            <span>•</span>
+                            <span>{period.duration_minutes}min</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-xs">No periods configured</p>
+                  )}
+                </div>
+
+                {currentTeam.periods[0]?.captain_id && (
+                  <div className="flex items-center gap-2 py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                    <Star className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                    <span className="text-sm font-medium">
+                      Captain: {captainNames[currentTeam.periods[0].captain_id] || 'Loading...'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <Button 
               onClick={onOpenFullManager} 
