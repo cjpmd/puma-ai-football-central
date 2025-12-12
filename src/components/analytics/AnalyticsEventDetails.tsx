@@ -125,10 +125,10 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
 
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
           <CardTitle className="text-sm">Performance Analysis</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
           {/* Positives */}
           {(analysis.positives?.on_ball?.length > 0 || analysis.positives?.off_ball?.length > 0) && (
             <div>
@@ -208,7 +208,7 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
   if (loading || !event) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl max-h-[90vh]">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] p-4 sm:p-6">
           <div className="flex items-center justify-center h-64">
             <p className="text-sm text-muted-foreground">Loading event details...</p>
           </div>
@@ -219,15 +219,15 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>{event.title}</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg">{event.title}</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[calc(90vh-120px)] pr-4">
-          <div className="space-y-6">
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-2 sm:pr-4">
+          <div className="space-y-4 sm:space-y-6">
             {/* Event Info */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div className="flex items-center gap-2 text-sm">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
                 <span>{format(new Date(event.date), 'EEE, MMM dd, yyyy')}</span>
@@ -259,18 +259,18 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
 
             {/* Score */}
             <Card>
-              <CardHeader>
+              <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                 <CardTitle className="text-sm">Score</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-bold">{renderScore()}</p>
+              <CardContent className="p-4 sm:p-6 pt-0">
+                <p className="text-xl sm:text-2xl font-bold break-words">{renderScore()}</p>
               </CardContent>
             </Card>
 
             {/* Match Events Summary */}
             {matchEventsSummary && (
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                   <CardTitle className="text-sm">Match Events</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -370,14 +370,14 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
             {/* Player of the Match */}
             {potmPlayer && (
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Trophy className="h-4 w-4 text-warning" />
                     Player of the Match
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-lg font-semibold">{potmPlayer}</p>
+                <CardContent className="p-4 sm:p-6 pt-0">
+                  <p className="text-base sm:text-lg font-semibold">{potmPlayer}</p>
                 </CardContent>
               </Card>
             )}
@@ -385,10 +385,10 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
             {/* Notes */}
             {(event.coach_notes || event.staff_notes) && (
               <Card>
-                <CardHeader>
+                <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                   <CardTitle className="text-sm">Notes</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
                   {event.coach_notes && (
                     <div>
                       <h4 className="text-xs font-semibold mb-1">Coach Notes:</h4>
