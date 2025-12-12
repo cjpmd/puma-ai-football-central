@@ -1077,21 +1077,23 @@ export default function CalendarEventsMobile() {
 
       {/* Post Game Edit Modal */}
       <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[600px] max-h-[90vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6">
-          <DialogHeader>
-            <DialogTitle>Post-Game Report</DialogTitle>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[600px] max-h-[90vh] overflow-hidden p-3 sm:p-4">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base">Post-Game Report</DialogTitle>
           </DialogHeader>
-          {selectedEvent && (
-            <PostGameEditor
-              eventId={selectedEvent.id}
-              isOpen={showPostGameEdit}
-              onClose={() => {
-                setShowPostGameEdit(false);
-                setSelectedEvent(null);
-                loadEvents();
-              }}
-            />
-          )}
+          <div className="overflow-y-auto overflow-x-hidden max-h-[calc(90vh-80px)]">
+            {selectedEvent && (
+              <PostGameEditor
+                eventId={selectedEvent.id}
+                isOpen={showPostGameEdit}
+                onClose={() => {
+                  setShowPostGameEdit(false);
+                  setSelectedEvent(null);
+                  loadEvents();
+                }}
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

@@ -398,41 +398,41 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
   const opponentName = event.opponent || 'Opponent';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 min-w-0 overflow-hidden">
       {/* Event Info */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="font-semibold">{event.title}</h3>
-        <p className="text-sm text-gray-600">
+      <div className="bg-muted p-3 rounded-lg overflow-hidden">
+        <h3 className="font-semibold truncate">{event.title}</h3>
+        <p className="text-sm text-muted-foreground">
           {event.date && format(new Date(event.date), 'PPP')} • {event.start_time}
         </p>
         {event.opponent && (
-          <p className="text-sm text-gray-600">vs {event.opponent}</p>
+          <p className="text-sm text-muted-foreground truncate">vs {event.opponent}</p>
         )}
       </div>
 
       {/* Match Events Summary Section */}
       {matchEventsSummary && (matchEventsSummary.goals.length > 0 || matchEventsSummary.assists.length > 0 || matchEventsSummary.saves.length > 0) && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Match Events Summary</span>
+        <Card className="overflow-hidden">
+          <CardHeader className="p-3 sm:p-4">
+            <CardTitle className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:justify-between text-base">
+              <span className="truncate">Match Events</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleCalculateScore}
                 disabled={calculatingScore}
-                className="flex items-center gap-2"
+                className="flex items-center gap-1 text-xs whitespace-nowrap"
               >
-                <Calculator className="h-4 w-4" />
-                {calculatingScore ? 'Calculating...' : 'Calculate Score from Events'}
+                <Calculator className="h-3 w-3" />
+                {calculatingScore ? 'Calculating...' : 'Calculate Score'}
               </Button>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs">
               Events logged during the match
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="p-3 sm:p-4 pt-0 sm:pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {matchEventsSummary.goals && matchEventsSummary.goals.length > 0 && (
                 <div>
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
@@ -487,44 +487,44 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
       {/* Only show team results if we have actual team selections */}
       {teamSelections.length > 0 ? (
-        <div>
-          <Label className="text-base font-semibold">Match Results</Label>
+        <div className="overflow-hidden">
+          <Label className="text-sm font-semibold">Match Results</Label>
           
-          <div className="space-y-4 mt-3">
+          <div className="space-y-3 mt-2">
             {teamSelections.map((team) => (
-              <div key={team.teamNumber} className="border rounded-lg p-4">
-                <h4 className="font-medium mb-3">{team.performanceCategoryName} vs {opponentName}</h4>
+              <div key={team.teamNumber} className="border rounded-lg p-3 overflow-hidden">
+                <h4 className="font-medium mb-2 text-sm truncate">{team.performanceCategoryName} vs {opponentName}</h4>
                 
                 {/* Score Input */}
-                <div className="grid grid-cols-3 gap-4 items-center mb-4">
-                  <div className="text-center">
-                    <Label className="text-sm text-gray-600">{team.performanceCategoryName}</Label>
+                <div className="grid grid-cols-3 gap-2 items-center mb-3">
+                  <div className="text-center min-w-0">
+                    <Label className="text-xs text-muted-foreground truncate block">{team.performanceCategoryName}</Label>
                     <Input
                       type="number"
                       min="0"
                       value={scores[`team_${team.teamNumber}`] || ''}
                       onChange={(e) => handleScoreChange(`team_${team.teamNumber}`, e.target.value)}
-                      className="text-center text-lg font-bold h-12 mt-1"
+                      className="text-center text-base font-bold h-10 mt-1"
                     />
                   </div>
-                  <div className="text-center text-gray-400 text-lg font-bold">
+                  <div className="text-center text-muted-foreground text-base font-bold">
                     vs
                   </div>
-                  <div className="text-center">
-                    <Label className="text-sm text-gray-600">{opponentName}</Label>
+                  <div className="text-center min-w-0">
+                    <Label className="text-xs text-muted-foreground truncate block">{opponentName}</Label>
                     <Input
                       type="number"
                       min="0"
                       value={scores[`opponent_${team.teamNumber}`] || ''}
                       onChange={(e) => handleScoreChange(`opponent_${team.teamNumber}`, e.target.value)}
-                      className="text-center text-lg font-bold h-12 mt-1"
+                      className="text-center text-base font-bold h-10 mt-1"
                     />
                   </div>
                 </div>
                 
                 {/* Outcome indicator */}
                 {scores[`team_${team.teamNumber}`] !== undefined && scores[`opponent_${team.teamNumber}`] !== undefined && (
-                  <div className="text-center mb-4">
+                  <div className="text-center mb-3">
                     <Badge 
                       variant={
                         Number(scores[`team_${team.teamNumber}`]) > Number(scores[`opponent_${team.teamNumber}`]) 
@@ -546,8 +546,8 @@ export const PostGameEditor: React.FC<PostGameEditorProps> = ({ eventId, isOpen,
 
                 {/* Player of the Match for this team */}
                 {team.players.length > 0 && (
-                  <div>
-                    <Label>Player of the Match - {team.performanceCategoryName}</Label>
+                  <div className="overflow-hidden">
+                    <Label className="text-xs truncate block">POTM - {team.performanceCategoryName}</Label>
                     <Select 
                       value={playerOfMatchByTeam[team.teamNumber] || 'none'} 
                       onValueChange={(value) => handlePOTMChange(team.teamNumber, value)}
