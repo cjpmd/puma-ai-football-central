@@ -328,27 +328,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 )}
               </div>
             ) : (
-              <div className="space-y-3">
-                <div className="text-sm">
-                  <h4 className="font-medium mb-2 text-sm">Formation Summary</h4>
-                  {currentTeam.periods.length > 0 ? (
-                    <div className="space-y-2">
-                      {currentTeam.periods.map((period, index) => (
-                        <div key={index} className="flex justify-between items-center py-2 px-2 bg-muted/50 rounded text-xs">
-                          <span className="font-medium">Period {period.period_number}</span>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span>{period.formation}</span>
-                            <span>•</span>
-                            <span>{period.duration_minutes}min</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground text-xs">No periods configured</p>
-                  )}
-                </div>
-
+              <>
                 {currentTeam.periods[0]?.captain_id && (
                   <div className="flex items-center gap-2 py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
                     <Star className="h-4 w-4 text-amber-500 flex-shrink-0" />
@@ -357,7 +337,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                     </span>
                   </div>
                 )}
-              </div>
+              </>
             )}
 
             <Button 
