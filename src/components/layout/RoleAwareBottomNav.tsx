@@ -2,8 +2,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
   Calendar, 
-  Target,
-  Shield
+  BarChart3,
+  User
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -16,8 +16,8 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Home },
   { name: 'Calendar', href: '/calendar', icon: Calendar },
-  { name: 'Individual', href: '/individual-training', icon: Target },
-  { name: 'My Team', href: '/child-progress', icon: Shield },
+  { name: 'My Team', href: '/my-team', icon: BarChart3 },
+  { name: 'Player', href: '/player', icon: User },
 ];
 
 export function RoleAwareBottomNav() {
