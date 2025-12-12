@@ -995,20 +995,13 @@ export default function CalendarEventsMobile() {
               )}
               
               {canEditEvents() && (
-                <div className="grid grid-cols-2 gap-2 mt-6">
+                <div className="grid grid-cols-3 gap-2 mt-6">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleEventAction(selectedEvent, 'setup')}
                   >
                     SETUP
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEventAction(selectedEvent, 'squad')}
-                  >
-                    SQUAD
                   </Button>
                   {(selectedEvent.event_type === 'match' || selectedEvent.event_type === 'friendly' || selectedEvent.event_type === 'fixture') && (
                     <Button
