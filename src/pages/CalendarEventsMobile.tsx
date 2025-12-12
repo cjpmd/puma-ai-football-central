@@ -595,6 +595,7 @@ export default function CalendarEventsMobile() {
           <MobileTeamSelectionView
             event={selectedEvent}
             teamId={teams?.[0]?.id || ''}
+            teamName={teams?.[0]?.name}
             onOpenFullManager={() => {
               setShowExpandedTeamSelection(false);
               setShowTeamSelection(true);
@@ -959,6 +960,7 @@ export default function CalendarEventsMobile() {
                 <MobileTeamSelectionView
                   event={selectedEvent}
                   teamId={teams?.[0]?.id || ''}
+                  teamName={teams?.[0]?.name}
                   onOpenFullManager={() => {
                     setShowEventDetails(false);
                     setShowTeamSelection(true);
