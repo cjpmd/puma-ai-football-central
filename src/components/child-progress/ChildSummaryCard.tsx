@@ -120,22 +120,34 @@ export const ChildSummaryCard: React.FC<ChildSummaryCardProps> = ({ child }) => 
         </div>
 
         {/* Quick Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
           <div className="text-center p-3 rounded-lg bg-muted/50">
             <div className="text-2xl font-bold text-primary">{child.stats.totalGames}</div>
-            <div className="text-sm text-muted-foreground">Games Played</div>
+            <div className="text-xs text-muted-foreground">Games</div>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/50">
             <div className="text-2xl font-bold text-primary">{Math.round(child.stats.totalMinutes)}</div>
-            <div className="text-sm text-muted-foreground">Total Minutes</div>
+            <div className="text-xs text-muted-foreground">Minutes</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="text-2xl font-bold text-primary">{child.stats.totalGoals || 0}</div>
+            <div className="text-xs text-muted-foreground">⚽ Goals</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="text-2xl font-bold text-primary">{child.stats.totalAssists || 0}</div>
+            <div className="text-xs text-muted-foreground">👟 Assists</div>
+          </div>
+          <div className="text-center p-3 rounded-lg bg-muted/50">
+            <div className="text-2xl font-bold text-primary">{child.stats.totalSaves || 0}</div>
+            <div className="text-xs text-muted-foreground">🧤 Saves</div>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/50">
             <div className="text-2xl font-bold text-yellow-600">{child.stats.captainGames}</div>
-            <div className="text-sm text-muted-foreground">Captain</div>
+            <div className="text-xs text-muted-foreground">Captain</div>
           </div>
           <div className="text-center p-3 rounded-lg bg-muted/50">
             <div className="text-2xl font-bold text-green-600">{child.stats.playerOfTheMatchCount}</div>
-            <div className="text-sm text-muted-foreground">POTM</div>
+            <div className="text-xs text-muted-foreground">POTM</div>
           </div>
         </div>
 
