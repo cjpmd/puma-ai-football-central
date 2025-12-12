@@ -44,6 +44,8 @@ import SubscriptionManagement from "./pages/SubscriptionManagement";
 import SubscriptionManagementMobile from "./pages/SubscriptionManagementMobile";
 import ChildProgress from "./pages/ChildProgress";
 import ChildProgressMobile from "./pages/ChildProgressMobile";
+import PlayerMobile from "./pages/PlayerMobile";
+import MyTeamMobile from "./pages/MyTeamMobile";
 import GameDayMobile from "./pages/GameDayMobile";
 import AdminPlayStyles from "./pages/AdminPlayStyles";
 import AdminPlayStylesMobile from "./pages/AdminPlayStylesMobile";
@@ -204,8 +206,30 @@ const App = () => (
                        mobileComponent={<ChildProgressMobile />}
                      />
                    </ProtectedRoute>
-                   }
-                 />
+                 }
+               />
+               <Route 
+                 path="/player" 
+                 element={
+                   <ProtectedRoute>
+                     <ResponsiveRoute
+                       desktopComponent={<ChildProgress />}
+                       mobileComponent={<PlayerMobile />}
+                     />
+                   </ProtectedRoute>
+                 }
+               />
+               <Route 
+                 path="/my-team" 
+                 element={
+                   <ProtectedRoute>
+                     <ResponsiveRoute
+                       desktopComponent={<Analytics />}
+                       mobileComponent={<MyTeamMobile />}
+                     />
+                   </ProtectedRoute>
+                 }
+               />
                  <Route 
                    path="/game-day/:eventId" 
                    element={
