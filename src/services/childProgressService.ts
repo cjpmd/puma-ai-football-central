@@ -15,6 +15,11 @@ export interface ChildProgressData {
   stats: {
     totalGames: number;
     totalMinutes: number;
+    totalGoals: number;
+    totalAssists: number;
+    totalSaves: number;
+    yellowCards: number;
+    redCards: number;
     captainGames: number;
     playerOfTheMatchCount: number;
     trainingCompletionRate: number;
@@ -92,8 +97,29 @@ export const childProgressService = {
         // Get performance trend
         const performanceTrend = await calculatePerformanceTrend(player.id);
         
-        // Get match history
-        const matchHistory = await getPlayerMatchHistory(player.id);
+        // Extract match_stats
+        const matchStats = (typeof player.match_stats === 'object' && player.match_stats !== null) ? player.match_stats as any : {};
+        
+        // Get match history from match_stats.recentGames (already populated)
+        const recentGames = matchStats.recentGames || [];
+        const matchHistory = recentGames.map((game: any) => ({
+          eventId: game.eventId,
+          opponent: game.opponent || 'Unknown',
+          date: game.date,
+          minutes: game.minutes || 0,
+          captain: game.captain || false,
+          playerOfTheMatch: game.playerOfTheMatch || false,
+          minutesByPosition: game.minutesByPosition || {},
+          performanceCategory: game.performanceCategory,
+          wasSubstitute: game.wasSubstitute || false,
+          matchStats: {
+            goals: game.goals || 0,
+            assists: game.assists || 0,
+            saves: game.saves || 0,
+            yellowCards: game.yellowCards || 0,
+            redCards: game.redCards || 0
+          }
+        }));
         
         // Get training analytics
         const { data: trainingAnalytics } = await supabase
@@ -114,9 +140,13 @@ export const childProgressService = {
           .limit(5);
 
         // Calculate stats from match_stats
-        const matchStats = (typeof player.match_stats === 'object' && player.match_stats !== null) ? player.match_stats as any : {};
         const totalGames = matchStats.totalGames || 0;
         const totalMinutes = matchStats.totalMinutes || 0;
+        const totalGoals = matchStats.totalGoals || 0;
+        const totalAssists = matchStats.totalAssists || 0;
+        const totalSaves = matchStats.totalSaves || 0;
+        const yellowCards = matchStats.yellowCards || 0;
+        const redCards = matchStats.redCards || 0;
         const captainGames = matchStats.captainGames || 0;
         const playerOfTheMatchCount = matchStats.playerOfTheMatchCount || 0;
         
@@ -168,6 +198,11 @@ export const childProgressService = {
           stats: {
             totalGames,
             totalMinutes,
+            totalGoals,
+            totalAssists,
+            totalSaves,
+            yellowCards,
+            redCards,
             captainGames,
             playerOfTheMatchCount,
             trainingCompletionRate: completionRate,
