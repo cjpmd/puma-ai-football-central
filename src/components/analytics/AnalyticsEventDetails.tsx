@@ -208,7 +208,7 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
   if (loading || !event) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] p-4 sm:p-6">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90vh] p-3 sm:p-6 overflow-hidden">
           <div className="flex items-center justify-center h-64">
             <p className="text-sm text-muted-foreground">Loading event details...</p>
           </div>
@@ -219,12 +219,12 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] p-4 sm:p-6">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-3xl max-h-[90vh] p-3 sm:p-6 overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="text-base sm:text-lg">{event.title}</DialogTitle>
+          <DialogTitle className="text-base sm:text-lg break-words">{event.title}</DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[calc(90vh-120px)] pr-2 sm:pr-4">
+        <ScrollArea className="max-h-[calc(90vh-120px)] pr-2 sm:pr-4 overflow-x-hidden">
           <div className="space-y-4 sm:space-y-6">
             {/* Event Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -239,18 +239,18 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
                 </div>
               )}
               {event.opponent && (
-                <div className="flex items-center gap-2 text-sm col-span-2">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span>vs {event.opponent}</span>
+                <div className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <Shield className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="break-words">vs {event.opponent}</span>
                 </div>
               )}
               {event.location && (
-                <div className="flex items-center gap-2 text-sm col-span-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{event.location}</span>
+                <div className="flex items-center gap-2 text-sm sm:col-span-2">
+                  <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                  <span className="break-words">{event.location}</span>
                 </div>
               )}
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Badge variant="outline">{event.event_type}</Badge>
               </div>
             </div>
@@ -273,7 +273,7 @@ export const AnalyticsEventDetails: React.FC<AnalyticsEventDetailsProps> = ({
                 <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-4">
                   <CardTitle className="text-sm">Match Events</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="p-4 sm:p-6 pt-0 space-y-4">
                   {matchEventsSummary.goals.length > 0 && (
                     <div>
                       <h4 className="text-xs font-semibold mb-2 flex items-center gap-2">
