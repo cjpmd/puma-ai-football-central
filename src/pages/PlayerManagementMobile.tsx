@@ -3,7 +3,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Plus, Filter, Settings } from 'lucide-react';
+import { Search, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -139,7 +139,7 @@ export default function PlayerManagementMobile() {
 
   const filteredPlayers = players.filter(player =>
     player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    player.type.toLowerCase().includes(searchTerm.toLowerCase())
+    player.squadNumber?.toString().includes(searchTerm)
   );
 
   // Mock team data for the cards - use current team from context
@@ -440,22 +440,14 @@ export default function PlayerManagementMobile() {
     <MobileLayout>
       <div className="space-y-4">
         {/* Header Actions */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search players..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12"
-            />
-          </div>
-          <Button size="sm" variant="outline" className="h-12 px-3">
-            <Filter className="h-4 w-4" />
-          </Button>
-          <Button size="sm" className="h-12 px-3">
-            <Plus className="h-4 w-4" />
-          </Button>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or squad number..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 h-12"
+          />
         </div>
 
         {/* Player Count Badge */}
