@@ -1,6 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { encode as base64Encode, decode as base64Decode } from "https://deno.land/std@0.168.0/encoding/base64.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +22,228 @@ interface WebPushSubscription {
   };
 }
 
+// Base64URL encoding/decoding utilities
+function base64UrlEncode(data: Uint8Array): string {
+  return base64Encode(data)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+function base64UrlDecode(str: string): Uint8Array {
+  // Add padding if needed
+  let padded = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (padded.length % 4) {
+    padded += '=';
+  }
+  return base64Decode(padded);
+}
+
+// Convert string to Uint8Array
+function stringToUint8Array(str: string): Uint8Array {
+  return new TextEncoder().encode(str);
+}
+
+// Concatenate Uint8Arrays
+function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
+  const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+  const result = new Uint8Array(totalLength);
+  let offset = 0;
+  for (const arr of arrays) {
+    result.set(arr, offset);
+    offset += arr.length;
+  }
+  return result;
+}
+
+// Create VAPID JWT token
+async function createVapidJwt(
+  audience: string,
+  subject: string,
+  privateKeyBase64: string
+): Promise<string> {
+  const header = { typ: 'JWT', alg: 'ES256' };
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    aud: audience,
+    exp: now + 12 * 60 * 60, // 12 hours
+    sub: subject
+  };
+
+  const headerB64 = base64UrlEncode(stringToUint8Array(JSON.stringify(header)));
+  const payloadB64 = base64UrlEncode(stringToUint8Array(JSON.stringify(payload)));
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+
+  // Import the private key for signing
+  const privateKeyBytes = base64UrlDecode(privateKeyBase64);
+  
+  const privateKey = await crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBytes,
+    { name: 'ECDSA', namedCurve: 'P-256' },
+    false,
+    ['sign']
+  );
+
+  // Sign the token
+  const signature = await crypto.subtle.sign(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    privateKey,
+    stringToUint8Array(unsignedToken)
+  );
+
+  // Convert signature from DER to raw format (64 bytes: r || s)
+  const signatureB64 = base64UrlEncode(new Uint8Array(signature));
+  
+  return `${unsignedToken}.${signatureB64}`;
+}
+
+// HKDF key derivation
+async function hkdf(
+  salt: Uint8Array,
+  ikm: Uint8Array,
+  info: Uint8Array,
+  length: number
+): Promise<Uint8Array> {
+  const key = await crypto.subtle.importKey(
+    'raw',
+    ikm,
+    { name: 'HKDF' },
+    false,
+    ['deriveBits']
+  );
+
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: salt,
+      info: info
+    },
+    key,
+    length * 8
+  );
+
+  return new Uint8Array(bits);
+}
+
+// Create info for HKDF
+function createInfo(type: string, context: Uint8Array): Uint8Array {
+  const typeBytes = stringToUint8Array(type);
+  const header = stringToUint8Array('Content-Encoding: ');
+  const nul = new Uint8Array([0]);
+  
+  return concatUint8Arrays(header, typeBytes, nul, context);
+}
+
+// Encrypt payload using aes128gcm
+async function encryptPayload(
+  payload: string,
+  p256dhBase64: string,
+  authBase64: string
+): Promise<{ encrypted: Uint8Array; salt: Uint8Array; localPublicKey: Uint8Array }> {
+  // Decode subscriber's public key and auth secret
+  const subscriberPublicKeyBytes = base64UrlDecode(p256dhBase64);
+  const authSecret = base64UrlDecode(authBase64);
+
+  // Generate local key pair for ECDH
+  const localKeyPair = await crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveBits']
+  );
+
+  // Export local public key in uncompressed format
+  const localPublicKeyRaw = await crypto.subtle.exportKey('raw', localKeyPair.publicKey);
+  const localPublicKey = new Uint8Array(localPublicKeyRaw);
+
+  // Import subscriber's public key
+  const subscriberPublicKey = await crypto.subtle.importKey(
+    'raw',
+    subscriberPublicKeyBytes,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    false,
+    []
+  );
+
+  // Derive shared secret using ECDH
+  const sharedSecretBits = await crypto.subtle.deriveBits(
+    { name: 'ECDH', public: subscriberPublicKey },
+    localKeyPair.privateKey,
+    256
+  );
+  const sharedSecret = new Uint8Array(sharedSecretBits);
+
+  // Generate random salt (16 bytes)
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+
+  // Create context for key derivation
+  // context = label || 0x00 || client_public_key_length || client_public_key || server_public_key_length || server_public_key
+  const keyLabel = stringToUint8Array('P-256');
+  const contextInfo = concatUint8Arrays(
+    keyLabel,
+    new Uint8Array([0]),
+    new Uint8Array([0, 65]), // client public key length (65 bytes)
+    subscriberPublicKeyBytes,
+    new Uint8Array([0, 65]), // server public key length (65 bytes)
+    localPublicKey
+  );
+
+  // Derive PRK using auth secret
+  const prkInfo = stringToUint8Array('Content-Encoding: auth\0');
+  const prk = await hkdf(authSecret, sharedSecret, prkInfo, 32);
+
+  // Derive content encryption key (CEK)
+  const cekInfo = createInfo('aes128gcm', contextInfo);
+  const cek = await hkdf(salt, prk, cekInfo, 16);
+
+  // Derive nonce
+  const nonceInfo = createInfo('nonce', contextInfo);
+  const nonce = await hkdf(salt, prk, nonceInfo, 12);
+
+  // Pad the payload (add delimiter 0x02 and padding)
+  const payloadBytes = stringToUint8Array(payload);
+  const paddedPayload = concatUint8Arrays(payloadBytes, new Uint8Array([2])); // 0x02 delimiter
+
+  // Import CEK for AES-GCM
+  const aesKey = await crypto.subtle.importKey(
+    'raw',
+    cek,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+
+  // Encrypt with AES-128-GCM
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: nonce },
+    aesKey,
+    paddedPayload
+  );
+
+  return {
+    encrypted: new Uint8Array(ciphertext),
+    salt,
+    localPublicKey
+  };
+}
+
+// Build aes128gcm encrypted body
+function buildEncryptedBody(
+  encrypted: Uint8Array,
+  salt: Uint8Array,
+  localPublicKey: Uint8Array
+): Uint8Array {
+  // aes128gcm format:
+  // salt (16 bytes) || rs (4 bytes, record size) || idlen (1 byte) || keyid (idlen bytes) || encrypted data
+  const recordSize = new Uint8Array(4);
+  new DataView(recordSize.buffer).setUint32(0, 4096, false); // 4096 record size
+  
+  const keyIdLen = new Uint8Array([65]); // Public key is 65 bytes
+  
+  return concatUint8Arrays(salt, recordSize, keyIdLen, localPublicKey, encrypted);
+}
+
 // Send FCM notification
 async function sendFCMNotification(
   pushToken: string, 
@@ -29,29 +251,40 @@ async function sendFCMNotification(
   body: string, 
   eventId: string | undefined,
   fcmServerKey: string
-): Promise<boolean> {
-  const payload = {
-    to: pushToken,
-    notification: {
-      title: title,
-      body: body
-    },
-    data: {
-      eventId: eventId || '',
-      type: 'availability_request'
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const payload = {
+      to: pushToken,
+      notification: {
+        title: title,
+        body: body
+      },
+      data: {
+        eventId: eventId || '',
+        type: 'availability_request'
+      }
+    };
+
+    const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+      method: 'POST',
+      headers: {
+        'Authorization': `key=${fcmServerKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('FCM error:', response.status, errorText);
+      return { success: false, error: `FCM ${response.status}: ${errorText}` };
     }
-  };
 
-  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
-    method: 'POST',
-    headers: {
-      'Authorization': `key=${fcmServerKey}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  });
-
-  return response.ok;
+    return { success: true };
+  } catch (error) {
+    console.error('FCM exception:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
 
 // Send Web Push notification
@@ -62,10 +295,9 @@ async function sendWebPushNotification(
   eventId: string | undefined,
   vapidPrivateKey: string,
   vapidPublicKey: string
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string; statusCode?: number }> {
   try {
-    // Web Push requires the web-push library or manual implementation
-    // For simplicity, we'll use the fetch API with proper headers
+    console.log('Sending Web Push to:', subscription.endpoint);
     
     const payload = JSON.stringify({
       title: title,
@@ -78,55 +310,61 @@ async function sendWebPushNotification(
       }
     });
 
-    // Create JWT for VAPID authentication
-    const vapidHeaders = await createVapidHeaders(
-      subscription.endpoint,
-      vapidPublicKey,
-      vapidPrivateKey
+    // Encrypt the payload
+    const { encrypted, salt, localPublicKey } = await encryptPayload(
+      payload,
+      subscription.keys.p256dh,
+      subscription.keys.auth
     );
+    
+    const encryptedBody = buildEncryptedBody(encrypted, salt, localPublicKey);
+    console.log('Encrypted body size:', encryptedBody.length);
+
+    // Create VAPID JWT
+    const audience = new URL(subscription.endpoint).origin;
+    const subject = 'mailto:admin@puma-ai.com';
+    
+    let jwt: string;
+    try {
+      jwt = await createVapidJwt(audience, subject, vapidPrivateKey);
+      console.log('VAPID JWT created successfully');
+    } catch (jwtError) {
+      console.error('VAPID JWT creation failed:', jwtError);
+      return { success: false, error: `JWT creation failed: ${jwtError}` };
+    }
+
+    // Prepare headers
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/octet-stream',
+      'Content-Encoding': 'aes128gcm',
+      'Content-Length': encryptedBody.length.toString(),
+      'TTL': '86400',
+      'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
+    };
+
+    console.log('Sending to push service with headers:', Object.keys(headers));
 
     const response = await fetch(subscription.endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'Content-Encoding': 'aes128gcm',
-        'TTL': '86400',
-        ...vapidHeaders
-      },
-      body: await encryptPayload(payload, subscription.keys.p256dh, subscription.keys.auth)
+      headers: headers,
+      body: encryptedBody
     });
 
-    return response.ok;
+    const statusCode = response.status;
+    console.log('Push service response:', statusCode);
+
+    if (statusCode === 201) {
+      console.log('Web Push sent successfully');
+      return { success: true, statusCode };
+    } else {
+      const errorText = await response.text();
+      console.error('Push service error:', statusCode, errorText);
+      return { success: false, error: `Push service ${statusCode}: ${errorText}`, statusCode };
+    }
   } catch (error) {
-    console.error('Web Push error:', error);
-    return false;
+    console.error('Web Push exception:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
-}
-
-// Simple VAPID header creation (simplified version)
-async function createVapidHeaders(
-  endpoint: string,
-  publicKey: string,
-  privateKey: string
-): Promise<Record<string, string>> {
-  // For a production implementation, use proper VAPID JWT creation
-  // This is a simplified placeholder
-  const audience = new URL(endpoint).origin;
-  
-  return {
-    'Authorization': `vapid t=eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiJ9, k=${publicKey}`
-  };
-}
-
-// Placeholder for payload encryption (would need proper implementation)
-async function encryptPayload(
-  payload: string,
-  p256dh: string,
-  auth: string
-): Promise<Uint8Array> {
-  // In production, use proper Web Push encryption
-  // For now, return the payload as bytes
-  return new TextEncoder().encode(payload);
 }
 
 serve(async (req) => {
@@ -136,12 +374,15 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Push notification function invoked');
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     const { eventId, title, body, userIds }: NotificationPayload = await req.json()
+    console.log('Notification request:', { eventId, title, userIds: userIds?.length || 0 });
 
     let targetUserIds = userIds
 
@@ -196,34 +437,49 @@ serve(async (req) => {
     }
 
     if (!targetUserIds || targetUserIds.length === 0) {
+      console.log('No users to notify');
       return new Response(
         JSON.stringify({ success: true, message: 'No users to notify' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    console.log('Target user IDs:', targetUserIds);
+
     // Get push tokens for target users
-    const { data: profiles } = await supabaseClient
+    const { data: profiles, error: profilesError } = await supabaseClient
       .from('profiles')
       .select('id, push_token, name')
       .in('id', targetUserIds)
       .not('push_token', 'is', null)
 
+    if (profilesError) {
+      console.error('Error fetching profiles:', profilesError);
+    }
+
     if (!profiles || profiles.length === 0) {
+      console.log('No push tokens found for users');
       return new Response(
         JSON.stringify({ success: true, message: 'No push tokens found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
+    console.log('Found profiles with push tokens:', profiles.length);
+
     // Get environment variables
     const fcmServerKey = Deno.env.get('FCM_SERVER_KEY')
     const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
 
+    console.log('VAPID keys configured:', !!vapidPublicKey && !!vapidPrivateKey);
+    console.log('FCM key configured:', !!fcmServerKey);
+
     const notifications = profiles.map(async (profile) => {
       let success = false;
       let method = 'unknown';
+      let errorMessage: string | undefined;
+      let statusCode: number | undefined;
 
       // Check if it's a Web Push subscription (prefixed with "webpush:")
       if (profile.push_token?.startsWith('webpush:')) {
@@ -233,8 +489,9 @@ serve(async (req) => {
           try {
             const subscriptionJson = profile.push_token.substring(8); // Remove "webpush:" prefix
             const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
+            console.log('Parsed Web Push subscription for user:', profile.id);
             
-            success = await sendWebPushNotification(
+            const result = await sendWebPushNotification(
               subscription,
               title,
               body,
@@ -242,38 +499,53 @@ serve(async (req) => {
               vapidPrivateKey,
               vapidPublicKey
             );
+            success = result.success;
+            errorMessage = result.error;
+            statusCode = result.statusCode;
           } catch (e) {
             console.error('Failed to parse Web Push subscription:', e);
+            errorMessage = `Parse error: ${e}`;
           }
         } else {
           console.log('VAPID keys not configured for Web Push');
+          errorMessage = 'VAPID keys not configured';
         }
       } else if (profile.push_token && fcmServerKey) {
         // FCM notification (Capacitor/native)
         method = 'fcm';
-        success = await sendFCMNotification(
+        const result = await sendFCMNotification(
           profile.push_token,
           title,
           body,
           eventId,
           fcmServerKey
         );
+        success = result.success;
+        errorMessage = result.error;
+      } else if (!fcmServerKey && profile.push_token) {
+        errorMessage = 'FCM key not configured';
       }
 
       // Log notification attempt
-      await supabaseClient
-        .from('notification_logs')
-        .insert({
-          user_id: profile.id,
-          event_id: eventId || null,
-          title: title,
-          body: body,
-          notification_type: 'push',
-          method: method,
-          status: success ? 'sent' : 'failed'
-        })
+      try {
+        await supabaseClient
+          .from('notification_logs')
+          .insert({
+            user_id: profile.id,
+            event_id: eventId || null,
+            title: title,
+            body: body,
+            notification_type: 'push',
+            method: method,
+            status: success ? 'sent' : 'failed',
+            error_message: errorMessage || null,
+            status_code: statusCode || null
+          })
+      } catch (logError) {
+        console.error('Failed to log notification:', logError);
+      }
 
-      return { userId: profile.id, success, method };
+      return { userId: profile.id, success, method, error: errorMessage, statusCode };
     })
 
     const results = await Promise.allSettled(notifications)
@@ -281,6 +553,7 @@ serve(async (req) => {
     const successCount = fulfilled.filter(r => r.value.success).length;
 
     console.log(`Push notifications sent: ${successCount}/${profiles.length}`);
+    console.log('Results:', fulfilled.map(r => r.value));
 
     return new Response(
       JSON.stringify({ 
