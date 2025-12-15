@@ -37,53 +37,41 @@ registerRoute(
 
 // ============ Push Notification Handling ============
 
-// Handle push events
+// Handle push events - iOS-compatible simplified handler
 self.addEventListener('push', (event) => {
-  console.log('[SW] Push event received:', event);
+  console.log('[SW] Push event received');
   
-  let data = {
-    title: 'Puma-AI',
-    body: 'You have a new notification',
-    icon: '/pwa-icons/icon-192x192.png',
-    badge: '/pwa-icons/badge-72x72.png',
-    data: {}
-  };
+  let title = 'Puma-AI';
+  let body = 'You have a new notification';
+  let notificationData = {};
   
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Push payload:', payload);
-      data = {
-        title: payload.title || data.title,
-        body: payload.body || data.body,
-        icon: payload.icon || data.icon,
-        badge: payload.badge || data.badge,
-        data: payload.data || {}
-      };
+      console.log('[SW] Push payload received');
+      title = payload.title || title;
+      body = payload.body || body;
+      notificationData = payload.data || {};
     } catch (e) {
-      console.log('[SW] Push data text:', event.data.text());
-      data.body = event.data.text();
+      // Fallback to text if JSON parsing fails
+      const text = event.data.text();
+      if (text) body = text;
     }
   }
   
-  const options = {
-    body: data.body,
-    icon: data.icon,
-    badge: data.badge,
+  // iOS-compatible minimal notification options
+  // iOS doesn't support: actions, renotify, requireInteraction, badge
+  const options: NotificationOptions = {
+    body: body,
+    icon: '/pwa-icons/icon-192x192.png',
     tag: 'puma-ai-notification',
-    renotify: true,
-    requireInteraction: true,
-    data: data.data,
-    actions: [
-      { action: 'open', title: 'Open' },
-      { action: 'dismiss', title: 'Dismiss' }
-    ]
-  } as NotificationOptions & { renotify?: boolean };
+    data: notificationData
+  };
   
-  console.log('[SW] Showing notification:', data.title, options);
+  console.log('[SW] Showing notification:', title);
   
   event.waitUntil(
-    self.registration.showNotification(data.title, options)
+    self.registration.showNotification(title, options)
   );
 });
 
