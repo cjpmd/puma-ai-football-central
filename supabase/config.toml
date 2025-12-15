@@ -5,3 +5,24 @@ verify_jwt = true
 
 [functions.ai-training-builder]
 verify_jwt = true
+
+[functions.send-push-notification]
+verify_jwt = false
+
+[functions.send-availability-notification]
+verify_jwt = true
+
+[functions.send-invitation-email]
+verify_jwt = true
+
+[functions.enhanced-notification-scheduler]
+verify_jwt = true
+
+[functions.notification-rsvp-handler]
+verify_jwt = false
+
+[functions.google-maps-config]
+verify_jwt = false
+
+[functions.weather-data]
+verify_jwt = false

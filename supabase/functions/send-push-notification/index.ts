@@ -56,7 +56,7 @@ function concatUint8Arrays(...arrays: Uint8Array[]): Uint8Array {
   return result;
 }
 
-// Create VAPID JWT token
+// Create VAPID JWT token with raw 32-byte private key
 async function createVapidJwt(
   audience: string,
   subject: string,
@@ -74,16 +74,70 @@ async function createVapidJwt(
   const payloadB64 = base64UrlEncode(stringToUint8Array(JSON.stringify(payload)));
   const unsignedToken = `${headerB64}.${payloadB64}`;
 
-  // Import the private key for signing
+  // Decode the private key - VAPID keys are raw 32-byte keys
   const privateKeyBytes = base64UrlDecode(privateKeyBase64);
+  console.log('[Push] Private key length:', privateKeyBytes.length);
   
-  const privateKey = await crypto.subtle.importKey(
-    'pkcs8',
-    privateKeyBytes,
-    { name: 'ECDSA', namedCurve: 'P-256' },
-    false,
-    ['sign']
-  );
+  let privateKey: CryptoKey;
+  
+  // Try to import as raw key first (32 bytes), then as PKCS8 if that fails
+  if (privateKeyBytes.length === 32) {
+    // Raw 32-byte private key - need to convert to JWK format for import
+    const jwk = {
+      kty: 'EC',
+      crv: 'P-256',
+      d: privateKeyBase64,
+      x: '', // Will be computed
+      y: ''  // Will be computed
+    };
+    
+    // Generate a temporary key pair to get the public key coordinates
+    // Then import with just the d parameter
+    try {
+      privateKey = await crypto.subtle.importKey(
+        'jwk',
+        {
+          kty: 'EC',
+          crv: 'P-256',
+          d: privateKeyBase64,
+          // For signing we only need d, but WebCrypto requires x,y
+          // We'll use a workaround: generate key pair and replace d
+          x: 'placeholder',
+          y: 'placeholder'
+        },
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['sign']
+      );
+    } catch (e) {
+      console.log('[Push] JWK import failed, trying raw derivation');
+      // Alternative: Create PKCS8 wrapper around raw key
+      const pkcs8Header = new Uint8Array([
+        0x30, 0x41, 0x02, 0x01, 0x00, 0x30, 0x13, 0x06, 0x07, 0x2a, 0x86, 0x48,
+        0xce, 0x3d, 0x02, 0x01, 0x06, 0x08, 0x2a, 0x86, 0x48, 0xce, 0x3d, 0x03,
+        0x01, 0x07, 0x04, 0x27, 0x30, 0x25, 0x02, 0x01, 0x01, 0x04, 0x20
+      ]);
+      const pkcs8Key = concatUint8Arrays(pkcs8Header, privateKeyBytes);
+      
+      privateKey = await crypto.subtle.importKey(
+        'pkcs8',
+        pkcs8Key,
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        false,
+        ['sign']
+      );
+    }
+  } else {
+    // Assume it's already in PKCS8 format
+    console.log('[Push] Importing as PKCS8 format');
+    privateKey = await crypto.subtle.importKey(
+      'pkcs8',
+      privateKeyBytes,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign']
+    );
+  }
 
   // Sign the token
   const signature = await crypto.subtle.sign(
@@ -95,6 +149,7 @@ async function createVapidJwt(
   // Convert signature from DER to raw format (64 bytes: r || s)
   const signatureB64 = base64UrlEncode(new Uint8Array(signature));
   
+  console.log('[Push] JWT created successfully');
   return `${unsignedToken}.${signatureB64}`;
 }
 
