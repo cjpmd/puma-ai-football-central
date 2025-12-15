@@ -536,15 +536,19 @@ serve(async (req) => {
       let errorMessage: string | undefined;
       let statusCode: number | undefined;
 
-      // Check if it's a Web Push subscription (prefixed with "webpush:")
-      if (profile.push_token?.startsWith('webpush:')) {
+      const pushToken = profile.push_token;
+      console.log(`[Push] Processing token for user ${profile.id}:`, pushToken?.substring(0, 30) + '...');
+
+      // Check token type and send appropriate notification
+      if (pushToken?.startsWith('webpush:')) {
+        // Web Push subscription
         method = 'web_push';
         
         if (vapidPublicKey && vapidPrivateKey) {
           try {
-            const subscriptionJson = profile.push_token.substring(8); // Remove "webpush:" prefix
+            const subscriptionJson = pushToken.substring(8); // Remove "webpush:" prefix
             const subscription: WebPushSubscription = JSON.parse(subscriptionJson);
-            console.log('Parsed Web Push subscription for user:', profile.id);
+            console.log('[Push] Sending Web Push to user:', profile.id);
             
             const result = await sendWebPushNotification(
               subscription,
@@ -558,27 +562,50 @@ serve(async (req) => {
             errorMessage = result.error;
             statusCode = result.statusCode;
           } catch (e) {
-            console.error('Failed to parse Web Push subscription:', e);
+            console.error('[Push] Failed to parse Web Push subscription:', e);
             errorMessage = `Parse error: ${e}`;
           }
         } else {
-          console.log('VAPID keys not configured for Web Push');
+          console.log('[Push] VAPID keys not configured for Web Push');
           errorMessage = 'VAPID keys not configured';
         }
-      } else if (profile.push_token && fcmServerKey) {
-        // FCM notification (Capacitor/native)
-        method = 'fcm';
-        const result = await sendFCMNotification(
-          profile.push_token,
-          title,
-          body,
-          eventId,
-          fcmServerKey
-        );
+      } else if (pushToken?.startsWith('native_ios:')) {
+        // Native iOS token (APNs via FCM)
+        method = 'fcm_ios';
+        const deviceToken = pushToken.substring(11); // Remove "native_ios:" prefix
+        console.log('[Push] Sending FCM to iOS device for user:', profile.id);
+        
+        if (fcmServerKey) {
+          const result = await sendFCMNotification(deviceToken, title, body, eventId, fcmServerKey);
+          success = result.success;
+          errorMessage = result.error;
+        } else {
+          errorMessage = 'FCM key not configured for iOS native';
+        }
+      } else if (pushToken?.startsWith('native_android:')) {
+        // Native Android token (FCM)
+        method = 'fcm_android';
+        const deviceToken = pushToken.substring(15); // Remove "native_android:" prefix
+        console.log('[Push] Sending FCM to Android device for user:', profile.id);
+        
+        if (fcmServerKey) {
+          const result = await sendFCMNotification(deviceToken, title, body, eventId, fcmServerKey);
+          success = result.success;
+          errorMessage = result.error;
+        } else {
+          errorMessage = 'FCM key not configured for Android native';
+        }
+      } else if (pushToken && fcmServerKey) {
+        // Legacy: raw FCM token (Capacitor/native without prefix)
+        method = 'fcm_legacy';
+        console.log('[Push] Sending FCM (legacy format) to user:', profile.id);
+        const result = await sendFCMNotification(pushToken, title, body, eventId, fcmServerKey);
         success = result.success;
         errorMessage = result.error;
-      } else if (!fcmServerKey && profile.push_token) {
+      } else if (!fcmServerKey && pushToken) {
         errorMessage = 'FCM key not configured';
+      } else {
+        errorMessage = 'Unknown token format';
       }
 
       // Log notification attempt
