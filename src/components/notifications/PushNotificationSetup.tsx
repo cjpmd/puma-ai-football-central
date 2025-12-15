@@ -13,7 +13,8 @@ export const PushNotificationSetup: React.FC = () => {
     platform, 
     requestPermissions,
     sendTestNotification,
-    isSupported 
+    isSupported,
+    isIOS
   } = usePushNotifications();
   const [isRequesting, setIsRequesting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -119,6 +120,12 @@ export const PushNotificationSetup: React.FC = () => {
                 <CheckCircle className="h-4 w-4" />
                 <span className="text-sm">Push notifications are enabled</span>
               </div>
+              {isIOS && platform === 'web-push' && (
+                <div className="rounded-md bg-amber-50 dark:bg-amber-950 p-3 text-xs text-amber-800 dark:text-amber-200">
+                  <strong>iOS Note:</strong> Push notifications on iOS work best when the app is open. 
+                  Background notifications may be delayed or not delivered due to iOS limitations.
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button 
                   variant="outline"
@@ -164,16 +171,27 @@ export const PushNotificationSetup: React.FC = () => {
                   </>
                 )}
               </Button>
+              {isIOS && platform === 'web-push' && (
+                <div className="rounded-md bg-blue-50 dark:bg-blue-950 p-3 text-xs text-blue-800 dark:text-blue-200 space-y-1">
+                  <p><strong>iOS Requirements:</strong></p>
+                  <ul className="list-disc list-inside space-y-0.5">
+                    <li>iOS 16.4 or later required</li>
+                    <li>Must add app to Home Screen first</li>
+                    <li>Open app from Home Screen icon</li>
+                  </ul>
+                </div>
+              )}
               <div className="flex items-center justify-between">
-                {platform === 'web-push' && (
+                {platform === 'web-push' && !isIOS && (
                   <p className="text-xs text-muted-foreground">
-                    For best experience on iOS, add this app to your home screen first.
+                    Enable browser notifications to receive event availability requests.
                   </p>
                 )}
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setShowDebug(!showDebug)}
+                  className="ml-auto"
                 >
                   <Bug className="h-4 w-4" />
                 </Button>

@@ -35,7 +35,7 @@ export const usePushNotifications = () => {
     }
   }, [user, isInitialized, platform]);
 
-  const initializeNotifications = async () => {
+  const initializeNotifications = async (): Promise<boolean> => {
     try {
       let granted = false;
       
@@ -47,21 +47,27 @@ export const usePushNotifications = () => {
       
       setPermissionGranted(granted);
       setIsInitialized(true);
+      return granted;
     } catch (error) {
       console.error('Failed to initialize push notifications:', error);
       setIsInitialized(true);
+      return false;
     }
   };
 
-  const requestPermissions = async () => {
+  const requestPermissions = async (): Promise<boolean> => {
     if (platform === 'none') {
       console.log('Push notifications not supported on this platform');
       return false;
     }
     
     const granted = await initializeNotifications();
-    return permissionGranted;
+    return granted;
   };
+
+  // Detect iOS for limitation warnings
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
   const sendTestNotification = async () => {
     return webPushService.sendTestNotification();
@@ -73,6 +79,7 @@ export const usePushNotifications = () => {
     platform,
     requestPermissions,
     sendTestNotification,
-    isSupported: platform !== 'none'
+    isSupported: platform !== 'none',
+    isIOS
   };
 };
