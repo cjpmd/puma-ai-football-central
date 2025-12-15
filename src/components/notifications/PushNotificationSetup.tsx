@@ -1,10 +1,10 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bell, CheckCircle, Smartphone, Globe } from 'lucide-react';
+import { Bell, CheckCircle, Smartphone, Globe, Bug } from 'lucide-react';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { toast } from 'sonner';
+import { PushNotificationDebug } from './PushNotificationDebug';
 
 export const PushNotificationSetup: React.FC = () => {
   const { 
@@ -17,6 +17,7 @@ export const PushNotificationSetup: React.FC = () => {
   } = usePushNotifications();
   const [isRequesting, setIsRequesting] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
 
   // Don't show if not supported
   if (!isSupported) {
@@ -85,82 +86,104 @@ export const PushNotificationSetup: React.FC = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          {permissionGranted ? (
-            <CheckCircle className="h-5 w-5 text-green-600" />
-          ) : (
-            <Bell className="h-5 w-5" />
-          )}
-          <CardTitle className="text-lg">
-            Push Notifications
-          </CardTitle>
-          <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
-            {getPlatformIcon()}
-            {getPlatformLabel()}
-          </span>
-        </div>
-        <CardDescription>
-          {permissionGranted 
-            ? 'You\'ll receive notifications when events require your availability.'
-            : platform === 'web-push' 
-              ? 'Enable browser notifications to receive event availability requests.'
-              : 'Enable push notifications to receive event availability requests on your device.'
-          }
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {permissionGranted ? (
-          <>
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-4 w-4" />
-              <span className="text-sm">Push notifications are enabled</span>
-            </div>
-            <Button 
-              variant="outline"
-              onClick={handleTestNotification}
-              disabled={isTesting}
-              size="sm"
-              className="w-full"
-            >
-              {isTesting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                  Sending...
-                </>
-              ) : (
-                'Send Test Notification'
-              )}
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button 
-              onClick={handleRequestPermissions}
-              disabled={isRequesting}
-              className="w-full"
-            >
-              {isRequesting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Setting up...
-                </>
-              ) : (
-                <>
-                  <Bell className="h-4 w-4 mr-2" />
-                  Enable Push Notifications
-                </>
-              )}
-            </Button>
-            {platform === 'web-push' && (
-              <p className="text-xs text-muted-foreground text-center">
-                For best experience on iOS, add this app to your home screen first.
-              </p>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            {permissionGranted ? (
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            ) : (
+              <Bell className="h-5 w-5" />
             )}
-          </>
-        )}
-      </CardContent>
-    </Card>
+            <CardTitle className="text-lg">
+              Push Notifications
+            </CardTitle>
+            <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+              {getPlatformIcon()}
+              {getPlatformLabel()}
+            </span>
+          </div>
+          <CardDescription>
+            {permissionGranted 
+              ? 'You\'ll receive notifications when events require your availability.'
+              : platform === 'web-push' 
+                ? 'Enable browser notifications to receive event availability requests.'
+                : 'Enable push notifications to receive event availability requests on your device.'
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {permissionGranted ? (
+            <>
+              <div className="flex items-center gap-2 text-green-600">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-sm">Push notifications are enabled</span>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline"
+                  onClick={handleTestNotification}
+                  disabled={isTesting}
+                  size="sm"
+                  className="flex-1"
+                >
+                  {isTesting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Test Notification'
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDebug(!showDebug)}
+                >
+                  <Bug className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <Button 
+                onClick={handleRequestPermissions}
+                disabled={isRequesting}
+                className="w-full"
+              >
+                {isRequesting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Setting up...
+                  </>
+                ) : (
+                  <>
+                    <Bell className="h-4 w-4 mr-2" />
+                    Enable Push Notifications
+                  </>
+                )}
+              </Button>
+              <div className="flex items-center justify-between">
+                {platform === 'web-push' && (
+                  <p className="text-xs text-muted-foreground">
+                    For best experience on iOS, add this app to your home screen first.
+                  </p>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDebug(!showDebug)}
+                >
+                  <Bug className="h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+      
+      {showDebug && <PushNotificationDebug />}
+    </div>
   );
 };
