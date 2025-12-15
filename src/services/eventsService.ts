@@ -320,6 +320,10 @@ export const eventsService = {
           } else {
             console.log(`Created ${availabilityRecords.length} availability records for event ${eventId}`);
           }
+
+          // Send push notifications to users with linked accounts
+          const userIds = availabilityRecords.map(r => r.user_id);
+          await this.sendEventNotifications(eventId, userIds);
         }
       }
     } catch (error) {
@@ -516,4 +520,61 @@ export const eventsService = {
       throw error;
     }
   },
+
+  async sendEventNotifications(eventId: string, userIds: string[]) {
+    try {
+      // Get event details for the notification message
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .select('title, date, event_type, opponent, teams!inner(name)')
+        .eq('id', eventId)
+        .single();
+
+      if (eventError) {
+        console.error('Error fetching event for notification:', eventError);
+        return;
+      }
+
+      const eventDate = new Date(event.date).toLocaleDateString('en-GB', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short'
+      });
+
+      let title = 'New Event';
+      let body = `${event.title} on ${eventDate}`;
+
+      if (event.event_type === 'match' && event.opponent) {
+        title = 'Match Availability Request';
+        body = `vs ${event.opponent} on ${eventDate} - Please confirm your availability`;
+      } else if (event.event_type === 'training') {
+        title = 'Training Session';
+        body = `${event.title} on ${eventDate} - Please confirm your availability`;
+      } else {
+        title = 'Event Notification';
+        body = `${event.title} on ${eventDate} - Please confirm your availability`;
+      }
+
+      console.log('Sending push notifications for event:', eventId, 'to users:', userIds.length);
+
+      // Call the edge function to send push notifications
+      const { error } = await supabase.functions.invoke('send-push-notification', {
+        body: {
+          eventId,
+          title,
+          body,
+          userIds
+        }
+      });
+
+      if (error) {
+        console.error('Error sending push notifications:', error);
+      } else {
+        console.log('Push notifications sent successfully for event:', eventId);
+      }
+    } catch (error) {
+      console.error('Error in sendEventNotifications:', error);
+      // Don't throw - notifications failing shouldn't break event creation
+    }
+  }
 };
