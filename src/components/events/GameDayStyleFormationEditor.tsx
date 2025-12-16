@@ -156,6 +156,19 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
     return 'midfielder';
   };
 
+  const getPositionGroupColor = (positionName: string): string => {
+    const pos = positionName?.toLowerCase() || '';
+    if (pos.includes('goalkeeper') || pos === 'gk') {
+      return 'border-yellow-400 bg-yellow-400/20';
+    } else if (pos.includes('defender') || pos.startsWith('d')) {
+      return 'border-blue-400 bg-blue-400/20';
+    } else if (pos.includes('midfielder') || pos.startsWith('m') || pos.includes('mid')) {
+      return 'border-green-400 bg-green-400/20';
+    } else {
+      return 'border-red-400 bg-red-400/20';
+    }
+  };
+
   const createPositionSlots = (formationId: string): PositionSlotType[] => {
     const formationConfig = gameFormatFormations.find(f => f.id === formationId);
     if (!formationConfig) return [];
@@ -439,7 +452,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       onDragEnd={handleDragEnd}
       modifiers={[snapCenterToCursor]}
     >
-      <div className="flex flex-col h-full max-h-[calc(100vh-280px)] overflow-hidden">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Formation Selector */}
         <div className="flex items-center justify-between px-3 py-2 border-b shrink-0">
           <Select
@@ -465,25 +478,55 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         {/* Pitch Area */}
         <div 
           ref={pitchRef}
-          className="flex-1 min-h-0 relative overflow-hidden"
+          className="flex-1 min-h-[320px] relative overflow-visible"
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-          <div className="formation-pitch h-full w-full" style={{ minHeight: '300px', maxHeight: '100%' }}>
+          <div className="formation-pitch w-full h-full" style={{ minHeight: '320px' }}>
             <div className="goal-box-top"></div>
             <div className="goal-box-bottom"></div>
             
             {currentPeriod.positions.map((position, index) => {
               const player = squadPlayers.find(p => p.id === position.playerId);
+              const isCaptain = player?.id === globalCaptainId;
+              const positionGroupColor = getPositionGroupColor(position.positionName);
+              
               return (
-                <PositionSlot
-                  key={`${currentPeriod.id}-position-${index}`}
-                  id={`${currentPeriod.id}-position-${index}`}
-                  position={position}
-                  player={player}
-                  isCaptain={player?.id === globalCaptainId}
-                  nameDisplayOption={nameDisplayOption}
-                />
+                <div key={`${currentPeriod.id}-position-${index}`}>
+                  {/* Drop zone for position */}
+                  <PositionSlot
+                    id={`${currentPeriod.id}-position-${index}`}
+                    position={position}
+                    player={player}
+                    isCaptain={isCaptain}
+                    nameDisplayOption={nameDisplayOption}
+                  />
+                  
+                  {/* Render draggable player icon on top of position slot */}
+                  {player && (
+                    <div
+                      className="absolute"
+                      style={{
+                        left: `${position.x}%`,
+                        top: `${position.y}%`,
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 20,
+                      }}
+                    >
+                      <div className={`rounded-full border-2 ${positionGroupColor} p-0.5`}>
+                        <PlayerIcon
+                          player={player}
+                          isCaptain={isCaptain}
+                          nameDisplayOption={nameDisplayOption}
+                          isCircular={true}
+                          dragId={isPositionsLocked ? undefined : `${currentPeriod.id}|position|${player.id}`}
+                          positionAbbreviation={position.abbreviation}
+                          showPositionLabel={true}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>
