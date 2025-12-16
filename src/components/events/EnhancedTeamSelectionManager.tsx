@@ -349,6 +349,39 @@ const { data: teamData } = useQuery({
     
     console.log('Auto-syncing formation layouts on tab open');
     
+    // Helper function for consistent position abbreviations
+    const getPositionAbbreviation = (positionName: string): string => {
+      const positionMap: Record<string, string> = {
+        'Goalkeeper': 'GK',
+        'Defender Left': 'DL',
+        'Defender Centre': 'DC',
+        'Defender Right': 'DR',
+        'Defender Centre Left': 'DCL',
+        'Defender Centre Right': 'DCR',
+        'Midfielder Left': 'ML',
+        'Midfielder Centre': 'MC',
+        'Midfielder Right': 'MR',
+        'Midfielder Centre Left': 'MCL',
+        'Midfielder Centre Right': 'MCR',
+        'Midfielder Defensive': 'DM',
+        'Midfielder Attacking': 'AM',
+        'Midfielder Attacking Left': 'AML',
+        'Midfielder Attacking Right': 'AMR',
+        'Midfielder Attacking Centre': 'AMC',
+        'Striker Left': 'STL',
+        'Striker Centre': 'STC',
+        'Striker Right': 'STR',
+        'Forward Left': 'FL',
+        'Forward Centre': 'FC',
+        'Forward Right': 'FR',
+        'Wing Left': 'LW',
+        'Wing Right': 'RW',
+        'Winger Left': 'LW',
+        'Winger Right': 'RW',
+      };
+      return positionMap[positionName] || positionName.slice(0, 3).toUpperCase();
+    };
+
     // Helper to create position slots from formation
     const createPositionSlots = (formationId: string): any[] => {
       const formations = getFormationsByFormat(event.game_format as any);
@@ -358,7 +391,7 @@ const { data: teamData } = useQuery({
       return formation.positions.map((pos, index) => ({
         id: `position-${index}`,
         positionName: pos.position,
-        abbreviation: pos.position.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2),
+        abbreviation: getPositionAbbreviation(pos.position),
         positionGroup: pos.position.toLowerCase().includes('goalkeeper') ? 'goalkeeper' :
                        pos.position.toLowerCase().includes('def') ? 'defender' :
                        pos.position.toLowerCase().includes('mid') ? 'midfielder' : 'forward',
@@ -857,134 +890,65 @@ return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0">
-        <div className="h-[85vh] flex flex-col bg-background rounded-xl min-h-0">
-          <div className={`border-b ${isMobile ? 'p-3' : 'p-6'} overflow-x-hidden`}>
-          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center justify-between'}`}>
-            <div className="min-w-0 flex-1">
-              <h2 className={`font-bold truncate ${isMobile ? 'text-lg' : 'text-2xl'}`}>{event.title}</h2>
-              <p className={`text-muted-foreground truncate ${isMobile ? 'text-xs' : 'text-sm'}`}>
-                {event.date} • {event.game_format} • {isTrainingEvent ? 'Group Selection' : 'Team Selection'}
-              </p>
-            </div>
-            {!isMobile && (
-              <div className="flex items-center gap-1">
-                <Badge variant="outline" className="text-xs">
-                  {teamSelections.length} {isTrainingEvent ? (teamSelections.length === 1 ? 'group' : 'groups') : (teamSelections.length === 1 ? 'team' : 'teams')}
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {currentTeam?.squadPlayers.length || 0} players
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {(currentTeam?.selectedStaff || []).length} staff
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  {currentTeam?.periods.length || 0} period(s)
-                </Badge>
-                <Button 
-                  onClick={handleCopyTeams}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1.5"
-                >
-                  <Clipboard className="h-3 w-3" />
-                  Copy Teams
-                </Button>
-                <Button 
-                  onClick={() => setShowMatchDayPack(true)}
-                  variant="outline"
-                  size="sm"
-                  className="flex items-center gap-1.5"
-                >
-                  <FileText className="h-3 w-3" />
-                  📦 Pack
-                </Button>
-                <Button onClick={saveSelections} disabled={saving} size="sm">
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span className="ml-1">Saving...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-3 w-3" />
-                      <span className="ml-1">Save</span>
-                    </>
-                  )}
+        <div className="h-[88vh] flex flex-col bg-background rounded-xl min-h-0">
+          {/* Compact Header */}
+          <div className={`border-b ${isMobile ? 'px-3 py-2' : 'px-4 py-3'}`}>
+            {/* Row 1: Title + Teams + Actions */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Title */}
+              <div className="min-w-0 mr-2">
+                <h2 className={`font-semibold truncate ${isMobile ? 'text-base' : 'text-lg'}`}>{event.title}</h2>
+                <p className="text-muted-foreground text-xs truncate">
+                  {event.date} • {event.game_format}
+                </p>
+              </div>
+
+              {/* Team Buttons */}
+              <div className="flex items-center gap-1 flex-wrap">
+                {teamSelections.map((team, index) => (
+                  <div key={team.teamNumber} className="flex items-center">
+                    <Button
+                      variant={index === currentTeamIndex ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => {
+                        setCurrentTeamIndex(index);
+                        setActiveTab('squad');
+                      }}
+                      className="h-7 text-xs px-2 rounded-r-none border-r-0"
+                    >
+                      {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
+                      {team.squadPlayers.length > 0 && (
+                        <span className="ml-1 text-[10px] opacity-70">({team.squadPlayers.length})</span>
+                      )}
+                    </Button>
+                    {teamSelections.length > 1 && (
+                      <Button
+                        variant={index === currentTeamIndex ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => deleteTeam(index)}
+                        className="h-7 text-xs px-1 rounded-l-none text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <Button onClick={addTeam} variant="outline" size="sm" className="h-7 px-2">
+                  <Plus className="h-3 w-3" />
                 </Button>
               </div>
-            )}
-          </div>
 
-          {/* Team Selection */}
-          <div className={`flex ${isMobile ? 'flex-col gap-2' : 'items-center gap-4 flex-wrap'} ${isMobile ? 'mt-2' : 'mt-4'} overflow-hidden max-w-full`}>
-            <div className="flex items-center gap-2 flex-wrap min-w-0 w-full">
-              <Label className="text-xs font-medium shrink-0">{isTrainingEvent ? 'Groups:' : 'Teams:'}</Label>
-               <div className="flex gap-1 flex-wrap flex-1 min-w-0">
-                 {teamSelections.map((team, index) => (
-                   <div key={team.teamNumber} className="flex items-center">
-                     <Button
-                       variant={index === currentTeamIndex ? 'default' : 'outline'}
-                       size="sm"
-                       onClick={() => {
-                         console.log('Switching to team', index + 1);
-                         setCurrentTeamIndex(index);
-                         setActiveTab('squad');
-                       }}
-                       className="text-xs px-2 py-1 rounded-r-none border-r-0"
-                     >
-                       {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
-                       {team.squadPlayers.length > 0 && (
-                         <Badge variant="secondary" className="ml-1 text-xs">
-                           {team.squadPlayers.length}
-                         </Badge>
-                       )}
-                     </Button>
-                     {teamSelections.length > 1 && (
-                       <Button
-                         variant={index === currentTeamIndex ? 'default' : 'outline'}
-                         size="sm"
-                         onClick={() => deleteTeam(index)}
-                         className="text-xs px-1 py-1 rounded-l-none text-destructive hover:text-destructive hover:bg-destructive/10"
-                       >
-                         <X className="h-3 w-3" />
-                       </Button>
-                     )}
-                   </div>
-                 ))}
-                 <Button onClick={addTeam} variant="outline" size="sm" className="px-2 py-1 shrink-0">
-                   <Plus className="h-3 w-3" />
-                 </Button>
-               </div>
-              {isMobile && (
-                <Button onClick={saveSelections} disabled={saving} size="sm" className="h-8 px-3 shrink-0">
-                  {saving ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="h-3 w-3 mr-1" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              )}
-            </div>
-
-            {/* Performance Category Selection for Current Team */}
-            {performanceCategories.length > 0 && currentTeam && (
-              <>
-                <Label className="text-xs font-medium flex items-center gap-1">
-                  <Target className="h-3 w-3" />
-                  Category:
-                </Label>
+              {/* Category Selector (inline, compact) */}
+              {performanceCategories.length > 0 && currentTeam && (
                 <Select 
                   value={currentTeam.performanceCategory || 'none'} 
                   onValueChange={handlePerformanceCategoryChange}
                 >
-                  <SelectTrigger className={`${isMobile ? 'w-32 h-8 text-xs' : 'w-48'}`}>
-                    <SelectValue placeholder="Select category" />
+                  <SelectTrigger className="h-7 w-28 text-xs">
+                    <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">No specific category</SelectItem>
+                    <SelectItem value="none">No category</SelectItem>
                     {performanceCategories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name}
@@ -992,50 +956,59 @@ return (
                     ))}
                   </SelectContent>
                 </Select>
-              </>
-            )}
+              )}
 
-            {/* AI Team Builder Button */}
-            {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
-              <Button
-                variant="outline"
-                size={isMobile ? "sm" : "default"}
-                onClick={() => setShowAIBuilder(true)}
-                className={`${isMobile ? 'h-8 px-2' : 'px-3'}`}
-                title="Generate team with AI"
-              >
-                <Sparkles className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4 mr-2'}`} />
-                {!isMobile && 'AI Builder'}
-              </Button>
-            )}
+              {/* Spacer */}
+              <div className="flex-1" />
 
-            {/* Position Lock Toggle */}
-            {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
-              <Button
-                variant="outline"
-                size={isMobile ? "sm" : "default"}
-                 onClick={handleTogglePositionsLock}
-                 className={`${isMobile ? 'h-8 px-2' : 'px-3'} ${
-                   currentTeam.isPositionsLocked 
-                     ? 'bg-red-50 border-red-200 text-red-700 hover:bg-red-100' 
-                     : 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-                 }`}
-                 title={currentTeam.isPositionsLocked ? 'Unlock player positions' : 'Lock player positions'}
-               >
-                 {currentTeam.isPositionsLocked ? (
-                   <Lock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                 ) : (
-                   <Unlock className={`${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
-                 )}
-                 {!isMobile && (
-                   <span className="ml-1">
-                     {currentTeam.isPositionsLocked ? 'Locked' : 'Unlocked'}
-                   </span>
-                 )}
-              </Button>
-            )}
+              {/* Action Buttons */}
+              <div className="flex items-center gap-1">
+                {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAIBuilder(true)}
+                    className="h-7 px-2"
+                    title="AI Builder"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                  </Button>
+                )}
+
+                {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleTogglePositionsLock}
+                    className={`h-7 px-2 ${
+                      currentTeam.isPositionsLocked 
+                        ? 'bg-red-50 border-red-200 text-red-700' 
+                        : 'bg-green-50 border-green-200 text-green-700'
+                    }`}
+                    title={currentTeam.isPositionsLocked ? 'Unlock' : 'Lock'}
+                  >
+                    {currentTeam.isPositionsLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                  </Button>
+                )}
+
+                {!isMobile && (
+                  <>
+                    <Button onClick={handleCopyTeams} variant="outline" size="sm" className="h-7 px-2">
+                      <Clipboard className="h-3 w-3" />
+                    </Button>
+                    <Button onClick={() => setShowMatchDayPack(true)} variant="outline" size="sm" className="h-7 px-2">
+                      <FileText className="h-3 w-3" />
+                    </Button>
+                  </>
+                )}
+                
+                <Button onClick={saveSelections} disabled={saving} size="sm" className="h-7 px-3">
+                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+                  <span className="ml-1 text-xs">Save</span>
+                </Button>
+              </div>
+            </div>
           </div>
-        </div>
 
         <div className="flex-1 min-h-0 overflow-hidden">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col">
