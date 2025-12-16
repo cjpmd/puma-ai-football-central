@@ -200,16 +200,28 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       'Midfielder Centre': 'MC',
       'Midfielder Centre Left': 'MCL',
       'Midfielder Centre Right': 'MCR',
+      'Midfielder Defensive': 'DM',
+      'Midfielder Attacking': 'AM',
       'Attacking Midfielder Centre': 'AMC',
       'Attacking Midfielder Left': 'AML',
       'Attacking Midfielder Right': 'AMR',
+      'Midfielder Attacking Centre': 'AMC',
+      'Midfielder Attacking Left': 'AML',
+      'Midfielder Attacking Right': 'AMR',
       'Striker Centre': 'STC',
       'Striker Left': 'STL',
       'Striker Right': 'STR',
       'Striker Centre Left': 'SCL',
-      'Striker Centre Right': 'SCR'
+      'Striker Centre Right': 'SCR',
+      'Forward Left': 'FL',
+      'Forward Centre': 'FC',
+      'Forward Right': 'FR',
+      'Wing Left': 'LW',
+      'Wing Right': 'RW',
+      'Winger Left': 'LW',
+      'Winger Right': 'RW',
     };
-    return positionMap[positionName] || positionName.slice(0, 2).toUpperCase();
+    return positionMap[positionName] || positionName.slice(0, 3).toUpperCase();
   };
 
   const preservePlayerAssignments = (oldPositions: PositionSlotType[], newPositions: PositionSlotType[]): PositionSlotType[] => {
@@ -496,15 +508,15 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       onDragEnd={handleDragEnd}
       modifiers={[snapCenterToCursor]}
     >
-      <div className="flex flex-col h-[calc(100vh-220px)] overflow-hidden">
+      <div className="flex flex-col h-[calc(100vh-160px)] overflow-hidden">
         {/* Formation Selector - Compact */}
-        <div className="flex items-center justify-between px-2 py-1.5 border-b shrink-0">
+        <div className="flex items-center justify-between px-2 py-1 border-b shrink-0">
           <Select
             value={currentPeriod.formation}
             onValueChange={(value) => updatePeriodFormation(currentPeriod.id, value)}
             disabled={isPositionsLocked}
           >
-            <SelectTrigger className="w-32 h-7 text-xs">
+            <SelectTrigger className="w-28 h-6 text-xs">
               <SelectValue placeholder="Formation" />
             </SelectTrigger>
             <SelectContent>
@@ -519,7 +531,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </div>
         </div>
 
-        {/* Pitch Area - Compact */}
+        {/* Pitch Area - Larger */}
         <div 
           ref={pitchRef}
           className="flex-1 min-h-0 relative"
@@ -528,7 +540,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         >
           <div 
             className="formation-pitch w-full h-full"
-            style={{ maxHeight: '35vh', minHeight: '180px' }}
+            style={{ maxHeight: '50vh', minHeight: '220px' }}
           >
             <div className="goal-box-top"></div>
             <div className="goal-box-bottom"></div>
