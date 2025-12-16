@@ -14,8 +14,9 @@ interface PlayerIconProps {
   positionAbbreviation?: string;
   showPositionLabel?: boolean;
   isLarger?: boolean;
-  dragId?: string; // Custom drag ID for positioned players
-  isSelectedInOtherTeams?: boolean; // New prop to indicate multi-team selection
+  dragId?: string;
+  isSelectedInOtherTeams?: boolean;
+  compact?: boolean;
 }
 
 export const PlayerIcon: React.FC<PlayerIconProps> = ({ 
@@ -28,9 +29,9 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   showPositionLabel = false,
   isLarger = false,
   dragId,
-  isSelectedInOtherTeams = false
+  isSelectedInOtherTeams = false,
+  compact = false
 }) => {
-  // Enable dragging for available AND pending players
   const shouldEnableDrag = player.availabilityStatus === 'available' || player.availabilityStatus === 'pending';
   
   const {
@@ -69,7 +70,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   };
 
   const actualIsDragging = isDragging || dndIsDragging;
-  const circularSize = isLarger ? 'w-16 h-16' : 'w-14 h-14';
+  const circularSize = compact ? 'w-10 h-10' : isLarger ? 'w-16 h-16' : 'w-14 h-14';
+  const textSize = compact ? 'text-[10px]' : 'text-xs';
 
   if (isCircular) {
     return (
@@ -90,34 +92,36 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
       >
         {/* Captain indicator */}
         {(isCaptain || player.squadRole === 'captain') && (
-          <Crown className={`absolute -top-1 -right-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-yellow-500`} />
+          <Crown className={`absolute -top-1 -right-1 ${compact ? 'h-2.5 w-2.5' : isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-yellow-500`} />
         )}
         
         {/* Multi-team selection indicator */}
         {isSelectedInOtherTeams && (
-          <div className={`absolute -top-1 -left-1 ${isLarger ? 'h-4 w-4' : 'h-3 w-3'}`}>
+          <div className={`absolute -top-1 -left-1 ${compact ? 'h-2.5 w-2.5' : isLarger ? 'h-4 w-4' : 'h-3 w-3'}`}>
             <Users className="h-full w-full text-blue-500" />
           </div>
         )}
         
-        {/* Content inside circle - position abbreviation AND player name */}
+        {/* Content inside circle */}
         <div className="flex flex-col items-center justify-center text-center leading-none">
           {/* Position abbreviation above name if provided */}
           {showPositionLabel && positionAbbreviation && (
-            <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-blue-600 mb-0.5`}>
+            <div className={`${textSize} font-bold text-blue-600 mb-0.5`}>
               {positionAbbreviation}
             </div>
           )}
           
           {/* Player name */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-medium leading-tight`}>
+          <div className={`${textSize} font-medium leading-tight`}>
             {getDisplayName()}
           </div>
           
           {/* Squad number below */}
-          <div className={`${isLarger ? 'text-xs' : 'text-xs'} font-bold text-gray-600 mt-0.5`}>
-            #{player.squadNumber}
-          </div>
+          {!compact && (
+            <div className={`${textSize} font-bold text-gray-600 mt-0.5`}>
+              #{player.squadNumber}
+            </div>
+          )}
         </div>
       </div>
     );
