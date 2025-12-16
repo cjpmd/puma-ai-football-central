@@ -889,22 +889,36 @@ const { data: teamData } = useQuery({
 return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0">
-        <div className="h-[88vh] flex flex-col bg-background rounded-xl min-h-0">
+      <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden' : ''}`}>
+        <div className={`${isMobile ? 'h-[95vh]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0`}>
           {/* Compact Header */}
-          <div className={`border-b ${isMobile ? 'px-3 py-2' : 'px-4 py-3'}`}>
+          <div className={`border-b ${isMobile ? 'px-2 py-1.5' : 'px-4 py-3'}`}>
             {/* Row 1: Title + Teams + Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Mobile Close Button - positioned first */}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClose}
+                  className="h-7 w-7 p-0 shrink-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              
               {/* Title */}
-              <div className="min-w-0 mr-2">
-                <h2 className={`font-semibold truncate ${isMobile ? 'text-base' : 'text-lg'}`}>{event.title}</h2>
-                <p className="text-muted-foreground text-xs truncate">
-                  {event.date} • {event.game_format}
-                </p>
+              <div className={`min-w-0 ${isMobile ? 'flex-1' : 'mr-2'}`}>
+                <h2 className={`font-semibold truncate ${isMobile ? 'text-sm' : 'text-lg'}`}>{event.title}</h2>
+                {!isMobile && (
+                  <p className="text-muted-foreground text-xs truncate">
+                    {event.date} • {event.game_format}
+                  </p>
+                )}
               </div>
 
-              {/* Team Buttons */}
-              <div className="flex items-center gap-1 flex-wrap">
+              {/* Team Buttons - More compact on mobile */}
+              <div className="flex items-center gap-0.5 flex-wrap">
                 {teamSelections.map((team, index) => (
                   <div key={team.teamNumber} className="flex items-center">
                     <Button
@@ -914,11 +928,11 @@ return (
                         setCurrentTeamIndex(index);
                         setActiveTab('squad');
                       }}
-                      className="h-7 text-xs px-2 rounded-r-none border-r-0"
+                      className={`${isMobile ? 'h-6 text-[10px] px-1.5' : 'h-7 text-xs px-2'} ${teamSelections.length > 1 ? 'rounded-r-none border-r-0' : ''}`}
                     >
                       {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
                       {team.squadPlayers.length > 0 && (
-                        <span className="ml-1 text-[10px] opacity-70">({team.squadPlayers.length})</span>
+                        <span className={`ml-0.5 opacity-70 ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>({team.squadPlayers.length})</span>
                       )}
                     </Button>
                     {teamSelections.length > 1 && (
@@ -926,15 +940,15 @@ return (
                         variant={index === currentTeamIndex ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => deleteTeam(index)}
-                        className="h-7 text-xs px-1 rounded-l-none text-destructive hover:text-destructive hover:bg-destructive/10"
+                        className={`${isMobile ? 'h-6 px-0.5' : 'h-7 px-1'} text-xs rounded-l-none text-destructive hover:text-destructive hover:bg-destructive/10`}
                       >
-                        <X className="h-3 w-3" />
+                        <X className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
                       </Button>
                     )}
                   </div>
                 ))}
-                <Button onClick={addTeam} variant="outline" size="sm" className="h-7 px-2">
-                  <Plus className="h-3 w-3" />
+                <Button onClick={addTeam} variant="outline" size="sm" className={`${isMobile ? 'h-6 w-6 p-0' : 'h-7 px-2'}`}>
+                  <Plus className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
                 </Button>
               </div>
 
