@@ -97,7 +97,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
   const gameFormatFormations = getFormationsByFormat(gameFormat as any);
   const currentPeriod = periods[activePeriodIndex];
 
-  // Auto-sync existing periods to updated formation coordinates
+  // Auto-sync existing periods to updated formation coordinates and abbreviations
   useEffect(() => {
     let needsUpdate = false;
     const updatedPeriods = periods.map(period => {
@@ -112,13 +112,19 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           const matchingTemplate = templatePositions.find(
             template => template.positionName === existingPos.positionName
           );
-          if (matchingTemplate && (existingPos.x !== matchingTemplate.x || existingPos.y !== matchingTemplate.y)) {
+          // Also sync if abbreviation is wrong (fix for "Mi" showing instead of "ML")
+          const expectedAbbr = matchingTemplate?.abbreviation || getDefaultAbbreviation(existingPos.positionName);
+          if (matchingTemplate && (
+            existingPos.x !== matchingTemplate.x || 
+            existingPos.y !== matchingTemplate.y ||
+            existingPos.abbreviation !== expectedAbbr
+          )) {
             needsUpdate = true;
             return {
               ...existingPos,
               x: matchingTemplate.x,
               y: matchingTemplate.y,
-              abbreviation: matchingTemplate.abbreviation,
+              abbreviation: expectedAbbr,
               positionGroup: matchingTemplate.positionGroup
             };
           }
@@ -439,10 +445,20 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
     onPeriodsChange(updatedPeriods);
   };
 
-  // Get substitute players for current period
+  // Get substitute players for current period (excluding players already on pitch)
   const getSubstitutePlayers = (): SquadPlayer[] => {
     if (!currentPeriod) return [];
+    
+    // Get IDs of players currently on the pitch
+    const onPitchPlayerIds = new Set(
+      currentPeriod.positions
+        .filter(pos => pos.playerId)
+        .map(pos => pos.playerId)
+    );
+    
+    // Return squad players who are in substitutes AND not on pitch
     return currentPeriod.substitutes
+      .filter(id => !onPitchPlayerIds.has(id))
       .map(id => squadPlayers.find(p => p.id === id))
       .filter((p): p is SquadPlayer => p !== undefined);
   };
@@ -541,8 +557,8 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           <div 
             className="formation-pitch w-full h-full"
             style={{ 
-              maxHeight: isMobile ? '38vh' : '50vh', 
-              minHeight: isMobile ? '160px' : '220px' 
+              maxHeight: isMobile ? '48vh' : '50vh', 
+              minHeight: isMobile ? '200px' : '220px' 
             }}
           >
             <div className="goal-box-top"></div>
