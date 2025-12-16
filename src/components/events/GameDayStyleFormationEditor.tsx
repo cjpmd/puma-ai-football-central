@@ -508,7 +508,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       onDragEnd={handleDragEnd}
       modifiers={[snapCenterToCursor]}
     >
-      <div className="flex flex-col h-[calc(100vh-160px)] overflow-hidden">
+      <div className={`flex flex-col overflow-hidden ${isMobile ? 'h-[calc(100vh-180px)]' : 'h-[calc(100vh-160px)]'}`}>
         {/* Formation Selector - Compact */}
         <div className="flex items-center justify-between px-2 py-1 border-b shrink-0">
           <Select
@@ -516,7 +516,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
             onValueChange={(value) => updatePeriodFormation(currentPeriod.id, value)}
             disabled={isPositionsLocked}
           >
-            <SelectTrigger className="w-28 h-6 text-xs">
+            <SelectTrigger className={`${isMobile ? 'w-24 h-6 text-[10px]' : 'w-28 h-6 text-xs'}`}>
               <SelectValue placeholder="Formation" />
             </SelectTrigger>
             <SelectContent>
@@ -531,7 +531,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </div>
         </div>
 
-        {/* Pitch Area - Larger */}
+        {/* Pitch Area - Responsive */}
         <div 
           ref={pitchRef}
           className="flex-1 min-h-0 relative"
@@ -540,7 +540,10 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         >
           <div 
             className="formation-pitch w-full h-full"
-            style={{ maxHeight: '50vh', minHeight: '220px' }}
+            style={{ 
+              maxHeight: isMobile ? '38vh' : '50vh', 
+              minHeight: isMobile ? '160px' : '220px' 
+            }}
           >
             <div className="goal-box-top"></div>
             <div className="goal-box-bottom"></div>
@@ -682,8 +685,8 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         </div>
 
         {/* Substitutes Bench - Compact */}
-        <div className="shrink-0 px-2 py-1 border-t">
-          <div className="text-xs font-medium text-muted-foreground mb-1">Substitutes</div>
+        <div className={`shrink-0 px-2 border-t ${isMobile ? 'py-0.5' : 'py-1'}`}>
+          <div className={`font-medium text-muted-foreground ${isMobile ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>Subs</div>
           <SubstituteBench
             id={`substitutes-${currentPeriod.id}`}
             substitutes={getSubstitutePlayers()}
@@ -694,16 +697,16 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         </div>
 
         {/* Playing Time Summary */}
-        <div className="shrink-0 border-t bg-muted/20 px-2 py-1.5">
-          <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Playing Time ({totalGameMinutes}')
+        <div className={`shrink-0 border-t bg-muted/20 px-2 ${isMobile ? 'py-1' : 'py-1.5'}`}>
+          <div className={`font-medium text-muted-foreground flex items-center gap-1 ${isMobile ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>
+            <Clock className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+            Time ({totalGameMinutes}')
           </div>
-          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+          <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
             {playingTimeSummary.map(({ player, minutes }) => (
               <div 
                 key={player.id}
-                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                className={`flex items-center gap-0.5 rounded-full whitespace-nowrap ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} ${
                   minutes === 0 
                     ? 'bg-destructive/10 text-destructive' 
                     : minutes >= totalGameMinutes 

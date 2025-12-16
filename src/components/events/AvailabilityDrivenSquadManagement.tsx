@@ -248,29 +248,26 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                   return a.squadNumber - b.squadNumber;
                 })
                 .map((player) => (
-                <div key={player.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border transition-opacity gap-2 ${getAvailabilityColor(player.availabilityStatus)}`}>
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-opacity gap-2 ${getAvailabilityColor(player.availabilityStatus)}`}>
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <Avatar className="h-7 w-7 sm:h-9 sm:w-9 shrink-0">
                       <AvatarImage src={`/api/placeholder/40/40`} />
-                      <AvatarFallback className="text-xs sm:text-sm">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
+                      <AvatarFallback className="text-[10px] sm:text-xs">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                        <span className="font-medium text-sm sm:text-base truncate">{player.name}</span>
-                        <Badge variant="secondary" className="text-xs">#{player.squadNumber}</Badge>
-                        <Badge variant="outline" className="text-xs hidden sm:inline-flex">{player.type}</Badge>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="font-medium text-xs sm:text-sm truncate">{player.name}</span>
+                        <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
                         {isPlayerInOtherTeams(player.id) && (
-                          <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs hidden sm:inline-flex">
-                            <Users className="h-3 w-3 mr-1" />
-                            Multi
+                          <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">
+                            <Users className="h-2.5 w-2.5 sm:mr-0.5" />
+                            <span className="hidden sm:inline">Multi</span>
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
                         {getAvailabilityIcon(player.availabilityStatus)}
-                        <Badge variant="outline" className={`text-xs ${getAvailabilityBadgeColor(player.availabilityStatus)}`}>
-                          {player.availabilityStatus}
-                        </Badge>
+                        <span className="capitalize">{player.availabilityStatus}</span>
                       </div>
                     </div>
                   </div>
@@ -280,18 +277,18 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       variant="default"
                       size="sm"
                       onClick={() => handleAddToSquad(player)}
-                      className={`shrink-0 self-end sm:self-auto px-3 ${player.availabilityStatus === 'available' 
+                      className={`shrink-0 h-7 w-7 sm:h-8 sm:w-auto sm:px-3 p-0 ${player.availabilityStatus === 'available' 
                         ? "bg-green-600 hover:bg-green-700 text-white"
                         : "bg-yellow-600 hover:bg-yellow-700 text-white"
                       }`}
                     >
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      <span className="text-xs sm:text-sm">Add</span>
+                      <UserPlus className="h-3.5 w-3.5 sm:mr-1" />
+                      <span className="hidden sm:inline text-xs">Add</span>
                     </Button>
                   ) : (
-                    <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground shrink-0 self-end sm:self-auto">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="capitalize">{player.availabilityStatus}</span>
+                    <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline capitalize">{player.availabilityStatus}</span>
                     </div>
                   )}
                 </div>
@@ -361,34 +358,32 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                     return a.squadNumber - b.squadNumber;
                   })
                   .map((player) => (
-                  <div key={player.id} className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border gap-2 ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
-                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                  <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border gap-2 ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Avatar className="h-7 w-7 sm:h-9 sm:w-9 shrink-0">
                         <AvatarImage src={`/api/placeholder/40/40`} />
-                        <AvatarFallback className="text-xs sm:text-sm">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
+                        <AvatarFallback className="text-[10px] sm:text-xs">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                          <span className="font-medium text-sm sm:text-base truncate">{player.name}</span>
-                          <Badge variant="secondary" className="text-xs">#{player.squadNumber}</Badge>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="font-medium text-xs sm:text-sm truncate">{player.name}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
                           {!isTrainingEvent && player.id === localCaptainId && (
-                            <Badge className="bg-yellow-500 text-white text-xs">
-                              <Crown className="h-3 w-3 mr-1" />
-                              C
+                            <Badge className="bg-yellow-500 text-white text-[10px] px-1 h-4">
+                              <Crown className="h-2.5 w-2.5 sm:mr-0.5" />
+                              <span className="hidden sm:inline">C</span>
                             </Badge>
                           )}
                           {isPlayerInOtherTeams(player.id) && (
-                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-xs hidden sm:inline-flex">
-                              <Users className="h-3 w-3 mr-1" />
-                              Multi
+                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">
+                              <Users className="h-2.5 w-2.5 sm:mr-0.5" />
+                              <span className="hidden sm:inline">Multi</span>
                             </Badge>
                           )}
                         </div>
-                        <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
                           {getAvailabilityIcon(player.availabilityStatus)}
-                          <Badge variant="outline" className={`text-xs ${getAvailabilityBadgeColor(player.availabilityStatus)}`}>
-                            {player.availabilityStatus}
-                          </Badge>
+                          <span className="capitalize">{player.availabilityStatus}</span>
                         </div>
                       </div>
                     </div>
@@ -396,10 +391,10 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                       variant="outline"
                       size="sm"
                       onClick={() => handleRemoveFromSquad(player.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 px-3 shrink-0 self-end sm:self-auto"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0 h-7 w-7 sm:h-8 sm:w-auto sm:px-3 p-0"
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      <span className="text-xs sm:text-sm">Remove</span>
+                      <X className="h-3.5 w-3.5 sm:mr-1" />
+                      <span className="hidden sm:inline text-xs">Remove</span>
                     </Button>
                   </div>
                 ))}
