@@ -112,6 +112,14 @@
   border-bottom: 2px solid hsl(120, 40%, 30%);
 }
 
+/* Mobile-optimized pitch with reduced padding */
+@media (max-width: 640px) {
+  .formation-pitch {
+    padding: 35px 12px 20px;
+    min-height: 200px;
+  }
+}
+
 /* Pitch markings - enhanced with goal boxes */
 .formation-pitch::before {
   content: '';
