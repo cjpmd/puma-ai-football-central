@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Save, Users, Gamepad2, Target, Plus, X, FileText, Loader2, UserPlus, Lock, Unlock, Clipboard, Sparkles } from 'lucide-react';
-import { DragDropFormationEditor } from './DragDropFormationEditor';
+import { GameDayStyleFormationEditor } from './GameDayStyleFormationEditor';
 import { MatchDayPackView } from './MatchDayPackView';
 import { TrainingPlanEditor } from './TrainingPlanEditor';
 import { SquadPlayer, FormationPeriod, TeamSelectionState } from '@/types/teamSelection';
@@ -1127,7 +1127,7 @@ return (
                       </CardContent>
                     </Card>
                   ) : (
-                    <DragDropFormationEditor
+                    <GameDayStyleFormationEditor
                       squadPlayers={currentTeam.squadPlayers}
                       periods={currentTeam.periods}
                       gameFormat={event.game_format || '7-a-side'}
