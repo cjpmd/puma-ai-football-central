@@ -435,6 +435,47 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       .filter((p): p is SquadPlayer => p !== undefined);
   };
 
+  // Calculate playing time summary for all players
+  const calculatePlayingTimeSummary = (): { player: SquadPlayer; minutes: number }[] => {
+    const playerTimes: Record<string, number> = {};
+    
+    // Initialize all squad players with 0 minutes
+    squadPlayers.forEach(player => {
+      playerTimes[player.id] = 0;
+    });
+    
+    // Sum up minutes from each period where player is on pitch
+    periods.forEach(period => {
+      period.positions.forEach(position => {
+        if (position.playerId) {
+          playerTimes[position.playerId] = (playerTimes[position.playerId] || 0) + period.duration;
+        }
+      });
+    });
+    
+    // Convert to array with player objects
+    return squadPlayers.map(player => ({
+      player,
+      minutes: playerTimes[player.id] || 0
+    })).sort((a, b) => b.minutes - a.minutes);
+  };
+
+  // Get player display name
+  const getPlayerDisplayName = (player: SquadPlayer): string => {
+    const name = player.name || '';
+    switch (nameDisplayOption) {
+      case 'firstName':
+        return name.split(' ')[0] || name;
+      case 'surname':
+        const parts = name.split(' ');
+        return parts[parts.length - 1] || name;
+      case 'initials':
+        return name.split(' ').map(n => n[0]).join('').toUpperCase();
+      default:
+        return name;
+    }
+  };
+
   // Auto-create first period if none exist
   useEffect(() => {
     if (periods.length === 0 && gameFormatFormations.length > 0) {
@@ -444,6 +485,9 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
 
   if (!currentPeriod) return null;
 
+  const playingTimeSummary = calculatePlayingTimeSummary();
+  const totalGameMinutes = periods.reduce((sum, p) => sum + p.duration, 0);
+
   return (
     <DndContext
       sensors={sensors}
@@ -452,15 +496,15 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       onDragEnd={handleDragEnd}
       modifiers={[snapCenterToCursor]}
     >
-      <div className="flex flex-col h-full overflow-hidden">
-        {/* Formation Selector */}
-        <div className="flex items-center justify-between px-3 py-2 border-b shrink-0">
+      <div className="flex flex-col h-[calc(100vh-220px)] overflow-hidden">
+        {/* Formation Selector - Compact */}
+        <div className="flex items-center justify-between px-2 py-1.5 border-b shrink-0">
           <Select
             value={currentPeriod.formation}
             onValueChange={(value) => updatePeriodFormation(currentPeriod.id, value)}
             disabled={isPositionsLocked}
           >
-            <SelectTrigger className="w-40 h-8 text-xs">
+            <SelectTrigger className="w-32 h-7 text-xs">
               <SelectValue placeholder="Formation" />
             </SelectTrigger>
             <SelectContent>
@@ -471,18 +515,21 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </Select>
           
           <div className="text-xs text-muted-foreground">
-            Period {activePeriodIndex + 1} of {periods.length}
+            {activePeriodIndex + 1}/{periods.length}
           </div>
         </div>
 
-        {/* Pitch Area */}
+        {/* Pitch Area - Compact */}
         <div 
           ref={pitchRef}
-          className="flex-1 min-h-[320px] relative overflow-visible"
+          className="flex-1 min-h-0 relative"
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-          <div className="formation-pitch w-full h-full" style={{ minHeight: '320px' }}>
+          <div 
+            className="formation-pitch w-full h-full"
+            style={{ maxHeight: '35vh', minHeight: '180px' }}
+          >
             <div className="goal-box-top"></div>
             <div className="goal-box-bottom"></div>
             
@@ -532,18 +579,18 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </div>
         </div>
 
-        {/* Period Tabs - Game Day Style */}
-        <div className="shrink-0 border-t bg-muted/30 px-2 py-2">
-          <div className="flex items-center gap-2">
+        {/* Period Tabs - Compact */}
+        <div className="shrink-0 border-t bg-muted/30 px-2 py-1.5">
+          <div className="flex items-center gap-1">
             {/* Left Arrow */}
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 shrink-0"
+              className="h-7 w-7 p-0 shrink-0"
               onClick={() => setActivePeriodIndex(Math.max(0, activePeriodIndex - 1))}
               disabled={activePeriodIndex === 0}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3 w-3" />
             </Button>
             
             {/* Period Buttons */}
@@ -556,7 +603,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                 >
                   <PopoverTrigger asChild>
                     <button
-                      className={`period-time-button flex-1 min-w-[60px] ${index === activePeriodIndex ? 'active' : ''}`}
+                      className={`period-time-button flex-1 min-w-[50px] text-xs py-1 ${index === activePeriodIndex ? 'active' : ''}`}
                       onClick={() => setActivePeriodIndex(index)}
                     >
                       {calculateTimeRange(index)}
@@ -603,33 +650,60 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 shrink-0"
+              className="h-7 w-7 p-0 shrink-0"
               onClick={() => setActivePeriodIndex(Math.min(periods.length - 1, activePeriodIndex + 1))}
               disabled={activePeriodIndex === periods.length - 1}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3 w-3" />
             </Button>
 
             {/* Add Period Button */}
             <Button
               variant="outline"
               size="sm"
-              className="h-8 w-8 p-0 shrink-0"
+              className="h-7 w-7 p-0 shrink-0"
               onClick={addPeriod}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3" />
             </Button>
           </div>
         </div>
 
-        {/* Substitutes Bench */}
-        <div className="shrink-0 px-2 pb-2">
+        {/* Substitutes Bench - Compact */}
+        <div className="shrink-0 px-2 py-1 border-t">
+          <div className="text-xs font-medium text-muted-foreground mb-1">Substitutes</div>
           <SubstituteBench
             id={`substitutes-${currentPeriod.id}`}
             substitutes={getSubstitutePlayers()}
             globalCaptainId={globalCaptainId}
             nameDisplayOption={nameDisplayOption}
+            compact
           />
+        </div>
+
+        {/* Playing Time Summary */}
+        <div className="shrink-0 border-t bg-muted/20 px-2 py-1.5">
+          <div className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+            <Clock className="h-3 w-3" />
+            Playing Time ({totalGameMinutes}')
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-hide pb-0.5">
+            {playingTimeSummary.map(({ player, minutes }) => (
+              <div 
+                key={player.id}
+                className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                  minutes === 0 
+                    ? 'bg-destructive/10 text-destructive' 
+                    : minutes >= totalGameMinutes 
+                      ? 'bg-primary/10 text-primary' 
+                      : 'bg-muted'
+                }`}
+              >
+                <span className="font-medium">{getPlayerDisplayName(player)}</span>
+                <span className="text-muted-foreground">{minutes}'</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
