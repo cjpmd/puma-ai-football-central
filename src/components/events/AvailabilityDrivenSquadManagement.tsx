@@ -218,7 +218,99 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         </div>
       </div>
 
-      {/* Available Players - Show First */}
+      {/* Selected Squad - Show First */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Selected Squad ({squadPlayers.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {squadPlayers.length > 0 ? (
+            <div className="space-y-4">
+              {/* Captain Selection - Hidden for training events */}
+              {!isTrainingEvent && (
+                <div className="pb-4 border-b">
+                  <label className="text-sm font-medium mb-2 block">Select Captain:</label>
+                  <Select value={localCaptainId || 'no-captain'} onValueChange={handleCaptainChange}>
+                    <SelectTrigger className="w-full max-w-xs">
+                      <SelectValue placeholder="Choose captain..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="no-captain">No Captain</SelectItem>
+                      {squadPlayers.map((player) => (
+                        <SelectItem key={player.id} value={player.id}>
+                          {player.name} (#{player.squadNumber})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Squad Players List */}
+              <div className="space-y-3">
+                {squadPlayers
+                  .sort((a, b) => {
+                    const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
+                    const aOrder = availabilityOrder[a.availabilityStatus as keyof typeof availabilityOrder] || 4;
+                    const bOrder = availabilityOrder[b.availabilityStatus as keyof typeof availabilityOrder] || 4;
+                    if (aOrder !== bOrder) return aOrder - bOrder;
+                    return a.squadNumber - b.squadNumber;
+                  })
+                  .map((player) => (
+                  <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border gap-2 ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Avatar className="h-7 w-7 sm:h-9 sm:w-9 shrink-0">
+                        <AvatarImage src={`/api/placeholder/40/40`} />
+                        <AvatarFallback className="text-[10px] sm:text-xs">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1 flex-wrap">
+                          <span className="font-medium text-xs sm:text-sm truncate">{player.name}</span>
+                          <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
+                          {!isTrainingEvent && player.id === localCaptainId && (
+                            <Badge className="bg-yellow-500 text-white text-[10px] px-1 h-4">
+                              <Crown className="h-2.5 w-2.5 sm:mr-0.5" />
+                              <span className="hidden sm:inline">C</span>
+                            </Badge>
+                          )}
+                          {isPlayerInOtherTeams(player.id) && (
+                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">
+                              <Users className="h-2.5 w-2.5 sm:mr-0.5" />
+                              <span className="hidden sm:inline">Multi</span>
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                          {getAvailabilityIcon(player.availabilityStatus)}
+                          <span className="capitalize">{player.availabilityStatus}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleRemoveFromSquad(player.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0 h-7 w-7 sm:h-8 sm:w-auto sm:px-3 p-0"
+                    >
+                      <X className="h-3.5 w-3.5 sm:mr-1" />
+                      <span className="hidden sm:inline text-xs">Remove</span>
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-muted-foreground">
+              <p className="text-sm">No players selected yet. Add players from the list below.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Available Players - Show Second */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2">
@@ -316,97 +408,6 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         </CardContent>
       </Card>
 
-      {/* Selected Squad - Show Second */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Selected Squad ({squadPlayers.length})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {squadPlayers.length > 0 ? (
-            <div className="space-y-4">
-              {/* Captain Selection - Hidden for training events */}
-              {!isTrainingEvent && (
-                <div className="pb-4 border-b">
-                  <label className="text-sm font-medium mb-2 block">Select Captain:</label>
-                  <Select value={localCaptainId || 'no-captain'} onValueChange={handleCaptainChange}>
-                    <SelectTrigger className="w-full max-w-xs">
-                      <SelectValue placeholder="Choose captain..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-captain">No Captain</SelectItem>
-                      {squadPlayers.map((player) => (
-                        <SelectItem key={player.id} value={player.id}>
-                          {player.name} (#{player.squadNumber})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Squad Players List */}
-              <div className="space-y-3">
-                {squadPlayers
-                  .sort((a, b) => {
-                    const availabilityOrder = { available: 1, pending: 2, unavailable: 3 };
-                    const aOrder = availabilityOrder[a.availabilityStatus as keyof typeof availabilityOrder] || 4;
-                    const bOrder = availabilityOrder[b.availabilityStatus as keyof typeof availabilityOrder] || 4;
-                    if (aOrder !== bOrder) return aOrder - bOrder;
-                    return a.squadNumber - b.squadNumber;
-                  })
-                  .map((player) => (
-                  <div key={player.id} className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border gap-2 ${getAvailabilityColor(player.availabilityStatus)} bg-opacity-20`}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <Avatar className="h-7 w-7 sm:h-9 sm:w-9 shrink-0">
-                        <AvatarImage src={`/api/placeholder/40/40`} />
-                        <AvatarFallback className="text-[10px] sm:text-xs">{formatPlayerName(player.name, 'initials')}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1 flex-wrap">
-                          <span className="font-medium text-xs sm:text-sm truncate">{player.name}</span>
-                          <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
-                          {!isTrainingEvent && player.id === localCaptainId && (
-                            <Badge className="bg-yellow-500 text-white text-[10px] px-1 h-4">
-                              <Crown className="h-2.5 w-2.5 sm:mr-0.5" />
-                              <span className="hidden sm:inline">C</span>
-                            </Badge>
-                          )}
-                          {isPlayerInOtherTeams(player.id) && (
-                            <Badge variant="outline" className="text-blue-600 border-blue-600 text-[10px] px-1 h-4">
-                              <Users className="h-2.5 w-2.5 sm:mr-0.5" />
-                              <span className="hidden sm:inline">Multi</span>
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
-                          {getAvailabilityIcon(player.availabilityStatus)}
-                          <span className="capitalize">{player.availabilityStatus}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRemoveFromSquad(player.id)}
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50 shrink-0 h-7 w-7 sm:h-8 sm:w-auto sm:px-3 p-0"
-                    >
-                      <X className="h-3.5 w-3.5 sm:mr-1" />
-                      <span className="hidden sm:inline text-xs">Remove</span>
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-4 text-muted-foreground">
-              <p className="text-sm">No players selected yet. Add players from the list above.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
