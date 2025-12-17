@@ -604,7 +604,7 @@ export const GameDayView: React.FC = () => {
       {/* Content */}
       <div className="game-day-content">
         {/* Compact Timeline */}
-        <div className="px-2 py-1">
+        <div className="px-2 py-1 shrink-0">
           <GameDayTimeline
             matchEvents={filteredMatchEvents}
             periodDuration={periodDuration}
@@ -614,68 +614,66 @@ export const GameDayView: React.FC = () => {
           />
         </div>
 
-        {/* Formation Display */}
-        <div className="relative">
-          <div className="periods-carousel">
-            <GameDayFormationCard
-              eventId={eventId!}
-              teamId={event.team_id}
-              periodNumber={currentSelection.period_number}
-              formation={currentSelection.formation}
-              positions={positions}
-              periodDuration={periodDuration}
-              substitutes={substitutes}
-              matchEvents={filteredMatchEvents}
-              onEventCreated={handleEventCreated}
-              onSubstitution={handleSubstitution}
-              currentMinute={currentMinute}
-            />
-          </div>
-
-          {/* Period Navigation with Time Ranges */}
-          {totalPeriods > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-2 px-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={handlePreviousPeriod}
-                disabled={currentPeriodIndex === 0}
-              >
-                <ChevronLeft className="h-3 w-3" />
-              </Button>
-              
-              <div className="flex gap-1 flex-1 justify-center overflow-x-auto">
-                {eventSelections.map((sel, i) => {
-                  const startMin = eventSelections
-                    .slice(0, i)
-                    .reduce((sum, s) => sum + (s.duration_minutes || 25), 0);
-                  const endMin = startMin + (sel.duration_minutes || 25);
-                  
-                  return (
-                    <button
-                      key={i}
-                      className={`period-time-button ${i === currentPeriodIndex ? 'active' : ''}`}
-                      onClick={() => setCurrentPeriodIndex(i)}
-                    >
-                      <div className="text-sm font-semibold">{startMin}-{endMin}'</div>
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7"
-                onClick={handleNextPeriod}
-                disabled={currentPeriodIndex === totalPeriods - 1}
-              >
-                <ChevronRight className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
+        {/* Formation Display - fills available space */}
+        <div className="formation-wrapper">
+          <GameDayFormationCard
+            eventId={eventId!}
+            teamId={event.team_id}
+            periodNumber={currentSelection.period_number}
+            formation={currentSelection.formation}
+            positions={positions}
+            periodDuration={periodDuration}
+            substitutes={substitutes}
+            matchEvents={filteredMatchEvents}
+            onEventCreated={handleEventCreated}
+            onSubstitution={handleSubstitution}
+            currentMinute={currentMinute}
+          />
         </div>
+
+        {/* Period Navigation with Time Ranges */}
+        {totalPeriods > 1 && (
+          <div className="flex items-center justify-center gap-2 py-2 px-2 shrink-0">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handlePreviousPeriod}
+              disabled={currentPeriodIndex === 0}
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+            
+            <div className="flex gap-1 flex-1 justify-center overflow-x-auto">
+              {eventSelections.map((sel, i) => {
+                const startMin = eventSelections
+                  .slice(0, i)
+                  .reduce((sum, s) => sum + (s.duration_minutes || 25), 0);
+                const endMin = startMin + (sel.duration_minutes || 25);
+                
+                return (
+                  <button
+                    key={i}
+                    className={`period-time-button ${i === currentPeriodIndex ? 'active' : ''}`}
+                    onClick={() => setCurrentPeriodIndex(i)}
+                  >
+                    <div className="text-sm font-semibold">{startMin}-{endMin}'</div>
+                  </button>
+                );
+              })}
+            </div>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={handleNextPeriod}
+              disabled={currentPeriodIndex === totalPeriods - 1}
+            >
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          </div>
+        )}
 
         {/* Substitutes - no extra wrapper, just the bench */}
         {substitutes.length > 0 && (

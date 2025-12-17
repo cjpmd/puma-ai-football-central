@@ -252,14 +252,14 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   };
 
   return (
-    <div className="period-card">
-      <div className="text-center py-1">
+    <div className="period-card flex flex-col flex-1 min-h-0">
+      <div className="text-center py-1 shrink-0">
         <p className="text-xs font-semibold text-muted-foreground">
           {formation}
         </p>
       </div>
 
-      <div className="formation-pitch">
+      <div className="formation-pitch flex-1 min-h-0">
         <div className="goal-box-top"></div>
         <div className="goal-box-bottom"></div>
         {positions.map((pos) => {
