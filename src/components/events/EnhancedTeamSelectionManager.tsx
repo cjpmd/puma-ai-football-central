@@ -891,68 +891,89 @@ return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden' : ''}`}>
         <div className={`${isMobile ? 'h-[calc(100dvh-56px)]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0 w-full max-w-full overflow-hidden`}>
-          {/* Compact Header */}
-          <div className={`border-b ${isMobile ? 'px-2 py-1.5' : 'px-4 py-3'}`}>
-            {/* Row 1: Title + Teams + Actions */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Mobile Close Button - positioned first */}
-              {isMobile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClose}
-                  className="h-7 w-7 p-0 shrink-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-              
-              {/* Title */}
-              <div className={`min-w-0 ${isMobile ? 'flex-1' : 'mr-2'}`}>
-                <h2 className={`font-semibold truncate ${isMobile ? 'text-sm' : 'text-lg'}`}>{event.title}</h2>
-                {!isMobile && (
-                  <p className="text-muted-foreground text-xs truncate">
-                    {event.date} • {event.game_format}
-                  </p>
-                )}
-              </div>
-
-              {/* Team Buttons - More compact on mobile */}
+          {/* Compact Header - 2 Rows */}
+          <div className={`border-b ${isMobile ? 'px-2 py-1.5' : 'px-4 py-3'} space-y-2`}>
+            {/* Row 1: Teams Only + Close Button on far right */}
+            <div className="flex items-center gap-1.5">
+              {/* Team Buttons */}
               <div className="flex items-center gap-0.5 flex-wrap">
                 {teamSelections.map((team, index) => (
-                  <div key={team.teamNumber} className="flex items-center">
-                    <Button
-                      variant={index === currentTeamIndex ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => {
-                        setCurrentTeamIndex(index);
-                        setActiveTab('squad');
-                      }}
-                      className={`${isMobile ? 'h-6 text-[10px] px-1.5' : 'h-7 text-xs px-2'} ${teamSelections.length > 1 ? 'rounded-r-none border-r-0' : ''}`}
-                    >
-                      {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
-                      {team.squadPlayers.length > 0 && (
-                        <span className={`ml-0.5 opacity-70 ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>({team.squadPlayers.length})</span>
-                      )}
-                    </Button>
-                    {teamSelections.length > 1 && (
-                      <Button
-                        variant={index === currentTeamIndex ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => deleteTeam(index)}
-                        className={`${isMobile ? 'h-6 px-0.5' : 'h-7 px-1'} text-xs rounded-l-none text-destructive hover:text-destructive hover:bg-destructive/10`}
-                      >
-                        <X className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
-                      </Button>
+                  <Button
+                    key={team.teamNumber}
+                    variant={index === currentTeamIndex ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => {
+                      setCurrentTeamIndex(index);
+                      setActiveTab('squad');
+                    }}
+                    className={`${isMobile ? 'h-6 text-[10px] px-1.5' : 'h-7 text-xs px-2'}`}
+                  >
+                    {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
+                    {team.squadPlayers.length > 0 && (
+                      <span className={`ml-0.5 opacity-70 ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>({team.squadPlayers.length})</span>
                     )}
-                  </div>
+                  </Button>
                 ))}
                 <Button onClick={addTeam} variant="outline" size="sm" className={`${isMobile ? 'h-6 w-6 p-0' : 'h-7 px-2'}`}>
                   <Plus className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
                 </Button>
+                {teamSelections.length > 1 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => deleteTeam(currentTeamIndex)}
+                    className={`${isMobile ? 'h-6 px-1.5' : 'h-7 px-2'} text-xs text-destructive hover:text-destructive hover:bg-destructive/10`}
+                  >
+                    <X className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+                  </Button>
+                )}
               </div>
 
-              {/* Category Selector (inline, compact) */}
+              {/* Spacer */}
+              <div className="flex-1" />
+
+              {/* Close Button - far right */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onClose}
+                className="h-7 w-7 p-0 shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Row 2: AI, Lock, Category, Save */}
+            <div className="flex items-center gap-1.5">
+              {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAIBuilder(true)}
+                  className="h-7 px-2"
+                  title="AI Builder"
+                >
+                  <Sparkles className="h-3 w-3" />
+                </Button>
+              )}
+
+              {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTogglePositionsLock}
+                  className={`h-7 px-2 ${
+                    currentTeam.isPositionsLocked 
+                      ? 'bg-red-50 border-red-200 text-red-700' 
+                      : 'bg-green-50 border-green-200 text-green-700'
+                  }`}
+                  title={currentTeam.isPositionsLocked ? 'Unlock' : 'Lock'}
+                >
+                  {currentTeam.isPositionsLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                </Button>
+              )}
+
+              {/* Category Selector */}
               {performanceCategories.length > 0 && currentTeam && (
                 <Select 
                   value={currentTeam.performanceCategory || 'none'} 
@@ -977,34 +998,6 @@ return (
 
               {/* Action Buttons */}
               <div className="flex items-center gap-1">
-                {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowAIBuilder(true)}
-                    className="h-7 px-2"
-                    title="AI Builder"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                  </Button>
-                )}
-
-                {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleTogglePositionsLock}
-                    className={`h-7 px-2 ${
-                      currentTeam.isPositionsLocked 
-                        ? 'bg-red-50 border-red-200 text-red-700' 
-                        : 'bg-green-50 border-green-200 text-green-700'
-                    }`}
-                    title={currentTeam.isPositionsLocked ? 'Unlock' : 'Lock'}
-                  >
-                    {currentTeam.isPositionsLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
-                  </Button>
-                )}
-
                 {!isMobile && (
                   <>
                     <Button onClick={handleCopyTeams} variant="outline" size="sm" className="h-7 px-2">
@@ -1065,24 +1058,13 @@ return (
 
               <TabsContent value="staff" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                 {currentTeam && (
-                  <div className="space-y-2">
-                    <div className="flex justify-end">
-                      <Button
-                        variant="outline"
-                        size={isMobile ? 'sm' : 'default'}
-                        onClick={() => setLinkModalOpen(true)}
-                      >
-                        Manage Staff Links
-                      </Button>
-                    </div>
-                    <EventStaffAssignmentSection
-                      eventId={event.id}
-                      teamId={teamId}
-                      selectedStaff={currentTeam.selectedStaff || []}
-                      onStaffChange={handleStaffChange}
-                      refreshToken={staffLinksRefresh}
-                    />
-                  </div>
+                  <EventStaffAssignmentSection
+                    eventId={event.id}
+                    teamId={teamId}
+                    selectedStaff={currentTeam.selectedStaff || []}
+                    onStaffChange={handleStaffChange}
+                    refreshToken={staffLinksRefresh}
+                  />
                 )}
               </TabsContent>
 
