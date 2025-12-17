@@ -1043,7 +1043,7 @@ return (
               </TabsList>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 pb-2">
+            <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
               <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden"  style={{ height: 'auto' }}>
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement

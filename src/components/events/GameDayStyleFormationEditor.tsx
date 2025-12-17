@@ -550,17 +550,11 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         {/* Pitch Area - Responsive */}
         <div 
           ref={pitchRef}
-          className="flex-1 min-h-0 relative"
+          className="flex-1 min-h-0 relative overflow-visible"
           onTouchStart={isMobile ? handleTouchStart : undefined}
           onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
-          <div 
-            className="formation-pitch w-full h-full"
-            style={{ 
-              maxHeight: isMobile ? '48vh' : '50vh', 
-              minHeight: isMobile ? '200px' : '220px' 
-            }}
-          >
+          <div className="formation-pitch w-full h-full">
             <div className="goal-box-top"></div>
             <div className="goal-box-bottom"></div>
             

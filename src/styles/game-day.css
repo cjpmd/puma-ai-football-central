@@ -92,7 +92,7 @@
 .formation-pitch {
   position: relative;
   width: 100%;
-  min-height: 380px;
+  min-height: 320px;
   max-height: 55vh;
   aspect-ratio: 3/4;
   background: 
@@ -104,7 +104,7 @@
       hsl(120, 45%, 38%) 80px
     );
   margin: 0;
-  padding: 60px 20px 30px;
+  padding: 50px 20px 25px;
   border-radius: 0;
   overflow: visible;
   border: none;
@@ -112,11 +112,14 @@
   border-bottom: 2px solid hsl(120, 40%, 30%);
 }
 
-/* Mobile-optimized pitch with reduced padding */
+/* Mobile-optimized pitch - remove aspect-ratio constraint to allow proper sizing */
 @media (max-width: 640px) {
   .formation-pitch {
-    padding: 35px 12px 20px;
-    min-height: 200px;
+    aspect-ratio: auto;
+    min-height: 300px;
+    max-height: none;
+    height: calc(100vh - 320px);
+    padding: 30px 10px 20px;
   }
 }
 
