@@ -332,7 +332,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
     const touchEndX = e.changedTouches[0].clientX;
     const diff = touchStartX.current - touchEndX;
     
-    if (Math.abs(diff) > 50) {
+    if (Math.abs(diff) > 30) {
       if (diff > 0 && activePeriodIndex < periods.length - 1) {
         setActivePeriodIndex(activePeriodIndex + 1);
       } else if (diff < 0 && activePeriodIndex > 0) {
@@ -524,15 +524,19 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       onDragEnd={handleDragEnd}
       modifiers={[snapCenterToCursor]}
     >
-      <div className={`flex flex-col overflow-hidden ${isMobile ? 'h-[calc(100vh-180px)]' : 'h-[calc(100vh-160px)]'}`}>
-        {/* Formation Selector - Compact */}
-        <div className="flex items-center justify-between px-2 py-1 border-b shrink-0">
+      <div 
+        className="flex flex-col h-full overflow-hidden"
+        onTouchStart={isMobile ? handleTouchStart : undefined}
+        onTouchEnd={isMobile ? handleTouchEnd : undefined}
+      >
+        {/* Formation Selector - Ultra Compact */}
+        <div className={`flex items-center justify-between px-1.5 border-b shrink-0 ${isMobile ? 'py-0.5' : 'py-1'}`}>
           <Select
             value={currentPeriod.formation}
             onValueChange={(value) => updatePeriodFormation(currentPeriod.id, value)}
             disabled={isPositionsLocked}
           >
-            <SelectTrigger className={`${isMobile ? 'w-24 h-6 text-[10px]' : 'w-28 h-6 text-xs'}`}>
+            <SelectTrigger className={`${isMobile ? 'w-20 h-5 text-[9px]' : 'w-28 h-6 text-xs'}`}>
               <SelectValue placeholder="Formation" />
             </SelectTrigger>
             <SelectContent>
@@ -542,7 +546,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
             </SelectContent>
           </Select>
           
-          <div className="text-xs text-muted-foreground">
+          <div className={`text-muted-foreground ${isMobile ? 'text-[9px]' : 'text-xs'}`}>
             {activePeriodIndex + 1}/{periods.length}
           </div>
         </div>
@@ -551,8 +555,6 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         <div 
           ref={pitchRef}
           className="flex-1 min-h-0 relative overflow-visible"
-          onTouchStart={isMobile ? handleTouchStart : undefined}
-          onTouchEnd={isMobile ? handleTouchEnd : undefined}
         >
           <div className="formation-pitch w-full h-full">
             <div className="goal-box-top"></div>
@@ -604,22 +606,22 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </div>
         </div>
 
-        {/* Period Tabs - Compact */}
-        <div className="shrink-0 border-t bg-muted/30 px-2 py-1.5">
-          <div className="flex items-center gap-1">
+        {/* Period Tabs - Ultra Compact on Mobile */}
+        <div className={`shrink-0 border-t bg-muted/30 px-1.5 ${isMobile ? 'py-0.5' : 'py-1.5'}`}>
+          <div className="flex items-center gap-0.5">
             {/* Left Arrow */}
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 shrink-0"
+              className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
               onClick={() => setActivePeriodIndex(Math.max(0, activePeriodIndex - 1))}
               disabled={activePeriodIndex === 0}
             >
-              <ChevronLeft className="h-3 w-3" />
+              <ChevronLeft className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
             </Button>
             
             {/* Period Buttons */}
-            <div className="flex-1 flex gap-1 overflow-x-auto scrollbar-hide">
+            <div className="flex-1 flex gap-0.5 overflow-x-auto scrollbar-hide">
               {periods.map((period, index) => (
                 <Popover 
                   key={period.id} 
@@ -628,7 +630,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                 >
                   <PopoverTrigger asChild>
                     <button
-                      className={`period-time-button flex-1 min-w-[50px] text-xs py-1 ${index === activePeriodIndex ? 'active' : ''}`}
+                      className={`period-time-button flex-1 min-w-[40px] ${isMobile ? 'text-[10px] py-0.5' : 'text-xs py-1'} ${index === activePeriodIndex ? 'active' : ''}`}
                       onClick={() => setActivePeriodIndex(index)}
                     >
                       {calculateTimeRange(index)}
@@ -675,28 +677,28 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 w-7 p-0 shrink-0"
+              className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
               onClick={() => setActivePeriodIndex(Math.min(periods.length - 1, activePeriodIndex + 1))}
               disabled={activePeriodIndex === periods.length - 1}
             >
-              <ChevronRight className="h-3 w-3" />
+              <ChevronRight className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
             </Button>
 
             {/* Add Period Button */}
             <Button
               variant="outline"
               size="sm"
-              className="h-7 w-7 p-0 shrink-0"
+              className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
               onClick={addPeriod}
             >
-              <Plus className="h-3 w-3" />
+              <Plus className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
             </Button>
           </div>
         </div>
 
-        {/* Substitutes Bench - Compact */}
-        <div className={`shrink-0 px-2 border-t ${isMobile ? 'py-0.5' : 'py-1'}`}>
-          <div className={`font-medium text-muted-foreground ${isMobile ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>Subs</div>
+        {/* Substitutes Bench - Ultra Compact on Mobile */}
+        <div className={`shrink-0 px-1.5 border-t ${isMobile ? 'py-0.5' : 'py-1'}`}>
+          <div className={`font-medium text-muted-foreground ${isMobile ? 'text-[9px] mb-0' : 'text-xs mb-1'}`}>Subs</div>
           <SubstituteBench
             id={`substitutes-${currentPeriod.id}`}
             substitutes={getSubstitutePlayers()}
@@ -706,17 +708,17 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           />
         </div>
 
-        {/* Playing Time Summary */}
-        <div className={`shrink-0 border-t bg-muted/20 px-2 ${isMobile ? 'py-1' : 'py-1.5'}`}>
-          <div className={`font-medium text-muted-foreground flex items-center gap-1 ${isMobile ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>
-            <Clock className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+        {/* Playing Time Summary - Ultra Compact on Mobile */}
+        <div className={`shrink-0 border-t bg-muted/20 px-1.5 ${isMobile ? 'py-0.5' : 'py-1.5'}`}>
+          <div className={`font-medium text-muted-foreground flex items-center gap-0.5 ${isMobile ? 'text-[9px] mb-0' : 'text-xs mb-1'}`}>
+            <Clock className={isMobile ? 'h-2 w-2' : 'h-3 w-3'} />
             Time ({totalGameMinutes}')
           </div>
-          <div className="flex gap-1 overflow-x-auto scrollbar-hide pb-0.5">
+          <div className="flex gap-0.5 overflow-x-auto scrollbar-hide">
             {playingTimeSummary.map(({ player, minutes }) => (
               <div 
                 key={player.id}
-                className={`flex items-center gap-0.5 rounded-full whitespace-nowrap ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} ${
+                className={`flex items-center gap-0.5 rounded-full whitespace-nowrap ${isMobile ? 'px-1 py-0 text-[8px]' : 'px-2 py-1 text-xs'} ${
                   minutes === 0 
                     ? 'bg-destructive/10 text-destructive' 
                     : minutes >= totalGameMinutes 

@@ -32,14 +32,14 @@ export const SubstituteBench: React.FC<SubstituteBenchProps> = ({
     <div
       ref={setNodeRef}
       className={`
-        flex flex-wrap gap-1.5 rounded-lg border-2 border-dashed
-        ${compact ? 'p-2 min-h-[60px]' : 'p-3 min-h-[100px]'}
+        flex flex-wrap gap-1 rounded-lg border-2 border-dashed
+        ${compact ? 'p-1 min-h-[40px]' : 'p-3 min-h-[100px]'}
         ${isOver ? 'border-solid border-primary bg-primary/15 ring-4 ring-primary/30 shadow-lg animate-pulse' : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'}
         transition-all duration-300 ease-out
       `}
     >
       {substitutes.length === 0 ? (
-        <div className={`flex-1 flex items-center justify-center text-gray-500 ${compact ? 'text-xs' : 'text-sm'}`}>
+        <div className={`flex-1 flex items-center justify-center text-gray-500 ${compact ? 'text-[9px]' : 'text-sm'}`}>
           Drag players here
         </div>
       ) : (

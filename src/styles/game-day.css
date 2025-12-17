@@ -112,14 +112,14 @@
   border-bottom: 2px solid hsl(120, 40%, 30%);
 }
 
-/* Mobile-optimized pitch - remove aspect-ratio constraint to allow proper sizing */
+/* Mobile-optimized pitch - fill available flex space */
 @media (max-width: 640px) {
   .formation-pitch {
     aspect-ratio: auto;
-    min-height: 300px;
+    min-height: 180px;
     max-height: none;
-    height: calc(100vh - 320px);
-    padding: 30px 10px 20px;
+    height: 100%;
+    padding: 20px 6px 15px;
   }
 }
 

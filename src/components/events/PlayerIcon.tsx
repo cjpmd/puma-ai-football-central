@@ -70,8 +70,8 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
   };
 
   const actualIsDragging = isDragging || dndIsDragging;
-  const circularSize = compact ? 'w-10 h-10' : isLarger ? 'w-16 h-16' : 'w-14 h-14';
-  const textSize = compact ? 'text-[10px]' : 'text-xs';
+  const circularSize = compact ? 'w-8 h-8' : isLarger ? 'w-16 h-16' : 'w-14 h-14';
+  const textSize = compact ? 'text-[8px]' : 'text-xs';
 
   if (isCircular) {
     return (

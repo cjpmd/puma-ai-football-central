@@ -1043,8 +1043,8 @@ return (
               </TabsList>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto px-2 pb-2">
-              <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden"  style={{ height: 'auto' }}>
+            <div className={`flex-1 min-h-0 px-2 pb-2 ${activeTab === 'formation' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+              <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement
                     key={`team-${currentTeamIndex}`}
@@ -1099,7 +1099,7 @@ return (
                   )}
                 </TabsContent>
               ) : (
-                <TabsContent value="formation" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
+                <TabsContent value="formation" className="mt-0 h-full data-[state=active]:flex data-[state=active]:flex-col data-[state=inactive]:hidden overflow-hidden">
                   {!currentTeam || currentTeam.squadPlayers.length === 0 ? (
                     <Card>
                       <CardContent className={`text-center ${isMobile ? 'py-4' : 'py-8'}`}>
