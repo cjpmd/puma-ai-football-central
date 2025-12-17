@@ -525,7 +525,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       modifiers={[snapCenterToCursor]}
     >
       <div 
-        className="flex flex-col h-full overflow-hidden"
+        className="flex flex-col h-full overflow-hidden w-full max-w-full"
         onTouchStart={isMobile ? handleTouchStart : undefined}
         onTouchEnd={isMobile ? handleTouchEnd : undefined}
       >
@@ -554,7 +554,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         {/* Pitch Area - Fill available space */}
         <div 
           ref={pitchRef}
-          className="flex-1 min-h-0 relative overflow-hidden"
+          className="flex-1 min-h-0 relative overflow-hidden w-full max-w-full"
         >
           <div className="formation-pitch w-full h-full">
             <div className="goal-box-top"></div>

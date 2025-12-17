@@ -890,7 +890,7 @@ return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden' : ''}`}>
-        <div className={`${isMobile ? 'h-[calc(100dvh-56px)]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0`}>
+        <div className={`${isMobile ? 'h-[calc(100dvh-56px)]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0 w-full max-w-full overflow-hidden`}>
           {/* Compact Header */}
           <div className={`border-b ${isMobile ? 'px-2 py-1.5' : 'px-4 py-3'}`}>
             {/* Row 1: Title + Teams + Actions */}
@@ -1024,9 +1024,9 @@ return (
             </div>
           </div>
 
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col">
-            <div className={`${isMobile ? 'p-2' : 'p-6'} flex-shrink-0`}>
+        <div className="flex-1 min-h-0 overflow-hidden w-full max-w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col w-full max-w-full">
+            <div className={`${isMobile ? 'p-2' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
                   <Users className="h-3 w-3" />
@@ -1043,7 +1043,7 @@ return (
               </TabsList>
             </div>
 
-            <div className={`flex-1 min-h-0 px-2 pb-2 ${activeTab === 'formation' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+            <div className={`flex-1 min-h-0 px-2 pb-2 w-full max-w-full ${activeTab === 'formation' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
               <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
                 {currentTeam && (
                   <AvailabilityDrivenSquadManagement
