@@ -551,10 +551,10 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           </div>
         </div>
 
-        {/* Pitch Area - Responsive */}
+        {/* Pitch Area - Fill available space */}
         <div 
           ref={pitchRef}
-          className="flex-1 min-h-0 relative overflow-visible"
+          className="flex-1 min-h-0 relative overflow-hidden"
         >
           <div className="formation-pitch w-full h-full">
             <div className="goal-box-top"></div>

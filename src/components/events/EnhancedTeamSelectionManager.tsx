@@ -890,7 +890,7 @@ return (
   <>
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden' : ''}`}>
-        <div className={`${isMobile ? 'h-[95vh]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0`}>
+        <div className={`${isMobile ? 'h-[calc(100dvh-56px)]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0`}>
           {/* Compact Header */}
           <div className={`border-b ${isMobile ? 'px-2 py-1.5' : 'px-4 py-3'}`}>
             {/* Row 1: Title + Teams + Actions */}

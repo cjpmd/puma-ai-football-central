@@ -116,10 +116,13 @@
 @media (max-width: 640px) {
   .formation-pitch {
     aspect-ratio: auto;
-    min-height: 180px;
+    min-height: 120px;
     max-height: none;
     height: 100%;
-    padding: 20px 6px 15px;
+    padding: 10px 18px 8px;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 }
 
