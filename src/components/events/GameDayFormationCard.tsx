@@ -309,23 +309,18 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                 )}
                 
                 <div className={playerCircleClass}>
-                  {/* Position badge inside circle at top */}
+                  {renderPlayerBadges(pos.playerId, pos.isCaptain)}
+                  
+                  {/* Position abbreviation - colored text */}
                   <div className="position-badge-inline">
                     {getPositionAbbreviation(pos.position)}
                   </div>
                   
-                  {renderPlayerBadges(pos.playerId, pos.isCaptain)}
-                  
-                  {/* Player name inside circle */}
+                  {/* Player name */}
                   <div className="player-circle-name">{pos.playerName.split(' ')[0]}</div>
                   
-                  {/* Squad number below name */}
-                  <div className="player-number">{pos.squadNumber}</div>
-                  
-                  {/* Minutes at bottom of circle */}
-                  {pos.minutesPlayed !== undefined && (
-                    <div className="player-minutes-inline">{pos.minutesPlayed}'</div>
-                  )}
+                  {/* Squad number */}
+                  <div className="player-number">#{pos.squadNumber}</div>
                 </div>
               </div>
             </GameDayPlayerEventMenu>

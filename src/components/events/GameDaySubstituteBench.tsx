@@ -15,36 +15,26 @@ interface GameDaySubstituteBenchProps {
   onPlayerLongPress: (playerId: string) => void;
 }
 
-// Separate component for each substitute player to properly use hooks
-const SubstituteCard: React.FC<{
+// Compact circular icon for each substitute - matching Formation Tab style
+const SubstituteIcon: React.FC<{
   player: SubstitutePlayer;
   onLongPress: () => void;
 }> = ({ player, onLongPress }) => {
   const longPressHandlers = useLongPress(onLongPress);
   const firstName = player.name.split(' ')[0];
-  // Dynamic font size: smaller for longer names
-  const fontSize = firstName.length <= 4 ? 14 : firstName.length <= 6 ? 12 : 10;
   
   return (
     <div
-      className={`substitute-card ${player.isUsed ? 'used' : ''}`}
+      className="substitute-player-icon"
       {...longPressHandlers}
     >
       {player.replacedPlayerName && (
-        <div className="replaced-by-label">
+        <div className="replaced-label">
           {player.replacedPlayerName.split(' ')[0]}
         </div>
       )}
-      <div className="player-circle">
-        <div className="player-name-in-circle" style={{ fontSize: `${fontSize}px` }}>
-          {firstName}
-        </div>
-      </div>
-      <div className="substitute-number">#{player.squad_number}</div>
-      <div className="substitute-position">{player.position}</div>
-      {player.isUsed && (
-        <div className="text-[9px] text-green-600 dark:text-green-400 font-medium">Available</div>
-      )}
+      <span className="sub-name">{firstName}</span>
+      <span className="sub-number">#{player.squad_number}</span>
     </div>
   );
 };
@@ -54,13 +44,17 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
   onPlayerLongPress
 }) => {
   if (substitutes.length === 0) {
-    return null;
+    return (
+      <div className="substitute-bench">
+        <span className="substitute-bench-empty">No subs</span>
+      </div>
+    );
   }
 
   return (
     <div className="substitute-bench">
       {substitutes.map((player) => (
-        <SubstituteCard
+        <SubstituteIcon
           key={player.id}
           player={player}
           onLongPress={() => onPlayerLongPress(player.id)}
