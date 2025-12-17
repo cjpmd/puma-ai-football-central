@@ -46,32 +46,25 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  min-height: 0;
 }
 
-/* Periods carousel - horizontal scrolling */
-.periods-carousel {
-  flex-shrink: 0;
-  display: flex;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-
-.periods-carousel::-webkit-scrollbar {
-  display: none;
-}
-
-/* Individual period card - no padding for full width */
-.period-card {
-  flex: 0 0 100vw;
-  width: 100vw;
+/* Formation wrapper - fills available space */
+.formation-wrapper {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  scroll-snap-align: start;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Individual period card - fills available height */
+.period-card {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   overflow: visible;
   padding: 0;
   min-height: 0;
@@ -88,13 +81,12 @@
   flex-shrink: 0;
 }
 
-/* Formation pitch - full width with striped grass effect */
+/* Formation pitch - fills available space */
 .formation-pitch {
   position: relative;
   width: 100%;
-  min-height: 320px;
-  max-height: 55vh;
-  aspect-ratio: 3/4;
+  flex: 1;
+  min-height: 200px;
   background: 
     repeating-linear-gradient(
       0deg,
@@ -104,27 +96,12 @@
       hsl(120, 45%, 38%) 80px
     );
   margin: 0;
-  padding: 50px 20px 25px;
+  padding: 8px 12px 6px;
   border-radius: 0;
   overflow: visible;
   border: none;
   border-top: 2px solid hsl(120, 40%, 30%);
   border-bottom: 2px solid hsl(120, 40%, 30%);
-}
-
-/* Mobile-optimized pitch - fill available flex space */
-@media (max-width: 640px) {
-  .formation-pitch {
-    aspect-ratio: auto;
-    min-height: 120px;
-    max-height: none;
-    height: 100%;
-    padding: 8px 12px 6px;
-    width: 100%;
-    max-width: 100%;
-    box-sizing: border-box;
-    overflow: hidden;
-  }
 }
 
 /* Pitch markings - enhanced with goal boxes */
