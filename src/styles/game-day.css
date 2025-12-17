@@ -188,42 +188,47 @@
   -webkit-touch-callout: none;
 }
 
-/* Player circles - name inside, number below */
+/* Player circles - white background with colored position borders */
 .player-circle {
-  width: 60px;
-  height: 60px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
-  background: hsl(217, 91%, 60%);
-  border: 3px solid hsl(0, 0%, 100%);
+  background: hsl(0, 0%, 100%);
+  border: 3px solid hsl(var(--border));
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  box-shadow: 0 2px 8px hsla(0, 0%, 0%, 0.3);
+  box-shadow: 0 2px 8px hsla(0, 0%, 0%, 0.15);
   transition: transform 0.2s;
-  padding: 18px 4px 4px;
+  padding: 4px;
+  gap: 0;
 }
 
 .player-circle:active {
   transform: scale(0.95);
 }
 
-/* Position-specific colors - all blue in reference */
+/* Position-specific border colors - matching Formation Tab */
 .player-circle.goalkeeper {
-  background: hsl(217, 91%, 60%);
+  border-color: hsl(45, 93%, 47%);
+  background: hsl(48, 96%, 95%);
 }
 
 .player-circle.defender {
-  background: hsl(217, 91%, 60%);
+  border-color: hsl(217, 91%, 60%);
+  background: hsl(214, 100%, 97%);
 }
 
 .player-circle.midfielder {
-  background: hsl(217, 91%, 60%);
+  border-color: hsl(142, 71%, 45%);
+  background: hsl(138, 76%, 97%);
 }
 
 .player-circle.forward {
-  background: hsl(217, 91%, 60%);
+  border-color: hsl(0, 84%, 60%);
+  background: hsl(0, 86%, 97%);
 }
 
 /* Card statuses - border colors */
@@ -243,53 +248,57 @@
   border-width: 4px;
 }
 
-/* Position badge inside circle at top */
+/* Position badge - colored text matching position */
 .position-badge-inline {
-  position: absolute;
-  top: -2px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: hsla(0, 0%, 0%, 0.8);
-  color: hsl(0, 0%, 100%);
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
-  white-space: nowrap;
   line-height: 1;
+  text-transform: uppercase;
 }
 
-/* Player name inside circle - BIGGER */
+.player-circle.goalkeeper .position-badge-inline {
+  color: hsl(45, 93%, 35%);
+}
+
+.player-circle.defender .position-badge-inline {
+  color: hsl(217, 91%, 50%);
+}
+
+.player-circle.midfielder .position-badge-inline {
+  color: hsl(142, 71%, 35%);
+}
+
+.player-circle.forward .position-badge-inline {
+  color: hsl(0, 84%, 50%);
+}
+
+/* Player name inside circle */
 .player-circle-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: hsl(0, 0%, 100%);
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
   text-align: center;
   line-height: 1.1;
-  max-width: 54px;
+  max-width: 48px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-bottom: 2px;
 }
 
-/* Squad number below name inside circle - SMALLER */
+/* Squad number below name inside circle */
 .player-number {
-  font-size: 14px;
-  font-weight: 700;
-  color: hsl(0, 0%, 100%);
+  font-size: 10px;
+  font-weight: 600;
+  color: hsl(var(--muted-foreground));
   margin: 0;
   line-height: 1;
-  z-index: 1;
 }
 
 /* Minutes inside circle at bottom */
 .player-minutes-inline {
-  position: absolute;
-  bottom: 2px;
-  font-size: 10px;
-  color: hsl(0, 0%, 100%);
-  font-weight: 600;
+  font-size: 9px;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
   line-height: 1;
 }
 
@@ -375,90 +384,83 @@
   font-size: 12px;
 }
 
-/* Substitute bench - wrapped grid, no scrolling */
+/* Substitute bench - simple dashed border like Formation Tab */
 .substitute-bench {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px;
   flex-shrink: 0;
-  background: hsl(var(--muted) / 0.3);
+  background: hsl(var(--muted) / 0.2);
+  border: 2px dashed hsl(var(--border));
   border-radius: 8px;
   margin: 8px;
+  min-height: 50px;
   justify-content: center;
+  align-items: center;
 }
 
-.substitute-card {
+/* Simple circular player icons for subs - matching Formation Tab style */
+.substitute-player-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid hsl(142, 71%, 45%);
+  background: hsl(138, 76%, 97%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 72px;
-  padding: 8px 4px;
-  background: hsl(var(--card));
-  border-radius: 8px;
-  box-shadow: 0 1px 3px hsla(0, 0%, 0%, 0.1);
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   position: relative;
 }
 
-.substitute-card:active {
+.substitute-player-icon:active {
   transform: scale(0.95);
 }
 
-.substitute-card .player-circle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  box-shadow: 0 2px 4px hsla(0, 0%, 0%, 0.2);
-  padding: 0 !important;
-  flex-direction: row !important;
-}
-
-.substitute-card .player-name-in-circle {
-  font-weight: 700;
-  color: hsl(var(--primary-foreground));
-  text-align: center;
-  line-height: 1;
-  width: auto;
-  margin: 0;
-  padding: 0;
-}
-
-.substitute-card .substitute-number {
-  font-size: 14px;
-  font-weight: 700;
-  color: hsl(var(--foreground));
-  margin-top: 6px;
-}
-
-.substitute-card .substitute-position {
+.substitute-player-icon .sub-name {
   font-size: 9px;
-  color: hsl(var(--muted-foreground));
-  margin-top: 2px;
+  font-weight: 600;
+  line-height: 1.1;
+  text-align: center;
+  max-width: 36px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.substitute-card .replaced-by-label {
+.substitute-player-icon .sub-number {
+  font-size: 8px;
+  color: hsl(var(--muted-foreground));
+  line-height: 1;
+}
+
+/* Yellow label for players who were subbed on (showing who they replaced) */
+.substitute-player-icon .replaced-label {
   position: absolute;
-  top: -8px;
+  top: -6px;
   left: 50%;
   transform: translateX(-50%);
   background: hsl(45, 93%, 47%);
   color: hsl(0, 0%, 0%);
-  font-size: 9px;
+  font-size: 7px;
   font-weight: 700;
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 1px 3px;
+  border-radius: 2px;
   white-space: nowrap;
   z-index: 10;
-  box-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.2);
 }
 
-.substitute-card.used {
-  opacity: 0.5;
+.substitute-bench-empty {
+  color: hsl(var(--muted-foreground));
+  font-size: 11px;
+  text-align: center;
+  padding: 8px;
 }
 
 /* Period indicators */
