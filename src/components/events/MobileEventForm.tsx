@@ -202,7 +202,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 value={formData.date}
                 onChange={(e) => handleDateChange(e.target.value)}
                 required
-                className="min-w-0"
+                className="min-w-0 h-10 appearance-none"
               />
             </div>
 
@@ -218,7 +218,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
-                  className="min-w-0"
+                  className="min-w-0 h-10 appearance-none"
                 />
               </div>
               <div className="space-y-2 min-w-0">
@@ -231,7 +231,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
-                  className="min-w-0"
+                  className="min-w-0 h-10 appearance-none"
                 />
               </div>
             </div>
