@@ -222,7 +222,10 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 />
               </div>
               <div className="space-y-2 min-w-0">
-                <Label htmlFor="endTime">End Time</Label>
+                <Label htmlFor="endTime" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  End Time
+                </Label>
                 <Input
                   id="endTime"
                   type="time"
