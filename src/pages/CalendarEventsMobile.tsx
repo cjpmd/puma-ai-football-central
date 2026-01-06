@@ -348,6 +348,51 @@ export default function CalendarEventsMobile() {
     });
   };
 
+  const handleAddTeam = async () => {
+    if (!selectedEvent || !teams?.[0]?.id) return;
+    
+    try {
+      // Get current team count
+      const { data: existingSelections } = await supabase
+        .from('event_selections')
+        .select('team_number')
+        .eq('event_id', selectedEvent.id)
+        .eq('team_id', teams[0].id);
+      
+      const teamNumbers = existingSelections?.map(s => s.team_number) || [];
+      const newTeamNumber = teamNumbers.length > 0 ? Math.max(...teamNumbers) + 1 : 1;
+      
+      // Insert new team selection
+      const { error } = await supabase
+        .from('event_selections')
+        .insert({
+          event_id: selectedEvent.id,
+          team_id: teams[0].id,
+          team_number: newTeamNumber,
+          period_number: 1,
+          formation: '4-3-3',
+          duration_minutes: selectedEvent.game_duration || 50,
+          player_positions: [],
+          substitutes: []
+        });
+      
+      if (error) throw error;
+      
+      // Update event teams array
+      const newTeamsArray = [...teamNumbers.map(String), newTeamNumber.toString()];
+      await supabase
+        .from('events')
+        .update({ teams: newTeamsArray })
+        .eq('id', selectedEvent.id);
+      
+      toast({ title: 'Team added successfully' });
+      loadEvents();
+    } catch (error) {
+      console.error('Error adding team:', error);
+      toast({ title: 'Failed to add team', variant: 'destructive' });
+    }
+  };
+
   const getFilteredEvents = () => {
     return events.filter(event => {
       switch (activeTab) {
@@ -948,12 +993,10 @@ export default function CalendarEventsMobile() {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => {
-                        setShowEventDetails(false);
-                        setShowExpandedTeamSelection(true);
-                      }}
+                      onClick={() => handleAddTeam()}
+                      className="h-8 px-2"
                     >
-                      View Full
+                      <Plus className="h-4 w-4" />
                     </Button>
                   )}
                 </div>
@@ -965,6 +1008,11 @@ export default function CalendarEventsMobile() {
                     setShowEventDetails(false);
                     setShowTeamSelection(true);
                   }}
+                  onTeamDeleted={() => {
+                    // Force refresh the event details by reloading event
+                    loadEvents();
+                  }}
+                  canEdit={canEditEvents()}
                 />
               </div>
               

@@ -3,10 +3,22 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Gamepad2, Star, ChevronLeft, Timer } from 'lucide-react';
+import { Users, Gamepad2, Star, ChevronLeft, Timer, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface MobileTeamSelectionViewProps {
   event: DatabaseEvent;
@@ -15,6 +27,8 @@ interface MobileTeamSelectionViewProps {
   onOpenFullManager: () => void;
   onClose?: () => void;
   isExpanded?: boolean;
+  onTeamDeleted?: () => void;
+  canEdit?: boolean;
 }
 
 interface TeamSelection {
@@ -37,8 +51,16 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   teamName,
   onOpenFullManager,
   onClose,
-  isExpanded = false
+  isExpanded = false,
+  onTeamDeleted,
+  canEdit = false
 }) => {
+  const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
+  const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
+  const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
+  const [captainNames, setCaptainNames] = useState<Record<string, string>>({});
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Helper to get display name for a team
   const getTeamDisplayName = (team: TeamSelection, index: number): string => {
     const isTraining = event.event_type === 'training';
@@ -56,10 +78,49 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
     // Fallback to Team X or Group X
     return isTraining ? `Group ${team.teamNumber}` : `Team ${team.teamNumber}`;
   };
-  const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
-  const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
-  const [trainingDrills, setTrainingDrills] = useState<TrainingDrill[]>([]);
-  const [captainNames, setCaptainNames] = useState<Record<string, string>>({});
+
+  const handleDeleteTeam = async (teamNumber: number) => {
+    if (teamSelections.length <= 1) {
+      toast.error('Cannot delete the last remaining team');
+      return;
+    }
+    
+    setIsDeleting(true);
+    try {
+      // Delete from event_selections table
+      const { error } = await supabase
+        .from('event_selections')
+        .delete()
+        .eq('event_id', event.id)
+        .eq('team_id', teamId)
+        .eq('team_number', teamNumber);
+
+      if (error) throw error;
+
+      // Update events.teams array
+      const remainingTeams = teamSelections
+        .filter(t => t.teamNumber !== teamNumber)
+        .map(t => t.teamNumber.toString());
+      
+      await supabase
+        .from('events')
+        .update({ teams: remainingTeams })
+        .eq('id', event.id);
+
+      toast.success('Team deleted successfully');
+      
+      // Update local state
+      setTeamSelections(prev => prev.filter(t => t.teamNumber !== teamNumber));
+      setCurrentTeamIndex(0);
+      
+      onTeamDeleted?.();
+    } catch (error) {
+      console.error('Error deleting team:', error);
+      toast.error('Failed to delete team');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Load performance categories for display names
   const { data: performanceCategories = [] } = useQuery({
@@ -302,9 +363,44 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
                 {getTeamDisplayName(currentTeam, currentTeamIndex)}
               </CardTitle>
               {!isExpanded && (
-                <Button variant="outline" size="sm" onClick={onOpenFullManager} className="text-xs px-2 py-1">
-                  Edit
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="sm" onClick={onOpenFullManager} className="text-xs px-2 py-1">
+                    Edit
+                  </Button>
+                  
+                  {canEdit && teamSelections.length > 1 && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="text-xs px-2 py-1 text-destructive hover:text-destructive"
+                          disabled={isDeleting}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Team?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{getTeamDisplayName(currentTeam, currentTeamIndex)}"? 
+                            This will remove all player selections and cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteTeam(currentTeam.teamNumber)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               )}
             </div>
             <div className="flex gap-1 flex-wrap">
