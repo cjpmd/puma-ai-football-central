@@ -892,11 +892,11 @@ return (
       <DialogContent className={`sm:max-w-6xl xl:max-w-7xl w-full max-w-[95vw] max-h-[92vh] overflow-hidden p-0 ${isMobile ? '[&>button]:hidden' : ''}`}>
         <div className={`${isMobile ? 'h-[calc(100dvh-56px)]' : 'h-[88vh]'} flex flex-col bg-background rounded-xl min-h-0 w-full max-w-full overflow-hidden`}>
           {/* Compact Header - 2 Rows */}
-          <div className={`border-b ${isMobile ? 'px-2 py-1.5' : 'px-4 py-3'} space-y-2`}>
+          <div className={`border-b ${isMobile ? 'px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.75rem)]' : 'px-4 py-3'} space-y-2`}>
             {/* Row 1: Teams Only + Close Button on far right */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {/* Team Buttons */}
-              <div className="flex items-center gap-0.5 flex-wrap">
+              <div className="flex items-center gap-1 flex-wrap">
                 {teamSelections.map((team, index) => (
                   <Button
                     key={team.teamNumber}
@@ -906,26 +906,31 @@ return (
                       setCurrentTeamIndex(index);
                       setActiveTab('squad');
                     }}
-                    className={`${isMobile ? 'h-6 text-[10px] px-1.5' : 'h-7 text-xs px-2'}`}
+                    className={`${isMobile ? 'h-10 text-sm px-3 min-w-[44px]' : 'h-7 text-xs px-2'}`}
                   >
                     {isTrainingEvent ? 'G' : 'T'}{team.teamNumber}
                     {team.squadPlayers.length > 0 && (
-                      <span className={`ml-0.5 opacity-70 ${isMobile ? 'text-[8px]' : 'text-[10px]'}`}>({team.squadPlayers.length})</span>
+                      <span className={`ml-1 opacity-70 ${isMobile ? 'text-xs' : 'text-[10px]'}`}>({team.squadPlayers.length})</span>
                     )}
                   </Button>
                 ))}
-                <Button onClick={addTeam} variant="outline" size="sm" className={`${isMobile ? 'h-6 w-6 p-0' : 'h-7 px-2'}`}>
-                  <Plus className={isMobile ? 'h-3 w-3' : 'h-3 w-3'} />
-                </Button>
-                {teamSelections.length > 1 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => deleteTeam(currentTeamIndex)}
-                    className={`${isMobile ? 'h-6 px-1.5' : 'h-7 px-2'} text-xs text-destructive hover:text-destructive hover:bg-destructive/10`}
-                  >
-                    <X className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
-                  </Button>
+                {/* Add/Remove team buttons - desktop only */}
+                {!isMobile && (
+                  <>
+                    <Button onClick={addTeam} variant="outline" size="sm" className="h-7 px-2">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                    {teamSelections.length > 1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => deleteTeam(currentTeamIndex)}
+                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -937,23 +942,23 @@ return (
                 variant="ghost"
                 size="sm"
                 onClick={onClose}
-                className="h-7 w-7 p-0 shrink-0"
+                className={`${isMobile ? 'h-10 w-10' : 'h-7 w-7'} p-0 shrink-0`}
               >
-                <X className="h-4 w-4" />
+                <X className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
               </Button>
             </div>
 
             {/* Row 2: AI, Lock, Category, Save */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowAIBuilder(true)}
-                  className="h-7 px-2"
+                  className={`${isMobile ? 'h-9 w-9 p-0' : 'h-7 px-2'}`}
                   title="AI Builder"
                 >
-                  <Sparkles className="h-3 w-3" />
+                  <Sparkles className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />
                 </Button>
               )}
 
@@ -962,14 +967,16 @@ return (
                   variant="outline"
                   size="sm"
                   onClick={handleTogglePositionsLock}
-                  className={`h-7 px-2 ${
+                  className={`${isMobile ? 'h-9 w-9 p-0' : 'h-7 px-2'} ${
                     currentTeam.isPositionsLocked 
                       ? 'bg-red-50 border-red-200 text-red-700' 
                       : 'bg-green-50 border-green-200 text-green-700'
                   }`}
                   title={currentTeam.isPositionsLocked ? 'Unlock' : 'Lock'}
                 >
-                  {currentTeam.isPositionsLocked ? <Lock className="h-3 w-3" /> : <Unlock className="h-3 w-3" />}
+                  {currentTeam.isPositionsLocked 
+                    ? <Lock className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} /> 
+                    : <Unlock className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />}
                 </Button>
               )}
 
@@ -979,7 +986,7 @@ return (
                   value={currentTeam.performanceCategory || 'none'} 
                   onValueChange={handlePerformanceCategoryChange}
                 >
-                  <SelectTrigger className="h-7 w-28 text-xs">
+                  <SelectTrigger className={`${isMobile ? 'h-9 w-32 text-sm' : 'h-7 w-28 text-xs'}`}>
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -997,7 +1004,7 @@ return (
               <div className="flex-1" />
 
               {/* Action Buttons */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 {!isMobile && (
                   <>
                     <Button onClick={handleCopyTeams} variant="outline" size="sm" className="h-7 px-2">
@@ -1009,9 +1016,9 @@ return (
                   </>
                 )}
                 
-                <Button onClick={saveSelections} disabled={saving} size="sm" className="h-7 px-3">
-                  {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
-                  <span className="ml-1 text-xs">Save</span>
+                <Button onClick={saveSelections} disabled={saving} size="sm" className={`${isMobile ? 'h-9 px-4' : 'h-7 px-3'}`}>
+                  {saving ? <Loader2 className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'} animate-spin`} /> : <Save className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />}
+                  <span className={`ml-1 ${isMobile ? 'text-sm' : 'text-xs'}`}>Save</span>
                 </Button>
               </div>
             </div>
