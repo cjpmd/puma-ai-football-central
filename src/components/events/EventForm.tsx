@@ -7,13 +7,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Calendar, MapPin, Clock, Users, Trophy, FileText, UserCheck } from 'lucide-react';
+import { Calendar, MapPin, Clock, Users, Trophy, FileText, UserCheck, Repeat } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { eventsService } from '@/services/eventsService';
 import { GameFormat } from '@/types';
 import { EventSquadPicker } from './EventSquadPicker';
+import { getDay } from 'date-fns';
+
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Sunday' },
+  { value: 1, label: 'Monday' },
+  { value: 2, label: 'Tuesday' },
+  { value: 3, label: 'Wednesday' },
+  { value: 4, label: 'Thursday' },
+  { value: 5, label: 'Friday' },
+  { value: 6, label: 'Saturday' },
+];
 
 interface EventFormProps {
   onEventCreated?: (eventId: string) => void;
@@ -59,6 +70,13 @@ export const EventForm: React.FC<EventFormProps> = ({
     facility_id: '',
     num_teams: 1,
     meeting_time: '',
+    // Recurring fields
+    is_recurring: false,
+    recurrence_pattern: 'weekly' as 'weekly' | 'biweekly' | 'monthly',
+    recurrence_day_of_week: 0,
+    recurrence_end_type: 'occurrences' as 'occurrences' | 'date',
+    recurrence_occurrences: 10,
+    recurrence_end_date: '',
   });
   const [teamTimes, setTeamTimes] = useState<{[teamNumber: number]: {start_time: string, meeting_time: string}}>({});
   const [loading, setLoading] = useState(false);
@@ -134,9 +152,10 @@ export const EventForm: React.FC<EventFormProps> = ({
 
   useEffect(() => {
     if (eventData) {
+      const eventDate = eventData.date || '';
       setFormData({
         title: eventData.title || '',
-        date: eventData.date || '',
+        date: eventDate,
         start_time: eventData.startTime || eventData.start_time || '',
         end_time: eventData.endTime || eventData.end_time || '',
         location: eventData.location || '',
@@ -152,6 +171,13 @@ export const EventForm: React.FC<EventFormProps> = ({
         facility_id: eventData.facilityId || eventData.facility_id || '',
         num_teams: eventData.num_teams || 1,
         meeting_time: eventData.meetingTime || eventData.meeting_time || '',
+        // Recurring fields (these don't load from existing events since recurring creates separate events)
+        is_recurring: false,
+        recurrence_pattern: 'weekly',
+        recurrence_day_of_week: eventDate ? getDay(new Date(eventDate)) : 0,
+        recurrence_end_type: 'occurrences',
+        recurrence_occurrences: 10,
+        recurrence_end_date: '',
       });
       
       // Load team-specific times if editing
@@ -270,7 +296,7 @@ export const EventForm: React.FC<EventFormProps> = ({
 
     try {
       // Clean up the form data to ensure proper format
-      const cleanEventData = {
+      const cleanEventData: any = {
         teamId: formData.team_id,
         title: formData.title,
         date: formData.date,
@@ -298,6 +324,18 @@ export const EventForm: React.FC<EventFormProps> = ({
           };
         }) : undefined,
       };
+
+      // Add recurring fields if enabled (only for new events)
+      if (!actualIsEditing && formData.is_recurring) {
+        cleanEventData.isRecurring = true;
+        cleanEventData.recurrencePattern = formData.recurrence_pattern;
+        cleanEventData.recurrenceDayOfWeek = formData.recurrence_day_of_week;
+        if (formData.recurrence_end_type === 'occurrences') {
+          cleanEventData.recurrenceOccurrences = formData.recurrence_occurrences;
+        } else {
+          cleanEventData.recurrenceEndDate = formData.recurrence_end_date;
+        }
+      }
 
       // If onSubmit prop is provided, use it (for new EventForm interface)
       if (onSubmit) {
@@ -461,15 +499,18 @@ export const EventForm: React.FC<EventFormProps> = ({
         eventId = eventData.id;
       } else {
         // Create new event using the service with invitation data
-        const newEvent = await eventsService.createEvent(cleanEventData, {
+        const result = await eventsService.createEvent(cleanEventData, {
           type: invitationType,
           selectedPlayerIds: invitationType === 'pick_squad' ? selectedPlayerIds : undefined,
           selectedStaffIds: invitationType === 'pick_squad' ? selectedStaffIds : undefined
         });
         
-        toast.success('Event created successfully');
-        if (onEventCreated) onEventCreated(newEvent.id);
-        eventId = newEvent.id;
+        const eventCount = cleanEventData.isRecurring ? (result as any).createdCount || 1 : 1;
+        toast.success(cleanEventData.isRecurring 
+          ? `Created ${eventCount} recurring events`
+          : 'Event created successfully');
+        if (onEventCreated) onEventCreated((result as any).id || result.id);
+        eventId = (result as any).id || result.id;
       }
 
     } catch (error: any) {
@@ -632,7 +673,11 @@ export const EventForm: React.FC<EventFormProps> = ({
                 id="date"
                 type="date"
                 value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+                onChange={(e) => {
+                  const newDate = e.target.value;
+                  const dayOfWeek = newDate ? getDay(new Date(newDate)) : 0;
+                  setFormData(prev => ({ ...prev, date: newDate, recurrence_day_of_week: dayOfWeek }));
+                }}
                 required
               />
             </div>
@@ -959,6 +1004,103 @@ export const EventForm: React.FC<EventFormProps> = ({
               </div>
             )}
           </div>
+
+          {/* Recurring Event Section - Only show for new events */}
+          {!actualIsEditing && (
+            <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is_recurring" className="flex items-center gap-2 cursor-pointer">
+                  <Repeat className="h-4 w-4" />
+                  Recurring Event
+                </Label>
+                <Switch
+                  id="is_recurring"
+                  checked={formData.is_recurring}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_recurring: checked }))}
+                />
+              </div>
+
+              {formData.is_recurring && (
+                <div className="space-y-4 pt-2 border-t mt-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="recurrence_pattern">Repeat</Label>
+                      <Select 
+                        value={formData.recurrence_pattern} 
+                        onValueChange={(value: 'weekly' | 'biweekly' | 'monthly') => setFormData(prev => ({ ...prev, recurrence_pattern: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="weekly">Weekly</SelectItem>
+                          <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="recurrence_day_of_week">On</Label>
+                      <Select 
+                        value={formData.recurrence_day_of_week.toString()} 
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, recurrence_day_of_week: parseInt(value) }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAYS_OF_WEEK.map(day => (
+                            <SelectItem key={day.value} value={day.value.toString()}>
+                              {day.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label>End</Label>
+                    <RadioGroup 
+                      value={formData.recurrence_end_type} 
+                      onValueChange={(value: 'occurrences' | 'date') => setFormData(prev => ({ ...prev, recurrence_end_type: value }))}
+                      className="space-y-2"
+                    >
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="occurrences" id="form_occurrences" />
+                        <Label htmlFor="form_occurrences" className="flex items-center gap-2 flex-1 cursor-pointer">
+                          After
+                          <Input
+                            type="number"
+                            min="2"
+                            max="52"
+                            value={formData.recurrence_occurrences}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurrence_occurrences: parseInt(e.target.value) || 10 }))}
+                            className="w-16 h-8"
+                            disabled={formData.recurrence_end_type !== 'occurrences'}
+                          />
+                          occurrences
+                        </Label>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <RadioGroupItem value="date" id="form_endDate" />
+                        <Label htmlFor="form_endDate" className="flex items-center gap-2 flex-1 cursor-pointer">
+                          Until
+                          <Input
+                            type="date"
+                            value={formData.recurrence_end_date}
+                            onChange={(e) => setFormData(prev => ({ ...prev, recurrence_end_date: e.target.value }))}
+                            className="h-8 w-auto"
+                            disabled={formData.recurrence_end_type !== 'date'}
+                          />
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Who's Invited Section - Show for both create and edit modes */}
           {!showSquadPicker && (

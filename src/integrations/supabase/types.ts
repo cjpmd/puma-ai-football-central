@@ -1069,6 +1069,7 @@ export type Database = {
           game_format: string | null
           id: string
           is_home: boolean | null
+          is_recurring: boolean | null
           kit_selection: string | null
           latitude: number | null
           location: string | null
@@ -1077,6 +1078,11 @@ export type Database = {
           notes: string | null
           opponent: string | null
           player_of_match_id: string | null
+          recurrence_day_of_week: number | null
+          recurrence_end_date: string | null
+          recurrence_occurrences: number | null
+          recurrence_pattern: string | null
+          recurring_group_id: string | null
           scores: Json | null
           staff_notes: string | null
           start_time: string | null
@@ -1100,6 +1106,7 @@ export type Database = {
           game_format?: string | null
           id?: string
           is_home?: boolean | null
+          is_recurring?: boolean | null
           kit_selection?: string | null
           latitude?: number | null
           location?: string | null
@@ -1108,6 +1115,11 @@ export type Database = {
           notes?: string | null
           opponent?: string | null
           player_of_match_id?: string | null
+          recurrence_day_of_week?: number | null
+          recurrence_end_date?: string | null
+          recurrence_occurrences?: number | null
+          recurrence_pattern?: string | null
+          recurring_group_id?: string | null
           scores?: Json | null
           staff_notes?: string | null
           start_time?: string | null
@@ -1131,6 +1143,7 @@ export type Database = {
           game_format?: string | null
           id?: string
           is_home?: boolean | null
+          is_recurring?: boolean | null
           kit_selection?: string | null
           latitude?: number | null
           location?: string | null
@@ -1139,6 +1152,11 @@ export type Database = {
           notes?: string | null
           opponent?: string | null
           player_of_match_id?: string | null
+          recurrence_day_of_week?: number | null
+          recurrence_end_date?: string | null
+          recurrence_occurrences?: number | null
+          recurrence_pattern?: string | null
+          recurring_group_id?: string | null
           scores?: Json | null
           staff_notes?: string | null
           start_time?: string | null
