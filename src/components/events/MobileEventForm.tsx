@@ -202,12 +202,13 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 value={formData.date}
                 onChange={(e) => handleDateChange(e.target.value)}
                 required
+                className="min-w-0"
               />
             </div>
 
             {/* Times */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label htmlFor="startTime" className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
                   Start Time
@@ -217,15 +218,17 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                   type="time"
                   value={formData.startTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, startTime: e.target.value }))}
+                  className="min-w-0"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 min-w-0">
                 <Label htmlFor="endTime">End Time</Label>
                 <Input
                   id="endTime"
                   type="time"
                   value={formData.endTime}
                   onChange={(e) => setFormData(prev => ({ ...prev, endTime: e.target.value }))}
+                  className="min-w-0"
                 />
               </div>
             </div>
