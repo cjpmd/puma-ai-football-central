@@ -5,7 +5,7 @@ import { MatchEvent, MatchEventType, PlayerCardStatus, SubstitutionData } from '
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
 import { FootballIcon } from './icons/FootballIcon';
-import { Star, ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PlayerPosition {
@@ -202,7 +202,7 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       <div className="player-badges">
         {isCaptain && (
           <div className="event-badge captain">
-            <Star className="h-2 w-2" fill="white" />
+            <span className="text-[8px] font-bold">C</span>
           </div>
         )}
         {goals > 0 && (

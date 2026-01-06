@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Users, Gamepad2, Star, ChevronLeft, Timer, Trash2 } from 'lucide-react';
+import { Users, Gamepad2, ChevronLeft, Timer, Trash2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -441,7 +441,9 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               <>
                 {currentTeam.periods[0]?.captain_id && (
                   <div className="flex items-center gap-2 py-2 px-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                    <Star className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                    <div className="w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-[8px] font-bold text-white">C</span>
+                    </div>
                     <span className="text-sm font-medium">
                       Captain: {captainNames[currentTeam.periods[0].captain_id] || 'Loading...'}
                     </span>

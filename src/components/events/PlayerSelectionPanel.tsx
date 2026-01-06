@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Crown, UserCheck, Filter, Grid3X3, AlertTriangle, UserMinus } from 'lucide-react';
+import { Users, UserCheck, Filter, Grid3X3, AlertTriangle, UserMinus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { FormationSelector } from './FormationSelector';
 import { getPositionsForFormation } from '@/utils/formationUtils';
@@ -371,7 +371,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 </SelectContent>
               </Select>
               {captainId === positionPlayers[positionObj.position] && (
-                <Crown className="h-4 w-4 text-yellow-500" />
+                <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="text-[8px] font-bold text-white">C</span>
+                </div>
               )}
             </div>
           ))}
@@ -430,7 +432,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                         </div>
                       )}
                       {captainId === playerId && (
-                        <Crown className="h-4 w-4 text-yellow-500" />
+                        <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                          <span className="text-[8px] font-bold text-white">C</span>
+                        </div>
                       )}
                       <Button
                         variant="outline"
@@ -512,7 +516,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                   </div>
                 )}
                 {captainId === player.id && (
-                  <Crown className="h-4 w-4 text-yellow-500" />
+                  <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">C</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -523,7 +529,9 @@ export const PlayerSelectionPanel: React.FC<PlayerSelectionPanelProps> = ({
                 onClick={() => handleCaptainSelect(player.id)}
                 className="flex items-center gap-1"
               >
-                <Crown className="h-3 w-3" />
+                <div className="w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center">
+                  <span className="text-[6px] font-bold text-white">C</span>
+                </div>
                 {captainId === player.id ? 'Team Captain' : 'Make Captain'}
               </Button>
             )}

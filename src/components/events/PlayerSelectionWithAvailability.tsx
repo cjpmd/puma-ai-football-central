@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Star, Clock, AlertCircle, Grid, List } from 'lucide-react';
+import { Users, Clock, AlertCircle, Grid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { GameFormat } from '@/types';
 import { getFormationsByFormat, getPositionsForFormation } from '@/utils/formationUtils';
@@ -364,7 +364,9 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                     {assignedPlayer && (
                       <div className="flex items-center gap-2">
                         {captainId === assignedPlayer.id && (
-                          <Star className="h-4 w-4 text-yellow-500 fill-current" />
+                          <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                            <span className="text-[8px] font-bold text-white">C</span>
+                          </div>
                         )}
                         {getAvailabilityBadge(assignedPlayer.id)}
                       </div>
@@ -438,9 +440,13 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                           SUB
                         </Badge>
                         <div>
-                          <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                             <span className="font-medium">{formatPlayerDisplayName(player)}</span>
-                            {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                            {isCaptain && (
+                              <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-white">C</span>
+                              </div>
+                            )}
                             {getAvailabilityIcon(playerId)}
                             {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
                           </div>
@@ -598,7 +604,11 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{formatPlayerDisplayName(player)}</span>
-                            {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                            {isCaptain && (
+                              <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-white">C</span>
+                              </div>
+                            )}
                             {getAvailabilityIcon(playerId)}
                             {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
                           </div>
@@ -665,7 +675,11 @@ export const PlayerSelectionWithAvailability: React.FC<PlayerSelectionProps> = (
                         <div>
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{formatPlayerDisplayName(player)}</span>
-                            {isCaptain && <Star className="h-4 w-4 text-yellow-500 fill-current" />}
+                            {isCaptain && (
+                              <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                <span className="text-[8px] font-bold text-white">C</span>
+                              </div>
+                            )}
                             {getAvailabilityIcon(playerId)}
                             {isConflicted && <AlertCircle className="h-4 w-4 text-red-500" />}
                           </div>
