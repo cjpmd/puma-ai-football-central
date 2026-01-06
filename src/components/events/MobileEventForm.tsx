@@ -138,7 +138,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
   const isMatchType = ['match', 'fixture', 'friendly'].includes(formData.type);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 pb-24 overflow-y-auto">
       <Card className="w-full max-w-md mx-auto my-8">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
           <CardTitle className="text-lg">Create Event</CardTitle>
