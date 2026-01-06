@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Users, UserPlus, UserMinus, Crown, AlertTriangle, Filter } from 'lucide-react';
+import { Users, UserPlus, UserMinus, AlertTriangle, Filter } from 'lucide-react';
 import { useSquadManagement } from '@/hooks/useSquadManagement';
 import { useQuery } from '@tanstack/react-query';
 import { playersService } from '@/services/playersService';
@@ -262,7 +262,9 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
         <Card>
           <CardHeader className={`${isMobile ? 'pb-2 px-3 pt-3' : 'pb-3'}`}>
             <CardTitle className={`flex items-center gap-2 ${isMobile ? 'text-sm' : 'text-base'}`}>
-              <Crown className={`text-yellow-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+              <div className={`bg-yellow-500 rounded-full flex items-center justify-center ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`}>
+                <span className={`font-bold text-white ${isMobile ? 'text-[6px]' : 'text-[8px]'}`}>C</span>
+              </div>
               Team Captain
             </CardTitle>
           </CardHeader>
@@ -373,7 +375,9 @@ export const SquadManagement: React.FC<SquadManagementProps> = ({
                       <Badge variant="outline" className={isMobile ? 'text-xs' : ''}>#{player.squadNumber}</Badge>
                       <span className={`font-medium ${isMobile ? 'text-sm' : ''}`}>{player.name}</span>
                       {player.id === globalCaptainId && (
-                        <Crown className={`text-yellow-500 ${isMobile ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                        <div className={`bg-yellow-500 rounded-full flex items-center justify-center ${isMobile ? 'w-3 h-3' : 'w-4 h-4'}`}>
+                          <span className={`font-bold text-white ${isMobile ? 'text-[6px]' : 'text-[8px]'}`}>C</span>
+                        </div>
                       )}
                       {player.type === 'goalkeeper' && (
                         <Badge variant="secondary" className={isMobile ? 'text-xs' : ''}>GK</Badge>

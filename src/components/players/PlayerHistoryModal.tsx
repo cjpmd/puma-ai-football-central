@@ -8,7 +8,7 @@ import { playersService } from '@/services/playersService';
 import { formatDate } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, Crown, Trophy } from 'lucide-react';
+import { ArrowRight, Trophy } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
@@ -188,7 +188,9 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
                             <div className="flex items-center gap-2">
                               {match.captain && (
                                 <div className="flex items-center gap-1">
-                                  <Crown className="h-3 w-3 text-yellow-500" />
+                                  <div className="w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center">
+                                    <span className="text-[6px] font-bold text-white">C</span>
+                                  </div>
                                   <span className="text-xs">Captain</span>
                                 </div>
                               )}

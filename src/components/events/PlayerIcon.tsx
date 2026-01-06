@@ -1,7 +1,7 @@
 
 import { useDraggable } from '@dnd-kit/core';
 import { Badge } from '@/components/ui/badge';
-import { Crown, Users } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { SquadPlayer } from '@/types/teamSelection';
 import { formatPlayerName } from '@/utils/nameUtils';
 
@@ -92,7 +92,9 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
       >
         {/* Captain indicator */}
         {(isCaptain || player.squadRole === 'captain') && (
-          <Crown className={`absolute -top-1 -right-1 ${compact ? 'h-2.5 w-2.5' : isLarger ? 'h-4 w-4' : 'h-3 w-3'} text-yellow-500`} />
+          <div className={`absolute -top-1 -right-1 ${compact ? 'w-2.5 h-2.5 text-[6px]' : isLarger ? 'w-4 h-4 text-[8px]' : 'w-3 h-3 text-[7px]'} bg-yellow-500 rounded-full flex items-center justify-center`}>
+            <span className="font-bold text-white leading-none">C</span>
+          </div>
         )}
         
         {/* Multi-team selection indicator */}
@@ -142,7 +144,9 @@ export const PlayerIcon: React.FC<PlayerIconProps> = ({
     >
       {/* Captain indicator */}
       {(isCaptain || player.squadRole === 'captain') && (
-        <Crown className="absolute -top-1 -right-1 h-4 w-4 text-yellow-500" />
+        <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+          <span className="text-[8px] font-bold text-white leading-none">C</span>
+        </div>
       )}
       
       {/* Multi-team selection indicator */}

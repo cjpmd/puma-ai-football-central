@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Trophy, Target, TrendingUp, TrendingDown, Minus, Clock, MapPin } from 'lucide-react';
+import { Calendar, Trophy, TrendingUp, TrendingDown, Minus, Clock, MapPin } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { ChildSummaryCard } from '@/components/child-progress/ChildSummaryCard';
 import { ChildMatchHistory } from '@/components/child-progress/ChildMatchHistory';
@@ -133,7 +133,11 @@ const ChildProgress = () => {
                         selectedChild.recentAchievements.map((achievement, index) => (
                           <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
                             <div className="flex-shrink-0">
-                              {achievement.type === 'captain' && <Target className="h-4 w-4 text-blue-600" />}
+                              {achievement.type === 'captain' && (
+                                <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                                  <span className="text-[8px] font-bold text-white">C</span>
+                                </div>
+                              )}
                               {achievement.type === 'potm' && <Trophy className="h-4 w-4 text-yellow-500" />}
                             </div>
                             <div className="flex-1 min-w-0">

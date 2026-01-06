@@ -14,7 +14,6 @@ import { Label } from '@/components/ui/label';
 import { formatDate } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Crown, 
   Trophy, 
   Clock, 
   MapPin, 
@@ -394,7 +393,9 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                      <Crown className="h-4 w-4" />
+                      <div className="w-4 h-4 bg-yellow-500 rounded-full flex items-center justify-center">
+                        <span className="text-[8px] font-bold text-white">C</span>
+                      </div>
                       Captain Games
                     </CardTitle>
                   </CardHeader>
@@ -763,7 +764,9 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
                             <TableCell>
                               <div className="flex items-center gap-1">
                                 {game.captain && (
-                                  <Crown className="h-3 w-3 text-yellow-500" />
+                                  <div className="w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center">
+                                    <span className="text-[6px] font-bold text-white">C</span>
+                                  </div>
                                 )}
                                 {game.playerOfTheMatch && (
                                   <Trophy className="h-3 w-3 text-blue-500" />

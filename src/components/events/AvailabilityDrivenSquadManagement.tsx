@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, UserPlus, Crown, CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, CheckCircle, Clock, X, AlertTriangle } from 'lucide-react';
 import { useAvailabilityBasedSquad } from '@/hooks/useAvailabilityBasedSquad';
 import { toast } from 'sonner';
 import { formatPlayerName } from '@/utils/nameUtils';
@@ -272,8 +272,7 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
                           <Badge variant="secondary" className="text-[10px] px-1 h-4">#{player.squadNumber}</Badge>
                           {!isTrainingEvent && player.id === localCaptainId && (
                             <Badge className="bg-yellow-500 text-white text-[10px] px-1 h-4">
-                              <Crown className="h-2.5 w-2.5 sm:mr-0.5" />
-                              <span className="hidden sm:inline">C</span>
+                              <span className="font-bold">C</span>
                             </Badge>
                           )}
                           {isPlayerInOtherTeams(player.id) && (

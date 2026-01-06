@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Player } from '@/types';
-import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Crown, Trophy, BarChart3, Brain, Target, MessageSquare, History, Camera, Upload } from 'lucide-react';
+import { Edit, Users, TrendingUp, TrendingDown, Minus, User, Calendar, Hash, Shirt, UserMinus, ArrowRightLeft, Trash2, RotateCcw, Settings, Trophy, BarChart3, Brain, Target, MessageSquare, History, Camera, Upload } from 'lucide-react';
 
 interface PlayerCardProps {
   player: Player;
@@ -323,7 +323,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <div className="h-5 flex gap-2 justify-center">
           {isCaptain && (
             <div className="flex items-center gap-1 text-yellow-600">
-              <Crown className="h-3 w-3" />
+              <div className="w-3 h-3 bg-yellow-500 rounded-full flex items-center justify-center">
+                <span className="text-[6px] font-bold text-white">C</span>
+              </div>
               <span className="text-xs font-medium">{player.matchStats?.captainGames}</span>
             </div>
           )}
