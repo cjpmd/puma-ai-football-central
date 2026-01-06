@@ -709,16 +709,16 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
         </div>
 
         {/* Playing Time Summary - Ultra Compact on Mobile */}
-        <div className={`shrink-0 border-t bg-muted/20 px-1.5 ${isMobile ? 'py-0.5' : 'py-1.5'}`}>
-          <div className={`font-medium text-muted-foreground flex items-center gap-0.5 ${isMobile ? 'text-[9px] mb-0' : 'text-xs mb-1'}`}>
-            <Clock className={isMobile ? 'h-2 w-2' : 'h-3 w-3'} />
+        <div className={`shrink-0 border-t bg-muted/20 px-1.5 ${isMobile ? 'py-1' : 'py-1.5'}`}>
+          <div className={`font-medium text-muted-foreground flex items-center gap-0.5 ${isMobile ? 'text-[10px] mb-0.5' : 'text-xs mb-1'}`}>
+            <Clock className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
             Time ({totalGameMinutes}')
           </div>
           <div className="flex gap-0.5 overflow-x-auto scrollbar-hide">
             {playingTimeSummary.map(({ player, minutes }) => (
               <div 
                 key={player.id}
-                className={`flex items-center gap-0.5 rounded-full whitespace-nowrap ${isMobile ? 'px-1 py-0 text-[8px]' : 'px-2 py-1 text-xs'} ${
+                className={`flex items-center gap-0.5 rounded-full whitespace-nowrap ${isMobile ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-1 text-xs'} ${
                   minutes === 0 
                     ? 'bg-destructive/10 text-destructive' 
                     : minutes >= totalGameMinutes 

@@ -1026,7 +1026,7 @@ return (
 
         <div className="flex-1 min-h-0 overflow-hidden w-full max-w-full">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col w-full max-w-full">
-            <div className={`${isMobile ? 'p-2' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
+            <div className={`${isMobile ? 'px-2 pb-2 pt-0' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
                   <Users className="h-3 w-3" />
