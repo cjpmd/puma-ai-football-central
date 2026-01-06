@@ -1,5 +1,49 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Event } from '@/types';
+import { addWeeks, addMonths, format } from 'date-fns';
+
+// Helper function to generate recurring event dates
+const generateRecurringDates = (
+  startDate: string,
+  pattern: 'weekly' | 'biweekly' | 'monthly',
+  dayOfWeek: number,
+  endCondition: { type: 'occurrences', count: number } | { type: 'endDate', date: string }
+): string[] => {
+  const dates: string[] = [];
+  let currentDate = new Date(startDate);
+  
+  // Adjust to correct day of week if needed
+  while (currentDate.getDay() !== dayOfWeek) {
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  const maxIterations = 100; // Safety limit
+  let iteration = 0;
+  const endDate = endCondition.type === 'endDate' ? new Date(endCondition.date) : null;
+  
+  while (iteration < maxIterations) {
+    if (endCondition.type === 'occurrences' && dates.length >= endCondition.count) break;
+    if (endDate && currentDate > endDate) break;
+    
+    dates.push(format(currentDate, 'yyyy-MM-dd'));
+    
+    // Move to next occurrence
+    switch (pattern) {
+      case 'weekly': 
+        currentDate = addWeeks(currentDate, 1); 
+        break;
+      case 'biweekly': 
+        currentDate = addWeeks(currentDate, 2); 
+        break;
+      case 'monthly': 
+        currentDate = addMonths(currentDate, 1); 
+        break;
+    }
+    iteration++;
+  }
+  
+  return dates;
+};
 
 export const eventsService = {
   async createEvent(eventData: Partial<Event>, invitations?: {
@@ -10,13 +54,18 @@ export const eventsService = {
     try {
       console.log('Creating event with data:', eventData);
       
+      // Check if this is a recurring event
+      if (eventData.isRecurring && eventData.recurrencePattern && eventData.recurrenceDayOfWeek !== undefined) {
+        return await this.createRecurringEvents(eventData, invitations);
+      }
+      
       const formattedData = {
         team_id: eventData.teamId,
         title: eventData.title,
         description: eventData.description,
         date: eventData.date,
-        start_time: eventData.startTime || null, // Convert empty string to null
-        end_time: eventData.endTime || null, // Convert empty string to null
+        start_time: eventData.startTime || null,
+        end_time: eventData.endTime || null,
         event_type: eventData.type,
         location: eventData.location,
         latitude: eventData.latitude,
@@ -26,9 +75,9 @@ export const eventsService = {
         opponent: eventData.opponent,
         is_home: eventData.isHome,
         kit_selection: eventData.kitSelection,
-        teams: eventData.teams,  // Save the teams array
-        facility_id: eventData.facilityId || null, // Convert empty string to null
-        meeting_time: eventData.meetingTime || null, // Convert empty string to null
+        teams: eventData.teams,
+        facility_id: eventData.facilityId || null,
+        meeting_time: eventData.meetingTime || null,
         notes: eventData.notes,
         training_notes: eventData.trainingNotes
       };
@@ -98,7 +147,79 @@ export const eventsService = {
       throw error;
     }
   },
-  
+
+  async createRecurringEvents(eventData: Partial<Event>, invitations?: {
+    type: 'everyone' | 'pick_squad',
+    selectedPlayerIds?: string[],
+    selectedStaffIds?: string[]
+  }) {
+    const recurringGroupId = crypto.randomUUID();
+    
+    const endCondition = eventData.recurrenceOccurrences 
+      ? { type: 'occurrences' as const, count: eventData.recurrenceOccurrences }
+      : { type: 'endDate' as const, date: eventData.recurrenceEndDate! };
+    
+    const dates = generateRecurringDates(
+      eventData.date!,
+      eventData.recurrencePattern!,
+      eventData.recurrenceDayOfWeek!,
+      endCondition
+    );
+    
+    console.log(`Creating ${dates.length} recurring events`);
+    
+    const eventsToInsert = dates.map(date => ({
+      team_id: eventData.teamId,
+      title: eventData.title,
+      description: eventData.description,
+      date: date,
+      start_time: eventData.startTime || null,
+      end_time: eventData.endTime || null,
+      event_type: eventData.type,
+      location: eventData.location,
+      game_format: eventData.gameFormat,
+      game_duration: eventData.gameDuration,
+      opponent: eventData.opponent,
+      is_home: eventData.isHome,
+      kit_selection: eventData.kitSelection,
+      facility_id: eventData.facilityId || null,
+      meeting_time: eventData.meetingTime || null,
+      notes: eventData.notes,
+      is_recurring: true,
+      recurrence_pattern: eventData.recurrencePattern,
+      recurrence_day_of_week: eventData.recurrenceDayOfWeek,
+      recurring_group_id: recurringGroupId,
+    }));
+    
+    const { data, error } = await supabase
+      .from('events')
+      .insert(eventsToInsert)
+      .select();
+      
+    if (error) throw error;
+    
+    // Create event teams for each event
+    if (data && eventData.teamId) {
+      const eventTeams = data.map(event => ({
+        event_id: event.id,
+        team_id: eventData.teamId,
+        team_number: 1,
+        start_time: eventData.startTime || null,
+        meeting_time: eventData.meetingTime || null
+      }));
+      
+      await supabase.from('event_teams').insert(eventTeams);
+    }
+    
+    // Create invitations for each event
+    if (invitations && data) {
+      for (const event of data) {
+        await this.createEventInvitations(event.id, eventData.teamId!, invitations);
+      }
+    }
+    
+    return { ...data[0], createdCount: data.length };
+  },
   async createEventInvitations(
     eventId: string,
     teamId: string,

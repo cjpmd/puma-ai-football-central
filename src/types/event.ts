@@ -19,7 +19,7 @@ export interface DatabaseEvent {
   scores?: {
     home: number;
     away: number;
-  };
+  } | null;
   player_of_match_id?: string;
   coach_notes?: string;
   staff_notes?: string;
@@ -34,6 +34,13 @@ export interface DatabaseEvent {
     meeting_time?: string;
   }> | string[];
   kit_selection?: 'home' | 'away' | 'training';
+  // Recurring event fields
+  is_recurring?: boolean;
+  recurrence_pattern?: 'weekly' | 'biweekly' | 'monthly';
+  recurrence_day_of_week?: number; // 0=Sunday through 6=Saturday
+  recurrence_end_date?: string;
+  recurrence_occurrences?: number;
+  recurring_group_id?: string;
   created_at: string;
   updated_at: string;
 }

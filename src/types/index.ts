@@ -315,6 +315,13 @@ export interface Event {
     meeting_time?: string;
   }> | string[];
   kitSelection?: 'home' | 'away' | 'training';
+  // Recurring event fields
+  isRecurring?: boolean;
+  recurrencePattern?: 'weekly' | 'biweekly' | 'monthly';
+  recurrenceDayOfWeek?: number; // 0=Sunday through 6=Saturday
+  recurrenceEndDate?: string;
+  recurrenceOccurrences?: number;
+  recurringGroupId?: string;
   createdAt?: string;
   updatedAt?: string;
   latitude?: number;
