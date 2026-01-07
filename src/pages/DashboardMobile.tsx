@@ -1,8 +1,8 @@
+
 import { MobileLayout } from '@/components/layout/MobileLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Users, Trophy, Plus, TrendingUp, User, Link2, AlertCircle, Check } from 'lucide-react';
+import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
@@ -10,6 +10,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
+import { format, isToday, isTomorrow } from 'date-fns';
 
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
@@ -41,7 +42,6 @@ export default function DashboardMobile() {
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
 
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
-    // Update the local state to reflect the change
     setStats(prevStats => ({
       ...prevStats,
       pendingAvailability: prevStats.pendingAvailability.filter(availability => 
@@ -49,7 +49,6 @@ export default function DashboardMobile() {
       )
     }));
     
-    // Show success message
     toast({
       title: "Availability updated",
       description: `Marked as ${status} for this event`,
@@ -58,7 +57,6 @@ export default function DashboardMobile() {
 
   const handleEventCreated = () => {
     setShowMobileEventForm(false);
-    // Reload the stats to reflect the new event
     loadLiveData();
   };
 
@@ -70,37 +68,28 @@ export default function DashboardMobile() {
     if (!user) return;
 
     try {
-      // Determine which teams to query based on view mode
-      // Use teams directly from AuthContext for accurate data across club switches
       const teamsToUse = viewMode === 'all' 
         ? (teams?.length ? teams : allTeams || [])
         : (currentTeam ? [currentTeam] : []);
       
-      console.log('Teams to use:', teamsToUse?.length, teamsToUse?.map(t => ({ id: t.id, name: t.name })), 'View mode:', viewMode);
-      
       if (!teamsToUse.length) {
-        console.log('No teams available for loading data');
         return;
       }
       
       const teamIds = teamsToUse.map(team => team.id);
-      console.log('Team IDs for queries:', teamIds);
       
-      // Load players count from all connected teams
       const { count: playersCount } = await supabase
         .from('players')
         .select('*', { count: 'exact', head: true })
         .in('team_id', teamIds);
 
-      // Load upcoming events count from all teams
       const { count: eventsCount } = await supabase
         .from('events')
         .select('*', { count: 'exact', head: true })
         .in('team_id', teamIds)
         .gte('date', new Date().toISOString().split('T')[0]);
 
-      // Load upcoming events details with team information
-      const { data: upcomingEventsData, error: upcomingError } = await supabase
+      const { data: upcomingEventsData } = await supabase
         .from('events')
         .select(`
           *,
@@ -114,12 +103,6 @@ export default function DashboardMobile() {
         .order('date', { ascending: true })
         .limit(5);
 
-      if (upcomingError) {
-        console.error('Error loading upcoming events:', upcomingError);
-      }
-      console.log('Upcoming events data:', upcomingEventsData?.length, upcomingEventsData);
-
-      // Add team context to events
       const upcomingEvents = upcomingEventsData?.map(event => ({
         ...event,
         team_context: {
@@ -130,8 +113,7 @@ export default function DashboardMobile() {
         }
       })) || [];
 
-      // Load recent completed events with results
-      const { data: recentResultsData, error: recentError } = await supabase
+      const { data: recentResultsData } = await supabase
         .from('events')
         .select(`
           *,
@@ -146,12 +128,6 @@ export default function DashboardMobile() {
         .order('date', { ascending: false })
         .limit(10);
 
-      if (recentError) {
-        console.error('Error loading recent results:', recentError);
-      }
-      console.log('Recent results data:', recentResultsData?.length, recentResultsData);
-
-      // Fetch performance categories for these events
       const eventIdsForCategories = recentResultsData?.map(e => e.id) || [];
       const { data: eventSelectionsData } = await supabase
         .from('event_selections')
@@ -163,7 +139,6 @@ export default function DashboardMobile() {
         `)
         .in('event_id', eventIdsForCategories);
 
-      // Create a lookup map for performance categories by event_id and team_number
       const categoryMap: Record<string, Record<number, string>> = {};
       eventSelectionsData?.forEach(selection => {
         if (!categoryMap[selection.event_id]) {
@@ -175,7 +150,6 @@ export default function DashboardMobile() {
         }
       });
 
-      // Expand events into individual team entries
       const recentResults: any[] = [];
       recentResultsData?.forEach(event => {
         const scores = event.scores as any;
@@ -187,7 +161,6 @@ export default function DashboardMobile() {
           club_logo_url: event.teams.clubs?.logo_url
         };
 
-        // Check for multi-team format (team_1, team_2, etc.)
         let teamNumber = 1;
         let hasMultiTeam = false;
         while (scores && scores[`team_${teamNumber}`] !== undefined) {
@@ -211,7 +184,6 @@ export default function DashboardMobile() {
           teamNumber++;
         }
         
-        // Fallback for simple home/away format
         if (!hasMultiTeam && scores) {
           recentResults.push({
             id: event.id,
@@ -225,45 +197,27 @@ export default function DashboardMobile() {
         }
       });
 
-      // Sort by date and limit
       recentResults.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const limitedRecentResults = recentResults.slice(0, 6);
 
-      // Load pending availability for current user with team context
-      // First, get all upcoming events that might need availability confirmation
       const upcomingEventsForAvailability = upcomingEvents.filter(event => {
         const eventDate = new Date(event.date);
         const now = new Date();
-        // Only include events that are in the future
         return eventDate > now;
       });
 
-      console.log('Upcoming events for availability check:', upcomingEventsForAvailability.length);
-
-      // Check existing availability records for these events
       const eventIds = upcomingEventsForAvailability.map(event => event.id);
-      const { data: existingAvailability, error: availabilityError } = await supabase
+      const { data: existingAvailability } = await supabase
         .from('event_availability')
         .select('event_id, status')
         .eq('user_id', user.id)
         .in('event_id', eventIds);
 
-      if (availabilityError) {
-        console.error('Error loading existing availability:', availabilityError);
-      }
-
-      console.log('Existing availability records:', existingAvailability?.length || 0, existingAvailability);
-
-      // Filter events that need availability confirmation
       const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
         const existingRecord = existingAvailability?.find(a => a.event_id === event.id);
-        // Show events that have no record or have 'pending' status
         return !existingRecord || existingRecord.status === 'pending';
       });
 
-      console.log('Events needing availability confirmation:', eventsNeedingAvailability.length);
-
-      // Format these events for the availability display
       const pendingAvailabilityData = eventsNeedingAvailability.map(event => ({
         id: `${event.id}_${user.id}`,
         event_id: event.id,
@@ -275,8 +229,6 @@ export default function DashboardMobile() {
           team_context: event.team_context
         }
       }));
-
-      console.log('Pending availability data:', pendingAvailabilityData?.length, pendingAvailabilityData);
 
       setStats({
         playersCount: playersCount || 0,
@@ -296,28 +248,31 @@ export default function DashboardMobile() {
     }
   };
 
-  const getEventTypeColor = (eventType: string) => {
-    switch (eventType) {
-      case 'training': return 'bg-purple-50';
-      case 'match':
-      case 'fixture': return 'bg-red-50';
-      default: return 'bg-blue-50';
-    }
-  };
-
   const getResultFromScores = (ourScore: number | undefined, opponentScore: number | undefined) => {
     if (ourScore === undefined || opponentScore === undefined) return null;
     
-    if (ourScore > opponentScore) return { result: 'Win', color: 'bg-green-500' };
-    if (ourScore < opponentScore) return { result: 'Loss', color: 'bg-red-500' };
-    return { result: 'Draw', color: 'bg-gray-500' };
+    if (ourScore > opponentScore) return { result: 'W', color: 'bg-green-500' };
+    if (ourScore < opponentScore) return { result: 'L', color: 'bg-red-500' };
+    return { result: 'D', color: 'bg-gray-500' };
   };
 
-  // Check if user can manage teams (not just parent or player)
   const canManageTeam = () => {
     if (!profile?.roles) return false;
     const managementRoles = ['global_admin', 'club_admin', 'manager', 'team_manager', 'team_coach', 'team_assistant_manager', 'coach', 'staff'];
     return profile.roles.some(role => managementRoles.includes(role));
+  };
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const getConversationalTime = (event: any) => {
+    const eventDate = new Date(event.date);
+    const time = event.start_time ? event.start_time.slice(0, 5) : '';
+    
+    if (isToday(eventDate)) return time ? `Today at ${time}` : 'Today';
+    if (isTomorrow(eventDate)) return time ? `Tomorrow at ${time}` : 'Tomorrow';
+    return time ? `${format(eventDate, 'EEE d MMM')} at ${time}` : format(eventDate, 'EEE d MMM');
   };
 
   if (loading) {
@@ -330,83 +285,124 @@ export default function DashboardMobile() {
     );
   }
 
-  // Helper function to get initials
-  const getInitials = (name: string) => {
-    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   return (
     <MobileLayout>
-      <div className="space-y-6 pb-safe-bottom">
-        {/* Welcome Message */}
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-foreground mb-2">
-            Welcome, {getPersonalizedGreeting(profile, user?.email)}!
-          </h2>
+      <div className="min-h-screen bg-gray-50 -mx-4 -mt-4 px-4 pt-4">
+        <div className="space-y-4 pb-safe-bottom">
           
-          {/* Teams and Players Section */}
-          <div className="space-y-4">
-            {/* Connected Teams - Interactive */}
-            {(allTeams?.length || teams?.length) && (
-              <div className="bg-card rounded-lg p-4 border">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Teams</h3>
-                <div className="space-y-2">
-                  {/* All Teams option */}
-                  <button
-                    onClick={() => setViewMode('all')}
-                    className={`w-full flex items-center justify-between gap-3 rounded-lg px-4 py-3 transition-colors ${
-                      viewMode === 'all' ? 'bg-primary/10 border-2 border-primary' : 'bg-muted/50 hover:bg-muted border-2 border-transparent'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                        <Users className="w-4 h-4 text-muted-foreground" />
-                      </div>
-                      <span className="text-sm font-medium">All Teams</span>
-                    </div>
-                    {viewMode === 'all' && <Check className="w-5 h-5 text-primary shrink-0" />}
-                  </button>
-                  
-                  {/* Individual teams */}
-                  {(allTeams?.length ? allTeams : teams)?.map((team) => {
-                    const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
-                    return (
-                      <button
-                        key={team.id}
-                        onClick={() => setCurrentTeam(team)}
-                        className={`w-full flex items-center justify-between gap-3 rounded-lg px-4 py-3 transition-colors ${
-                          isSelected ? 'bg-primary/10 border-2 border-primary' : 'bg-muted/50 hover:bg-muted border-2 border-transparent'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {team.logoUrl ? (
-                            <img 
-                              src={team.logoUrl} 
-                              alt={team.name}
-                              className="w-8 h-8 rounded-full flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                              {getInitials(team.name)}
-                            </div>
-                          )}
-                          <span className="text-sm font-medium text-left">{team.name}</span>
-                        </div>
-                        {isSelected && <Check className="w-5 h-5 text-primary shrink-0" />}
-                      </button>
-                    );
-                  })}
+          {/* Profile Header */}
+          <div className="flex flex-col items-center pt-2 pb-4">
+          <div className="w-20 h-20 rounded-2xl bg-gray-200 flex items-center justify-center mb-3 shadow-sm">
+            <span className="text-2xl font-semibold text-gray-600">
+              {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
+              </span>
+            </div>
+            <h1 className="text-xl font-semibold text-gray-900">
+              {getPersonalizedGreeting(profile, user?.email)}
+            </h1>
+          </div>
+
+          {/* Availability Status Banner */}
+          {stats.pendingAvailability.length > 0 ? (
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <Link to="/calendar" className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
+                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <span className="text-base font-medium text-gray-900">Availability Requests</span>
+                    <p className="text-sm text-gray-500">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
+                  </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">{stats.pendingAvailability.length}</Badge>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </div>
+              </Link>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
+                  <Check className="w-5 h-5 text-green-600" />
+                </div>
+                <span className="text-base text-gray-900">All caught up!</span>
               </div>
-            )}
-            
-            {/* Connected Players */}
-            {connectedPlayers?.length > 0 && (
-              <div className="bg-card rounded-lg p-4 border">
-                <h3 className="text-sm font-medium text-muted-foreground mb-3">Your Players</h3>
-                <div className="flex flex-wrap gap-2 justify-center">
+            </div>
+          )}
+
+          {/* Your Teams */}
+          {(allTeams?.length || teams?.length) ? (
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100">
+                <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Teams</h2>
+              </div>
+              
+              {/* All Teams option */}
+              <button
+                onClick={() => setViewMode('all')}
+                className="w-full flex items-center justify-between px-4 py-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <span className="text-base text-gray-900">All Teams</span>
+                </div>
+                {viewMode === 'all' ? (
+                  <Check className="w-5 h-5 text-blue-600" />
+                ) : (
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                )}
+              </button>
+              
+              {/* Individual teams */}
+              {(allTeams?.length ? allTeams : teams)?.map((team, index) => {
+                const isSelected = viewMode === 'single' && currentTeam?.id === team.id;
+                return (
+                  <div key={team.id}>
+                    <div className="h-px bg-gray-100 mx-4" />
+                    <button
+                      onClick={() => setCurrentTeam(team)}
+                      className="w-full flex items-center justify-between px-4 py-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        {team.logoUrl ? (
+                          <img 
+                            src={team.logoUrl} 
+                            alt={team.name}
+                            className="w-9 h-9 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-sm font-semibold text-blue-600">
+                            {getInitials(team.name)}
+                          </div>
+                        )}
+                        <span className="text-base text-gray-900 text-left">{team.name}</span>
+                      </div>
+                      {isSelected ? (
+                        <Check className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                      )}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {/* Connected Players */}
+          {connectedPlayers?.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+              <div className="px-4 py-2.5 border-b border-gray-100">
+                <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Players</h2>
+              </div>
+              <div className="px-4 py-3">
+                <div className="flex flex-wrap gap-2">
                   {connectedPlayers.map((player) => (
-                    <div key={player.id} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                    <div key={player.id} className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-1.5">
                       {player.photoUrl ? (
                         <img 
                           src={player.photoUrl} 
@@ -414,291 +410,230 @@ export default function DashboardMobile() {
                           className="w-6 h-6 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
                           {getInitials(player.name)}
                         </div>
                       )}
-                      <span className="text-sm font-medium">{player.name}</span>
+                      <span className="text-sm font-medium text-gray-700">{player.name}</span>
                     </div>
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Quick Actions */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100">
+              <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quick Actions</h2>
+            </div>
+            
+            {canManageTeam() && (
+              <>
+                <button
+                  onClick={() => setShowMobileEventForm(true)}
+                  className="w-full flex items-center justify-between px-4 py-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
+                      <Plus className="w-5 h-5 text-green-600" />
+                    </div>
+                    <span className="text-base text-gray-900">Create Event</span>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </button>
+                <div className="h-px bg-gray-100 mx-4" />
+                <Link to="/players" className="w-full flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <span className="text-base text-gray-900">View Team</span>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                </Link>
+                <div className="h-px bg-gray-100 mx-4" />
+              </>
+            )}
+            
+            <button
+              onClick={() => setShowEditProfile(true)}
+              className="w-full flex items-center justify-between px-4 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
+                  <User className="w-5 h-5 text-purple-600" />
+                </div>
+                <span className="text-base text-gray-900">Edit Profile</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            </button>
+            <div className="h-px bg-gray-100 mx-4" />
+            <button
+              onClick={() => setShowManageConnections(true)}
+              className="w-full flex items-center justify-between px-4 py-3"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
+                  <Link2 className="w-5 h-5 text-orange-600" />
+                </div>
+                <span className="text-base text-gray-900">Manage Connections</span>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+
+          {/* Upcoming Events */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100">
+              <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Upcoming Events</h2>
+            </div>
+            
+            {stats.upcomingEvents.length > 0 ? (
+              <>
+                {stats.upcomingEvents.map((event, index) => (
+                  <div key={event.id}>
+                    {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
+                    <div className="flex gap-3 px-4 py-3">
+                      {/* Date column */}
+                      <div className="flex flex-col items-center justify-center min-w-[40px]">
+                        <span className="text-[10px] text-gray-500 uppercase font-medium">
+                          {format(new Date(event.date), 'MMM')}
+                        </span>
+                        <span className="text-xl font-bold text-gray-900">
+                          {format(new Date(event.date), 'd')}
+                        </span>
+                      </div>
+                      
+                      {/* Colored accent */}
+                      <div className={`w-1 self-stretch rounded-full ${
+                        event.event_type === 'training' ? 'bg-purple-400' : 'bg-red-400'
+                      }`} />
+                      
+                      {/* Event details */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">
+                          {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {getConversationalTime(event)}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {event.team_context?.name}
+                        </p>
+                        
+                        {/* Inline availability controls */}
+                        <div className="mt-2">
+                          <QuickAvailabilityControls 
+                            eventId={event.id}
+                            currentStatus="pending"
+                            size="sm"
+                            onStatusChange={(status) => handleAvailabilityStatusChange(event.id, status)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="h-px bg-gray-100" />
+                <Link to="/calendar" className="flex items-center justify-center px-4 py-3 text-blue-600 font-medium">
+                  View All Events
+                </Link>
+              </>
+            ) : (
+              <div className="px-4 py-6 text-center text-gray-500">
+                No upcoming events
+              </div>
             )}
           </div>
-        </div>
-        
-        {/* Availability Status - Always Show */}
-        {stats.pendingAvailability.length > 0 ? (
-          <Card className="border-orange-200 bg-orange-50 animate-fade-in">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <AlertCircle className="h-5 w-5 mr-2 text-orange-600" />
-                Availability Requests
-                <Badge variant="secondary" className="ml-2 bg-orange-100 text-orange-700">
-                  {stats.pendingAvailability.length}
-                </Badge>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {stats.pendingAvailability.slice(0, 2).map((availability) => (
-                <div key={availability.id} className="space-y-3 p-3 rounded-lg bg-white border border-orange-200 hover-scale">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      {availability.events.team_context?.logo_url ? (
-                        <img 
-                          src={availability.events.team_context.logo_url} 
-                          alt={availability.events.team_context.name}
-                          className="w-4 h-4 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                          {availability.events.team_context?.name?.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="text-xs text-muted-foreground">
-                        {availability.events.team_context?.name}
-                      </span>
-                    </div>
-                    <div className="font-medium">
-                      {availability.events.event_type === 'training' 
-                        ? availability.events.title 
-                        : `vs ${availability.events.opponent || 'TBD'}`}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(availability.events.date).toLocaleDateString()}
-                      {availability.events.start_time && `, ${availability.events.start_time}`}
-                    </div>
-                  </div>
-                  <QuickAvailabilityControls 
-                    eventId={availability.event_id}
-                    currentStatus="pending"
-                    size="sm"
-                    onStatusChange={(status) => handleAvailabilityStatusChange(availability.event_id, status)}
-                  />
-                </div>
-              ))}
-              {stats.pendingAvailability.length > 2 && (
-                <p className="text-sm text-center text-muted-foreground">
-                  +{stats.pendingAvailability.length - 2} more requests
-                </p>
-              )}
-              <Link to="/calendar">
-                <Button className="w-full h-10 bg-orange-600 hover:bg-orange-700 text-white">
-                  Confirm Availability ({stats.pendingAvailability.length})
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="border-green-200 bg-green-50">
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center">
-                  <Calendar className="h-4 w-4 text-white" />
-                </div>
-                <span className="text-green-800 font-medium">All Caught Up!</span>
-              </div>
-              <p className="text-sm text-green-700">No availability requests pending</p>
-            </CardContent>
-          </Card>
-        )}
-        
-        {/* Live Stats */}
-        <div className="grid grid-cols-1 gap-4">
-          <Card className="touch-manipulation">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-8 w-8 mx-auto mb-2 text-green-600" />
-              <div className="text-2xl font-bold">{stats.eventsCount}</div>
-              <div className="text-sm text-muted-foreground">Upcoming Events</div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3">
-              {canManageTeam() && (
-                <>
-                  <Button 
-                    className="h-20 flex-col gap-2 bg-green-600 hover:bg-green-700 text-white" 
-                    onClick={() => setShowMobileEventForm(true)}
-                  >
-                    <Plus className="h-6 w-6" />
-                    <span className="text-sm">Create Event</span>
-                  </Button>
-                  <Link to="/players" className="contents">
-                    <Button className="h-20 flex-col gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                      <Users className="h-6 w-6" />
-                      <span className="text-sm">Team</span>
-                    </Button>
-                  </Link>
-                </>
-              )}
-              <Button 
-                className="h-20 flex-col gap-2 bg-purple-600 hover:bg-purple-700 text-white" 
-                onClick={() => setShowEditProfile(true)}
-              >
-                <User className="h-6 w-6" />
-                <span className="text-sm">Edit Profile</span>
-              </Button>
-              <Button 
-                className="h-20 flex-col gap-2 bg-orange-600 hover:bg-orange-700 text-white" 
-                onClick={() => setShowManageConnections(true)}
-              >
-                <Link2 className="h-6 w-6" />
-                <span className="text-sm">Connections</span>
-              </Button>
+          {/* Recent Results */}
+          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-4 py-2.5 border-b border-gray-100">
+              <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Results</h2>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Upcoming Events */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <Calendar className="h-5 w-5 mr-2" />
-              Upcoming Events
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {stats.upcomingEvents.length > 0 ? (
-              stats.upcomingEvents.map((event) => (
-                <div key={event.id} className={`p-3 rounded-lg ${getEventTypeColor(event.event_type)}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        {event.team_context?.logo_url ? (
-                          <img 
-                            src={event.team_context.logo_url} 
-                            alt={event.team_context.name}
-                            className="w-5 h-5 rounded-full"
-                          />
-                        ) : (
-                          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                            {event.team_context?.name?.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <span className="text-sm font-medium text-muted-foreground">
-                          {event.team_context?.name || event.team_name}
-                        </span>
-                      </div>
-                      <div className="font-medium">
-                        {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(event.date).toLocaleDateString()} {event.start_time && `, ${event.start_time}`}
-                      </div>
-                    </div>
-                    <Badge variant="outline">
-                      {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
-                    </Badge>
-                  </div>
-                  
-                  {/* Availability Controls */}
-                  <div className="mt-3 pt-2 border-t border-border/50">
-                    <QuickAvailabilityControls 
-                      eventId={event.id}
-                      currentStatus="pending"
-                      size="sm"
-                      onStatusChange={(status) => handleAvailabilityStatusChange(event.id, status)}
-                    />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center py-4">No upcoming events</p>
-            )}
-            <Link to="/calendar">
-              <Button variant="ghost" className="w-full h-10">
-                View All Events
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-
-        {/* Recent Performance */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center">
-              <TrendingUp className="h-5 w-5 mr-2" />
-              Recent Results
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            
             {stats.recentResults.length > 0 ? (
-              <div className="space-y-3">
-                {stats.recentResults.map((event) => {
+              <>
+                {stats.recentResults.map((event, index) => {
                   const result = getResultFromScores(event.our_score, event.opponent_score);
                   return (
-                    <div key={event.id} className="p-3 bg-muted/30 rounded-lg space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          {event.team_context?.logo_url ? (
-                            <img 
-                              src={event.team_context.logo_url} 
-                              alt=""
-                              className="w-4 h-4 rounded-full object-cover shrink-0"
-                            />
-                          ) : (
-                            <div className="w-4 h-4 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold shrink-0">
-                              {event.team_context?.name?.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          <span className="text-xs text-muted-foreground truncate">
-                            {event.team_context?.name || 'Unknown Team'}
+                    <div key={event.id}>
+                      {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
+                      <div className="flex gap-3 px-4 py-3">
+                        {/* Date column */}
+                        <div className="flex flex-col items-center justify-center min-w-[40px]">
+                          <span className="text-[10px] text-gray-500 uppercase font-medium">
+                            {format(new Date(event.date), 'MMM')}
+                          </span>
+                          <span className="text-xl font-bold text-gray-900">
+                            {format(new Date(event.date), 'd')}
                           </span>
                         </div>
-                        {event.category_name && (
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            {event.category_name}
-                          </Badge>
-                        )}
+                        
+                        {/* Colored accent based on result */}
+                        <div className={`w-1 self-stretch rounded-full ${
+                          result?.result === 'W' ? 'bg-green-400' : 
+                          result?.result === 'L' ? 'bg-red-400' : 'bg-gray-400'
+                        }`} />
+                        
+                        {/* Result details */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-semibold text-gray-900 truncate">
+                              vs {event.opponent}
+                            </p>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-lg font-bold text-gray-900">
+                                {event.our_score}-{event.opponent_score}
+                              </span>
+                              {result && (
+                                <Badge className={`${result.color} text-white text-xs px-1.5`}>
+                                  {result.result}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-500">
+                            {event.team_context?.name}
+                          </p>
+                          {event.category_name && (
+                            <Badge variant="outline" className="text-xs mt-1">
+                              {event.category_name}
+                            </Badge>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium truncate">
-                          vs {event.opponent} ({event.our_score}-{event.opponent_score})
-                        </span>
-                        {result && (
-                          <Badge className={`${result.color} text-white shrink-0`}>
-                            {result.result}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(event.date).toLocaleDateString()}
-                      </p>
                     </div>
                   );
                 })}
-              </div>
+              </>
             ) : (
-              <p className="text-muted-foreground text-center py-4">No recent results</p>
+              <div className="px-4 py-6 text-center text-gray-500">
+                No recent results
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
 
-        {/* Modals */}
-        <EditProfileModal 
-          isOpen={showEditProfile} 
-          onClose={() => setShowEditProfile(false)} 
-        />
-        <ManageConnectionsModal 
-          isOpen={showManageConnections} 
-          onClose={() => setShowManageConnections(false)} 
-        />
-        
-        {/* Mobile Event Form Modal */}
-        {showMobileEventForm && (
-          <MobileEventForm
-            onClose={() => setShowMobileEventForm(false)}
-            onEventCreated={handleEventCreated}
-          />
-        )}
+        </div>
       </div>
+
+      {/* Modals */}
+      <EditProfileModal 
+        isOpen={showEditProfile} 
+        onClose={() => setShowEditProfile(false)} 
+      />
+      <ManageConnectionsModal 
+        isOpen={showManageConnections} 
+        onClose={() => setShowManageConnections(false)} 
+      />
+      
+      {showMobileEventForm && (
+        <MobileEventForm
+          onClose={() => setShowMobileEventForm(false)}
+          onEventCreated={handleEventCreated}
+        />
+      )}
     </MobileLayout>
   );
 }
