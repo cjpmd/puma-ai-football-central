@@ -572,13 +572,18 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                 const positionGroupColor = getPositionGroupColor(position.positionName);
                 const positionGroup = getPositionGroup(position.positionName);
                 
-                // Get player initials for fallback avatar
+                // Get player initials and surname for display
                 const getPlayerInitials = (name: string) => {
                   const parts = name.split(' ');
                   if (parts.length >= 2) {
                     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
                   }
                   return name.substring(0, 2).toUpperCase();
+                };
+                
+                const getPlayerSurname = (name: string): string => {
+                  const parts = name.trim().split(' ');
+                  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
                 };
                 
                 return (
@@ -592,7 +597,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                       nameDisplayOption={nameDisplayOption}
                     />
                     
-                    {/* Render draggable Fantasy-style player card on top */}
+                    {/* Render draggable Enhanced Fantasy-style player card on top */}
                     {player && (
                       <div
                         className="absolute player-position"
@@ -604,25 +609,22 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                         }}
                       >
                         <div 
-                          className="player-card-fantasy"
+                          className="player-card-enhanced"
                           style={{ cursor: isPositionsLocked ? 'default' : 'grab' }}
                         >
-                          {/* Player image container with position-colored border */}
-                          <div 
-                            className={`player-image-container ${positionGroup}`}
-                            ref={(el) => {
-                              // Attach drag handlers to the image container
-                              if (el && !isPositionsLocked) {
-                                const dragId = `${currentPeriod.id}|position|${player.id}`;
-                                el.setAttribute('data-drag-id', dragId);
-                              }
-                            }}
-                          >
+                          {/* Captain Badge */}
+                          {isCaptain && (
+                            <div className="captain-badge-enhanced">
+                              <span>C</span>
+                            </div>
+                          )}
+                          
+                          {/* Player Image */}
+                          <div className="player-image-enhanced">
                             {(player as any).photo_url ? (
                               <img 
                                 src={(player as any).photo_url} 
                                 alt={player.name}
-                                className="w-full h-full object-cover"
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
                                   const fallback = e.currentTarget.nextElementSibling;
@@ -630,26 +632,19 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                                 }}
                               />
                             ) : null}
-                            <div className={`player-avatar-fallback ${(player as any).photo_url ? 'hidden' : ''}`}>
+                            <span className={`avatar-fallback-enhanced ${(player as any).photo_url ? 'hidden' : ''}`}>
                               {getPlayerInitials(player.name)}
-                            </div>
-                            
-                            {/* Captain badge */}
-                            {isCaptain && (
-                              <div className="captain-badge-fantasy">
-                                <span>C</span>
-                              </div>
-                            )}
+                            </span>
                           </div>
                           
-                          {/* Player info rectangle */}
-                          <div className={`player-info-rectangle ${positionGroup}`}>
-                            <span className="player-name-fantasy">
-                              {nameDisplayOption === 'firstName' 
-                                ? player.name.split(' ')[0] 
-                                : player.name.split(' ').pop()}
-                            </span>
-                            <span className="player-number-fantasy">#{player.squadNumber}</span>
+                          {/* Name Bar */}
+                          <div className="player-name-bar">
+                            <span>{getPlayerSurname(player.name)}</span>
+                          </div>
+                          
+                          {/* Number Bar with position gradient */}
+                          <div className={`player-number-bar ${positionGroup}`}>
+                            <span>{player.squadNumber || '?'}</span>
                           </div>
                         </div>
                       </div>
