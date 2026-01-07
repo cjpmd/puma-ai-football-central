@@ -638,11 +638,11 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                                   }}
                                 />
                                 <div className="player-shirt-fallback" style={{ display: 'none' }}>
-                                  <PlayerShirtFallback kitDesign={kitDesign} size="sm" />
+                                  <PlayerShirtFallback kitDesign={kitDesign} size="sm" squadNumber={player.squadNumber} />
                                 </div>
                               </>
                             ) : (
-                              <PlayerShirtFallback kitDesign={kitDesign} size="sm" />
+                              <PlayerShirtFallback kitDesign={kitDesign} size="sm" squadNumber={player.squadNumber} />
                             )}
                           </div>
                           
