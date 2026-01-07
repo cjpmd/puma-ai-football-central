@@ -4,8 +4,8 @@ import { GameDayPlayerEventMenu } from './GameDayPlayerEventMenu';
 import { MatchEvent, MatchEventType, PlayerCardStatus, SubstitutionData } from '@/types/matchEvent';
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
-import { FootballIcon } from './icons/FootballIcon';
-import { ArrowLeftRight, User } from 'lucide-react';
+import { PlayerShirtFallback } from '@/components/shared/PlayerShirtFallback';
+import { KitDesign } from '@/types/team';
 import { toast } from 'sonner';
 
 interface PlayerPosition {
@@ -45,6 +45,8 @@ interface GameDayFormationCardProps {
   onEventCreated: (event: MatchEvent) => void;
   onSubstitution?: (playerOffId: string, playerOnId: string) => void;
   currentMinute?: number;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
 }
 
 export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
@@ -58,7 +60,9 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   matchEvents,
   onEventCreated,
   onSubstitution,
-  currentMinute = 0
+  currentMinute = 0,
+  kitDesign,
+  goalkeeperKitDesign
 }) => {
   const [playerCardStatuses, setPlayerCardStatuses] = useState<Record<string, PlayerCardStatus>>({});
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
@@ -288,28 +292,40 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
                     {/* Player Image */}
                     <div className="player-image-enhanced">
                       {pos.photoUrl ? (
-                        <img 
-                          src={pos.photoUrl} 
-                          alt={pos.playerName}
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                          }}
+                        <>
+                          <img 
+                            src={pos.photoUrl} 
+                            alt={pos.playerName}
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              const fallback = e.currentTarget.nextElementSibling;
+                              if (fallback) fallback.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="hidden">
+                            <PlayerShirtFallback 
+                              kitDesign={kitDesign} 
+                              goalkeeperKitDesign={goalkeeperKitDesign}
+                              isGoalkeeper={isGoalkeeper}
+                              size="sm" 
+                              squadNumber={pos.squadNumber} 
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <PlayerShirtFallback 
+                          kitDesign={kitDesign} 
+                          goalkeeperKitDesign={goalkeeperKitDesign}
+                          isGoalkeeper={isGoalkeeper}
+                          size="sm" 
+                          squadNumber={pos.squadNumber} 
                         />
-                      ) : null}
-                      <span className={`avatar-fallback-enhanced ${pos.photoUrl ? 'hidden' : ''}`}>
-                        {getPlayerInitials(pos.playerName)}
-                      </span>
+                      )}
                     </div>
                     
                     {/* Name Bar */}
                     <div className="player-name-bar">
                       <span>{getPlayerSurname(pos.playerName)}</span>
-                    </div>
-                    
-                    {/* Number Bar with position gradient */}
-                    <div className={`player-number-bar ${getPositionGroup(pos.positionGroup)}`}>
-                      <span>{pos.squadNumber}</span>
                     </div>
                   </div>
                 </div>
