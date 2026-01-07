@@ -13,6 +13,7 @@ export interface AvailablePlayer {
   availabilityStatus: 'available' | 'unavailable' | 'pending';
   isAssignedToSquad: boolean;
   squadRole?: 'player' | 'captain' | 'vice_captain';
+  photo_url?: string;
 }
 
 export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, currentTeamIndex?: number) => {
@@ -74,7 +75,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             console.log(`[${contextId}] No invitations found - loading all team players (everyone invited)`);
             const result = await supabase
               .from('players')
-              .select('id, name, squad_number, type')
+              .select('id, name, squad_number, type, photo_url')
               .eq('team_id', teamId)
               .eq('status', 'active')
               .order('squad_number');
@@ -92,7 +93,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
           console.log(`[${contextId}] Loading ${invitedPlayerIds.length} invited players`);
           const result = await supabase
             .from('players')
-            .select('id, name, squad_number, type')
+            .select('id, name, squad_number, type, photo_url')
             .in('id', invitedPlayerIds)
             .eq('status', 'active')
             .order('squad_number');
@@ -104,7 +105,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         // No eventId - load all team players
         const result = await supabase
           .from('players')
-          .select('id, name, squad_number, type')
+          .select('id, name, squad_number, type, photo_url')
           .eq('team_id', teamId)
           .eq('status', 'active')
           .order('squad_number');
@@ -133,7 +134,8 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         type: (player.type === 'goalkeeper' ? 'goalkeeper' : 'outfield') as 'goalkeeper' | 'outfield',
         availabilityStatus: 'pending' as 'available' | 'unavailable' | 'pending',
         isAssignedToSquad: false,
-        squadRole: 'player' as 'player' | 'captain' | 'vice_captain'
+        squadRole: 'player' as 'player' | 'captain' | 'vice_captain',
+        photo_url: player.photo_url || undefined
       }));
 
       // Get availability data if eventId is provided

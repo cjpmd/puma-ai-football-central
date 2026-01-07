@@ -6,6 +6,7 @@ export interface SquadPlayer {
   type: 'goalkeeper' | 'outfield';
   availabilityStatus: 'available' | 'unavailable' | 'pending' | 'maybe';
   squadRole: 'player' | 'captain' | 'vice_captain';
+  photo_url?: string;
 }
 
 export interface PositionSlot {

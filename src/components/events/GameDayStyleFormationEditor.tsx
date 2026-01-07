@@ -14,6 +14,7 @@ import {
   type CollisionDetection,
   type UniqueIdentifier
 } from '@dnd-kit/core';
+import '@/styles/game-day.css';
 import { snapCenterToCursor } from '@dnd-kit/modifiers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
