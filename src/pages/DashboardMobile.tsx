@@ -292,16 +292,16 @@ export default function DashboardMobile() {
         <div className="space-y-4 pb-safe-bottom">
           
           {/* Profile Header */}
-          <div className="flex flex-col items-center pt-2 pb-4">
-            <Avatar className="w-20 h-20 rounded-2xl mb-3 shadow-sm">
+          <div className="flex flex-col items-center pt-2 pb-3">
+            <Avatar className="w-16 h-16 rounded-2xl mb-2 shadow-sm">
               {(profile as any)?.avatar_url ? (
                 <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-2xl" />
               ) : null}
-              <AvatarFallback className="rounded-2xl bg-gray-200 text-2xl font-semibold text-gray-600">
+              <AvatarFallback className="rounded-2xl bg-gray-200 text-xl font-semibold text-gray-600">
                 {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
               </AvatarFallback>
             </Avatar>
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900">
               {getPersonalizedGreeting(profile, user?.email)}
             </h1>
           </div>
@@ -309,29 +309,29 @@ export default function DashboardMobile() {
           {/* Availability Status Banner */}
           {stats.pendingAvailability.length > 0 ? (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <Link to="/calendar" className="flex items-center justify-between px-4 py-3.5">
+              <Link to="/calendar" className="flex items-center justify-between px-4 py-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                    <AlertCircle className="w-5 h-5 text-orange-600" />
+                  <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-orange-600" />
                   </div>
                   <div>
-                    <span className="text-base font-medium text-gray-900">Availability Requests</span>
-                    <p className="text-sm text-gray-500">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
+                    <span className="text-sm font-medium text-gray-900">Availability Requests</span>
+                    <p className="text-xs text-gray-500">{stats.pendingAvailability.length} pending response{stats.pendingAvailability.length > 1 ? 's' : ''}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100">{stats.pendingAvailability.length}</Badge>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-100 text-xs">{stats.pendingAvailability.length}</Badge>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
                 </div>
               </Link>
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-sm px-4 py-3.5">
+            <div className="bg-white rounded-2xl shadow-sm px-4 py-2.5">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
-                  <Check className="w-5 h-5 text-green-600" />
+                <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
+                  <Check className="w-4 h-4 text-green-600" />
                 </div>
-                <span className="text-base text-gray-900">All caught up!</span>
+                <span className="text-sm text-gray-900">All caught up!</span>
               </div>
             </div>
           )}
@@ -339,25 +339,25 @@ export default function DashboardMobile() {
           {/* Your Teams */}
           {(allTeams?.length || teams?.length) ? (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-gray-100">
+              <div className="px-4 py-2 border-b border-gray-100">
                 <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Teams</h2>
               </div>
               
               {/* All Teams option */}
               <button
                 onClick={() => setViewMode('all')}
-                className="w-full flex items-center justify-between px-4 py-3"
+                className="w-full flex items-center justify-between px-4 py-2.5"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                    <Users className="w-5 h-5 text-blue-600" />
+                  <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-blue-600" />
                   </div>
-                  <span className="text-base text-gray-900">All Teams</span>
+                  <span className="text-sm text-gray-900">All Teams</span>
                 </div>
                 {viewMode === 'all' ? (
-                  <Check className="w-5 h-5 text-blue-600" />
+                  <Check className="w-4 h-4 text-blue-600" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
                 )}
               </button>
               
@@ -369,26 +369,26 @@ export default function DashboardMobile() {
                     <div className="h-px bg-gray-100 mx-4" />
                     <button
                       onClick={() => setCurrentTeam(team)}
-                      className="w-full flex items-center justify-between px-4 py-3"
+                      className="w-full flex items-center justify-between px-4 py-2.5"
                     >
                       <div className="flex items-center gap-3">
                         {team.logoUrl ? (
                           <img 
                             src={team.logoUrl} 
                             alt={team.name}
-                            className="w-9 h-9 rounded-full object-cover"
+                            className="w-8 h-8 rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-sm font-semibold text-blue-600">
+                          <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-xs font-semibold text-blue-600">
                             {getInitials(team.name)}
                           </div>
                         )}
-                        <span className="text-base text-gray-900 text-left">{team.name}</span>
+                        <span className="text-sm text-gray-900 text-left">{team.name}</span>
                       </div>
                       {isSelected ? (
-                        <Check className="w-5 h-5 text-blue-600" />
+                        <Check className="w-4 h-4 text-blue-600" />
                       ) : (
-                        <ChevronRight className="w-5 h-5 text-gray-400" />
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
                       )}
                     </button>
                   </div>
@@ -400,25 +400,25 @@ export default function DashboardMobile() {
           {/* Connected Players */}
           {connectedPlayers?.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-4 py-2.5 border-b border-gray-100">
+              <div className="px-4 py-2 border-b border-gray-100">
                 <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Your Players</h2>
               </div>
-              <div className="px-4 py-3">
-                <div className="flex flex-wrap gap-2">
+              <div className="px-4 py-2.5">
+                <div className="flex flex-wrap gap-1.5">
                   {connectedPlayers.map((player) => (
-                    <div key={player.id} className="flex items-center gap-2 bg-gray-50 rounded-full px-3 py-1.5">
+                    <div key={player.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1">
                       {player.photoUrl ? (
                         <img 
                           src={player.photoUrl} 
                           alt={player.name}
-                          className="w-6 h-6 rounded-full object-cover"
+                          className="w-5 h-5 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs font-semibold text-blue-600">
+                        <div className="w-5 h-5 rounded-full bg-blue-100 flex items-center justify-center text-[10px] font-semibold text-blue-600">
                           {getInitials(player.name)}
                         </div>
                       )}
-                      <span className="text-sm font-medium text-gray-700">{player.name}</span>
+                      <span className="text-xs font-medium text-gray-700">{player.name}</span>
                     </div>
                   ))}
                 </div>
@@ -428,7 +428,7 @@ export default function DashboardMobile() {
 
           {/* Quick Actions */}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-gray-100">
+            <div className="px-4 py-2 border-b border-gray-100">
               <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quick Actions</h2>
             </div>
             
@@ -436,25 +436,25 @@ export default function DashboardMobile() {
               <>
                 <button
                   onClick={() => setShowMobileEventForm(true)}
-                  className="w-full flex items-center justify-between px-4 py-3"
+                  className="w-full flex items-center justify-between px-4 py-2.5"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-green-50 flex items-center justify-center">
-                      <Plus className="w-5 h-5 text-green-600" />
+                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-green-600" />
                     </div>
-                    <span className="text-base text-gray-900">Create Event</span>
+                    <span className="text-sm text-gray-900">Create Event</span>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
                 </button>
                 <div className="h-px bg-gray-100 mx-4" />
-                <Link to="/players" className="w-full flex items-center justify-between px-4 py-3">
+                <Link to="/players" className="w-full flex items-center justify-between px-4 py-2.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center">
-                      <Users className="w-5 h-5 text-blue-600" />
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-blue-600" />
                     </div>
-                    <span className="text-base text-gray-900">View Team</span>
+                    <span className="text-sm text-gray-900">View Team</span>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400" />
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
                 </Link>
                 <div className="h-px bg-gray-100 mx-4" />
               </>
@@ -462,34 +462,34 @@ export default function DashboardMobile() {
             
             <button
               onClick={() => setShowEditProfile(true)}
-              className="w-full flex items-center justify-between px-4 py-3"
+              className="w-full flex items-center justify-between px-4 py-2.5"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-purple-50 flex items-center justify-center">
-                  <User className="w-5 h-5 text-purple-600" />
+                <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
+                  <User className="w-4 h-4 text-purple-600" />
                 </div>
-                <span className="text-base text-gray-900">Edit Profile</span>
+                <span className="text-sm text-gray-900">Edit Profile</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             </button>
             <div className="h-px bg-gray-100 mx-4" />
             <button
               onClick={() => setShowManageConnections(true)}
-              className="w-full flex items-center justify-between px-4 py-3"
+              className="w-full flex items-center justify-between px-4 py-2.5"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-orange-50 flex items-center justify-center">
-                  <Link2 className="w-5 h-5 text-orange-600" />
+                <div className="w-8 h-8 rounded-full bg-orange-50 flex items-center justify-center">
+                  <Link2 className="w-4 h-4 text-orange-600" />
                 </div>
-                <span className="text-base text-gray-900">Manage Connections</span>
+                <span className="text-sm text-gray-900">Manage Connections</span>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
+              <ChevronRight className="w-4 h-4 text-gray-400" />
             </button>
           </div>
 
           {/* Upcoming Events */}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-gray-100">
+            <div className="px-4 py-2 border-b border-gray-100">
               <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Upcoming Events</h2>
             </div>
             
@@ -553,7 +553,7 @@ export default function DashboardMobile() {
 
           {/* Recent Results */}
           <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-2.5 border-b border-gray-100">
+            <div className="px-4 py-2 border-b border-gray-100">
               <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent Results</h2>
             </div>
             
