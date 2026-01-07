@@ -43,6 +43,7 @@ interface GameDayStyleFormationEditorProps {
   eventType?: string;
   isPositionsLocked?: boolean;
   kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
 }
 
 export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorProps> = ({
@@ -56,6 +57,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
   gameDuration = 50,
   isPositionsLocked = false,
   kitDesign,
+  goalkeeperKitDesign,
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
   const [activePeriodIndex, setActivePeriodIndex] = useState(0);
@@ -638,11 +640,23 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                                   }}
                                 />
                                 <div className="player-shirt-fallback" style={{ display: 'none' }}>
-                                  <PlayerShirtFallback kitDesign={kitDesign} size="sm" squadNumber={player.squadNumber} />
+                                  <PlayerShirtFallback 
+                                    kitDesign={kitDesign} 
+                                    goalkeeperKitDesign={goalkeeperKitDesign}
+                                    isGoalkeeper={positionGroup === 'goalkeeper'}
+                                    size="sm" 
+                                    squadNumber={player.squadNumber} 
+                                  />
                                 </div>
                               </>
                             ) : (
-                              <PlayerShirtFallback kitDesign={kitDesign} size="sm" squadNumber={player.squadNumber} />
+                              <PlayerShirtFallback 
+                                kitDesign={kitDesign} 
+                                goalkeeperKitDesign={goalkeeperKitDesign}
+                                isGoalkeeper={positionGroup === 'goalkeeper'}
+                                size="sm" 
+                                squadNumber={player.squadNumber} 
+                              />
                             )}
                           </div>
                           

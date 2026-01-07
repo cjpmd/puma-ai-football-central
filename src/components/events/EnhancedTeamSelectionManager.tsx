@@ -122,6 +122,13 @@ const { data: teamData } = useQuery({
     return teamData.kit_designs[kitSelection as keyof typeof teamData.kit_designs];
   };
 
+  // Get goalkeeper kit design
+  const getGoalkeeperKitDesign = () => {
+    if (!teamData?.kit_designs) return undefined;
+    const designs = teamData.kit_designs as { goalkeeper?: any };
+    return designs.goalkeeper;
+  };
+
   // Initialize teams and load existing data
   useEffect(() => {
     if (!isOpen) return;
@@ -1122,6 +1129,7 @@ return (
                       isPositionsLocked={currentTeam.isPositionsLocked || false}
                       eventType={event.event_type}
                       kitDesign={getEventKitDesign()}
+                      goalkeeperKitDesign={getGoalkeeperKitDesign()}
                     />
                   )}
                 </TabsContent>
