@@ -8,6 +8,7 @@ interface SubstitutePlayer {
   position: string;
   isUsed?: boolean;
   replacedPlayerName?: string;
+  photo_url?: string;
 }
 
 interface GameDaySubstituteBenchProps {
@@ -15,8 +16,16 @@ interface GameDaySubstituteBenchProps {
   onPlayerLongPress: (playerId: string) => void;
 }
 
-// Compact circular icon for each substitute - matching Formation Tab style
-const SubstituteIcon: React.FC<{
+const getPlayerInitials = (name: string) => {
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
+
+// Fantasy-style substitute card
+const SubstituteCard: React.FC<{
   player: SubstitutePlayer;
   onLongPress: () => void;
 }> = ({ player, onLongPress }) => {
@@ -25,7 +34,7 @@ const SubstituteIcon: React.FC<{
   
   return (
     <div
-      className="substitute-player-icon"
+      className="substitute-card-fantasy"
       {...longPressHandlers}
     >
       {player.replacedPlayerName && (
@@ -33,8 +42,29 @@ const SubstituteIcon: React.FC<{
           {player.replacedPlayerName.split(' ')[0]}
         </div>
       )}
-      <span className="sub-name">{firstName}</span>
-      <span className="sub-number">#{player.squad_number}</span>
+      
+      {/* Mini player image */}
+      <div className="sub-image-mini">
+        {player.photo_url ? (
+          <img 
+            src={player.photo_url} 
+            alt={player.name}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+        ) : null}
+        <div className={`sub-avatar-fallback ${player.photo_url ? 'hidden' : ''}`}>
+          {getPlayerInitials(player.name)}
+        </div>
+      </div>
+      
+      {/* Mini info card */}
+      <div className="sub-info-mini">
+        <span className="sub-name-mini">{firstName}</span>
+        <span className="sub-number-mini">#{player.squad_number}</span>
+      </div>
     </div>
   );
 };
@@ -54,7 +84,7 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
   return (
     <div className="substitute-bench">
       {substitutes.map((player) => (
-        <SubstituteIcon
+        <SubstituteCard
           key={player.id}
           player={player}
           onLongPress={() => onPlayerLongPress(player.id)}

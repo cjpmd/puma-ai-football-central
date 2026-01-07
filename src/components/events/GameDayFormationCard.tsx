@@ -5,7 +5,7 @@ import { MatchEvent, MatchEventType, PlayerCardStatus, SubstitutionData } from '
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
 import { FootballIcon } from './icons/FootballIcon';
-import { ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface PlayerPosition {
@@ -21,6 +21,7 @@ interface PlayerPosition {
   isSubstitute?: boolean;
   replacedPlayerId?: string;
   replacedPlayerName?: string;
+  photoUrl?: string;
 }
 
 interface SubstitutePlayer {
@@ -29,6 +30,7 @@ interface SubstitutePlayer {
   squad_number: number;
   position: string;
   isUsed?: boolean;
+  photo_url?: string;
 }
 
 interface GameDayFormationCardProps {
@@ -62,7 +64,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load card statuses for all players
     const loadCardStatuses = async () => {
       const statuses: Record<string, PlayerCardStatus> = {};
       for (const pos of positions) {
@@ -123,7 +124,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
         onSubstitution(playerOffId, playerOnId);
       }
       
-      // Add event to UI and close menu
       onEventCreated(newEvent);
       setSelectedPlayer(null);
     } catch (error) {
@@ -138,41 +138,20 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
 
   const getPositionGroupClass = (group: string) => {
     switch (group) {
-      case 'goalkeeper':
-        return 'goalkeeper';
-      case 'defender':
-        return 'defender';
-      case 'midfielder':
-        return 'midfielder';
-      case 'forward':
-        return 'forward';
-      default:
-        return '';
+      case 'goalkeeper': return 'goalkeeper';
+      case 'defender': return 'defender';
+      case 'midfielder': return 'midfielder';
+      case 'forward': return 'forward';
+      default: return '';
     }
   };
 
-  const getPositionAbbreviation = (position: string): string => {
-    const abbreviations: Record<string, string> = {
-      'Goalkeeper': 'GK',
-      'Left Back': 'LB',
-      'Right Back': 'RB',
-      'Centre Back': 'CB',
-      'Left Wing Back': 'LWB',
-      'Right Wing Back': 'RWB',
-      'Left Midfield': 'LM',
-      'Right Midfield': 'RM',
-      'Centre Midfield': 'CM',
-      'Defensive Midfield': 'CDM',
-      'Attacking Midfield': 'CAM',
-      'Left Wing': 'LW',
-      'Right Wing': 'RW',
-      'Centre Forward': 'CF',
-      'Striker': 'ST',
-      'Left Forward': 'LF',
-      'Right Forward': 'RF'
-    };
-    
-    return abbreviations[position] || position.substring(0, 2).toUpperCase();
+  const getPlayerInitials = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   };
 
   const renderPlayerBadges = (playerId: string, isCaptain?: boolean) => {
@@ -184,7 +163,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
     const hasYellow = events.some(e => e.event_type === 'yellow_card');
     const hasRed = events.some(e => e.event_type === 'red_card');
 
-    // Check if this player was substituted off or on
     const wasSubbedOff = substitutions.some(e => e.player_id === playerId);
     let wasSubbedOn = false;
     substitutions.forEach(sub => {
@@ -200,11 +178,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
 
     return (
       <div className="player-badges">
-        {isCaptain && (
-          <div className="event-badge captain">
-            <span className="text-[8px] font-bold">C</span>
-          </div>
-        )}
         {goals > 0 && (
           <div className="goal-badges-container">
             {Array.from({ length: Math.min(goals, 5) }).map((_, idx) => (
@@ -260,72 +233,100 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       </div>
 
       <div className="formation-pitch flex-1 min-h-0">
-        <div className="goal-box-top"></div>
-        <div className="goal-box-bottom"></div>
-        {positions.map((pos) => {
-          const cardStatus = playerCardStatuses[pos.playerId] || { hasYellow: false, hasRed: false };
-          const isGoalkeeper = pos.positionGroup === 'goalkeeper';
+        {/* 3D Tilted Pitch Field */}
+        <div className="pitch-field">
+          {/* Pitch markings */}
+          <div className="pitch-center-line" />
+          <div className="pitch-center-circle" />
+          <div className="pitch-center-spot" />
+          <div className="goal-box-top" />
+          <div className="goal-box-bottom" />
           
-          const longPressHandlers = useLongPress(() => {
-            setSelectedPlayer(pos.playerId);
-          });
+          {/* Player positions */}
+          {positions.map((pos) => {
+            const cardStatus = playerCardStatuses[pos.playerId] || { hasYellow: false, hasRed: false };
+            const isGoalkeeper = pos.positionGroup === 'goalkeeper';
+            
+            const longPressHandlers = useLongPress(() => {
+              setSelectedPlayer(pos.playerId);
+            });
 
-          const playerCircleClass = [
-            'player-circle',
-            getPositionGroupClass(pos.positionGroup),
-            cardStatus.hasRed ? 'has-red-card' : '',
-            pos.isSubstitute === false ? 'substituted-off' : '',
-            pos.isSubstitute === true ? 'substituted-on' : ''
-          ].filter(Boolean).join(' ');
+            const cardStatusClass = cardStatus.hasRed 
+              ? 'has-red-card' 
+              : pos.isSubstitute === false 
+                ? 'substituted' 
+                : '';
 
-          return (
-            <GameDayPlayerEventMenu
-              key={pos.playerId}
-              eventId={eventId}
-              playerId={pos.playerId}
-              playerName={pos.playerName}
-              teamId={teamId}
-              isGoalkeeper={isGoalkeeper}
-              cardStatus={cardStatus}
-              availableSubstitutes={substitutes}
-              onEventSelect={(eventType) => handleEventSelect(pos.playerId, eventType)}
-              onEventDelete={handleEventDelete}
-              onSubstitution={handleSubstitution}
-            >
-              <div
-                className="player-position"
-                style={{
-                  left: `${pos.x}%`,
-                  top: `${pos.y}%`,
-                  transform: 'translate(-50%, -50%)'
-                }}
-                {...longPressHandlers}
+            return (
+              <GameDayPlayerEventMenu
+                key={pos.playerId}
+                eventId={eventId}
+                playerId={pos.playerId}
+                playerName={pos.playerName}
+                teamId={teamId}
+                isGoalkeeper={isGoalkeeper}
+                cardStatus={cardStatus}
+                availableSubstitutes={substitutes}
+                onEventSelect={(eventType) => handleEventSelect(pos.playerId, eventType)}
+                onEventDelete={handleEventDelete}
+                onSubstitution={handleSubstitution}
               >
-                {/* Show replaced player name in yellow box */}
-                {pos.replacedPlayerName && (
-                  <div className="replaced-player-label">
-                    {pos.replacedPlayerName.split(' ')[0]}
+                <div
+                  className="player-position"
+                  style={{
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    transform: 'translate(-50%, -50%)'
+                  }}
+                  {...longPressHandlers}
+                >
+                  {/* Show replaced player name in yellow box */}
+                  {pos.replacedPlayerName && (
+                    <div className="replaced-player-label">
+                      {pos.replacedPlayerName.split(' ')[0]}
+                    </div>
+                  )}
+                  
+                  {/* Fantasy-style player card */}
+                  <div className={`player-card-fantasy ${cardStatusClass}`}>
+                    {/* Player image container with position-colored border */}
+                    <div className={`player-image-container ${getPositionGroupClass(pos.positionGroup)}`}>
+                      {pos.photoUrl ? (
+                        <img 
+                          src={pos.photoUrl} 
+                          alt={pos.playerName}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
+                        />
+                      ) : null}
+                      <div className={`player-avatar-fallback ${pos.photoUrl ? 'hidden' : ''}`}>
+                        {getPlayerInitials(pos.playerName)}
+                      </div>
+                      
+                      {/* Captain badge */}
+                      {pos.isCaptain && (
+                        <div className="captain-badge-fantasy">
+                          <span>C</span>
+                        </div>
+                      )}
+                      
+                      {/* Event badges (goals, cards, etc) */}
+                      {renderPlayerBadges(pos.playerId, pos.isCaptain)}
+                    </div>
+                    
+                    {/* Player info rectangle */}
+                    <div className={`player-info-rectangle ${getPositionGroupClass(pos.positionGroup)}`}>
+                      <span className="player-name-fantasy">{pos.playerName.split(' ')[0]}</span>
+                      <span className="player-number-fantasy">#{pos.squadNumber}</span>
+                    </div>
                   </div>
-                )}
-                
-                <div className={playerCircleClass}>
-                  {renderPlayerBadges(pos.playerId, pos.isCaptain)}
-                  
-                  {/* Position abbreviation - colored text */}
-                  <div className="position-badge-inline">
-                    {getPositionAbbreviation(pos.position)}
-                  </div>
-                  
-                  {/* Player name */}
-                  <div className="player-circle-name">{pos.playerName.split(' ')[0]}</div>
-                  
-                  {/* Squad number */}
-                  <div className="player-number">#{pos.squadNumber}</div>
                 </div>
-              </div>
-            </GameDayPlayerEventMenu>
-          );
-        })}
+              </GameDayPlayerEventMenu>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -557,52 +557,107 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           className="flex-1 min-h-0 relative overflow-hidden w-full max-w-full"
         >
           <div className="formation-pitch w-full h-full">
-            <div className="goal-box-top"></div>
-            <div className="goal-box-bottom"></div>
-            
-            {currentPeriod.positions.map((position, index) => {
-              const player = squadPlayers.find(p => p.id === position.playerId);
-              const isCaptain = player?.id === globalCaptainId;
-              const positionGroupColor = getPositionGroupColor(position.positionName);
+            {/* 3D Tilted Pitch Field */}
+            <div className="pitch-field">
+              {/* Pitch markings */}
+              <div className="pitch-center-line" />
+              <div className="pitch-center-circle" />
+              <div className="pitch-center-spot" />
+              <div className="goal-box-top" />
+              <div className="goal-box-bottom" />
               
-              return (
-                <div key={`${currentPeriod.id}-position-${index}`}>
-                  {/* Drop zone for position */}
-                  <PositionSlot
-                    id={`${currentPeriod.id}-position-${index}`}
-                    position={position}
-                    player={player}
-                    isCaptain={isCaptain}
-                    nameDisplayOption={nameDisplayOption}
-                  />
-                  
-                  {/* Render draggable player icon on top of position slot */}
-                  {player && (
-                    <div
-                      className="absolute"
-                      style={{
-                        left: `${position.x}%`,
-                        top: `${position.y}%`,
-                        transform: 'translate(-50%, -50%)',
-                        zIndex: 20,
-                      }}
-                    >
-                      <div className={`rounded-full border-2 ${positionGroupColor} p-0.5`}>
-                        <PlayerIcon
-                          player={player}
-                          isCaptain={isCaptain}
-                          nameDisplayOption={nameDisplayOption}
-                          isCircular={true}
-                          dragId={isPositionsLocked ? undefined : `${currentPeriod.id}|position|${player.id}`}
-                          positionAbbreviation={position.abbreviation}
-                          showPositionLabel={true}
-                        />
+              {currentPeriod.positions.map((position, index) => {
+                const player = squadPlayers.find(p => p.id === position.playerId);
+                const isCaptain = player?.id === globalCaptainId;
+                const positionGroupColor = getPositionGroupColor(position.positionName);
+                const positionGroup = getPositionGroup(position.positionName);
+                
+                // Get player initials for fallback avatar
+                const getPlayerInitials = (name: string) => {
+                  const parts = name.split(' ');
+                  if (parts.length >= 2) {
+                    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+                  }
+                  return name.substring(0, 2).toUpperCase();
+                };
+                
+                return (
+                  <div key={`${currentPeriod.id}-position-${index}`}>
+                    {/* Drop zone for position */}
+                    <PositionSlot
+                      id={`${currentPeriod.id}-position-${index}`}
+                      position={position}
+                      player={player}
+                      isCaptain={isCaptain}
+                      nameDisplayOption={nameDisplayOption}
+                    />
+                    
+                    {/* Render draggable Fantasy-style player card on top */}
+                    {player && (
+                      <div
+                        className="absolute player-position"
+                        style={{
+                          left: `${position.x}%`,
+                          top: `${position.y}%`,
+                          transform: 'translate(-50%, -50%)',
+                          zIndex: 20,
+                        }}
+                      >
+                        <div 
+                          className="player-card-fantasy"
+                          style={{ cursor: isPositionsLocked ? 'default' : 'grab' }}
+                        >
+                          {/* Player image container with position-colored border */}
+                          <div 
+                            className={`player-image-container ${positionGroup}`}
+                            ref={(el) => {
+                              // Attach drag handlers to the image container
+                              if (el && !isPositionsLocked) {
+                                const dragId = `${currentPeriod.id}|position|${player.id}`;
+                                el.setAttribute('data-drag-id', dragId);
+                              }
+                            }}
+                          >
+                            {(player as any).photo_url ? (
+                              <img 
+                                src={(player as any).photo_url} 
+                                alt={player.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  const fallback = e.currentTarget.nextElementSibling;
+                                  if (fallback) fallback.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            <div className={`player-avatar-fallback ${(player as any).photo_url ? 'hidden' : ''}`}>
+                              {getPlayerInitials(player.name)}
+                            </div>
+                            
+                            {/* Captain badge */}
+                            {isCaptain && (
+                              <div className="captain-badge-fantasy">
+                                <span>C</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {/* Player info rectangle */}
+                          <div className={`player-info-rectangle ${positionGroup}`}>
+                            <span className="player-name-fantasy">
+                              {nameDisplayOption === 'firstName' 
+                                ? player.name.split(' ')[0] 
+                                : player.name.split(' ').pop()}
+                            </span>
+                            <span className="player-number-fantasy">#{player.squadNumber}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
