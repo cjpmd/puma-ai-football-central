@@ -89,20 +89,26 @@ export const GameDayView: React.FC = () => {
     }
   });
 
-  // Fetch team for logo/badge
+  // Fetch team for logo/badge and kit designs
   const { data: team } = useQuery({
     queryKey: ['team', event?.team_id],
     enabled: !!event?.team_id,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teams')
-        .select('id, name, logo_url')
+        .select('id, name, logo_url, kit_designs')
         .eq('id', event.team_id)
         .single();
       if (error) throw error;
       return data;
     }
   });
+
+  // Extract kit designs based on event kit selection
+  const kitDesigns = team?.kit_designs as any;
+  const kitSelection = event?.kit_selection || 'home';
+  const kitDesign = kitDesigns?.[kitSelection] || kitDesigns?.home;
+  const goalkeeperKitDesign = kitDesigns?.goalkeeper;
 
   // Create player lookup map
   const playerMap = useMemo(() => {
@@ -628,6 +634,8 @@ export const GameDayView: React.FC = () => {
             onEventCreated={handleEventCreated}
             onSubstitution={handleSubstitution}
             currentMinute={currentMinute}
+            kitDesign={kitDesign}
+            goalkeeperKitDesign={goalkeeperKitDesign}
           />
         </div>
 
