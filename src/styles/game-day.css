@@ -343,13 +343,14 @@
   display: block;
 }
 
-/* Number bar - VERY THIN strip */
+/* Number bar - VERY THIN accent strip */
 .player-number-bar {
   width: calc(100% + 6px);
-  margin: 1px -3px 0 -3px;
-  padding: 2px 0;
+  margin: 0 -3px 0 -3px;
+  padding: 1px 0;
   border-radius: 0 0 6px 6px;
   text-align: center;
+  line-height: 1;
 }
 
 /* Position-based number bar colors */
@@ -370,10 +371,11 @@
 }
 
 .player-number-bar span {
-  font-size: 8px;
+  font-size: 7px;
   font-weight: 800;
   color: hsl(0, 0%, 100%);
   text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.2);
+  line-height: 1;
 }
 
 /* Event badges on enhanced cards */
