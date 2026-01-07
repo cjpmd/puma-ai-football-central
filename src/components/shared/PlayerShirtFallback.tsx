@@ -13,16 +13,16 @@ export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
   squadNumber
 }) => {
   const sizes = {
-    sm: { width: 36, height: 42 },
-    md: { width: 44, height: 52 }
+    sm: { width: 40, height: 44 },
+    md: { width: 52, height: 56 }
   };
 
   const { width, height } = sizes[size];
   
   // Default kit colors if none provided
-  const shirtColor = kitDesign?.shirtColor || '#6b7280';
-  const shortsColor = kitDesign?.shortsColor || '#374151';
-  const stripeColor = kitDesign?.stripeColor || '#ffffff';
+  const shirtColor = kitDesign?.shirtColor || '#ffffff';
+  const accentColor = kitDesign?.sleeveColor || kitDesign?.stripeColor || '#dc2626';
+  const stripeColor = kitDesign?.stripeColor || '#1a1a1a';
   const hasStripes = kitDesign?.hasStripes || false;
 
   // Determine text color based on shirt brightness
@@ -42,30 +42,53 @@ export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
       <svg
         width={width}
         height={height}
-        viewBox="0 0 100 115"
+        viewBox="0 0 100 90"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
-        {/* Shirt body */}
+        {/* Shirt body - back view silhouette */}
         <path
-          d="M25 28 L25 18 Q25 13 30 13 L35 13 L35 8 Q35 3 40 3 L60 3 Q65 3 65 8 L65 13 L70 13 Q75 13 75 18 L75 28 L85 33 L85 43 L75 38 L75 90 Q75 95 70 95 L30 95 Q25 95 25 90 L25 38 L15 43 L15 33 L25 28 Z"
+          d="M15 25 L15 15 Q15 8 25 8 L35 8 L38 3 Q42 0 50 0 Q58 0 62 3 L65 8 L75 8 Q85 8 85 15 L85 25 L95 30 L95 42 L85 37 L85 85 Q85 88 82 88 L18 88 Q15 88 15 85 L15 37 L5 42 L5 30 L15 25 Z"
           fill={shirtColor}
-          stroke="rgba(255,255,255,0.3)"
-          strokeWidth="1.5"
+          stroke="#1a1a1a"
+          strokeWidth="3"
+          strokeLinejoin="round"
         />
         
-        {/* Stripes overlay if enabled */}
+        {/* Collar accent */}
+        <path
+          d="M38 3 Q42 0 50 0 Q58 0 62 3"
+          fill="none"
+          stroke={accentColor}
+          strokeWidth="4"
+          strokeLinecap="round"
+        />
+        
+        {/* Left sleeve cuff */}
+        <rect
+          x="5"
+          y="30"
+          width="12"
+          height="5"
+          fill={accentColor}
+        />
+        
+        {/* Right sleeve cuff */}
+        <rect
+          x="83"
+          y="30"
+          width="12"
+          height="5"
+          fill={accentColor}
+        />
+        
+        {/* Vertical stripes on bottom portion */}
         {hasStripes && (
           <>
-            <defs>
-              <pattern id="shirt-stripes" patternUnits="userSpaceOnUse" width="10" height="10">
-                <rect width="5" height="10" fill={stripeColor} opacity="0.5" />
-              </pattern>
-            </defs>
-            <path
-              d="M25 28 L25 18 Q25 13 30 13 L35 13 L35 8 Q35 3 40 3 L60 3 Q65 3 65 8 L65 13 L70 13 Q75 13 75 18 L75 28 L85 33 L85 43 L75 38 L75 90 Q75 95 70 95 L30 95 Q25 95 25 90 L25 38 L15 43 L15 33 L25 28 Z"
-              fill="url(#shirt-stripes)"
-            />
+            <rect x="25" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
+            <rect x="37" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
+            <rect x="57" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
+            <rect x="69" y="55" width="6" height="30" fill={stripeColor} opacity="0.7" />
           </>
         )}
 
@@ -73,29 +96,17 @@ export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
         {squadNumber && (
           <text
             x="50"
-            y="58"
+            y="48"
             textAnchor="middle"
             dominantBaseline="middle"
             fill={numberColor}
-            fontSize="28"
+            fontSize="34"
             fontWeight="bold"
             fontFamily="Arial, sans-serif"
           >
             {squadNumber}
           </text>
         )}
-        
-        {/* Shorts */}
-        <rect
-          x="32"
-          y="93"
-          width="36"
-          height="18"
-          rx="3"
-          fill={shortsColor}
-          stroke="rgba(255,255,255,0.2)"
-          strokeWidth="1"
-        />
       </svg>
     </div>
   );
