@@ -28,6 +28,8 @@ import { usePositionAbbreviations } from '@/hooks/usePositionAbbreviations';
 import { SquadPlayer, FormationPeriod, PositionSlot as PositionSlotType } from '@/types/teamSelection';
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { useMobileDetection } from '@/hooks/useMobileDetection';
+import { PlayerShirtFallback } from '@/components/shared/PlayerShirtFallback';
+import { KitDesign } from '@/types/team';
 
 interface GameDayStyleFormationEditorProps {
   squadPlayers: SquadPlayer[];
@@ -40,6 +42,7 @@ interface GameDayStyleFormationEditorProps {
   gameDuration?: number;
   eventType?: string;
   isPositionsLocked?: boolean;
+  kitDesign?: KitDesign;
 }
 
 export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorProps> = ({
@@ -52,6 +55,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
   onCaptainChange,
   gameDuration = 50,
   isPositionsLocked = false,
+  kitDesign,
 }) => {
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
   const [activePeriodIndex, setActivePeriodIndex] = useState(0);
@@ -629,18 +633,16 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                                   alt={player.name}
                                   onError={(e) => {
                                     e.currentTarget.style.display = 'none';
-                                    const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback-enhanced');
+                                    const fallback = e.currentTarget.parentElement?.querySelector('.player-shirt-fallback');
                                     if (fallback) (fallback as HTMLElement).style.display = 'flex';
                                   }}
                                 />
-                                <span className="avatar-fallback-enhanced" style={{ display: 'none' }}>
-                                  {getPlayerInitials(player.name)}
-                                </span>
+                                <div className="player-shirt-fallback" style={{ display: 'none' }}>
+                                  <PlayerShirtFallback kitDesign={kitDesign} size="sm" />
+                                </div>
                               </>
                             ) : (
-                              <span className="avatar-fallback-enhanced">
-                                {getPlayerInitials(player.name)}
-                              </span>
+                              <PlayerShirtFallback kitDesign={kitDesign} size="sm" />
                             )}
                           </div>
                           

@@ -99,13 +99,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
     enabled: !!teamId,
   });
 
-  // Load team name display option
+  // Load team name display option and kit designs
 const { data: teamData } = useQuery({
   queryKey: ['team-settings', teamId],
   queryFn: async () => {
     const { data, error } = await supabase
       .from('teams')
-      .select('name, name_display_option')
+      .select('name, name_display_option, kit_designs')
       .eq('id', teamId)
       .single();
       
@@ -114,6 +114,13 @@ const { data: teamData } = useQuery({
     },
     enabled: !!teamId,
   });
+
+  // Get the appropriate kit design based on event kit selection
+  const getEventKitDesign = () => {
+    if (!teamData?.kit_designs) return undefined;
+    const kitSelection = event.kit_selection || 'home';
+    return teamData.kit_designs[kitSelection as keyof typeof teamData.kit_designs];
+  };
 
   // Initialize teams and load existing data
   useEffect(() => {
@@ -1114,6 +1121,7 @@ return (
                       gameDuration={event.game_duration || 50}
                       isPositionsLocked={currentTeam.isPositionsLocked || false}
                       eventType={event.event_type}
+                      kitDesign={getEventKitDesign()}
                     />
                   )}
                 </TabsContent>
