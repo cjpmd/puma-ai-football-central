@@ -69,7 +69,8 @@ export const AvailabilityDrivenSquadManagement: React.FC<AvailabilityDrivenSquad
         squadNumber: player.squadNumber,
         type: player.type,
         availabilityStatus: player.availabilityStatus,
-        squadRole: (player.squadRole || 'player') as 'player' | 'captain' | 'vice_captain'
+        squadRole: (player.squadRole || 'player') as 'player' | 'captain' | 'vice_captain',
+        photo_url: player.photo_url
       }))
       .sort((a, b) => {
         // Primary sort: availability status (available -> pending -> unavailable)
