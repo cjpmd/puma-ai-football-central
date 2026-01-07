@@ -4,11 +4,13 @@ import { KitDesign } from '@/types/team';
 interface PlayerShirtFallbackProps {
   kitDesign?: KitDesign;
   size?: 'sm' | 'md';
+  squadNumber?: number | string;
 }
 
 export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({ 
   kitDesign,
-  size = 'sm'
+  size = 'sm',
+  squadNumber
 }) => {
   const sizes = {
     sm: { width: 36, height: 42 },
@@ -22,6 +24,18 @@ export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
   const shortsColor = kitDesign?.shortsColor || '#374151';
   const stripeColor = kitDesign?.stripeColor || '#ffffff';
   const hasStripes = kitDesign?.hasStripes || false;
+
+  // Determine text color based on shirt brightness
+  const getContrastColor = (hexColor: string) => {
+    const hex = hexColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    return brightness > 128 ? '#1a1a1a' : '#ffffff';
+  };
+
+  const numberColor = getContrastColor(shirtColor);
 
   return (
     <div className="flex items-center justify-center w-full h-full">
@@ -53,6 +67,22 @@ export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
               fill="url(#shirt-stripes)"
             />
           </>
+        )}
+
+        {/* Squad Number */}
+        {squadNumber && (
+          <text
+            x="50"
+            y="58"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={numberColor}
+            fontSize="28"
+            fontWeight="bold"
+            fontFamily="Arial, sans-serif"
+          >
+            {squadNumber}
+          </text>
         )}
         
         {/* Shorts */}
