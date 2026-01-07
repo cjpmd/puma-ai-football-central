@@ -24,17 +24,22 @@ const getPlayerInitials = (name: string) => {
   return name.substring(0, 2).toUpperCase();
 };
 
-// Fantasy-style substitute card
+// Get player surname for display
+const getPlayerSurname = (name: string): string => {
+  const parts = name.trim().split(' ');
+  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
+};
+
+// Enhanced substitute card
 const SubstituteCard: React.FC<{
   player: SubstitutePlayer;
   onLongPress: () => void;
 }> = ({ player, onLongPress }) => {
   const longPressHandlers = useLongPress(onLongPress);
-  const firstName = player.name.split(' ')[0];
   
   return (
     <div
-      className="substitute-card-fantasy"
+      className="substitute-card-enhanced"
       {...longPressHandlers}
     >
       {player.replacedPlayerName && (
@@ -43,8 +48,8 @@ const SubstituteCard: React.FC<{
         </div>
       )}
       
-      {/* Mini player image */}
-      <div className="sub-image-mini">
+      {/* Player image */}
+      <div className="sub-image-enhanced">
         {player.photo_url ? (
           <img 
             src={player.photo_url} 
@@ -55,15 +60,19 @@ const SubstituteCard: React.FC<{
             }}
           />
         ) : null}
-        <div className={`sub-avatar-fallback ${player.photo_url ? 'hidden' : ''}`}>
+        <span className={`sub-avatar-fallback ${player.photo_url ? 'hidden' : ''}`}>
           {getPlayerInitials(player.name)}
-        </div>
+        </span>
       </div>
       
-      {/* Mini info card */}
-      <div className="sub-info-mini">
-        <span className="sub-name-mini">{firstName}</span>
-        <span className="sub-number-mini">#{player.squad_number}</span>
+      {/* Name Bar */}
+      <div className="sub-name-bar">
+        <span>{getPlayerSurname(player.name)}</span>
+      </div>
+      
+      {/* Number Bar */}
+      <div className="sub-number-bar">
+        <span>{player.squad_number}</span>
       </div>
     </div>
   );
