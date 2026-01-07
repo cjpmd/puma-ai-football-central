@@ -2,6 +2,7 @@
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -292,11 +293,14 @@ export default function DashboardMobile() {
           
           {/* Profile Header */}
           <div className="flex flex-col items-center pt-2 pb-4">
-          <div className="w-20 h-20 rounded-2xl bg-gray-200 flex items-center justify-center mb-3 shadow-sm">
-            <span className="text-2xl font-semibold text-gray-600">
-              {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
-              </span>
-            </div>
+            <Avatar className="w-20 h-20 rounded-2xl mb-3 shadow-sm">
+              {(profile as any)?.avatar_url ? (
+                <AvatarImage src={(profile as any).avatar_url} alt="Profile" className="rounded-2xl" />
+              ) : null}
+              <AvatarFallback className="rounded-2xl bg-gray-200 text-2xl font-semibold text-gray-600">
+                {getInitials((profile as any)?.first_name || user?.email?.charAt(0) || 'U')}
+              </AvatarFallback>
+            </Avatar>
             <h1 className="text-xl font-semibold text-gray-900">
               {getPersonalizedGreeting(profile, user?.email)}
             </h1>

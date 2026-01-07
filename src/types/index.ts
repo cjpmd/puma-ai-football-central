@@ -430,6 +430,7 @@ export type Profile = {
   fa_id: string | null;
   coaching_badges: any[];
   managed_player_ids?: string[]; // Added to support players managed by this user (e.g. parent)
+  avatar_url?: string | null;
   created_at: string;
   updated_at: string;
 };
