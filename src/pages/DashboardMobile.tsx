@@ -567,34 +567,46 @@ export default function DashboardMobile() {
           <CardContent className="space-y-3">
             {stats.upcomingEvents.length > 0 ? (
               stats.upcomingEvents.map((event) => (
-                <div key={event.id} className={`flex items-center justify-between p-3 rounded-lg ${getEventTypeColor(event.event_type)}`}>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {event.team_context?.logo_url ? (
-                        <img 
-                          src={event.team_context.logo_url} 
-                          alt={event.team_context.name}
-                          className="w-5 h-5 rounded-full"
-                        />
-                      ) : (
-                        <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
-                          {event.team_context?.name?.slice(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                      <span className="text-sm font-medium text-muted-foreground">
-                        {event.team_context?.name || event.team_name}
-                      </span>
+                <div key={event.id} className={`p-3 rounded-lg ${getEventTypeColor(event.event_type)}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {event.team_context?.logo_url ? (
+                          <img 
+                            src={event.team_context.logo_url} 
+                            alt={event.team_context.name}
+                            className="w-5 h-5 rounded-full"
+                          />
+                        ) : (
+                          <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold">
+                            {event.team_context?.name?.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-sm font-medium text-muted-foreground">
+                          {event.team_context?.name || event.team_name}
+                        </span>
+                      </div>
+                      <div className="font-medium">
+                        {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(event.date).toLocaleDateString()} {event.start_time && `, ${event.start_time}`}
+                      </div>
                     </div>
-                    <div className="font-medium">
-                      {event.event_type === 'training' ? event.title : `vs ${event.opponent || 'TBD'}`}
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      {new Date(event.date).toLocaleDateString()} {event.start_time && `, ${event.start_time}`}
-                    </div>
+                    <Badge variant="outline">
+                      {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
+                    </Badge>
                   </div>
-                  <Badge variant="outline">
-                    {event.event_type.charAt(0).toUpperCase() + event.event_type.slice(1)}
-                  </Badge>
+                  
+                  {/* Availability Controls */}
+                  <div className="mt-3 pt-2 border-t border-border/50">
+                    <QuickAvailabilityControls 
+                      eventId={event.id}
+                      currentStatus="pending"
+                      size="sm"
+                      onStatusChange={(status) => handleAvailabilityStatusChange(event.id, status)}
+                    />
+                  </div>
                 </div>
               ))
             ) : (

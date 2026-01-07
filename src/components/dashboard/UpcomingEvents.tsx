@@ -10,6 +10,7 @@ import { Calendar, Users, Trophy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EventTeamsTable } from '@/components/events/EventTeamsTable';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
+import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 
 interface Event {
   id: string;
@@ -95,6 +96,13 @@ export function UpcomingEvents() {
       default:
         return 'border-l-blue-500';
     }
+  };
+
+  const handleAvailabilityChange = (eventId: string, status: 'available' | 'unavailable') => {
+    setUserAvailability(prev => 
+      prev.map(a => a.eventId === eventId ? { ...a, status } : a)
+    );
+    loadUserAvailability();
   };
 
   const loadUpcomingEvents = async () => {
@@ -283,6 +291,17 @@ export function UpcomingEvents() {
                 </p>
               )}
             </div>
+            
+            {/* Availability Controls */}
+            <div className="mt-4 pt-3 border-t">
+              <QuickAvailabilityControls 
+                eventId={nextEvent.id}
+                currentStatus={getAvailabilityStatus(nextEvent.id) || 'pending'}
+                size="sm"
+                onStatusChange={(status) => handleAvailabilityChange(nextEvent.id, status)}
+              />
+            </div>
+            
             <div className="flex gap-2 mt-4">
               <Button 
                 size="sm" 
@@ -393,6 +412,16 @@ export function UpcomingEvents() {
                       Manage Squad
                     </Button>
                   </div>
+                </div>
+                
+                {/* Availability Controls */}
+                <div className="mt-3 pt-2 border-t">
+                  <QuickAvailabilityControls 
+                    eventId={event.id}
+                    currentStatus={getAvailabilityStatus(event.id) || 'pending'}
+                    size="sm"
+                    onStatusChange={(status) => handleAvailabilityChange(event.id, status)}
+                  />
                 </div>
               </CardContent>
             </Card>
