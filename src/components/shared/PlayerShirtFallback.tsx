@@ -3,12 +3,16 @@ import { KitDesign } from '@/types/team';
 
 interface PlayerShirtFallbackProps {
   kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
+  isGoalkeeper?: boolean;
   size?: 'sm' | 'md';
   squadNumber?: number | string;
 }
 
 export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({ 
   kitDesign,
+  goalkeeperKitDesign,
+  isGoalkeeper = false,
   size = 'sm',
   squadNumber
 }) => {
@@ -19,11 +23,19 @@ export const PlayerShirtFallback: React.FC<PlayerShirtFallbackProps> = ({
 
   const { width, height } = sizes[size];
   
-  // Default kit colors if none provided
-  const shirtColor = kitDesign?.shirtColor || '#ffffff';
-  const accentColor = kitDesign?.sleeveColor || kitDesign?.stripeColor || '#dc2626';
-  const stripeColor = kitDesign?.stripeColor || '#1a1a1a';
-  const hasStripes = kitDesign?.hasStripes || false;
+  // Use goalkeeper kit if player is GK, with fallback to main kit
+  const activeKit = isGoalkeeper 
+    ? (goalkeeperKitDesign || kitDesign) 
+    : kitDesign;
+  
+  // Default colors - goalkeeper defaults to yellow/black if no kit configured
+  const defaultShirtColor = isGoalkeeper ? '#facc15' : '#ffffff';
+  const defaultAccentColor = isGoalkeeper ? '#1a1a1a' : '#dc2626';
+  
+  const shirtColor = activeKit?.shirtColor || defaultShirtColor;
+  const accentColor = activeKit?.sleeveColor || activeKit?.stripeColor || defaultAccentColor;
+  const stripeColor = activeKit?.stripeColor || '#1a1a1a';
+  const hasStripes = activeKit?.hasStripes || false;
 
   // Determine text color based on shirt brightness
   const getContrastColor = (hexColor: string) => {
