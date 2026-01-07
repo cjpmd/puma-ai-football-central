@@ -665,10 +665,6 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                             <span>{getPlayerSurname(player.name)}</span>
                           </div>
                           
-                          {/* Number Bar with position gradient */}
-                          <div className={`player-number-bar ${positionGroup}`}>
-                            <span>{player.squadNumber || '?'}</span>
-                          </div>
                         </div>
                       </div>
                     )}
