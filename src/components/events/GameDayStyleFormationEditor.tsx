@@ -622,9 +622,9 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                           
                           {/* Player Image */}
                           <div className="player-image-enhanced">
-                            {(player as any).photo_url ? (
+                            {player.photo_url ? (
                               <img 
-                                src={(player as any).photo_url} 
+                                src={player.photo_url} 
                                 alt={player.name}
                                 onError={(e) => {
                                   e.currentTarget.style.display = 'none';
@@ -633,7 +633,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                                 }}
                               />
                             ) : null}
-                            <span className={`avatar-fallback-enhanced ${(player as any).photo_url ? 'hidden' : ''}`}>
+                            <span className={`avatar-fallback-enhanced ${player.photo_url ? 'hidden' : ''}`}>
                               {getPlayerInitials(player.name)}
                             </span>
                           </div>
