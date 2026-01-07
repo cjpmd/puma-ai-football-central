@@ -1082,7 +1082,15 @@ export default function CalendarEventsMobile() {
       </Dialog>
 
       {/* Event Form Modal */}
-      <Dialog open={showEventForm} onOpenChange={setShowEventForm}>
+      <Dialog 
+        open={showEventForm} 
+        onOpenChange={(open) => {
+          setShowEventForm(open);
+          if (!open && selectedEvent) {
+            setShowEventDetails(true);
+          }
+        }}
+      >
         <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
@@ -1095,12 +1103,12 @@ export default function CalendarEventsMobile() {
             onSubmit={handleFormSubmit}
             onEventCreated={(eventId) => {
               setShowEventForm(false);
-              setSelectedEvent(null);
               loadEvents();
+              setShowEventDetails(true);
             }}
             onCancel={() => {
               setShowEventForm(false);
-              setSelectedEvent(null);
+              setShowEventDetails(true);
             }}
           />
         </DialogContent>
@@ -1113,13 +1121,21 @@ export default function CalendarEventsMobile() {
           isOpen={showTeamSelection}
           onClose={() => {
             setShowTeamSelection(false);
-            setSelectedEvent(null);
+            setShowEventDetails(true);
           }}
         />
       )}
 
       {/* Post Game Edit Modal */}
-      <Dialog open={showPostGameEdit} onOpenChange={setShowPostGameEdit}>
+      <Dialog 
+        open={showPostGameEdit} 
+        onOpenChange={(open) => {
+          setShowPostGameEdit(open);
+          if (!open && selectedEvent) {
+            setShowEventDetails(true);
+          }
+        }}
+      >
         <DialogContent className="w-[calc(100vw-2rem)] max-w-[600px] max-h-[90vh] overflow-hidden p-3 sm:p-4">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-base">Post-Game Report</DialogTitle>
@@ -1131,8 +1147,8 @@ export default function CalendarEventsMobile() {
                 isOpen={showPostGameEdit}
                 onClose={() => {
                   setShowPostGameEdit(false);
-                  setSelectedEvent(null);
                   loadEvents();
+                  setShowEventDetails(true);
                 }}
               />
             )}
