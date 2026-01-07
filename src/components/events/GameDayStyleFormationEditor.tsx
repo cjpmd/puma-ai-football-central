@@ -623,19 +623,25 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                           {/* Player Image */}
                           <div className="player-image-enhanced">
                             {player.photo_url ? (
-                              <img 
-                                src={player.photo_url} 
-                                alt={player.name}
-                                onError={(e) => {
-                                  e.currentTarget.style.display = 'none';
-                                  const fallback = e.currentTarget.nextElementSibling;
-                                  if (fallback) fallback.classList.remove('hidden');
-                                }}
-                              />
-                            ) : null}
-                            <span className={`avatar-fallback-enhanced ${player.photo_url ? 'hidden' : ''}`}>
-                              {getPlayerInitials(player.name)}
-                            </span>
+                              <>
+                                <img 
+                                  src={player.photo_url} 
+                                  alt={player.name}
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                    const fallback = e.currentTarget.parentElement?.querySelector('.avatar-fallback-enhanced');
+                                    if (fallback) (fallback as HTMLElement).style.display = 'flex';
+                                  }}
+                                />
+                                <span className="avatar-fallback-enhanced" style={{ display: 'none' }}>
+                                  {getPlayerInitials(player.name)}
+                                </span>
+                              </>
+                            ) : (
+                              <span className="avatar-fallback-enhanced">
+                                {getPlayerInitials(player.name)}
+                              </span>
+                            )}
                           </div>
                           
                           {/* Name Bar */}
