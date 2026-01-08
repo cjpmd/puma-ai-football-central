@@ -22,6 +22,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, ChevronLeft, ChevronRight, Clock, Trash2 } from 'lucide-react';
 import { PlayerIcon } from './PlayerIcon';
+import { DraggablePitchPlayer } from './DraggablePitchPlayer';
 import { PositionSlot } from './PositionSlot';
 import { SubstituteBench } from './SubstituteBench';
 import { usePositionAbbreviations } from '@/hooks/usePositionAbbreviations';
@@ -72,7 +73,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
       activationConstraint: { distance: 3 },
     }),
     useSensor(TouchSensor, {
-      activationConstraint: { delay: 150, tolerance: 8 },
+      activationConstraint: { delay: 100, tolerance: 10 },
     })
   );
 
@@ -606,67 +607,16 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                     
                     {/* Render draggable Enhanced Fantasy-style player card on top */}
                     {player && (
-                      <div
-                        className="absolute player-position"
-                        style={{
-                          left: `${position.x}%`,
-                          top: `${position.y}%`,
-                          transform: 'translate(-50%, -50%)',
-                          zIndex: 20,
-                        }}
-                      >
-                        <div 
-                          className="player-card-enhanced"
-                          style={{ cursor: isPositionsLocked ? 'default' : 'grab' }}
-                        >
-                          {/* Captain Badge */}
-                          {isCaptain && (
-                            <div className="captain-badge-enhanced">
-                              <span>C</span>
-                            </div>
-                          )}
-                          
-                          {/* Player Image */}
-                          <div className="player-image-enhanced">
-                            {player.photo_url ? (
-                              <>
-                                <img 
-                                  src={player.photo_url} 
-                                  alt={player.name}
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = 'none';
-                                    const fallback = e.currentTarget.parentElement?.querySelector('.player-shirt-fallback');
-                                    if (fallback) (fallback as HTMLElement).style.display = 'flex';
-                                  }}
-                                />
-                                <div className="player-shirt-fallback" style={{ display: 'none' }}>
-                                  <PlayerShirtFallback 
-                                    kitDesign={kitDesign} 
-                                    goalkeeperKitDesign={goalkeeperKitDesign}
-                                    isGoalkeeper={positionGroup === 'goalkeeper'}
-                                    size="sm" 
-                                    squadNumber={player.squadNumber} 
-                                  />
-                                </div>
-                              </>
-                            ) : (
-                              <PlayerShirtFallback 
-                                kitDesign={kitDesign} 
-                                goalkeeperKitDesign={goalkeeperKitDesign}
-                                isGoalkeeper={positionGroup === 'goalkeeper'}
-                                size="sm" 
-                                squadNumber={player.squadNumber} 
-                              />
-                            )}
-                          </div>
-                          
-                          {/* Name Bar */}
-                          <div className="player-name-bar">
-                            <span>{getPlayerSurname(player.name)}</span>
-                          </div>
-                          
-                        </div>
-                      </div>
+                      <DraggablePitchPlayer
+                        player={player}
+                        position={position}
+                        isCaptain={isCaptain}
+                        isPositionsLocked={isPositionsLocked}
+                        kitDesign={kitDesign}
+                        goalkeeperKitDesign={goalkeeperKitDesign}
+                        periodId={currentPeriod.id}
+                        positionIndex={index}
+                      />
                     )}
                   </div>
                 );
