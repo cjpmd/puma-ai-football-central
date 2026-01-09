@@ -53,6 +53,24 @@ const getSurname = (name: string): string => {
  * 
  * NO number strip below - number is on the shirt itself.
  */
+/**
+ * Get circle background color based on position
+ */
+const getCircleBackground = (positionGroup: PositionGroup): string => {
+  switch (positionGroup) {
+    case 'goalkeeper':
+      return 'bg-yellow-500/20';
+    case 'defender':
+      return 'bg-blue-500/20';
+    case 'midfielder':
+      return 'bg-green-500/20';
+    case 'forward':
+      return 'bg-red-500/20';
+    default:
+      return 'bg-green-500/20';
+  }
+};
+
 export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   name,
   squadNumber,
@@ -73,6 +91,9 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   const shirtColor = effectiveKitDesign?.shirtColor || getDefaultShirtColor(positionGroup);
   const stripeColor = effectiveKitDesign?.stripeColor;
   const hasStripes = effectiveKitDesign?.hasStripes || false;
+  
+  // Get circle background color
+  const circleBackground = getCircleBackground(positionGroup);
 
   return (
     <div className={`fpl-player-token ${className}`}>
@@ -83,8 +104,8 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         </div>
       )}
       
-      {/* Shirt Container - transparent background, shirt carries the color */}
-      <div className={`fpl-shirt-container ${containerSize}`}>
+      {/* Shirt Container with circle background */}
+      <div className={`fpl-shirt-circle ${containerSize} ${circleBackground}`}>
         <FPLShirtIcon 
           className={shirtSize}
           squadNumber={squadNumber}
@@ -94,7 +115,7 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         />
       </div>
 
-      {/* Player Surname - no number strip */}
+      {/* Player Surname */}
       <div className={`fpl-player-name ${nameSize}`}>
         {getSurname(name)}
       </div>

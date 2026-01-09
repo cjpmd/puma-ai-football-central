@@ -77,6 +77,18 @@ export const FPLShirtIcon: React.FC<FPLShirtIconProps> = ({
         fill={hasStripes && stripeColor ? `url(#${patternId})` : shirtColor}
       />
       
+      {/* White pill background for striped kits */}
+      {squadNumber !== undefined && hasStripes && (
+        <rect
+          x="18"
+          y="28"
+          width="28"
+          height="18"
+          rx="4"
+          fill="white"
+        />
+      )}
+      
       {/* Squad number on shirt */}
       {squadNumber !== undefined && (
         <text
@@ -84,13 +96,10 @@ export const FPLShirtIcon: React.FC<FPLShirtIconProps> = ({
           y="40"
           textAnchor="middle"
           dominantBaseline="middle"
-          fill={textColor}
-          fontSize="18"
+          fill={hasStripes ? '#000000' : textColor}
+          fontSize="16"
           fontWeight="bold"
           fontFamily="Arial, sans-serif"
-          style={{ 
-            textShadow: hasStripes ? '0 1px 2px rgba(0,0,0,0.5)' : 'none',
-          }}
         >
           {squadNumber}
         </text>
