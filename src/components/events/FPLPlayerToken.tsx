@@ -35,24 +35,6 @@ const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
 };
 
 /**
- * Get the position-based number strip gradient class
- */
-const getNumberStripClass = (positionGroup: PositionGroup): string => {
-  switch (positionGroup) {
-    case 'goalkeeper':
-      return 'fpl-number-strip-gk';
-    case 'defender':
-      return 'fpl-number-strip-def';
-    case 'midfielder':
-      return 'fpl-number-strip-mid';
-    case 'forward':
-      return 'fpl-number-strip-fwd';
-    default:
-      return 'fpl-number-strip-mid';
-  }
-};
-
-/**
  * Extract surname from full name
  */
 const getSurname = (name: string): string => {
@@ -63,14 +45,13 @@ const getSurname = (name: string): string => {
 /**
  * FPL-style Player Token Component
  * 
- * Circular token with:
- * - Shirt icon filling ~80% of circle
+ * Features:
+ * - Shirt icon with squad number displayed ON the shirt
  * - Surname label below
- * - Position-colored number strip
+ * - Uses actual kit design colors including stripes
  * - Captain badge (optional)
- * - Uses actual kit design colors when provided
  * 
- * NO shadows, NO borders, NO card containers.
+ * NO number strip below - number is on the shirt itself.
  */
 export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   name,
@@ -83,17 +64,15 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   goalkeeperKitDesign,
 }) => {
   const isPitch = size === 'pitch';
-  const circleSize = isPitch ? 'w-14 h-14' : 'w-11 h-11'; // 56px vs 44px
-  // Increased shirt size to fill ~80% of circle
-  const shirtSize = isPitch ? 'w-11 h-11' : 'w-[34px] h-[34px]'; // 44px vs 34px
+  const containerSize = isPitch ? 'w-14 h-14' : 'w-11 h-11';
+  const shirtSize = isPitch ? 'w-12 h-12' : 'w-10 h-10';
   const nameSize = isPitch ? 'text-[11px]' : 'text-[10px]';
-  const stripSize = isPitch ? 'text-[10px] px-2 py-0.5' : 'text-[9px] px-1.5 py-0.5';
   
-  // Determine shirt color from kit design or fall back to position-based color
+  // Determine which kit to use based on position
   const effectiveKitDesign = positionGroup === 'goalkeeper' ? goalkeeperKitDesign : kitDesign;
-  const shirtBgColor = effectiveKitDesign?.shirtColor || getDefaultShirtColor(positionGroup);
-  
-  const numberStripClass = getNumberStripClass(positionGroup);
+  const shirtColor = effectiveKitDesign?.shirtColor || getDefaultShirtColor(positionGroup);
+  const stripeColor = effectiveKitDesign?.stripeColor;
+  const hasStripes = effectiveKitDesign?.hasStripes || false;
 
   return (
     <div className={`fpl-player-token ${className}`}>
@@ -104,25 +83,21 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         </div>
       )}
       
-      {/* Shirt Circle - using inline style for kit color */}
-      <div 
-        className={`fpl-shirt-circle ${circleSize}`}
-        style={{ backgroundColor: shirtBgColor }}
-      >
-        <FPLShirtIcon className={`${shirtSize} text-white/90`} />
+      {/* Shirt Container - transparent background, shirt carries the color */}
+      <div className={`fpl-shirt-container ${containerSize}`}>
+        <FPLShirtIcon 
+          className={shirtSize}
+          squadNumber={squadNumber}
+          shirtColor={shirtColor}
+          stripeColor={stripeColor}
+          hasStripes={hasStripes}
+        />
       </div>
 
-      {/* Player Surname */}
+      {/* Player Surname - no number strip */}
       <div className={`fpl-player-name ${nameSize}`}>
         {getSurname(name)}
       </div>
-
-      {/* Number Strip */}
-      {squadNumber !== undefined && (
-        <div className={`fpl-number-strip ${numberStripClass} ${stripSize}`}>
-          {squadNumber}
-        </div>
-      )}
     </div>
   );
 };
