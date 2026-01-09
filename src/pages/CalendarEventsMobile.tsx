@@ -32,6 +32,7 @@ import { MultiRoleAvailabilityControls } from '@/components/events/MultiRoleAvai
 import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
+import { EventAvailabilitySection } from '@/components/events/EventAvailabilitySection';
 
 // Helper to get color-coded event type label
 const getEventTypeLabel = (eventType: string): { label: string; colorClass: string } => {
@@ -994,6 +995,13 @@ export default function CalendarEventsMobile() {
                   canEdit={canEditEvents()}
                 />
               </div>
+
+              {/* Availability Section */}
+              <EventAvailabilitySection
+                eventId={selectedEvent.id}
+                teamId={teams?.[0]?.id || ''}
+                canEdit={canEditEvents()}
+              />
               
               {selectedEvent.description && (
                 <div>

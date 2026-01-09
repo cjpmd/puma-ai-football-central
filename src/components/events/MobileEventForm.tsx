@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,17 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventsService } from '@/services/eventsService';
-import { supabase } from '@/integrations/supabase/client';
 import { format, getDay } from 'date-fns';
-import { Calendar, Clock, MapPin, Users, X, Repeat, UserCheck } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, X, Repeat } from 'lucide-react';
 import { GameFormat } from '@/types';
-import { cn } from '@/lib/utils';
 
 interface MobileEventFormProps {
   onClose: () => void;
@@ -64,42 +59,6 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     recurrenceEndDate: '',
   });
 
-  // Invitation state
-  const [inviteType, setInviteType] = useState<'everyone' | 'players_only' | 'staff_only' | 'pick_squad'>('everyone');
-  const [showSquadPicker, setShowSquadPicker] = useState(false);
-  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
-  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
-  const [players, setPlayers] = useState<{ id: string; name: string }[]>([]);
-  const [staff, setStaff] = useState<{ id: string; name: string }[]>([]);
-
-  // Load players and staff for squad picker
-  useEffect(() => {
-    const loadSquadData = async () => {
-      if (!teams?.[0]?.id) return;
-
-      const [playersResult, staffResult] = await Promise.all([
-        supabase
-          .from('players')
-          .select('id, name')
-          .eq('team_id', teams[0].id)
-          .order('name'),
-        supabase
-          .from('team_staff')
-          .select('id, name')
-          .eq('team_id', teams[0].id)
-          .order('name')
-      ]);
-
-      if (playersResult.data) {
-        setPlayers(playersResult.data);
-      }
-      if (staffResult.data) {
-        setStaff(staffResult.data);
-      }
-    };
-
-    loadSquadData();
-  }, [teams]);
 
   // Update day of week when date changes
   const handleDateChange = (newDate: string) => {
@@ -152,29 +111,8 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
         }
       }
 
-      // Build invitations object based on inviteType
-      let invitations;
-      if (inviteType === 'everyone') {
-        invitations = { type: 'everyone' as const };
-      } else if (inviteType === 'pick_squad') {
-        invitations = {
-          type: 'pick_squad' as const,
-          selectedPlayerIds,
-          selectedStaffIds
-        };
-      } else if (inviteType === 'players_only') {
-        invitations = {
-          type: 'pick_squad' as const,
-          selectedPlayerIds: players.map(p => p.id),
-          selectedStaffIds: []
-        };
-      } else if (inviteType === 'staff_only') {
-        invitations = {
-          type: 'pick_squad' as const,
-          selectedPlayerIds: [],
-          selectedStaffIds: staff.map(s => s.id)
-        };
-      }
+      // Default to inviting everyone when creating event
+      const invitations = { type: 'everyone' as const };
 
       const result = await eventsService.createEvent(eventData, invitations);
 
@@ -454,74 +392,6 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
               </div>
             )}
 
-            {/* Request Availability Section */}
-            <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-              <Label className="flex items-center gap-2 text-sm font-medium">
-                <UserCheck className="h-4 w-4" />
-                Request Availability From
-              </Label>
-              
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setInviteType('everyone')}
-                  className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    inviteType === 'everyone' 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background border border-border"
-                  )}
-                >
-                  Everyone
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInviteType('players_only')}
-                  className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    inviteType === 'players_only' 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background border border-border"
-                  )}
-                >
-                  Players Only
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setInviteType('staff_only')}
-                  className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    inviteType === 'staff_only' 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background border border-border"
-                  )}
-                >
-                  Staff Only
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setInviteType('pick_squad');
-                    setShowSquadPicker(true);
-                  }}
-                  className={cn(
-                    "px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                    inviteType === 'pick_squad' 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-background border border-border"
-                  )}
-                >
-                  Pick Squad
-                </button>
-              </div>
-              
-              {inviteType === 'pick_squad' && (selectedPlayerIds.length > 0 || selectedStaffIds.length > 0) && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedPlayerIds.length} players, {selectedStaffIds.length} staff selected
-                </p>
-              )}
-            </div>
-
             {/* Description */}
             <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
@@ -558,105 +428,6 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
           </form>
         </CardContent>
       </Card>
-
-      {/* Squad Picker Sheet */}
-      <Sheet open={showSquadPicker} onOpenChange={setShowSquadPicker}>
-        <SheetContent side="bottom" className="h-[70vh]">
-          <SheetHeader>
-            <SheetTitle>Select Squad</SheetTitle>
-          </SheetHeader>
-          <ScrollArea className="h-[calc(100%-80px)] pr-4">
-            {/* Players Section */}
-            {players.length > 0 && (
-              <div className="space-y-2 py-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm">Players ({players.length})</h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (selectedPlayerIds.length === players.length) {
-                        setSelectedPlayerIds([]);
-                      } else {
-                        setSelectedPlayerIds(players.map(p => p.id));
-                      }
-                    }}
-                    className="text-xs h-7"
-                  >
-                    {selectedPlayerIds.length === players.length ? 'Deselect All' : 'Select All'}
-                  </Button>
-                </div>
-                {players.map(player => (
-                  <label 
-                    key={player.id} 
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
-                  >
-                    <Checkbox 
-                      checked={selectedPlayerIds.includes(player.id)}
-                      onCheckedChange={() => {
-                        setSelectedPlayerIds(prev => 
-                          prev.includes(player.id) 
-                            ? prev.filter(id => id !== player.id)
-                            : [...prev, player.id]
-                        );
-                      }}
-                    />
-                    <span className="text-sm">{player.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-            
-            {/* Staff Section */}
-            {staff.length > 0 && (
-              <div className="space-y-2 py-4 border-t">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-medium text-sm">Staff ({staff.length})</h4>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      if (selectedStaffIds.length === staff.length) {
-                        setSelectedStaffIds([]);
-                      } else {
-                        setSelectedStaffIds(staff.map(s => s.id));
-                      }
-                    }}
-                    className="text-xs h-7"
-                  >
-                    {selectedStaffIds.length === staff.length ? 'Deselect All' : 'Select All'}
-                  </Button>
-                </div>
-                {staff.map(member => (
-                  <label 
-                    key={member.id} 
-                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted cursor-pointer"
-                  >
-                    <Checkbox 
-                      checked={selectedStaffIds.includes(member.id)}
-                      onCheckedChange={() => {
-                        setSelectedStaffIds(prev => 
-                          prev.includes(member.id) 
-                            ? prev.filter(id => id !== member.id)
-                            : [...prev, member.id]
-                        );
-                      }}
-                    />
-                    <span className="text-sm">{member.name}</span>
-                  </label>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
-          <div className="sticky bottom-0 pt-4 border-t bg-background">
-            <Button onClick={() => setShowSquadPicker(false)} className="w-full">
-              Done ({selectedPlayerIds.length + selectedStaffIds.length} selected)
-            </Button>
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 };
