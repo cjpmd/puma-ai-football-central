@@ -83,51 +83,52 @@
 
 /* ============= FPL-STYLE PITCH WITH PERSPECTIVE ============= */
 
-/* Pitch Container - FPL aspect ratio */
+/* Pitch Container - FPL aspect ratio with off-screen bleed at top */
 .formation-pitch {
   position: relative;
   width: 100%;
   flex: 1;
   min-height: 200px;
-  max-height: 75vh;
+  max-height: 80vh;
   margin: 0 auto;
-  padding: 0;
+  margin-top: -20px;
+  padding-top: 20px;
   overflow: visible;
 }
 
-/* The pitch field - FPL-style perspective (narrower at TOP = far end, wider at BOTTOM = near) */
+/* The pitch field - FPL-style perspective (wider at TOP = far end, narrower at BOTTOM = near viewer) */
 .pitch-field {
   position: absolute;
   inset: 0;
-  /* FPL green gradient - exact colors from reference */
+  /* FPL green gradient - richer, more saturated, darker at top (distance) */
   background: linear-gradient(
-    180deg,
-    #3f8142 0%,
-    #3b7f3f 50%,
-    #357a38 100%
+    to top,
+    #4a9f4f 0%,      /* Brighter green at bottom (near viewer) */
+    #3d8c41 40%,     /* Mid green */
+    #347a38 100%     /* Darker green at top (far end/distance) */
   );
-  /* Perspective - top (far end) narrower, bottom (near viewer) wider */
+  /* Perspective - TOP wider (far end), BOTTOM narrower (near viewer) - matches FPL reference */
   clip-path: polygon(
-    8% 0%,       /* Top left - narrower (far end) */
-    92% 0%,      /* Top right - narrower */
-    100% 100%,   /* Bottom right - full width (near) */
-    0% 100%      /* Bottom left - full width */
+    0% 0%,           /* Top left - full width (far end) */
+    100% 0%,         /* Top right - full width */
+    88% 100%,        /* Bottom right - narrower (near) */
+    12% 100%         /* Bottom left - narrower */
   );
   overflow: hidden;
 }
 
-/* Subtle horizontal grass mowing stripes */
+/* Subtle VERTICAL grass mowing stripes (up/down the pitch) */
 .pitch-field::before {
   content: '';
   position: absolute;
   inset: 0;
-  /* 8-10 stripes with very subtle contrast difference (~6% opacity) */
+  /* Vertical stripes - alternating subtle bands */
   background: repeating-linear-gradient(
-    180deg,
+    90deg,
     transparent 0%,
-    transparent 10%,
-    rgba(0, 0, 0, 0.06) 10%,
-    rgba(0, 0, 0, 0.06) 20%
+    transparent 8%,
+    rgba(255, 255, 255, 0.025) 8%,
+    rgba(255, 255, 255, 0.025) 16%
   );
   pointer-events: none;
   z-index: 0;
@@ -136,23 +137,22 @@
 /* Pitch outline - white rectangle inside the green with green margin visible */
 .pitch-outline {
   position: absolute;
-  top: 5%;
-  left: 7%;
-  right: 7%;
-  bottom: 5%;
-  border: 2px solid #ffffff;
-  border-radius: 2px;
+  top: 4%;
+  left: 8%;
+  right: 8%;
+  bottom: 4%;
+  border: 1.5px solid #ffffff;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Pitch markings - solid white, no shadows */
+/* Pitch markings - solid white, crisp, no shadows */
 .pitch-center-line {
   position: absolute;
   top: 50%;
-  left: 7%;
-  right: 7%;
-  height: 2px;
+  left: 8%;
+  right: 8%;
+  height: 1.5px;
   background: #ffffff;
   transform: translateY(-50%);
   z-index: 1;
@@ -162,9 +162,9 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 16%;
+  width: 18%;
   aspect-ratio: 1;
-  border: 2px solid #ffffff;
+  border: 1.5px solid #ffffff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
@@ -174,8 +174,8 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   background: #ffffff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
@@ -185,12 +185,12 @@
 /* Penalty area (18-yard box) - TOP (far end) */
 .goal-box-top {
   position: absolute;
-  top: 5%;
+  top: 4%;
   left: 50%;
   transform: translateX(-50%);
   width: 44%;
   height: 16%;
-  border: 2px solid #ffffff;
+  border: 1.5px solid #ffffff;
   border-top: none;
   z-index: 1;
 }
@@ -204,19 +204,19 @@
   transform: translateX(-50%);
   width: 40%;
   height: 35%;
-  border: 2px solid #ffffff;
+  border: 1.5px solid #ffffff;
   border-top: none;
 }
 
 /* Penalty area (18-yard box) - BOTTOM (GK end, near viewer) */
 .goal-box-bottom {
   position: absolute;
-  bottom: 5%;
+  bottom: 4%;
   left: 50%;
   transform: translateX(-50%);
   width: 44%;
   height: 16%;
-  border: 2px solid #ffffff;
+  border: 1.5px solid #ffffff;
   border-bottom: none;
   z-index: 1;
 }
@@ -230,42 +230,44 @@
   transform: translateX(-50%);
   width: 40%;
   height: 35%;
-  border: 2px solid #ffffff;
+  border: 1.5px solid #ffffff;
   border-bottom: none;
 }
 
-/* Goals - white bars at top and bottom */
+/* Goals - white rectangles at edges representing goalposts */
 .goal-top {
   position: absolute;
-  top: 5%;
+  top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 12%;
-  height: 6px;
-  background: #ffffff;
-  border-radius: 2px 2px 0 0;
+  width: 14%;
+  height: 14px;
+  background: transparent;
+  border: 2px solid #ffffff;
+  border-top: none;
   z-index: 2;
 }
 
 .goal-bottom {
   position: absolute;
-  bottom: 5%;
+  bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 12%;
-  height: 6px;
-  background: #ffffff;
-  border-radius: 0 0 2px 2px;
+  width: 14%;
+  height: 14px;
+  background: transparent;
+  border: 2px solid #ffffff;
+  border-bottom: none;
   z-index: 2;
 }
 
 /* Penalty spots */
 .penalty-spot-top {
   position: absolute;
-  top: 17%;
+  top: 16%;
   left: 50%;
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   background: #ffffff;
   border-radius: 50%;
   transform: translateX(-50%);
@@ -274,52 +276,51 @@
 
 .penalty-spot-bottom {
   position: absolute;
-  bottom: 17%;
+  bottom: 16%;
   left: 50%;
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   background: #ffffff;
   border-radius: 50%;
   transform: translateX(-50%);
   z-index: 1;
 }
 
-/* Penalty arc (D-shape outside box) - top */
+/* Penalty arc (D-shape outside box) - subtle, minimal */
 .penalty-arc-top {
   position: absolute;
-  top: 19%;
+  top: 18%;
   left: 50%;
-  width: 50px;
-  height: 25px;
-  border: 2px solid #ffffff;
+  width: 40px;
+  height: 20px;
+  border: 1.5px solid #ffffff;
   border-radius: 0 0 50% 50%;
   border-top: none;
   transform: translateX(-50%);
   z-index: 1;
 }
 
-/* Penalty arc (D-shape outside box) - bottom */
 .penalty-arc-bottom {
   position: absolute;
-  bottom: 19%;
+  bottom: 18%;
   left: 50%;
-  width: 50px;
-  height: 25px;
-  border: 2px solid #ffffff;
+  width: 40px;
+  height: 20px;
+  border: 1.5px solid #ffffff;
   border-radius: 50% 50% 0 0;
   border-bottom: none;
   transform: translateX(-50%);
   z-index: 1;
 }
 
-/* Corner arcs */
+/* Corner arcs - subtle quarter circles */
 .corner-arc-top-left {
   position: absolute;
-  top: 5%;
-  left: 7%;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
+  top: 4%;
+  left: 8%;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #ffffff;
   border-radius: 0 0 100% 0;
   border-left: none;
   border-top: none;
@@ -328,11 +329,11 @@
 
 .corner-arc-top-right {
   position: absolute;
-  top: 5%;
-  right: 7%;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
+  top: 4%;
+  right: 8%;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #ffffff;
   border-radius: 0 0 0 100%;
   border-right: none;
   border-top: none;
@@ -341,11 +342,11 @@
 
 .corner-arc-bottom-left {
   position: absolute;
-  bottom: 5%;
-  left: 7%;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
+  bottom: 4%;
+  left: 8%;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #ffffff;
   border-radius: 0 100% 0 0;
   border-left: none;
   border-bottom: none;
@@ -354,11 +355,11 @@
 
 .corner-arc-bottom-right {
   position: absolute;
-  bottom: 5%;
-  right: 7%;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #ffffff;
+  bottom: 4%;
+  right: 8%;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #ffffff;
   border-radius: 100% 0 0 0;
   border-right: none;
   border-bottom: none;
