@@ -33,17 +33,28 @@ import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilitySe
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 
-const tabs = [
-  { id: 'fixtures', label: 'FIXTURES' },
-  { id: 'training', label: 'TRAINING' },
-  { id: 'friendlies', label: 'FRIENDLIES' },
-  { id: 'other', label: 'OTHER' },
-];
+// Helper to get color-coded event type label
+const getEventTypeLabel = (eventType: string): { label: string; colorClass: string } => {
+  switch (eventType) {
+    case 'fixture':
+    case 'match':
+      return { label: 'Fixture', colorClass: 'text-blue-600' };
+    case 'friendly':
+      return { label: 'Friendly', colorClass: 'text-green-600' };
+    case 'training':
+      return { label: 'Training', colorClass: 'text-purple-600' };
+    case 'tournament':
+      return { label: 'Tournament', colorClass: 'text-orange-600' };
+    case 'festival':
+      return { label: 'Festival', colorClass: 'text-amber-600' };
+    default:
+      return { label: eventType.charAt(0).toUpperCase() + eventType.slice(1), colorClass: 'text-muted-foreground' };
+  }
+};
 
 export default function CalendarEventsMobile() {
   const navigate = useNavigate();
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
-  const [activeTab, setActiveTab] = useState('fixtures');
   const [loading, setLoading] = useState(true);
   const [eventsToShow, setEventsToShow] = useState(5);
   const showMoreIncrement = 5;
@@ -66,40 +77,6 @@ export default function CalendarEventsMobile() {
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode, availableTeams } = useTeamContext();
   const { hasPermission } = useAuthorization();
-
-  // Swipe detection state
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-
-  // Swipe functionality
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-
-    if (isLeftSwipe || isRightSwipe) {
-      const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
-      
-      if (isLeftSwipe && currentIndex < tabs.length - 1) {
-        // Swipe left - go to next tab
-        setActiveTab(tabs[currentIndex + 1].id);
-      } else if (isRightSwipe && currentIndex > 0) {
-        // Swipe right - go to previous tab
-        setActiveTab(tabs[currentIndex - 1].id);
-      }
-    }
-  };
 
   // Check if user can create events (admin or manager roles only)
   const canCreateEvents = () => {
@@ -393,22 +370,8 @@ export default function CalendarEventsMobile() {
     }
   };
 
-  const getFilteredEvents = () => {
-    return events.filter(event => {
-      switch (activeTab) {
-        case 'fixtures':
-          return ['match', 'fixture'].includes(event.event_type);
-        case 'training':
-          return event.event_type === 'training';
-        case 'friendlies':
-          return event.event_type === 'friendly';
-        case 'other':
-          return !['match', 'fixture', 'training', 'friendly'].includes(event.event_type);
-        default:
-          return true;
-      }
-    });
-  };
+  // Show all events (no filtering by type)
+  const getFilteredEvents = () => events;
 
   const groupEventsByPeriod = (events: DatabaseEvent[]) => {
     const now = new Date();
@@ -718,19 +681,8 @@ export default function CalendarEventsMobile() {
   }
 
   return (
-    <MobileLayout 
-      showTabs={true}
-      activeTab={activeTab}
-      onTabChange={setActiveTab}
-      tabs={tabs}
-      stickyTabs={true}
-    >
-      <div 
-        className="space-y-4 pb-8 px-1"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
+    <MobileLayout>
+      <div className="space-y-4 pb-8 px-1">
         {/* Pending Availability - First Priority (filtered to exclude past events) */}
         {(() => {
           const futurePendingAvailability = pendingAvailability.filter(availability => {
@@ -798,7 +750,7 @@ export default function CalendarEventsMobile() {
           </div>
         ) : paginatedEvents.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-muted-foreground">No {activeTab} scheduled</p>
+            <p className="text-muted-foreground">No events scheduled</p>
           </div>
         ) : (
           <>
@@ -842,12 +794,17 @@ export default function CalendarEventsMobile() {
                             
                             {/* Right: Event Details */}
                             <div className="flex-1 min-w-0 space-y-0.5">
-                              {/* Event Title */}
-                              <h3 className="font-semibold text-foreground truncate text-sm">
-                                {isMatchType(event.event_type) && event.opponent 
-                                  ? `vs ${event.opponent}`
-                                  : event.title
-                                }
+                              {/* Event Title with Color-Coded Type */}
+                              <h3 className="font-semibold truncate text-sm">
+                                <span className={`${getEventTypeLabel(event.event_type).colorClass} mr-1`}>
+                                  {getEventTypeLabel(event.event_type).label}
+                                </span>
+                                <span className="text-foreground">
+                                  {isMatchType(event.event_type) && event.opponent 
+                                    ? `vs ${event.opponent}`
+                                    : event.event_type !== 'training' ? event.title : ''
+                                  }
+                                </span>
                               </h3>
                               
                               {/* Conversational Time */}
