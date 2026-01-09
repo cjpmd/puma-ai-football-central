@@ -836,11 +836,11 @@ export default function CalendarEventsMobile() {
                     const accentColor = getAccentColor(event);
                     
                     return (
-                      <Card 
-                        key={event.id} 
-                        className={`bg-card shadow-none border cursor-pointer hover:bg-accent/50 transition-colors ${
-                          isNextEvent ? 'ring-2 ring-primary shadow-sm' : ''
-                        }`}
+                    <Card 
+                      key={event.id} 
+                      className={`bg-card shadow-none border cursor-pointer hover:bg-accent/50 transition-colors relative ${
+                        isNextEvent ? 'ring-2 ring-primary shadow-sm' : ''
+                      }`}
                         onClick={(e) => handleEventClick(event, e)}
                       >
                         <CardContent className="p-3">
@@ -900,24 +900,22 @@ export default function CalendarEventsMobile() {
                               {/* Availability status indicator removed - now in Event Details */}
                             </div>
                             
-                            {/* Right edge: Next badge, team logo */}
-                            <div className="flex flex-col items-end justify-between h-full">
-                              {isNextEvent && (
-                                <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5">
-                                  NEXT
-                                </Badge>
-                              )}
-                              
-                              {/* Team badge - show when viewing all teams */}
-                              {viewMode === 'all' && team && (
-                                <Avatar className="h-6 w-6 mt-auto">
-                                  <AvatarImage src={team.logo_url} alt={team.name} />
-                                  <AvatarFallback className="text-[8px] bg-muted">
-                                    {team.name?.substring(0, 2).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
-                            </div>
+                            {/* Right edge: Next badge */}
+                            {isNextEvent && (
+                              <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 ml-auto">
+                                NEXT
+                              </Badge>
+                            )}
+                            
+                            {/* Team badge - absolute bottom right when viewing all teams */}
+                            {viewMode === 'all' && team && (
+                              <Avatar className="h-6 w-6 absolute bottom-2 right-2">
+                                <AvatarImage src={team.logo_url} alt={team.name} />
+                                <AvatarFallback className="text-[8px] bg-muted">
+                                  {team.name?.substring(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
