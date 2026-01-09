@@ -93,73 +93,80 @@
   margin: 0 auto;
   padding: 0;
   overflow: visible;
-  /* No border radius - clean edges */
+  /* Extend top beyond viewport */
+  margin-top: -25px;
+  padding-top: 25px;
 }
 
-/* The pitch field - FPL-style trapezoidal with flat green gradient */
+/* The pitch field - FPL-style inverted trapezoid (wider at TOP) */
 .pitch-field {
   position: absolute;
   inset: 0;
-  /* Flat green gradient - no grass texture */
-  background: linear-gradient(
-    180deg,
-    hsl(145, 60%, 35%) 0%,
-    hsl(142, 55%, 40%) 100%
-  );
-  /* Trapezoidal perspective - wider at bottom (goal end) */
+  /* Solid green base */
+  background: hsl(142, 55%, 38%);
+  /* Inverted trapezoid - wider at TOP (attacking end), narrower at bottom (GK) */
   clip-path: polygon(
-    10% 0%,      /* Top left - narrower */
-    90% 0%,      /* Top right - narrower */
-    100% 100%,   /* Bottom right - full width */
-    0% 100%      /* Bottom left - full width */
+    0% 0%,       /* Top left - full width */
+    100% 0%,     /* Top right - full width */
+    90% 100%,    /* Bottom right - narrower */
+    10% 100%     /* Bottom left - narrower */
   );
   overflow: hidden;
-  /* No shadows, no borders */
 }
 
-/* Remove grass stripes - FPL uses flat color */
+/* Horizontal grass stripes */
 .pitch-field::before {
-  display: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 28px,
+    hsla(142, 60%, 30%, 0.35) 28px,
+    hsla(142, 60%, 30%, 0.35) 56px
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
-/* Center line - subtle low opacity */
+/* Pitch markings - solid white */
 .pitch-center-line {
   position: absolute;
   top: 50%;
   left: 10%;
   right: 10%;
   height: 2px;
-  background: hsla(0, 0%, 100%, 0.25);
+  background: white;
   transform: translateY(-50%);
-  /* No shadow */
+  z-index: 1;
 }
 
-/* Center circle - subtle low opacity */
 .pitch-center-circle {
   position: absolute;
   top: 50%;
   left: 50%;
   width: 70px;
   height: 70px;
-  border: 2px solid hsla(0, 0%, 100%, 0.25);
+  border: 2px solid white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
-  /* No shadow */
+  z-index: 1;
 }
 
-/* Center spot - subtle */
 .pitch-center-spot {
   position: absolute;
   top: 50%;
   left: 50%;
   width: 6px;
   height: 6px;
-  background: hsla(0, 0%, 100%, 0.3);
+  background: white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
+  z-index: 1;
 }
 
-/* Goal box styling - top (attacking end) - subtle */
+/* Goal boxes - solid white markings */
 .goal-box-top {
   position: absolute;
   top: 0;
@@ -167,9 +174,10 @@
   transform: translateX(-50%);
   width: 30%;
   height: 35px;
-  border: 2px solid hsla(0, 0%, 100%, 0.2);
+  border: 2px solid white;
   border-top: none;
   border-radius: 0 0 4px 4px;
+  z-index: 1;
 }
 
 /* 6-yard box - top */
@@ -181,12 +189,12 @@
   transform: translateX(-50%);
   width: 50%;
   height: 14px;
-  border: 2px solid hsla(0, 0%, 100%, 0.15);
+  border: 2px solid white;
   border-top: none;
   border-radius: 0 0 2px 2px;
 }
 
-/* Goal box styling - bottom (GK end) - subtle */
+/* Goal box styling - bottom (GK end) */
 .goal-box-bottom {
   position: absolute;
   bottom: 0;
@@ -194,9 +202,10 @@
   transform: translateX(-50%);
   width: 30%;
   height: 35px;
-  border: 2px solid hsla(0, 0%, 100%, 0.2);
+  border: 2px solid white;
   border-bottom: none;
   border-radius: 4px 4px 0 0;
+  z-index: 1;
 }
 
 /* 6-yard box - bottom */
@@ -208,7 +217,7 @@
   transform: translateX(-50%);
   width: 50%;
   height: 14px;
-  border: 2px solid hsla(0, 0%, 100%, 0.15);
+  border: 2px solid white;
   border-bottom: none;
   border-radius: 2px 2px 0 0;
 }
@@ -860,16 +869,12 @@
     height: 28px;
   }
 
-  .pitch-field {
-    transform: rotateX(10deg);
-  }
+  /* No transform on mobile for pitch */
 }
 
 /* Landscape mode adjustments */
 @media (orientation: landscape) and (max-height: 500px) {
-  .pitch-field {
-    transform: rotateX(8deg);
-  }
+  /* No pitch transform */
 
   .period-card {
     flex-direction: row;
@@ -1008,6 +1013,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 2px;
   position: relative;
   user-select: none;
   -webkit-user-select: none;
@@ -1015,56 +1021,26 @@
   touch-action: none;
 }
 
-/* Circular shirt container */
-.fpl-shirt-circle {
-  border-radius: 50%;
+/* Container for the shirt - transparent, shirt SVG carries the color */
+.fpl-shirt-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* No shadow, no border - FPL style */
 }
 
-/* Player name - no background, just text */
+/* Player name - just text, no number strip */
 .fpl-player-name {
-  margin-top: 4px;
   line-height: 1;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
-  max-width: 60px;
+  max-width: 70px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: hsl(0, 0%, 100%);
-  font-weight: 600;
-  text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.5);
-  /* No background, no container */
-}
-
-/* Number strip below name */
-.fpl-number-strip {
-  margin-top: 2px;
-  border-radius: 2px;
   font-weight: 700;
-  color: hsl(0, 0%, 100%);
-  text-align: center;
-}
-
-/* Position-based number strip colors */
-.fpl-number-strip-gk {
-  background: linear-gradient(90deg, hsl(45, 93%, 47%), hsl(38, 92%, 50%));
-}
-
-.fpl-number-strip-def {
-  background: linear-gradient(90deg, hsl(217, 91%, 60%), hsl(221, 83%, 53%));
-}
-
-.fpl-number-strip-mid {
-  background: linear-gradient(90deg, hsl(142, 71%, 45%), hsl(142, 76%, 36%));
-}
-
-.fpl-number-strip-fwd {
-  background: linear-gradient(90deg, hsl(0, 84%, 60%), hsl(0, 72%, 51%));
+  text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.8);
 }
 
 /* Captain badge - FPL style */
