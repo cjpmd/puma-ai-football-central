@@ -634,8 +634,6 @@ export const GameDayView: React.FC = () => {
             onEventCreated={handleEventCreated}
             onSubstitution={handleSubstitution}
             currentMinute={currentMinute}
-            kitDesign={kitDesign}
-            goalkeeperKitDesign={goalkeeperKitDesign}
           />
         </div>
 
