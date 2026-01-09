@@ -20,6 +20,8 @@ import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
 import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus, UserCheck } from 'lucide-react';
+import { EventLocationMap } from '@/components/events/EventLocationMap';
+import { EventWeatherDisplay } from '@/components/events/EventWeatherDisplay';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
@@ -915,9 +917,25 @@ export default function CalendarEventsMobile() {
                 <EventTeamTimesDisplay eventId={selectedEvent.id} />
                 
                 {selectedEvent.location && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span>{selectedEvent.location}</span>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <span>{selectedEvent.location}</span>
+                    </div>
+                    
+                    {/* Map Display */}
+                    <EventLocationMap 
+                      location={selectedEvent.location}
+                      lat={selectedEvent.latitude}
+                      lng={selectedEvent.longitude}
+                    />
+                    
+                    {/* Weather Display */}
+                    <EventWeatherDisplay
+                      lat={selectedEvent.latitude}
+                      lng={selectedEvent.longitude}
+                      eventDate={selectedEvent.date}
+                    />
                   </div>
                 )}
                 
