@@ -6,7 +6,7 @@ import { MatchEvent, MatchEventType, PlayerCardStatus } from '@/types/matchEvent
 import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
 import { toast } from 'sonner';
-
+import FPLPitch from './FPLPitch';
 interface PlayerPosition {
   playerId: string;
   playerName: string;
@@ -195,37 +195,11 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       </div>
 
       <div className="formation-pitch flex-1 min-h-0">
-        {/* FPL-Style Pitch Field with Perspective */}
-        <div className="pitch-field">
-          {/* Pitch outline - inside the green with margin */}
-          <div className="pitch-outline" />
-          
-          {/* Goals */}
-          <div className="goal-top" />
-          <div className="goal-bottom" />
-          
-          {/* Centre markings */}
-          <div className="pitch-center-line" />
-          <div className="pitch-center-circle" />
-          <div className="pitch-center-spot" />
-          
-          {/* Penalty areas */}
-          <div className="goal-box-top" />
-          <div className="goal-box-bottom" />
-          
-          {/* Penalty spots and arcs */}
-          <div className="penalty-spot-top" />
-          <div className="penalty-spot-bottom" />
-          <div className="penalty-arc-top" />
-          <div className="penalty-arc-bottom" />
-          
-          {/* Corner arcs */}
-          <div className="corner-arc-top-left" />
-          <div className="corner-arc-top-right" />
-          <div className="corner-arc-bottom-left" />
-          <div className="corner-arc-bottom-right" />
-          
-          {/* Player positions using FPL tokens */}
+        {/* FPL-Style SVG Pitch with Perspective */}
+        <FPLPitch />
+        
+        {/* Player positions container - above pitch */}
+        <div className="formation-players-container">
           {positions.map((pos) => {
             const cardStatus = playerCardStatuses[pos.playerId] || { hasYellow: false, hasRed: false };
             const isGoalkeeper = pos.positionGroup === 'goalkeeper';
