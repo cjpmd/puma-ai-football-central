@@ -47,7 +47,7 @@ const generateRecurringDates = (
 
 export const eventsService = {
   async createEvent(eventData: Partial<Event>, invitations?: {
-    type: 'everyone' | 'pick_squad',
+    type: 'everyone' | 'players_only' | 'staff_only' | 'pick_squad',
     selectedPlayerIds?: string[],
     selectedStaffIds?: string[]
   }) {
@@ -149,7 +149,7 @@ export const eventsService = {
   },
 
   async createRecurringEvents(eventData: Partial<Event>, invitations?: {
-    type: 'everyone' | 'pick_squad',
+    type: 'everyone' | 'players_only' | 'staff_only' | 'pick_squad',
     selectedPlayerIds?: string[],
     selectedStaffIds?: string[]
   }) {
@@ -224,7 +224,7 @@ export const eventsService = {
     eventId: string,
     teamId: string,
     invitations: {
-      type: 'everyone' | 'pick_squad',
+      type: 'everyone' | 'players_only' | 'staff_only' | 'pick_squad',
       selectedPlayerIds?: string[],
       selectedStaffIds?: string[]
     }
@@ -234,123 +234,132 @@ export const eventsService = {
       
       const invitationRecords: any[] = [];
       
-      if (invitations.type === 'everyone') {
-        // Get all active players for the team
-        // @ts-ignore - Supabase type inference causes excessive depth
-        const playersResult: any = await supabase
-          .from('players')
-          .select('id')
-          .eq('team_id', teamId)
-          .eq('status', 'active');
+      if (invitations.type === 'everyone' || invitations.type === 'players_only' || invitations.type === 'staff_only') {
+        // Get players if needed (for 'everyone' or 'players_only')
+        let players: any[] = [];
+        let playerUsers: any[] = [];
+        
+        if (invitations.type === 'everyone' || invitations.type === 'players_only') {
+          // Get all active players for the team
+          // @ts-ignore - Supabase type inference causes excessive depth
+          const playersResult: any = await supabase
+            .from('players')
+            .select('id')
+            .eq('team_id', teamId)
+            .eq('status', 'active');
+            
+          if (playersResult.error) throw playersResult.error;
+          players = playersResult.data || [];
           
-        if (playersResult.error) throw playersResult.error;
-        const players = playersResult.data;
-        
-        // Get all active staff for the team from team_staff table
-        // @ts-ignore - Supabase type inference causes excessive depth
-        const staffResult: any = await supabase
-          .from('team_staff')
-          .select('id')
-          .eq('team_id', teamId);
+          // Get user IDs for players
+          const playerUsersResult: any = await supabase
+            .from('user_players')
+            .select('user_id, player_id')
+            .in('player_id', players.map((p: any) => p.id));
+          if (playerUsersResult.error) throw playerUsersResult.error;
+          playerUsers = playerUsersResult.data || [];
           
-        if (staffResult.error) throw staffResult.error;
-        const staff = staffResult.data;
-        
-        // Also get staff from user_teams (users with staff-like roles)
-        // @ts-ignore - Supabase type inference causes excessive depth
-        const userTeamsStaffResult: any = await supabase
-          .from('user_teams')
-          .select('user_id, role')
-          .eq('team_id', teamId)
-          .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'manager', 'coach', 'staff', 'helper', 'team_helper']);
-        
-        if (userTeamsStaffResult.error) throw userTeamsStaffResult.error;
-        const userTeamsStaff = userTeamsStaffResult.data || [];
-        
-        // Get user IDs for players
-        const playerUsersResult: any = await supabase
-          .from('user_players')
-          .select('user_id, player_id')
-          .in('player_id', (players || []).map((p: any) => p.id));
-        if (playerUsersResult.error) throw playerUsersResult.error;
-        const playerUsers = playerUsersResult.data || [];
-        
-        // Get user IDs for team_staff
-        const staffUsersResult: any = await supabase
-          .from('user_staff')
-          .select('user_id, staff_id')
-          .in('staff_id', (staff || []).map((s: any) => s.id));
-        if (staffUsersResult.error) throw staffUsersResult.error;
-        const staffUsers = staffUsersResult.data || [];
-        
-        // Add user_teams staff to staffUsers (they already have user_id)
-        const userTeamsStaffUsers = userTeamsStaff.map((uts: any) => ({
-          user_id: uts.user_id,
-          staff_id: null // No staff_id for user_teams entries
-        }));
-        
-        // Create invitation records for players (with or without linked users)
-        const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
-        playerUsers.forEach((pu: any) => {
-          invitationRecords.push({
-            event_id: eventId,
-            user_id: pu.user_id,
-            invitee_type: 'player',
-            player_id: pu.player_id
-          });
-        });
-        (players || []).forEach((p: any) => {
-          if (!mappedPlayerIds.has(p.id)) {
+          // Create invitation records for players (with or without linked users)
+          const mappedPlayerIds = new Set(playerUsers.map((pu: any) => pu.player_id));
+          playerUsers.forEach((pu: any) => {
             invitationRecords.push({
               event_id: eventId,
-              user_id: null, // no linked user
+              user_id: pu.user_id,
               invitee_type: 'player',
-              player_id: p.id
+              player_id: pu.player_id
             });
-          }
-        });
-        
-        // Create invitation records for team_staff (with or without linked users)
-        // Track processed user IDs to prevent duplicates
-        const processedUserIds = new Set<string>();
-        const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
-        
-        staffUsers.forEach((su: any) => {
-          invitationRecords.push({
-            event_id: eventId,
-            user_id: su.user_id,
-            invitee_type: 'staff',
-            staff_id: su.staff_id
           });
-          if (su.user_id) {
-            processedUserIds.add(su.user_id);
-          }
-        });
-        (staff || []).forEach((s: any) => {
-          if (!mappedStaffIds.has(s.id)) {
-            invitationRecords.push({
-              event_id: eventId,
-              user_id: null,
-              invitee_type: 'staff',
-              staff_id: s.id
-            });
-          }
-        });
+          players.forEach((p: any) => {
+            if (!mappedPlayerIds.has(p.id)) {
+              invitationRecords.push({
+                event_id: eventId,
+                user_id: null, // no linked user
+                invitee_type: 'player',
+                player_id: p.id
+              });
+            }
+          });
+        }
         
-        // Create invitation records for user_teams staff (already have user_id, no staff_id)
-        // Skip users who were already added via team_staff to avoid duplicate key errors
-        userTeamsStaffUsers.forEach((su: any) => {
-          if (su.user_id && !processedUserIds.has(su.user_id)) {
+        // Get staff if needed (for 'everyone' or 'staff_only')
+        if (invitations.type === 'everyone' || invitations.type === 'staff_only') {
+          // Get all active staff for the team from team_staff table
+          // @ts-ignore - Supabase type inference causes excessive depth
+          const staffResult: any = await supabase
+            .from('team_staff')
+            .select('id')
+            .eq('team_id', teamId);
+            
+          if (staffResult.error) throw staffResult.error;
+          const staff = staffResult.data || [];
+          
+          // Also get staff from user_teams (users with staff-like roles)
+          // @ts-ignore - Supabase type inference causes excessive depth
+          const userTeamsStaffResult: any = await supabase
+            .from('user_teams')
+            .select('user_id, role')
+            .eq('team_id', teamId)
+            .in('role', ['team_manager', 'team_assistant_manager', 'team_coach', 'manager', 'coach', 'staff', 'helper', 'team_helper']);
+          
+          if (userTeamsStaffResult.error) throw userTeamsStaffResult.error;
+          const userTeamsStaff = userTeamsStaffResult.data || [];
+          
+          // Get user IDs for team_staff
+          const staffUsersResult: any = await supabase
+            .from('user_staff')
+            .select('user_id, staff_id')
+            .in('staff_id', staff.map((s: any) => s.id));
+          if (staffUsersResult.error) throw staffUsersResult.error;
+          const staffUsers = staffUsersResult.data || [];
+          
+          // Add user_teams staff to staffUsers (they already have user_id)
+          const userTeamsStaffUsers = userTeamsStaff.map((uts: any) => ({
+            user_id: uts.user_id,
+            staff_id: null // No staff_id for user_teams entries
+          }));
+          
+          // Create invitation records for team_staff (with or without linked users)
+          // Track processed user IDs to prevent duplicates
+          const processedUserIds = new Set<string>();
+          const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
+          
+          staffUsers.forEach((su: any) => {
             invitationRecords.push({
               event_id: eventId,
               user_id: su.user_id,
               invitee_type: 'staff',
-              staff_id: null
+              staff_id: su.staff_id
             });
-            processedUserIds.add(su.user_id);
-          }
-        });
-      } else {
+            if (su.user_id) {
+              processedUserIds.add(su.user_id);
+            }
+          });
+          staff.forEach((s: any) => {
+            if (!mappedStaffIds.has(s.id)) {
+              invitationRecords.push({
+                event_id: eventId,
+                user_id: null,
+                invitee_type: 'staff',
+                staff_id: s.id
+              });
+            }
+          });
+          
+          // Create invitation records for user_teams staff (already have user_id, no staff_id)
+          // Skip users who were already added via team_staff to avoid duplicate key errors
+          userTeamsStaffUsers.forEach((su: any) => {
+            if (su.user_id && !processedUserIds.has(su.user_id)) {
+              invitationRecords.push({
+                event_id: eventId,
+                user_id: su.user_id,
+                invitee_type: 'staff',
+                staff_id: null
+              });
+              processedUserIds.add(su.user_id);
+            }
+          });
+        }
+      } else if (invitations.type === 'pick_squad') {
         // Pick squad - use selected IDs
         if (invitations.selectedPlayerIds && invitations.selectedPlayerIds.length > 0) {
           const playerUsersResult: any = await supabase

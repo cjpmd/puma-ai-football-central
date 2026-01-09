@@ -19,7 +19,7 @@ import { MobileEventForm } from '@/components/events/MobileEventForm';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
-import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus, UserCheck } from 'lucide-react';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
 import { AvailabilityStatusBadge } from '@/components/events/AvailabilityStatusBadge';
 import { userAvailabilityService, UserAvailabilityStatus } from '@/services/userAvailabilityService';
@@ -832,15 +832,7 @@ export default function CalendarEventsMobile() {
                                 </div>
                               )}
                               
-                              {/* Multi-Role Availability Controls - Compact */}
-                              {shouldShowAvailabilityControls(event) && (
-                                <div className="pt-1">
-                                  <MultiRoleAvailabilityControls
-                                    eventId={event.id}
-                                    size="sm"
-                                  />
-                                </div>
-                              )}
+                              {/* Availability status indicator removed - now in Event Details */}
                             </div>
                             
                             {/* Right edge: Next badge or result icons */}
@@ -959,6 +951,21 @@ export default function CalendarEventsMobile() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Your Availability Section */}
+              {shouldShowAvailabilityControls(selectedEvent) && (
+                <div className="border rounded-lg p-3 bg-muted/30">
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <UserCheck className="h-4 w-4" />
+                    Your Availability
+                  </h4>
+                  <MultiRoleAvailabilityControls
+                    eventId={selectedEvent.id}
+                    size="md"
+                    onStatusChange={() => loadEvents()}
+                  />
                 </div>
               )}
 
