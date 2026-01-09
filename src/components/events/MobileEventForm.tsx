@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventsService } from '@/services/eventsService';
 import { format, getDay } from 'date-fns';
-import { Calendar, Clock, MapPin, Users, X, Repeat } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, X, Repeat, UserCheck } from 'lucide-react';
 import { GameFormat } from '@/types';
 
 interface MobileEventFormProps {
@@ -69,6 +69,9 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     recurrenceOccurrences: 10,
     recurrenceEndDate: '',
   });
+
+  // Invitation type state
+  const [inviteType, setInviteType] = useState<'everyone' | 'players_only' | 'staff_only'>('everyone');
 
   // Update defaults when team settings load
   useEffect(() => {
@@ -133,8 +136,15 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
         }
       }
 
-      // Default to inviting everyone when creating event
-      const invitations = { type: 'everyone' as const };
+      // Set invitations based on selected invite type
+      let invitations: { type: 'everyone' | 'players_only' | 'staff_only' };
+      if (inviteType === 'everyone') {
+        invitations = { type: 'everyone' as const };
+      } else if (inviteType === 'players_only') {
+        invitations = { type: 'players_only' as const };
+      } else {
+        invitations = { type: 'staff_only' as const };
+      }
 
       const result = await eventsService.createEvent(eventData, invitations);
 
@@ -319,6 +329,43 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 </div>
               </>
             )}
+
+            {/* Request Availability From */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <UserCheck className="h-4 w-4" />
+                Request Availability From
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  type="button"
+                  variant={inviteType === 'everyone' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setInviteType('everyone')}
+                  className="text-xs"
+                >
+                  Everyone
+                </Button>
+                <Button
+                  type="button"
+                  variant={inviteType === 'players_only' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setInviteType('players_only')}
+                  className="text-xs"
+                >
+                  Players
+                </Button>
+                <Button
+                  type="button"
+                  variant={inviteType === 'staff_only' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setInviteType('staff_only')}
+                  className="text-xs"
+                >
+                  Staff
+                </Button>
+              </div>
+            </div>
 
             {/* Recurring Event Toggle */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
