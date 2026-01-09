@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLongPress } from '@/hooks/useLongPress';
 import { FPLPlayerToken } from './FPLPlayerToken';
+import { KitDesign } from '@/types/team';
 
 interface SubstitutePlayer {
   id: string;
@@ -15,6 +16,8 @@ interface SubstitutePlayer {
 interface GameDaySubstituteBenchProps {
   substitutes: SubstitutePlayer[];
   onPlayerLongPress: (playerId: string) => void;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
 }
 
 const getPositionGroup = (position: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
@@ -29,7 +32,9 @@ const getPositionGroup = (position: string): 'goalkeeper' | 'defender' | 'midfie
 const SubstituteCard: React.FC<{
   player: SubstitutePlayer;
   onLongPress: () => void;
-}> = ({ player, onLongPress }) => {
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
+}> = ({ player, onLongPress, kitDesign, goalkeeperKitDesign }) => {
   const longPressHandlers = useLongPress(onLongPress);
   const positionGroup = getPositionGroup(player.position);
   
@@ -49,6 +54,8 @@ const SubstituteCard: React.FC<{
         squadNumber={player.squad_number}
         positionGroup={positionGroup}
         size="bench"
+        kitDesign={kitDesign}
+        goalkeeperKitDesign={goalkeeperKitDesign}
       />
     </div>
   );
@@ -56,7 +63,9 @@ const SubstituteCard: React.FC<{
 
 export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
   substitutes,
-  onPlayerLongPress
+  onPlayerLongPress,
+  kitDesign,
+  goalkeeperKitDesign,
 }) => {
   if (substitutes.length === 0) {
     return (
@@ -73,6 +82,8 @@ export const GameDaySubstituteBench: React.FC<GameDaySubstituteBenchProps> = ({
           key={player.id}
           player={player}
           onLongPress={() => onPlayerLongPress(player.id)}
+          kitDesign={kitDesign}
+          goalkeeperKitDesign={goalkeeperKitDesign}
         />
       ))}
     </div>
