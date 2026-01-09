@@ -73,29 +73,17 @@ export const EventWeatherDisplay: React.FC<EventWeatherDisplayProps> = ({
   if (error || !weather) return null;
 
   return (
-    <div className="flex items-center gap-3 p-3 bg-sky-50 dark:bg-sky-950/30 rounded-lg">
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
       <img 
-        src={`https://openweathermap.org/img/wn/${weather.icon}@2x.png`}
+        src={`https://openweathermap.org/img/wn/${weather.icon}.png`}
         alt={weather.description}
-        className="w-10 h-10"
+        className="w-6 h-6 -ml-1"
       />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1">
-            <Thermometer className="h-3.5 w-3.5 text-orange-500" />
-            <span className="font-medium text-sm">{Math.round(weather.temp)}°C</span>
-          </div>
-          <span className="text-xs text-muted-foreground capitalize truncate">{weather.description}</span>
-        </div>
-        <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
-          <span className="flex items-center gap-1">
-            <Droplets className="h-3 w-3" /> {weather.humidity}%
-          </span>
-          <span className="flex items-center gap-1">
-            <Wind className="h-3 w-3" /> {Math.round(weather.windSpeed)} m/s
-          </span>
-        </div>
-      </div>
+      <span className="font-medium text-foreground">{Math.round(weather.temp)}°C</span>
+      <span className="capitalize">{weather.description}</span>
+      <span className="text-xs">•</span>
+      <Wind className="h-3 w-3" />
+      <span>{Math.round(weather.windSpeed)} m/s</span>
     </div>
   );
 };
