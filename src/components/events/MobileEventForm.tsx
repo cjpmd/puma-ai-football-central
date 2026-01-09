@@ -11,12 +11,13 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventsService } from '@/services/eventsService';
 import { format, getDay } from 'date-fns';
-import { Calendar, Clock, MapPin, Users, X, Repeat, UserCheck, ClipboardList } from 'lucide-react';
+import { Calendar, Clock, Users, X, Repeat, UserCheck, ClipboardList } from 'lucide-react';
 import { GameFormat } from '@/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
+import { LocationInput } from '@/components/ui/location-input';
 interface MobileEventFormProps {
   onClose: () => void;
   onEventCreated: () => void;
@@ -58,6 +59,8 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     startTime: '',
     endTime: '',
     location: '',
+    latitude: null as number | null,
+    longitude: null as number | null,
     type: 'training' as 'training' | 'match' | 'fixture' | 'friendly',
     opponent: '',
     isHome: true,
@@ -136,6 +139,8 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
         startTime: formData.startTime || undefined,
         endTime: formData.endTime || undefined,
         location: formData.location || undefined,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         type: formData.type,
         opponent: formData.opponent || undefined,
         isHome: formData.isHome,
@@ -297,19 +302,21 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
               </div>
             </div>
 
-            {/* Location */}
-            <div className="space-y-2">
-              <Label htmlFor="location" className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Location
-              </Label>
-              <Input
-                id="location"
-                value={formData.location}
-                onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
-                placeholder="Enter location"
-              />
-            </div>
+            {/* Location with Google Places Autocomplete */}
+            <LocationInput
+              value={formData.location}
+              onChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+              onLocationSelect={(locationData) => {
+                setFormData(prev => ({
+                  ...prev,
+                  location: locationData.address,
+                  latitude: locationData.lat,
+                  longitude: locationData.lng,
+                }));
+              }}
+              label="Location"
+              placeholder="Enter location or postcode"
+            />
 
             {/* Match Settings */}
             {isMatchType && (
