@@ -311,7 +311,10 @@ export const eventsService = {
         });
         
         // Create invitation records for team_staff (with or without linked users)
+        // Track processed user IDs to prevent duplicates
+        const processedUserIds = new Set<string>();
         const mappedStaffIds = new Set(staffUsers.map((su: any) => su.staff_id));
+        
         staffUsers.forEach((su: any) => {
           invitationRecords.push({
             event_id: eventId,
@@ -319,6 +322,9 @@ export const eventsService = {
             invitee_type: 'staff',
             staff_id: su.staff_id
           });
+          if (su.user_id) {
+            processedUserIds.add(su.user_id);
+          }
         });
         (staff || []).forEach((s: any) => {
           if (!mappedStaffIds.has(s.id)) {
@@ -332,13 +338,17 @@ export const eventsService = {
         });
         
         // Create invitation records for user_teams staff (already have user_id, no staff_id)
+        // Skip users who were already added via team_staff to avoid duplicate key errors
         userTeamsStaffUsers.forEach((su: any) => {
-          invitationRecords.push({
-            event_id: eventId,
-            user_id: su.user_id,
-            invitee_type: 'staff',
-            staff_id: null
-          });
+          if (su.user_id && !processedUserIds.has(su.user_id)) {
+            invitationRecords.push({
+              event_id: eventId,
+              user_id: su.user_id,
+              invitee_type: 'staff',
+              staff_id: null
+            });
+            processedUserIds.add(su.user_id);
+          }
         });
       } else {
         // Pick squad - use selected IDs

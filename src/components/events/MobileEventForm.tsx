@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,6 +37,17 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
+  // Get team settings for defaults
+  const currentTeam = teams?.[0];
+  const defaultGameFormat = useMemo(() => 
+    (currentTeam?.gameFormat as GameFormat) || '7-a-side', 
+    [currentTeam?.gameFormat]
+  );
+  const defaultGameDuration = useMemo(() => 
+    currentTeam?.gameDuration || 50, 
+    [currentTeam?.gameDuration]
+  );
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -47,8 +58,8 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     type: 'training' as 'training' | 'match' | 'fixture' | 'friendly',
     opponent: '',
     isHome: true,
-    gameFormat: '11-a-side' as GameFormat,
-    gameDuration: 90,
+    gameFormat: defaultGameFormat,
+    gameDuration: defaultGameDuration,
     notes: '',
     // Recurring fields
     isRecurring: false,
@@ -58,6 +69,17 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     recurrenceOccurrences: 10,
     recurrenceEndDate: '',
   });
+
+  // Update defaults when team settings load
+  useEffect(() => {
+    if (currentTeam) {
+      setFormData(prev => ({
+        ...prev,
+        gameFormat: (currentTeam.gameFormat as GameFormat) || prev.gameFormat,
+        gameDuration: currentTeam.gameDuration || prev.gameDuration,
+      }));
+    }
+  }, [currentTeam]);
 
 
   // Update day of week when date changes
