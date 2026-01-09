@@ -1,5 +1,6 @@
 import React from 'react';
 import { FPLShirtIcon } from '@/components/shared/FPLShirtIcon';
+import { KitDesign } from '@/types/team';
 
 type PositionGroup = 'goalkeeper' | 'defender' | 'midfielder' | 'forward';
 type TokenSize = 'pitch' | 'bench';
@@ -11,25 +12,25 @@ interface FPLPlayerTokenProps {
   isCaptain?: boolean;
   size?: TokenSize;
   className?: string;
-  /** Optional: Override the shirt color with a Tailwind bg class */
-  shirtColorClass?: string;
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
 }
 
 /**
- * Get the position-based shirt color class
+ * Get default position-based shirt color (fallback if no kit design)
  */
-const getShirtColor = (positionGroup: PositionGroup): string => {
+const getDefaultShirtColor = (positionGroup: PositionGroup): string => {
   switch (positionGroup) {
     case 'goalkeeper':
-      return 'bg-yellow-400';
+      return '#facc15'; // yellow-400
     case 'defender':
-      return 'bg-blue-600';
+      return '#2563eb'; // blue-600
     case 'midfielder':
-      return 'bg-green-600';
+      return '#16a34a'; // green-600
     case 'forward':
-      return 'bg-red-600';
+      return '#dc2626'; // red-600
     default:
-      return 'bg-green-600';
+      return '#16a34a';
   }
 };
 
@@ -63,10 +64,11 @@ const getSurname = (name: string): string => {
  * FPL-style Player Token Component
  * 
  * Circular token with:
- * - Shirt icon (60% of circle)
+ * - Shirt icon filling ~80% of circle
  * - Surname label below
  * - Position-colored number strip
  * - Captain badge (optional)
+ * - Uses actual kit design colors when provided
  * 
  * NO shadows, NO borders, NO card containers.
  */
@@ -77,15 +79,20 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
   isCaptain = false,
   size = 'pitch',
   className = '',
-  shirtColorClass,
+  kitDesign,
+  goalkeeperKitDesign,
 }) => {
   const isPitch = size === 'pitch';
   const circleSize = isPitch ? 'w-14 h-14' : 'w-11 h-11'; // 56px vs 44px
-  const shirtSize = isPitch ? 'w-8 h-8' : 'w-6 h-6'; // 32px vs 24px (~60%)
+  // Increased shirt size to fill ~80% of circle
+  const shirtSize = isPitch ? 'w-11 h-11' : 'w-[34px] h-[34px]'; // 44px vs 34px
   const nameSize = isPitch ? 'text-[11px]' : 'text-[10px]';
   const stripSize = isPitch ? 'text-[10px] px-2 py-0.5' : 'text-[9px] px-1.5 py-0.5';
   
-  const shirtColor = shirtColorClass || getShirtColor(positionGroup);
+  // Determine shirt color from kit design or fall back to position-based color
+  const effectiveKitDesign = positionGroup === 'goalkeeper' ? goalkeeperKitDesign : kitDesign;
+  const shirtBgColor = effectiveKitDesign?.shirtColor || getDefaultShirtColor(positionGroup);
+  
   const numberStripClass = getNumberStripClass(positionGroup);
 
   return (
@@ -97,8 +104,11 @@ export const FPLPlayerToken: React.FC<FPLPlayerTokenProps> = ({
         </div>
       )}
       
-      {/* Shirt Circle */}
-      <div className={`fpl-shirt-circle ${circleSize} ${shirtColor}`}>
+      {/* Shirt Circle - using inline style for kit color */}
+      <div 
+        className={`fpl-shirt-circle ${circleSize}`}
+        style={{ backgroundColor: shirtBgColor }}
+      >
         <FPLShirtIcon className={`${shirtSize} text-white/90`} />
       </div>
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { FPLPlayerToken } from './FPLPlayerToken';
 import { SquadPlayer, PositionSlot as PositionSlotType } from '@/types/teamSelection';
+import { KitDesign } from '@/types/team';
 
 interface DraggablePitchPlayerProps {
   player: SquadPlayer;
@@ -11,6 +12,8 @@ interface DraggablePitchPlayerProps {
   periodId: string;
   positionIndex: number;
   nameDisplayOption?: 'surname' | 'firstName' | 'fullName' | 'initials';
+  kitDesign?: KitDesign;
+  goalkeeperKitDesign?: KitDesign;
 }
 
 const getPositionGroup = (positionName: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
@@ -28,6 +31,8 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
   isPositionsLocked,
   periodId,
   positionIndex,
+  kitDesign,
+  goalkeeperKitDesign,
 }) => {
   const dragId = `${periodId}|position-${positionIndex}|${player.id}`;
   
@@ -62,6 +67,8 @@ export const DraggablePitchPlayer: React.FC<DraggablePitchPlayerProps> = ({
         isCaptain={isCaptain}
         size="pitch"
         className={isDragging ? 'scale-105' : ''}
+        kitDesign={kitDesign}
+        goalkeeperKitDesign={goalkeeperKitDesign}
       />
     </div>
   );

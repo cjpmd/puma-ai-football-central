@@ -605,7 +605,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                       nameDisplayOption={nameDisplayOption}
                     />
                     
-                    {/* Render draggable Enhanced Fantasy-style player card on top */}
+                    {/* Render draggable FPL-style player token on top */}
                     {player && (
                       <DraggablePitchPlayer
                         player={player}
@@ -614,6 +614,8 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                         isPositionsLocked={isPositionsLocked}
                         periodId={currentPeriod.id}
                         positionIndex={index}
+                        kitDesign={kitDesign}
+                        goalkeeperKitDesign={goalkeeperKitDesign}
                       />
                     )}
                   </div>
@@ -722,6 +724,8 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
             globalCaptainId={globalCaptainId}
             nameDisplayOption={nameDisplayOption}
             compact
+            kitDesign={kitDesign}
+            goalkeeperKitDesign={goalkeeperKitDesign}
           />
         </div>
 
