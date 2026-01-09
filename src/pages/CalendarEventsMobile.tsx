@@ -959,32 +959,16 @@ export default function CalendarEventsMobile() {
                 
                 {/* Kit Selection for matches */}
                 {isMatchType(selectedEvent.event_type) && (
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
                     <FPLShirtIcon 
-                      className="w-8 h-8 flex-shrink-0"
+                      className="w-7 h-7 flex-shrink-0"
                       shirtColor={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.shirtColor}
                       stripeColor={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.stripeColor}
                       hasStripes={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.hasStripes}
                     />
-                    {canEditEvents() ? (
-                      <Select 
-                        value={selectedEvent.kit_selection || 'home'}
-                        onValueChange={(value) => handleKitChange(value as 'home' | 'away' | 'training')}
-                      >
-                        <SelectTrigger className="w-[130px] h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="home">Home Kit</SelectItem>
-                          <SelectItem value="away">Away Kit</SelectItem>
-                          <SelectItem value="training">Training Kit</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <span className="text-sm text-muted-foreground capitalize">
-                        {selectedEvent.kit_selection || 'home'} Kit
-                      </span>
-                    )}
+                    <span className="text-sm text-muted-foreground capitalize">
+                      {selectedEvent.kit_selection || 'home'} Kit
+                    </span>
                   </div>
                 )}
                 
