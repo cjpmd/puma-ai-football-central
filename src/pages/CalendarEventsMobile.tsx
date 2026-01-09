@@ -907,20 +907,33 @@ export default function CalendarEventsMobile() {
                 </h3>
               </div>
               
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <span>{format(new Date(selectedEvent.date), 'EEEE, MMMM do, yyyy')}</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>{format(new Date(selectedEvent.date), 'EEE d MMM')}</span>
+                  {selectedEvent.start_time && (
+                    <>
+                      <span>•</span>
+                      <Clock className="h-4 w-4" />
+                      <span>{selectedEvent.start_time.slice(0, 5)}</span>
+                    </>
+                  )}
+                  {isMatchType(selectedEvent.event_type) && (
+                    <>
+                      <span>•</span>
+                      <span>{selectedEvent.is_home ? 'Home' : 'Away'}</span>
+                    </>
+                  )}
                 </div>
                 
                 {/* Show team times for multi-team events */}
                 <EventTeamTimesDisplay eventId={selectedEvent.id} />
                 
                 {selectedEvent.location && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-gray-500" />
-                      <span>{selectedEvent.location}</span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4" />
+                      <span className="truncate">{selectedEvent.location}</span>
                     </div>
                     
                     {/* Map Display */}
@@ -936,15 +949,6 @@ export default function CalendarEventsMobile() {
                       lng={selectedEvent.longitude}
                       eventDate={selectedEvent.date}
                     />
-                  </div>
-                )}
-                
-                {isMatchType(selectedEvent.event_type) && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Users className="h-4 w-4 text-gray-500" />
-                    <span>
-                      {selectedEvent.game_format || 'Match'} • {selectedEvent.is_home ? 'Home' : 'Away'}
-                    </span>
                   </div>
                 )}
               </div>

@@ -65,14 +65,14 @@ export const EventLocationMap: React.FC<EventLocationMapProps> = ({
   }
 
   // Use Mapbox static image API for a simple map preview
-  const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+e74c3c(${lng},${lat})/${lng},${lat},14,0/600x240@2x?access_token=${mapboxToken}`;
+  const mapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+e74c3c(${lng},${lat})/${lng},${lat},14,0/600x200@2x?access_token=${mapboxToken}`;
 
   return (
     <div className="rounded-lg overflow-hidden border">
       <img 
         src={mapUrl} 
         alt={`Map of ${location}`}
-        className="w-full h-[120px] object-cover"
+        className="w-full h-[80px] object-cover"
         loading="lazy"
       />
     </div>
