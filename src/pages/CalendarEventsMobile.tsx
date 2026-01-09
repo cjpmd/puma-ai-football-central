@@ -19,7 +19,10 @@ import { MobileEventForm } from '@/components/events/MobileEventForm';
 import { DatabaseEvent } from '@/types/event';
 import { GameFormat } from '@/types';
 import { EnhancedKitAvatar } from '@/components/shared/EnhancedKitAvatar';
-import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus, UserCheck } from 'lucide-react';
+import { FPLShirtIcon } from '@/components/shared/FPLShirtIcon';
+import { Calendar, Clock, MapPin, Users, User, Link2, AlertCircle, Plus, UserCheck, Shirt } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { KitDesign } from '@/types/team';
 import { EventLocationMap } from '@/components/events/EventLocationMap';
 import { EventWeatherDisplay } from '@/components/events/EventWeatherDisplay';
 import { MobileTeamSelectionView } from '@/components/events/MobileTeamSelectionView';
@@ -608,6 +611,34 @@ export default function CalendarEventsMobile() {
     }
   };
 
+  // Get kit design from team based on selection
+  const getKitDesign = (selection: 'home' | 'away' | 'training' | undefined): KitDesign | undefined => {
+    const team = teams?.[0];
+    if (!team?.kitDesigns) return undefined;
+    const kitDesigns = team.kitDesigns as Record<string, KitDesign>;
+    return kitDesigns[selection || 'home'] || kitDesigns.home;
+  };
+
+  // Handle kit selection change
+  const handleKitChange = async (kitSelection: 'home' | 'away' | 'training') => {
+    if (!selectedEvent) return;
+    
+    try {
+      const { error } = await supabase
+        .from('events')
+        .update({ kit_selection: kitSelection })
+        .eq('id', selectedEvent.id);
+      
+      if (error) throw error;
+      
+      setSelectedEvent(prev => prev ? { ...prev, kit_selection: kitSelection } : null);
+      toast({ title: 'Kit updated' });
+    } catch (error) {
+      console.error('Error updating kit:', error);
+      toast({ title: 'Failed to update kit', variant: 'destructive' });
+    }
+  };
+
   // Get user-relevant time display for mobile calendar cards
   const getUserRelevantTimeDisplay = (event: DatabaseEvent): string => {
     const context = eventTimeContexts[event.id];
@@ -918,13 +949,44 @@ export default function CalendarEventsMobile() {
                       <span>{selectedEvent.start_time.slice(0, 5)}</span>
                     </>
                   )}
-                  {isMatchType(selectedEvent.event_type) && (
+                {isMatchType(selectedEvent.event_type) && (
                     <>
                       <span>•</span>
                       <span>{selectedEvent.is_home ? 'Home' : 'Away'}</span>
                     </>
                   )}
                 </div>
+                
+                {/* Kit Selection for matches */}
+                {isMatchType(selectedEvent.event_type) && (
+                  <div className="flex items-center gap-3">
+                    <FPLShirtIcon 
+                      className="w-8 h-8 flex-shrink-0"
+                      shirtColor={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.shirtColor}
+                      stripeColor={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.stripeColor}
+                      hasStripes={getKitDesign(selectedEvent.kit_selection as 'home' | 'away' | 'training')?.hasStripes}
+                    />
+                    {canEditEvents() ? (
+                      <Select 
+                        value={selectedEvent.kit_selection || 'home'}
+                        onValueChange={(value) => handleKitChange(value as 'home' | 'away' | 'training')}
+                      >
+                        <SelectTrigger className="w-[130px] h-8 text-sm">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="home">Home Kit</SelectItem>
+                          <SelectItem value="away">Away Kit</SelectItem>
+                          <SelectItem value="training">Training Kit</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <span className="text-sm text-muted-foreground capitalize">
+                        {selectedEvent.kit_selection || 'home'} Kit
+                      </span>
+                    )}
+                  </div>
+                )}
                 
                 {/* Show team times for multi-team events */}
                 <EventTeamTimesDisplay eventId={selectedEvent.id} />
