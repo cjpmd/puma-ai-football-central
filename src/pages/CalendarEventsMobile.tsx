@@ -900,9 +900,9 @@ export default function CalendarEventsMobile() {
                               {/* Availability status indicator removed - now in Event Details */}
                             </div>
                             
-                            {/* Right edge: Next badge */}
+                            {/* NEXT badge - absolute top right */}
                             {isNextEvent && (
-                              <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 ml-auto">
+                              <Badge className="bg-primary text-primary-foreground text-[10px] font-semibold px-2 py-0.5 rounded-full absolute top-2 right-2">
                                 NEXT
                               </Badge>
                             )}
@@ -910,7 +910,7 @@ export default function CalendarEventsMobile() {
                             {/* Team badge - absolute bottom right when viewing all teams */}
                             {viewMode === 'all' && team && (
                               <Avatar className="h-6 w-6 absolute bottom-2 right-2">
-                                <AvatarImage src={team.logo_url} alt={team.name} />
+                                <AvatarImage src={team.logoUrl} alt={team.name} />
                                 <AvatarFallback className="text-[8px] bg-muted">
                                   {team.name?.substring(0, 2).toUpperCase()}
                                 </AvatarFallback>
