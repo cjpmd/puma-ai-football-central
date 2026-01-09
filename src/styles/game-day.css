@@ -130,6 +130,19 @@
   z-index: 0;
 }
 
+/* Pitch outline - white line inside the green with margin */
+.pitch-outline {
+  position: absolute;
+  top: 6%;
+  left: 8%;
+  right: 8%;
+  bottom: 6%;
+  border: 2px solid white;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Pitch markings - solid white */
 .pitch-center-line {
   position: absolute;
@@ -573,13 +586,19 @@
   gap: 8px;
   padding: 10px;
   flex-shrink: 0;
-  background: hsla(var(--muted), 0.3);
-  border: 2px dashed hsl(var(--border));
+  background: hsla(240, 20%, 15%, 0.9);
+  border: 2px dashed hsla(240, 20%, 40%, 0.6);
   border-radius: 10px;
   margin: 8px;
   min-height: 60px;
   justify-content: center;
   align-items: center;
+}
+
+/* Bench player names need white text on dark background */
+.substitute-bench .fpl-player-name {
+  color: hsl(0, 0%, 100%);
+  text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.8);
 }
 
 /* Enhanced Substitute Cards */
@@ -1021,11 +1040,12 @@
   touch-action: none;
 }
 
-/* Container for the shirt - transparent, shirt SVG carries the color */
-.fpl-shirt-container {
+/* Circle container for the shirt with position-based background */
+.fpl-shirt-circle {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
 }
 
 /* Player name - just text, no number strip */

@@ -567,6 +567,8 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           <div className="formation-pitch w-full h-full">
             {/* 3D Tilted Pitch Field */}
             <div className="pitch-field">
+              {/* Pitch outline - inside the green */}
+              <div className="pitch-outline" />
               {/* Pitch markings */}
               <div className="pitch-center-line" />
               <div className="pitch-center-circle" />

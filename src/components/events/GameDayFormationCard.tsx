@@ -197,6 +197,8 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       <div className="formation-pitch flex-1 min-h-0">
         {/* Pitch Field */}
         <div className="pitch-field">
+          {/* Pitch outline - inside the green */}
+          <div className="pitch-outline" />
           {/* Pitch markings */}
           <div className="pitch-center-line" />
           <div className="pitch-center-circle" />
