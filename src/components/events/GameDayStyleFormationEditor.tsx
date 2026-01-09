@@ -565,16 +565,35 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           className="flex-1 min-h-0 relative overflow-hidden w-full max-w-full"
         >
           <div className="formation-pitch w-full h-full">
-            {/* 3D Tilted Pitch Field */}
+            {/* FPL-Style Pitch Field with Perspective */}
             <div className="pitch-field">
-              {/* Pitch outline - inside the green */}
+              {/* Pitch outline - inside the green with margin */}
               <div className="pitch-outline" />
-              {/* Pitch markings */}
+              
+              {/* Goals */}
+              <div className="goal-top" />
+              <div className="goal-bottom" />
+              
+              {/* Centre markings */}
               <div className="pitch-center-line" />
               <div className="pitch-center-circle" />
               <div className="pitch-center-spot" />
+              
+              {/* Penalty areas */}
               <div className="goal-box-top" />
               <div className="goal-box-bottom" />
+              
+              {/* Penalty spots and arcs */}
+              <div className="penalty-spot-top" />
+              <div className="penalty-spot-bottom" />
+              <div className="penalty-arc-top" />
+              <div className="penalty-arc-bottom" />
+              
+              {/* Corner arcs */}
+              <div className="corner-arc-top-left" />
+              <div className="corner-arc-top-right" />
+              <div className="corner-arc-bottom-left" />
+              <div className="corner-arc-bottom-right" />
               
               {currentPeriod.positions.map((position, index) => {
                 const player = squadPlayers.find(p => p.id === position.playerId);

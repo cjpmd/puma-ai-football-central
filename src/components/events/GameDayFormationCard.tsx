@@ -195,16 +195,35 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       </div>
 
       <div className="formation-pitch flex-1 min-h-0">
-        {/* Pitch Field */}
+        {/* FPL-Style Pitch Field with Perspective */}
         <div className="pitch-field">
-          {/* Pitch outline - inside the green */}
+          {/* Pitch outline - inside the green with margin */}
           <div className="pitch-outline" />
-          {/* Pitch markings */}
+          
+          {/* Goals */}
+          <div className="goal-top" />
+          <div className="goal-bottom" />
+          
+          {/* Centre markings */}
           <div className="pitch-center-line" />
           <div className="pitch-center-circle" />
           <div className="pitch-center-spot" />
+          
+          {/* Penalty areas */}
           <div className="goal-box-top" />
           <div className="goal-box-bottom" />
+          
+          {/* Penalty spots and arcs */}
+          <div className="penalty-spot-top" />
+          <div className="penalty-spot-bottom" />
+          <div className="penalty-arc-top" />
+          <div className="penalty-arc-bottom" />
+          
+          {/* Corner arcs */}
+          <div className="corner-arc-top-left" />
+          <div className="corner-arc-top-right" />
+          <div className="corner-arc-bottom-left" />
+          <div className="corner-arc-bottom-right" />
           
           {/* Player positions using FPL tokens */}
           {positions.map((pos) => {
