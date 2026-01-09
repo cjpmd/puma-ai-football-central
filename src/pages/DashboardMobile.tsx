@@ -1,10 +1,9 @@
-
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
 import { useState, useEffect } from 'react';
@@ -27,6 +26,7 @@ interface LiveStats {
 }
 
 export default function DashboardMobile() {
+  const navigate = useNavigate();
   const { teams, allTeams, connectedPlayers, profile, user } = useAuth();
   const { currentTeam, viewMode, availableTeams, setCurrentTeam, setViewMode } = useTeamContext();
   const { toast } = useToast();
@@ -518,7 +518,10 @@ export default function DashboardMobile() {
                 {stats.upcomingEvents.map((event, index) => (
                   <div key={event.id}>
                     {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
-                    <div className="flex gap-3 px-4 py-3">
+                    <div 
+                      className="flex gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 active:bg-gray-100 transition-colors"
+                      onClick={() => navigate(`/calendar?eventId=${event.id}`)}
+                    >
                       {/* Date column */}
                       <div className="flex flex-col items-center justify-center min-w-[40px]">
                         <span className="text-[10px] text-gray-500 uppercase font-medium">
