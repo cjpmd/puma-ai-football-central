@@ -11,9 +11,12 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { eventsService } from '@/services/eventsService';
 import { format, getDay } from 'date-fns';
-import { Calendar, Clock, MapPin, Users, X, Repeat, UserCheck } from 'lucide-react';
+import { Calendar, Clock, MapPin, Users, X, Repeat, UserCheck, ClipboardList } from 'lucide-react';
 import { GameFormat } from '@/types';
-
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
 interface MobileEventFormProps {
   onClose: () => void;
   onEventCreated: () => void;
@@ -71,9 +74,13 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
   });
 
   // Invitation type state
-  const [inviteType, setInviteType] = useState<'everyone' | 'players_only' | 'staff_only'>('everyone');
-
-  // Update defaults when team settings load
+  const [inviteType, setInviteType] = useState<'everyone' | 'players_only' | 'staff_only' | 'pick_squad'>('everyone');
+  const [showSquadPicker, setShowSquadPicker] = useState(false);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<string[]>([]);
+  const [availablePlayers, setAvailablePlayers] = useState<{ id: string; name: string }[]>([]);
+  const [availableStaff, setAvailableStaff] = useState<{ id: string; name: string }[]>([]);
+  // Update defaults when team settings load + load squad data
   useEffect(() => {
     if (currentTeam) {
       setFormData(prev => ({
@@ -81,6 +88,20 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
         gameFormat: (currentTeam.gameFormat as GameFormat) || prev.gameFormat,
         gameDuration: currentTeam.gameDuration || prev.gameDuration,
       }));
+      
+      // Load players and staff for squad picker
+      const loadSquadData = async () => {
+        const teamId = currentTeam.id;
+        
+        const [playersResult, staffResult] = await Promise.all([
+          supabase.from('players').select('id, name').eq('team_id', teamId).order('name'),
+          supabase.from('team_staff').select('id, name').eq('team_id', teamId).order('name')
+        ]);
+        
+        if (playersResult.data) setAvailablePlayers(playersResult.data);
+        if (staffResult.data) setAvailableStaff(staffResult.data);
+      };
+      loadSquadData();
     }
   }, [currentTeam]);
 
@@ -137,8 +158,14 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
       }
 
       // Set invitations based on selected invite type
-      let invitations: { type: 'everyone' | 'players_only' | 'staff_only' };
-      if (inviteType === 'everyone') {
+      let invitations: any;
+      if (inviteType === 'pick_squad') {
+        invitations = {
+          type: 'pick_squad' as const,
+          selectedPlayerIds,
+          selectedStaffIds
+        };
+      } else if (inviteType === 'everyone') {
         invitations = { type: 'everyone' as const };
       } else if (inviteType === 'players_only') {
         invitations = { type: 'players_only' as const };
@@ -193,7 +220,6 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="training">Training</SelectItem>
-                  <SelectItem value="match">Match</SelectItem>
                   <SelectItem value="fixture">Fixture</SelectItem>
                   <SelectItem value="friendly">Friendly</SelectItem>
                 </SelectContent>
@@ -316,7 +342,10 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gameDuration">Duration</Label>
+                    <Label htmlFor="gameDuration" className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Duration
+                    </Label>
                     <Input
                       id="gameDuration"
                       type="number"
@@ -336,7 +365,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 <UserCheck className="h-4 w-4" />
                 Request Availability From
               </Label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
                   variant={inviteType === 'everyone' ? 'default' : 'outline'}
@@ -364,8 +393,154 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                 >
                   Staff
                 </Button>
+                <Button
+                  type="button"
+                  variant={inviteType === 'pick_squad' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setInviteType('pick_squad');
+                    setShowSquadPicker(true);
+                  }}
+                  className="text-xs flex items-center gap-1"
+                >
+                  <ClipboardList className="h-3 w-3" />
+                  Pick Squad
+                </Button>
               </div>
+              {inviteType === 'pick_squad' && (selectedPlayerIds.length > 0 || selectedStaffIds.length > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedPlayerIds.length} player{selectedPlayerIds.length !== 1 ? 's' : ''}, {selectedStaffIds.length} staff selected
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="text-xs h-auto p-0 ml-2"
+                    onClick={() => setShowSquadPicker(true)}
+                  >
+                    Edit
+                  </Button>
+                </p>
+              )}
             </div>
+
+            {/* Squad Picker Sheet */}
+            <Sheet open={showSquadPicker} onOpenChange={setShowSquadPicker}>
+              <SheetContent side="bottom" className="h-[70vh]">
+                <SheetHeader>
+                  <SheetTitle>Select Squad</SheetTitle>
+                </SheetHeader>
+                <ScrollArea className="h-[calc(100%-100px)] mt-4">
+                  {/* Players Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Players ({availablePlayers.length})</h4>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setSelectedPlayerIds(availablePlayers.map(p => p.id))}
+                        >
+                          Select All
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setSelectedPlayerIds([])}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {availablePlayers.map(player => (
+                        <div key={player.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                          <Checkbox
+                            id={`player-${player.id}`}
+                            checked={selectedPlayerIds.includes(player.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedPlayerIds(prev => [...prev, player.id]);
+                              } else {
+                                setSelectedPlayerIds(prev => prev.filter(id => id !== player.id));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`player-${player.id}`} className="flex-1 cursor-pointer">
+                            {player.name}
+                          </Label>
+                        </div>
+                      ))}
+                      {availablePlayers.length === 0 && (
+                        <p className="text-sm text-muted-foreground py-2">No players in team</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Staff Section */}
+                  <div className="space-y-3 mt-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm">Staff ({availableStaff.length})</h4>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setSelectedStaffIds(availableStaff.map(s => s.id))}
+                        >
+                          Select All
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="text-xs h-7"
+                          onClick={() => setSelectedStaffIds([])}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {availableStaff.map(staff => (
+                        <div key={staff.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
+                          <Checkbox
+                            id={`staff-${staff.id}`}
+                            checked={selectedStaffIds.includes(staff.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStaffIds(prev => [...prev, staff.id]);
+                              } else {
+                                setSelectedStaffIds(prev => prev.filter(id => id !== staff.id));
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`staff-${staff.id}`} className="flex-1 cursor-pointer">
+                            {staff.name}
+                          </Label>
+                        </div>
+                      ))}
+                      {availableStaff.length === 0 && (
+                        <p className="text-sm text-muted-foreground py-2">No staff in team</p>
+                      )}
+                    </div>
+                  </div>
+                </ScrollArea>
+                <div className="pt-4">
+                  <Button 
+                    type="button"
+                    className="w-full" 
+                    onClick={() => setShowSquadPicker(false)}
+                  >
+                    Confirm Selection ({selectedPlayerIds.length + selectedStaffIds.length} selected)
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
 
             {/* Recurring Event Toggle */}
             <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
