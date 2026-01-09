@@ -104,6 +104,25 @@ export default function DashboardMobile() {
         .order('date', { ascending: true })
         .limit(5);
 
+      // Fetch user availability for all upcoming events
+      const upcomingEventIds = upcomingEventsData?.map(e => e.id) || [];
+      const { data: userAvailabilityData } = await supabase
+        .from('event_availability')
+        .select('event_id, status, role')
+        .eq('user_id', user.id)
+        .in('event_id', upcomingEventIds);
+
+      // Create availability map - prioritize: available > unavailable > pending
+      const availabilityMap = new Map<string, string>();
+      userAvailabilityData?.forEach(record => {
+        const existing = availabilityMap.get(record.event_id);
+        if (!existing || 
+            (record.status === 'available') || 
+            (record.status === 'unavailable' && existing === 'pending')) {
+          availabilityMap.set(record.event_id, record.status);
+        }
+      });
+
       const upcomingEvents = upcomingEventsData?.map(event => ({
         ...event,
         team_context: {
@@ -111,7 +130,8 @@ export default function DashboardMobile() {
           logo_url: event.teams.logo_url,
           club_name: event.teams.clubs?.name,
           club_logo_url: event.teams.clubs?.logo_url
-        }
+        },
+        user_availability: availabilityMap.get(event.id) || null
       })) || [];
 
       const { data: recentResultsData } = await supabase
@@ -509,9 +529,17 @@ export default function DashboardMobile() {
                         </span>
                       </div>
                       
-                      {/* Colored accent */}
+                      {/* Colored accent - based on availability status */}
                       <div className={`w-1 self-stretch rounded-full ${
-                        event.event_type === 'training' ? 'bg-purple-400' : 'bg-red-400'
+                        event.user_availability === 'available'
+                          ? 'bg-green-400'
+                          : event.user_availability === 'unavailable'
+                            ? 'bg-red-400'
+                            : event.user_availability === 'pending'
+                              ? 'bg-amber-400'
+                              : event.event_type === 'training'
+                                ? 'bg-purple-400'
+                                : 'bg-gray-300'
                       }`} />
                       
                       {/* Event details */}
