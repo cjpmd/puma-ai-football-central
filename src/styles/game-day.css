@@ -81,7 +81,7 @@
   flex-shrink: 0;
 }
 
-/* ============= FPL-STYLE TRAPEZOIDAL PITCH ============= */
+/* ============= FPL-STYLE PITCH WITH PERSPECTIVE ============= */
 
 /* Pitch Container - FPL aspect ratio */
 .formation-pitch {
@@ -93,64 +93,67 @@
   margin: 0 auto;
   padding: 0;
   overflow: visible;
-  /* Extend top beyond viewport */
-  margin-top: -25px;
-  padding-top: 25px;
 }
 
-/* The pitch field - FPL-style inverted trapezoid (wider at TOP) */
+/* The pitch field - FPL-style perspective (narrower at TOP = far end, wider at BOTTOM = near) */
 .pitch-field {
   position: absolute;
   inset: 0;
-  /* Solid green base */
-  background: hsl(142, 55%, 38%);
-  /* Inverted trapezoid - wider at TOP (attacking end), narrower at bottom (GK) */
+  /* FPL green gradient - exact colors from reference */
+  background: linear-gradient(
+    180deg,
+    #3f8142 0%,
+    #3b7f3f 50%,
+    #357a38 100%
+  );
+  /* Perspective - top (far end) narrower, bottom (near viewer) wider */
   clip-path: polygon(
-    0% 0%,       /* Top left - full width */
-    100% 0%,     /* Top right - full width */
-    90% 100%,    /* Bottom right - narrower */
-    10% 100%     /* Bottom left - narrower */
+    8% 0%,       /* Top left - narrower (far end) */
+    92% 0%,      /* Top right - narrower */
+    100% 100%,   /* Bottom right - full width (near) */
+    0% 100%      /* Bottom left - full width */
   );
   overflow: hidden;
 }
 
-/* Horizontal grass stripes */
+/* Subtle horizontal grass mowing stripes */
 .pitch-field::before {
   content: '';
   position: absolute;
   inset: 0;
+  /* 8-10 stripes with very subtle contrast difference (~6% opacity) */
   background: repeating-linear-gradient(
-    0deg,
-    transparent 0px,
-    transparent 28px,
-    hsla(142, 60%, 30%, 0.35) 28px,
-    hsla(142, 60%, 30%, 0.35) 56px
+    180deg,
+    transparent 0%,
+    transparent 10%,
+    rgba(0, 0, 0, 0.06) 10%,
+    rgba(0, 0, 0, 0.06) 20%
   );
   pointer-events: none;
   z-index: 0;
 }
 
-/* Pitch outline - white line inside the green with margin */
+/* Pitch outline - white rectangle inside the green with green margin visible */
 .pitch-outline {
   position: absolute;
-  top: 6%;
-  left: 8%;
-  right: 8%;
-  bottom: 6%;
-  border: 2px solid white;
-  border-radius: 4px;
+  top: 5%;
+  left: 7%;
+  right: 7%;
+  bottom: 5%;
+  border: 2px solid #ffffff;
+  border-radius: 2px;
   pointer-events: none;
   z-index: 1;
 }
 
-/* Pitch markings - solid white */
+/* Pitch markings - solid white, no shadows */
 .pitch-center-line {
   position: absolute;
   top: 50%;
-  left: 10%;
-  right: 10%;
+  left: 7%;
+  right: 7%;
   height: 2px;
-  background: white;
+  background: #ffffff;
   transform: translateY(-50%);
   z-index: 1;
 }
@@ -159,9 +162,9 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 70px;
-  height: 70px;
-  border: 2px solid white;
+  width: 16%;
+  aspect-ratio: 1;
+  border: 2px solid #ffffff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
@@ -173,23 +176,22 @@
   left: 50%;
   width: 6px;
   height: 6px;
-  background: white;
+  background: #ffffff;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   z-index: 1;
 }
 
-/* Goal boxes - solid white markings */
+/* Penalty area (18-yard box) - TOP (far end) */
 .goal-box-top {
   position: absolute;
-  top: 0;
+  top: 5%;
   left: 50%;
   transform: translateX(-50%);
-  width: 30%;
-  height: 35px;
-  border: 2px solid white;
+  width: 44%;
+  height: 16%;
+  border: 2px solid #ffffff;
   border-top: none;
-  border-radius: 0 0 4px 4px;
   z-index: 1;
 }
 
@@ -200,24 +202,22 @@
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 50%;
-  height: 14px;
-  border: 2px solid white;
+  width: 40%;
+  height: 35%;
+  border: 2px solid #ffffff;
   border-top: none;
-  border-radius: 0 0 2px 2px;
 }
 
-/* Goal box styling - bottom (GK end) */
+/* Penalty area (18-yard box) - BOTTOM (GK end, near viewer) */
 .goal-box-bottom {
   position: absolute;
-  bottom: 0;
+  bottom: 5%;
   left: 50%;
   transform: translateX(-50%);
-  width: 30%;
-  height: 35px;
-  border: 2px solid white;
+  width: 44%;
+  height: 16%;
+  border: 2px solid #ffffff;
   border-bottom: none;
-  border-radius: 4px 4px 0 0;
   z-index: 1;
 }
 
@@ -228,11 +228,141 @@
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 50%;
-  height: 14px;
-  border: 2px solid white;
+  width: 40%;
+  height: 35%;
+  border: 2px solid #ffffff;
   border-bottom: none;
+}
+
+/* Goals - white bars at top and bottom */
+.goal-top {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12%;
+  height: 6px;
+  background: #ffffff;
   border-radius: 2px 2px 0 0;
+  z-index: 2;
+}
+
+.goal-bottom {
+  position: absolute;
+  bottom: 5%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12%;
+  height: 6px;
+  background: #ffffff;
+  border-radius: 0 0 2px 2px;
+  z-index: 2;
+}
+
+/* Penalty spots */
+.penalty-spot-top {
+  position: absolute;
+  top: 17%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: #ffffff;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+.penalty-spot-bottom {
+  position: absolute;
+  bottom: 17%;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  background: #ffffff;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+/* Penalty arc (D-shape outside box) - top */
+.penalty-arc-top {
+  position: absolute;
+  top: 19%;
+  left: 50%;
+  width: 50px;
+  height: 25px;
+  border: 2px solid #ffffff;
+  border-radius: 0 0 50% 50%;
+  border-top: none;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+/* Penalty arc (D-shape outside box) - bottom */
+.penalty-arc-bottom {
+  position: absolute;
+  bottom: 19%;
+  left: 50%;
+  width: 50px;
+  height: 25px;
+  border: 2px solid #ffffff;
+  border-radius: 50% 50% 0 0;
+  border-bottom: none;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+
+/* Corner arcs */
+.corner-arc-top-left {
+  position: absolute;
+  top: 5%;
+  left: 7%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 0 0 100% 0;
+  border-left: none;
+  border-top: none;
+  z-index: 1;
+}
+
+.corner-arc-top-right {
+  position: absolute;
+  top: 5%;
+  right: 7%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 0 0 0 100%;
+  border-right: none;
+  border-top: none;
+  z-index: 1;
+}
+
+.corner-arc-bottom-left {
+  position: absolute;
+  bottom: 5%;
+  left: 7%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 0 100% 0 0;
+  border-left: none;
+  border-bottom: none;
+  z-index: 1;
+}
+
+.corner-arc-bottom-right {
+  position: absolute;
+  bottom: 5%;
+  right: 7%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ffffff;
+  border-radius: 100% 0 0 0;
+  border-right: none;
+  border-bottom: none;
+  z-index: 1;
 }
 
 /* ============= FANTASY FOOTBALL PLAYER CARD STYLES ============= */

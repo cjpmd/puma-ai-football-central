@@ -59,15 +59,15 @@ const getSurname = (name: string): string => {
 const getCircleBackground = (positionGroup: PositionGroup): string => {
   switch (positionGroup) {
     case 'goalkeeper':
-      return 'bg-yellow-500/20';
+      return 'bg-yellow-400/50 border-2 border-yellow-300/60';
     case 'defender':
-      return 'bg-blue-500/20';
+      return 'bg-blue-400/50 border-2 border-blue-300/60';
     case 'midfielder':
-      return 'bg-green-500/20';
+      return 'bg-green-400/50 border-2 border-green-300/60';
     case 'forward':
-      return 'bg-red-500/20';
+      return 'bg-red-400/50 border-2 border-red-300/60';
     default:
-      return 'bg-green-500/20';
+      return 'bg-green-400/50 border-2 border-green-300/60';
   }
 };
 
