@@ -226,34 +226,32 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
             <span className="text-xs text-muted-foreground">{roleLabel}</span>
           </div>
         </div>
-        <div className="flex gap-1.5 flex-shrink-0">
+        <div className="flex gap-1 flex-shrink-0">
           <Button
             size="sm"
             variant={status === 'available' ? 'default' : 'outline'}
-            className={`h-7 px-2.5 text-xs ${
+            className={`h-6 w-6 p-0 rounded-full ${
               status === 'available' 
                 ? 'bg-teal-500 hover:bg-teal-600 text-white border-teal-500' 
-                : 'border-gray-200 text-gray-500 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50'
+                : 'border-muted-foreground/30 text-muted-foreground hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50'
             }`}
             onClick={() => handleUpdateAvailability(role, 'available')}
             disabled={isUpdating}
           >
-            <Check className={`${iconSize} mr-1`} />
-            Going
+            <Check className="h-3.5 w-3.5" />
           </Button>
           <Button
             size="sm"
             variant={status === 'unavailable' ? 'default' : 'outline'}
-            className={`h-7 px-2.5 text-xs ${
+            className={`h-6 w-6 p-0 rounded-full ${
               status === 'unavailable'
                 ? 'bg-red-500 hover:bg-red-600 text-white border-red-500'
-                : 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50'
+                : 'border-muted-foreground/30 text-muted-foreground hover:border-red-300 hover:text-red-500 hover:bg-red-50'
             }`}
             onClick={() => handleUpdateAvailability(role, 'unavailable')}
             disabled={isUpdating}
           >
-            <X className={`${iconSize} mr-1`} />
-            Not Going
+            <X className="h-3.5 w-3.5" />
           </Button>
         </div>
       </div>
@@ -326,34 +324,32 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
           <span className="text-xs text-muted-foreground">{roleLabel}</span>
         </div>
       </div>
-      <div className="flex gap-1.5 flex-shrink-0">
+      <div className="flex gap-1 flex-shrink-0">
         <Button
           size="sm"
           variant={status === 'available' ? 'default' : 'outline'}
-          className={`h-7 px-2.5 text-xs ${
+          className={`h-6 w-6 p-0 rounded-full ${
             status === 'available' 
               ? 'bg-teal-500 hover:bg-teal-600 text-white border-teal-500' 
-              : 'border-gray-200 text-gray-500 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50'
+              : 'border-muted-foreground/30 text-muted-foreground hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50'
           }`}
           onClick={() => handleUpdateAvailability(singleRole, 'available')}
           disabled={isUpdating}
         >
-          <Check className={`${iconSize} mr-1`} />
-          Going
+          <Check className="h-3.5 w-3.5" />
         </Button>
         <Button
           size="sm"
           variant={status === 'unavailable' ? 'default' : 'outline'}
-          className={`h-7 px-2.5 text-xs ${
+          className={`h-6 w-6 p-0 rounded-full ${
             status === 'unavailable'
               ? 'bg-red-500 hover:bg-red-600 text-white border-red-500'
-              : 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50'
+              : 'border-muted-foreground/30 text-muted-foreground hover:border-red-300 hover:text-red-500 hover:bg-red-50'
           }`}
           onClick={() => handleUpdateAvailability(singleRole, 'unavailable')}
           disabled={isUpdating}
         >
-          <X className={`${iconSize} mr-1`} />
-          Not Going
+          <X className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
