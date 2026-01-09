@@ -1007,3 +1007,110 @@
   font-weight: 500;
   line-height: 1;
 }
+
+/* ============= FPL-STYLE PLAYER TOKENS ============= */
+
+/* Main token container */
+.fpl-player-token {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+}
+
+/* Circular shirt container */
+.fpl-shirt-circle {
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* No shadow, no border - FPL style */
+}
+
+/* Player name - no background, just text */
+.fpl-player-name {
+  margin-top: 4px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 60px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: hsl(0, 0%, 100%);
+  font-weight: 600;
+  text-shadow: 0 1px 2px hsla(0, 0%, 0%, 0.5);
+  /* No background, no container */
+}
+
+/* Number strip below name */
+.fpl-number-strip {
+  margin-top: 2px;
+  border-radius: 2px;
+  font-weight: 700;
+  color: hsl(0, 0%, 100%);
+  text-align: center;
+}
+
+/* Position-based number strip colors */
+.fpl-number-strip-gk {
+  background: linear-gradient(90deg, hsl(45, 93%, 47%), hsl(38, 92%, 50%));
+}
+
+.fpl-number-strip-def {
+  background: linear-gradient(90deg, hsl(217, 91%, 60%), hsl(221, 83%, 53%));
+}
+
+.fpl-number-strip-mid {
+  background: linear-gradient(90deg, hsl(142, 71%, 45%), hsl(142, 76%, 36%));
+}
+
+.fpl-number-strip-fwd {
+  background: linear-gradient(90deg, hsl(0, 84%, 60%), hsl(0, 72%, 51%));
+}
+
+/* Captain badge - FPL style */
+.fpl-captain-badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  width: 16px;
+  height: 16px;
+  background: linear-gradient(135deg, hsl(45, 93%, 47%), hsl(38, 92%, 50%));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid hsl(0, 0%, 100%);
+  z-index: 25;
+}
+
+.fpl-captain-badge span {
+  font-size: 9px;
+  font-weight: 900;
+  color: hsl(0, 0%, 100%);
+  text-shadow: 0 1px 1px hsla(0, 0%, 0%, 0.3);
+}
+
+/* Event badges for FPL tokens */
+.fpl-player-token .event-badges-enhanced {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 30;
+}
+
+/* Drag state for FPL tokens */
+.fpl-player-token.dragging {
+  opacity: 0.8;
+  transform: scale(1.05);
+  z-index: 50;
+}

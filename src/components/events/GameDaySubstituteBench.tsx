@@ -1,5 +1,6 @@
 import React from 'react';
 import { useLongPress } from '@/hooks/useLongPress';
+import { FPLPlayerToken } from './FPLPlayerToken';
 
 interface SubstitutePlayer {
   id: string;
@@ -16,64 +17,39 @@ interface GameDaySubstituteBenchProps {
   onPlayerLongPress: (playerId: string) => void;
 }
 
-const getPlayerInitials = (name: string) => {
-  const parts = name.split(' ');
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
+const getPositionGroup = (position: string): 'goalkeeper' | 'defender' | 'midfielder' | 'forward' => {
+  const pos = position?.toLowerCase() || '';
+  if (pos.includes('keeper') || pos === 'gk') return 'goalkeeper';
+  if (pos.includes('back') || pos.includes('defender') || pos === 'cb' || pos === 'lb' || pos === 'rb') return 'defender';
+  if (pos.includes('mid') || pos === 'cm' || pos === 'dm' || pos === 'am') return 'midfielder';
+  return 'forward';
 };
 
-// Get player surname for display
-const getPlayerSurname = (name: string): string => {
-  const parts = name.trim().split(' ');
-  return parts.length > 1 ? parts[parts.length - 1] : parts[0];
-};
-
-// Enhanced substitute card
+// Enhanced substitute card using FPL token
 const SubstituteCard: React.FC<{
   player: SubstitutePlayer;
   onLongPress: () => void;
 }> = ({ player, onLongPress }) => {
   const longPressHandlers = useLongPress(onLongPress);
+  const positionGroup = getPositionGroup(player.position);
   
   return (
     <div
-      className="substitute-card-enhanced"
+      className="relative opacity-60 cursor-pointer"
       {...longPressHandlers}
     >
       {player.replacedPlayerName && (
-        <div className="replaced-label">
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-red-500 text-white text-[6px] px-1 py-0.5 rounded whitespace-nowrap z-10">
           {player.replacedPlayerName.split(' ')[0]}
         </div>
       )}
       
-      {/* Player image */}
-      <div className="sub-image-enhanced">
-        {player.photo_url ? (
-          <img 
-            src={player.photo_url} 
-            alt={player.name}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-            }}
-          />
-        ) : null}
-        <span className={`sub-avatar-fallback ${player.photo_url ? 'hidden' : ''}`}>
-          {getPlayerInitials(player.name)}
-        </span>
-      </div>
-      
-      {/* Name Bar */}
-      <div className="sub-name-bar">
-        <span>{getPlayerSurname(player.name)}</span>
-      </div>
-      
-      {/* Number Bar */}
-      <div className="sub-number-bar">
-        <span>{player.squad_number}</span>
-      </div>
+      <FPLPlayerToken
+        name={player.name}
+        squadNumber={player.squad_number}
+        positionGroup={positionGroup}
+        size="bench"
+      />
     </div>
   );
 };

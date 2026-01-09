@@ -612,8 +612,6 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                         position={position}
                         isCaptain={isCaptain}
                         isPositionsLocked={isPositionsLocked}
-                        kitDesign={kitDesign}
-                        goalkeeperKitDesign={goalkeeperKitDesign}
                         periodId={currentPeriod.id}
                         positionIndex={index}
                       />
