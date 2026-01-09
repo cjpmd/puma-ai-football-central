@@ -4,6 +4,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { format, isSameDay, isToday, isTomorrow, isPast, parseISO, startOfDay, endOfWeek, addWeeks } from 'date-fns';
 import { isEventPast, formatTime } from '@/utils/eventUtils';
@@ -60,6 +61,7 @@ const getEventTypeLabel = (eventType: string): { label: string; colorClass: stri
 
 export default function CalendarEventsMobile() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = React.useState(() => new URLSearchParams(window.location.search));
   const [events, setEvents] = useState<DatabaseEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [eventsToShow, setEventsToShow] = useState(5);
@@ -102,6 +104,21 @@ export default function CalendarEventsMobile() {
   useEffect(() => {
     loadEvents();
   }, [currentTeam, viewMode, availableTeams]);
+
+  // Handle eventId from URL (e.g., from Dashboard click)
+  useEffect(() => {
+    const eventIdFromUrl = searchParams.get('eventId');
+    if (eventIdFromUrl && events.length > 0 && !showEventDetails) {
+      const event = events.find(e => e.id === eventIdFromUrl);
+      if (event) {
+        setSelectedEvent(event);
+        setShowEventDetails(true);
+        // Clear the URL param to prevent re-opening on navigation
+        window.history.replaceState({}, '', window.location.pathname);
+        setSearchParams(new URLSearchParams());
+      }
+    }
+  }, [events, searchParams]);
 
   useEffect(() => {
     if (events.length > 0 && user?.id) {
@@ -883,12 +900,22 @@ export default function CalendarEventsMobile() {
                               {/* Availability status indicator removed - now in Event Details */}
                             </div>
                             
-                            {/* Right edge: Next badge or result icons */}
-                            <div className="flex flex-col items-end justify-start gap-1">
+                            {/* Right edge: Next badge, team logo */}
+                            <div className="flex flex-col items-end justify-between h-full">
                               {isNextEvent && (
                                 <Badge className="bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5">
                                   NEXT
                                 </Badge>
+                              )}
+                              
+                              {/* Team badge - show when viewing all teams */}
+                              {viewMode === 'all' && team && (
+                                <Avatar className="h-6 w-6 mt-auto">
+                                  <AvatarImage src={team.logo_url} alt={team.name} />
+                                  <AvatarFallback className="text-[8px] bg-muted">
+                                    {team.name?.substring(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
                               )}
                             </div>
                           </div>
