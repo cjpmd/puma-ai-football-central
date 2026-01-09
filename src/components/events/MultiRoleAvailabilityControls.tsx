@@ -298,55 +298,11 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
       }
     }
 
-    // Show initial accept/decline buttons for pending status
-    if (status === 'pending') {
-      return (
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 flex-1">
-            <Avatar className="h-8 w-8">
-              {photoUrl && (
-                <AvatarImage src={photoUrl} alt={displayName} />
-              )}
-              <AvatarFallback className="text-xs">
-                {getInitials(displayName)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex flex-col">
-              <span className={`${textSize} font-medium`}>{displayName}</span>
-              <span className={`text-xs text-muted-foreground`}>{roleLabel}</span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              className={`bg-green-600 hover:bg-green-700 text-white ${buttonSize}`}
-              onClick={() => handleUpdateAvailability(role, 'available')}
-              disabled={isUpdating}
-              title={`Mark as available`}
-            >
-              <Check className={iconSize} />
-              {size === 'md' && <span className="ml-1">Accept</span>}
-            </Button>
-            <Button
-              size="sm"
-              className={`bg-red-600 hover:bg-red-700 text-white ${buttonSize}`}
-              onClick={() => handleUpdateAvailability(role, 'unavailable')}
-              disabled={isUpdating}
-              title={`Mark as unavailable`}
-            >
-              <X className={iconSize} />
-              {size === 'md' && <span className="ml-1">Decline</span>}
-            </Button>
-          </div>
-        </div>
-      );
-    }
-
-    // Show status with change option
+    // Unified button layout for all statuses - always show both buttons as toggles
     return (
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 flex-1">
-          <Avatar className="h-8 w-8">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-shrink">
+          <Avatar className="h-7 w-7 flex-shrink-0">
             {photoUrl && (
               <AvatarImage src={photoUrl} alt={displayName} />
             )}
@@ -354,36 +310,39 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
               {getInitials(displayName)}
             </AvatarFallback>
           </Avatar>
-          <div className="flex flex-col">
-            <span className={`${textSize} font-medium`}>{displayName}</span>
-            <span className={`text-xs text-muted-foreground`}>{roleLabel}</span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium truncate">{displayName}</span>
+            <span className="text-xs text-muted-foreground">{roleLabel}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`flex items-center gap-1 ${
-            status === 'available' ? 'text-green-600' : 'text-red-600'
-          }`}>
-            {status === 'available' ? <Check className={iconSize} /> : <X className={iconSize} />}
-            <span className={textSize}>
-              {status === 'available' ? 'Going' : 'Not Going'}
-            </span>
-          </div>
+        <div className="flex gap-1.5 flex-shrink-0">
           <Button
-            variant="ghost"
             size="sm"
-            className={`${
+            variant={status === 'available' ? 'default' : 'outline'}
+            className={`h-7 px-2.5 text-xs ${
               status === 'available' 
-                ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
-                : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-            } h-6 w-6 p-0`}
-            onClick={() => handleUpdateAvailability(
-              role,
-              status === 'available' ? 'unavailable' : 'available'
-            )}
+                ? 'bg-teal-500 hover:bg-teal-600 text-white border-teal-500' 
+                : 'border-gray-200 text-gray-500 hover:border-teal-400 hover:text-teal-600 hover:bg-teal-50'
+            }`}
+            onClick={() => handleUpdateAvailability(role, 'available')}
             disabled={isUpdating}
-            title={`Change to ${status === 'available' ? 'unavailable' : 'available'}`}
           >
-            {status === 'available' ? <X className={iconSize} /> : <Check className={iconSize} />}
+            <Check className="h-3 w-3 mr-1" />
+            Going
+          </Button>
+          <Button
+            size="sm"
+            variant={status === 'unavailable' ? 'default' : 'outline'}
+            className={`h-7 px-2.5 text-xs ${
+              status === 'unavailable'
+                ? 'bg-red-500 hover:bg-red-600 text-white border-red-500'
+                : 'border-gray-200 text-gray-500 hover:border-red-300 hover:text-red-500 hover:bg-red-50'
+            }`}
+            onClick={() => handleUpdateAvailability(role, 'unavailable')}
+            disabled={isUpdating}
+          >
+            <X className="h-3 w-3 mr-1" />
+            Not Going
           </Button>
         </div>
       </div>
