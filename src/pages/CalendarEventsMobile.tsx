@@ -116,7 +116,9 @@ export default function CalendarEventsMobile() {
     try {
       if (!user?.id) return;
 
-      const { data: pending } = await supabase
+      // Get ALL availability records for user (not just pending)
+      // to properly handle multi-role scenarios
+      const { data: allAvailability } = await supabase
         .from('event_availability')
         .select(`
           *,
@@ -125,10 +127,23 @@ export default function CalendarEventsMobile() {
           )
         `)
         .eq('user_id', user.id)
-        .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      setPendingAvailability(pending || []);
+      // Group by event and check if ALL roles are pending
+      // If user has responded to at least one role, don't count as unanswered
+      const eventGroups = new Map<string, any[]>();
+      allAvailability?.forEach(record => {
+        const existing = eventGroups.get(record.event_id) || [];
+        existing.push(record);
+        eventGroups.set(record.event_id, existing);
+      });
+
+      // Only include events where ALL roles are still pending
+      const pendingEvents = Array.from(eventGroups.entries())
+        .filter(([_, records]) => records.every(r => r.status === 'pending'))
+        .map(([_, records]) => records[0]); // Return first record for display
+
+      setPendingAvailability(pendingEvents);
     } catch (error) {
       console.error('Error loading pending availability:', error);
     }
