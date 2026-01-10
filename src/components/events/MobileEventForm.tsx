@@ -66,6 +66,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     isHome: true,
     gameFormat: defaultGameFormat,
     gameDuration: defaultGameDuration,
+    numTeams: 1,
     notes: '',
     // Recurring fields
     isRecurring: false,
@@ -148,6 +149,13 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
         gameDuration: formData.gameDuration,
         notes: formData.notes || undefined,
         teamId: teams[0].id,
+        // Multi-team support for fixtures/friendlies/tournaments/festivals
+        teams: isMatchType && formData.numTeams > 1 ? Array.from({ length: formData.numTeams }, (_, i) => ({
+          id: teams[0].id,
+          team_number: i + 1,
+          start_time: formData.startTime || null,
+          meeting_time: null
+        })) : undefined,
       };
 
       // Add recurring fields if enabled
@@ -364,6 +372,31 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                       onChange={(e) => setFormData(prev => ({ ...prev, gameDuration: parseInt(e.target.value) || 90 }))}
                     />
                   </div>
+                </div>
+
+                {/* Number of Teams */}
+                <div className="space-y-2">
+                  <Label htmlFor="numTeams" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Number of Teams
+                  </Label>
+                  <Select 
+                    value={formData.numTeams.toString()} 
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, numTeams: parseInt(value) }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 Team</SelectItem>
+                      <SelectItem value="2">2 Teams</SelectItem>
+                      <SelectItem value="3">3 Teams</SelectItem>
+                      <SelectItem value="4">4 Teams</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Creates {formData.numTeams} team{formData.numTeams > 1 ? 's' : ''} for squad selection
+                  </p>
                 </div>
               </>
             )}
