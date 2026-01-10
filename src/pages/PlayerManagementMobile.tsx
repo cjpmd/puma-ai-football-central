@@ -480,19 +480,35 @@ export default function PlayerManagementMobile() {
 
         {/* Management Buttons - Role-based visibility */}
         {canManageTeam() && (
-          <div className="flex gap-2">
-            <Button onClick={() => setShowAddPlayer(true)} className="flex-1">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Player
+          <div className="flex gap-2 w-full">
+            <Button 
+              onClick={() => setShowAddPlayer(true)} 
+              className="flex-1 min-w-0"
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Add Player</span>
             </Button>
-            <Button variant="outline" onClick={() => setShowCodeManagement(true)}>
-              <Key className="h-4 w-4 mr-2" />
-              Codes
+            <Button 
+              variant="outline" 
+              onClick={() => setShowCodeManagement(true)}
+              className="flex-shrink-0 px-3"
+              size="sm"
+              title="Codes"
+            >
+              <Key className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Codes</span>
             </Button>
             {canManageStaff() && (
-              <Button variant="outline" onClick={() => setShowStaffManagement(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Staff
+              <Button 
+                variant="outline" 
+                onClick={() => setShowStaffManagement(true)}
+                className="flex-shrink-0 px-3"
+                size="sm"
+                title="Staff"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span className="hidden sm:inline ml-1">Staff</span>
               </Button>
             )}
           </div>

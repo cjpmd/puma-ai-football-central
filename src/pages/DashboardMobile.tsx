@@ -19,6 +19,13 @@ import { MobileEventForm } from '@/components/events/MobileEventForm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { EditPlayerModal } from '@/components/players/mobile/EditPlayerModal';
+import { PlayerStatsModal } from '@/components/players/mobile/PlayerStatsModal';
+import { PlayerAttributesModal } from '@/components/players/mobile/PlayerAttributesModal';
+import { PlayerObjectivesModal } from '@/components/players/mobile/PlayerObjectivesModal';
+import { PlayerCommentsModal } from '@/components/players/mobile/PlayerCommentsModal';
+import { PlayerHistoryModal } from '@/components/players/mobile/PlayerHistoryModal';
+import { PlayerParentsModal } from '@/components/players/mobile/PlayerParentsModal';
 
 interface LiveStats {
   playersCount: number;
@@ -46,6 +53,15 @@ export default function DashboardMobile() {
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
   const [selectedPlayerData, setSelectedPlayerData] = useState<any>(null);
   const [showPlayerCard, setShowPlayerCard] = useState(false);
+  
+  // Player action modal states for Dashboard FIFA card
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [attributesModalOpen, setAttributesModalOpen] = useState(false);
+  const [objectivesModalOpen, setObjectivesModalOpen] = useState(false);
+  const [commentsModalOpen, setCommentsModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [parentsModalOpen, setParentsModalOpen] = useState(false);
 
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
     setStats(prevStats => ({
@@ -212,6 +228,15 @@ export default function DashboardMobile() {
     setSelectedPlayerData(null);
     loadLiveData();
   };
+
+  // Player action handlers for FIFA card
+  const handleEditPlayer = () => setEditModalOpen(true);
+  const handleManageParents = () => setParentsModalOpen(true);
+  const handleManageAttributes = () => setAttributesModalOpen(true);
+  const handleManageObjectives = () => setObjectivesModalOpen(true);
+  const handleManageComments = () => setCommentsModalOpen(true);
+  const handleViewStats = () => setStatsModalOpen(true);
+  const handleViewHistory = () => setHistoryModalOpen(true);
 
   useEffect(() => {
     loadLiveData();
@@ -839,10 +864,78 @@ export default function DashboardMobile() {
               onSaveCardDesign={handleSaveCardDesign}
               onUpdatePhoto={handleUpdatePhoto}
               onDeletePhoto={handleDeletePhoto}
+              onEdit={handleEditPlayer}
+              onManageParents={handleManageParents}
+              onManageAttributes={handleManageAttributes}
+              onManageObjectives={handleManageObjectives}
+              onManageComments={handleManageComments}
+              onViewStats={handleViewStats}
+              onViewHistory={handleViewHistory}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Player Action Modals from Dashboard */}
+      {selectedPlayerData && (
+        <>
+          <EditPlayerModal
+            player={selectedPlayerData.player}
+            isOpen={editModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            onSave={() => {
+              handlePlayerClick({ id: selectedPlayerData.player.id });
+              setEditModalOpen(false);
+            }}
+          />
+          <PlayerStatsModal
+            player={selectedPlayerData.player}
+            isOpen={statsModalOpen}
+            onClose={() => setStatsModalOpen(false)}
+          />
+          <PlayerAttributesModal
+            player={selectedPlayerData.player}
+            isOpen={attributesModalOpen}
+            onClose={() => setAttributesModalOpen(false)}
+            onSave={() => {
+              handlePlayerClick({ id: selectedPlayerData.player.id });
+              setAttributesModalOpen(false);
+            }}
+          />
+          <PlayerObjectivesModal
+            player={selectedPlayerData.player}
+            isOpen={objectivesModalOpen}
+            onClose={() => setObjectivesModalOpen(false)}
+            onSave={() => {
+              handlePlayerClick({ id: selectedPlayerData.player.id });
+              setObjectivesModalOpen(false);
+            }}
+          />
+          <PlayerCommentsModal
+            player={selectedPlayerData.player}
+            isOpen={commentsModalOpen}
+            onClose={() => setCommentsModalOpen(false)}
+            onSave={() => {
+              handlePlayerClick({ id: selectedPlayerData.player.id });
+              setCommentsModalOpen(false);
+            }}
+          />
+          <PlayerHistoryModal
+            player={selectedPlayerData.player}
+            isOpen={historyModalOpen}
+            onClose={() => setHistoryModalOpen(false)}
+          />
+          <PlayerParentsModal
+            player={selectedPlayerData.player}
+            isOpen={parentsModalOpen}
+            onClose={() => setParentsModalOpen(false)}
+            onSave={() => {
+              handlePlayerClick({ id: selectedPlayerData.player.id });
+              setParentsModalOpen(false);
+            }}
+          />
+        </>
+      )}
     </MobileLayout>
   );
 }
