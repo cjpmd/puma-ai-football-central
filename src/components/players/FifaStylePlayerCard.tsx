@@ -487,8 +487,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onClose}
-              className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/30 hover:bg-black/40 rounded-full z-20 backdrop-blur-sm"
+              onClick={(e) => { e.stopPropagation(); onClose(); }}
+              className="absolute top-3 right-14 w-8 h-8 p-0 bg-black/50 hover:bg-black/60 rounded-full z-30 backdrop-blur-sm border border-white/20"
             >
               <X className="h-4 w-4 text-white" />
             </Button>
@@ -630,21 +630,10 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
             height: '100%'
           }}
         >
-          {/* Header: place Back and Close Buttons at top-right like the Front */}
+          {/* Header: Back button only on the back of card */}
           <div className="p-3 border-b border-gray-700 flex items-center justify-between bg-gray-800 relative">
-            <span className="text-lg font-bold text-white mx-auto w-full flex justify-center">Player Management</span>
+            <span className="text-lg font-bold text-white mx-auto w-full flex justify-center pr-10">Player Management</span>
             <div className="absolute right-3 top-3 flex space-x-2">
-              {onClose && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-                  className="w-8 h-8 p-0 bg-white/20 hover:bg-white/30 rounded-full text-white z-30" 
-                  style={{ pointerEvents: 'auto' }}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
               <Button
                 variant="ghost"
                 size="sm"
