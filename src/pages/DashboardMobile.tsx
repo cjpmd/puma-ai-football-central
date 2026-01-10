@@ -17,6 +17,8 @@ import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModa
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 import { MobileEventForm } from '@/components/events/MobileEventForm';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface LiveStats {
   playersCount: number;
@@ -42,6 +44,8 @@ export default function DashboardMobile() {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [showManageConnections, setShowManageConnections] = useState(false);
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
+  const [selectedPlayerData, setSelectedPlayerData] = useState<any>(null);
+  const [showPlayerCard, setShowPlayerCard] = useState(false);
 
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
     setStats(prevStats => ({
@@ -59,6 +63,57 @@ export default function DashboardMobile() {
 
   const handleEventCreated = () => {
     setShowMobileEventForm(false);
+    loadLiveData();
+  };
+
+  const handlePlayerClick = async (connectedPlayer: any) => {
+    try {
+      // Fetch full player data from the database
+      const { data: playerData, error } = await supabase
+        .from('players')
+        .select('*')
+        .eq('id', connectedPlayer.id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      if (!playerData) return;
+      
+      // Find the team for this player
+      const playerTeam = (allTeams || teams)?.find(t => t.id === playerData.team_id);
+      
+      // Convert to Player type format matching what FifaStylePlayerCard expects
+      const fullPlayer = {
+        id: playerData.id,
+        name: playerData.name,
+        squadNumber: playerData.squad_number,
+        photoUrl: playerData.photo_url,
+        dateOfBirth: playerData.date_of_birth,
+        type: playerData.type,
+        positions: (playerData as any).positions || [],
+        availability: playerData.availability,
+        totalGames: (playerData as any).total_games || 0,
+        totalMinutes: (playerData as any).total_minutes || 0,
+        subscription: (playerData as any).subscription || 'free',
+        isCaptain: (playerData as any).is_captain || false,
+        playerOfMatchCount: (playerData as any).player_of_match_count || 0,
+        status: playerData.status,
+      };
+      
+      setSelectedPlayerData({ player: fullPlayer, team: playerTeam });
+      setShowPlayerCard(true);
+    } catch (error) {
+      console.error('Error loading player data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load player details',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handlePlayerCardClose = () => {
+    setShowPlayerCard(false);
+    setSelectedPlayerData(null);
     loadLiveData();
   };
 
@@ -427,7 +482,11 @@ export default function DashboardMobile() {
               <div className="px-4 py-2.5">
                 <div className="flex flex-wrap gap-1.5">
                   {connectedPlayers.map((player) => (
-                    <div key={player.id} className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1">
+                    <button
+                      key={player.id}
+                      onClick={() => handlePlayerClick(player)}
+                      className="flex items-center gap-1.5 bg-gray-50 rounded-full px-2.5 py-1 hover:bg-gray-100 active:bg-gray-200 transition-colors"
+                    >
                       {player.photoUrl ? (
                         <img 
                           src={player.photoUrl} 
@@ -440,7 +499,7 @@ export default function DashboardMobile() {
                         </div>
                       )}
                       <span className="text-xs font-medium text-gray-700">{player.name}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -670,6 +729,19 @@ export default function DashboardMobile() {
           onEventCreated={handleEventCreated}
         />
       )}
+
+      {/* Player FIFA Card Modal */}
+      <Dialog open={showPlayerCard} onOpenChange={setShowPlayerCard}>
+        <DialogContent className="max-w-md p-0 bg-transparent border-none shadow-none">
+          {selectedPlayerData && (
+            <FifaStylePlayerCard
+              player={selectedPlayerData.player}
+              team={selectedPlayerData.team}
+              onClose={handlePlayerCardClose}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </MobileLayout>
   );
 }
