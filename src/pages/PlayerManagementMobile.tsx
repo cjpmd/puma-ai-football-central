@@ -3,13 +3,18 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Search, Settings } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Search, Plus, Key, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
 import { useTeamContext } from '@/contexts/TeamContext';
+import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { FifaStylePlayerCard } from '@/components/players/FifaStylePlayerCard';
+import { PlayerForm } from '@/components/players/PlayerForm';
+import { CodeManagementModal } from '@/components/codes/CodeManagementModal';
+import { StaffManagementModal } from '@/components/teams/StaffManagementModal';
 import { Player, Team } from '@/types';
 
 // Mobile-specific components
@@ -62,6 +67,8 @@ export default function PlayerManagementMobile() {
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode } = useTeamContext();
 
+  const { hasPermission, isGlobalAdmin } = useAuthorization();
+
   // Modal states
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
@@ -73,6 +80,26 @@ export default function PlayerManagementMobile() {
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [parentsModalOpen, setParentsModalOpen] = useState(false);
   const [trainingPlansModalOpen, setTrainingPlansModalOpen] = useState(false);
+  
+  // New modal states for team management
+  const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [showCodeManagement, setShowCodeManagement] = useState(false);
+  const [showStaffManagement, setShowStaffManagement] = useState(false);
+
+  // Permission checks
+  const canManageTeam = () => {
+    if (isGlobalAdmin) return true;
+    if (!currentTeam) return false;
+    return hasPermission({ resource: 'players', action: 'manage', resourceId: currentTeam.id }) ||
+           hasPermission({ resource: 'players', action: 'manage' });
+  };
+
+  const canManageStaff = () => {
+    if (isGlobalAdmin) return true;
+    if (!currentTeam) return false;
+    return hasPermission({ resource: 'staff', action: 'manage', resourceId: currentTeam.id }) ||
+           hasPermission({ resource: 'staff', action: 'manage' });
+  };
 
   useEffect(() => {
     loadPlayers();
@@ -451,6 +478,26 @@ export default function PlayerManagementMobile() {
           />
         </div>
 
+        {/* Management Buttons - Role-based visibility */}
+        {canManageTeam() && (
+          <div className="flex gap-2">
+            <Button onClick={() => setShowAddPlayer(true)} className="flex-1">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Player
+            </Button>
+            <Button variant="outline" onClick={() => setShowCodeManagement(true)}>
+              <Key className="h-4 w-4 mr-2" />
+              Codes
+            </Button>
+            {canManageStaff() && (
+              <Button variant="outline" onClick={() => setShowStaffManagement(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Staff
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Player Count Badge */}
         <div className="flex justify-center">
           <Badge variant="secondary" className="text-sm">
@@ -587,6 +634,62 @@ export default function PlayerManagementMobile() {
             onClose={() => setTrainingPlansModalOpen(false)}
           />
         </>
+      )}
+
+      {/* Add Player Modal */}
+      <Dialog open={showAddPlayer} onOpenChange={setShowAddPlayer}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Player</DialogTitle>
+          </DialogHeader>
+          {currentTeam && (
+            <PlayerForm
+              teamId={currentTeam.id}
+              onSubmit={async (playerData) => {
+                try {
+                  const { error } = await supabase
+                    .from('players')
+                    .insert({
+                      name: playerData.name,
+                      squad_number: playerData.squadNumber,
+                      date_of_birth: playerData.dateOfBirth,
+                      type: playerData.type,
+                      availability: playerData.availability || 'green',
+                      subscription_type: playerData.subscriptionType || 'full_squad',
+                      team_id: currentTeam.id,
+                      kit_sizes: playerData.kit_sizes || {}
+                    });
+                  if (error) throw error;
+                  toast({ title: 'Player Added', description: `${playerData.name} has been added to the team` });
+                  loadPlayers();
+                  setShowAddPlayer(false);
+                } catch (error: any) {
+                  toast({ title: 'Error', description: error.message || 'Failed to add player', variant: 'destructive' });
+                }
+              }}
+              onCancel={() => setShowAddPlayer(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Code Management Modal */}
+      {currentTeam && (
+        <CodeManagementModal
+          isOpen={showCodeManagement}
+          onClose={() => setShowCodeManagement(false)}
+          teamId={currentTeam.id}
+        />
+      )}
+
+      {/* Staff Management Modal */}
+      {currentTeam && (
+        <StaffManagementModal
+          isOpen={showStaffManagement}
+          onClose={() => setShowStaffManagement(false)}
+          team={currentTeam}
+          onUpdate={() => loadPlayers()}
+        />
       )}
     </MobileLayout>
   );

@@ -24,16 +24,20 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [primaryRole, setPrimaryRole] = useState<ViewRole>('parent');
   const [hasManuallySetView, setHasManuallySetView] = useState(false);
 
-  // Load saved view preference on mount
+  // Load saved view preference on mount - only if it's still valid
   useEffect(() => {
-    if (!profile) return;
+    if (!profile || availableViews.length === 0) return;
     
     const savedView = localStorage.getItem(`smartview-${profile.id}`);
-    if (savedView && (savedView as ViewRole)) {
+    // Only restore saved preference if it's a valid available view
+    if (savedView && availableViews.includes(savedView as ViewRole)) {
       setCurrentView(savedView as ViewRole);
       setHasManuallySetView(true);
+    } else {
+      // Default to highest permission role (primaryRole will be set by the other useEffect)
+      // Don't set here - let the primaryRole logic handle it
     }
-  }, [profile]);
+  }, [profile, availableViews]);
 
   // Determine available views based on user's roles and relationships
   useEffect(() => {

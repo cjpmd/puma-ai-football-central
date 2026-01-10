@@ -68,7 +68,7 @@ export default function DashboardMobile() {
 
   const handlePlayerClick = async (connectedPlayer: any) => {
     try {
-      // Fetch full player data from the database
+      // Fetch full player data from the database including all card-related fields
       const { data: playerData, error } = await supabase
         .from('players')
         .select('*')
@@ -88,15 +88,28 @@ export default function DashboardMobile() {
         squadNumber: playerData.squad_number,
         photoUrl: playerData.photo_url,
         dateOfBirth: playerData.date_of_birth,
-        type: playerData.type,
+        type: playerData.type === 'goalkeeper' ? 'goalkeeper' : 'outfield',
         positions: (playerData as any).positions || [],
         availability: playerData.availability,
+        status: playerData.status,
+        // Card design and customization fields
+        cardDesignId: (playerData as any).card_design_id || 'goldBallon',
+        funStats: (playerData as any).fun_stats || {},
+        playStyle: (playerData as any).play_style,
+        kitSizes: (playerData as any).kit_sizes || {},
+        kit_sizes: (playerData as any).kit_sizes || {},
+        // Match stats for positions and captain badges
+        matchStats: (playerData as any).match_stats || {},
+        // Other fields
+        attributes: (playerData as any).attributes || [],
+        objectives: (playerData as any).objectives || [],
+        comments: (playerData as any).comments || [],
+        team_id: playerData.team_id,
         totalGames: (playerData as any).total_games || 0,
         totalMinutes: (playerData as any).total_minutes || 0,
         subscription: (playerData as any).subscription || 'free',
         isCaptain: (playerData as any).is_captain || false,
         playerOfMatchCount: (playerData as any).player_of_match_count || 0,
-        status: playerData.status,
       };
       
       setSelectedPlayerData({ player: fullPlayer, team: playerTeam });
@@ -108,6 +121,89 @@ export default function DashboardMobile() {
         description: 'Failed to load player details',
         variant: 'destructive',
       });
+    }
+  };
+
+  // Handlers for saving FIFA card data from dashboard
+  const handleSaveFunStats = async (player: any, stats: Record<string, number>) => {
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ fun_stats: stats })
+        .eq('id', player.id);
+      if (error) throw error;
+      toast({ title: 'Stats Updated', description: `Fun stats updated for ${player.name}` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update stats', variant: 'destructive' });
+    }
+  };
+
+  const handleSavePlayStyle = async (player: any, playStyles: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ play_style: JSON.stringify(playStyles) })
+        .eq('id', player.id);
+      if (error) throw error;
+      toast({ title: 'Play Style Updated', description: `Play style updated for ${player.name}` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update play style', variant: 'destructive' });
+    }
+  };
+
+  const handleSaveCardDesign = async (player: any, designId: string) => {
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ card_design_id: designId })
+        .eq('id', player.id);
+      if (error) throw error;
+      toast({ title: 'Card Design Updated', description: `Card design updated for ${player.name}` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update card design', variant: 'destructive' });
+    }
+  };
+
+  const handleUpdatePhoto = async (player: any, file: File) => {
+    try {
+      toast({ title: 'Uploading Photo', description: `Uploading photo for ${player.name}...` });
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${player.id}-${Math.random()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('player_photos')
+        .upload(fileName, file);
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from('player_photos').getPublicUrl(fileName);
+      
+      const { error: updateError } = await supabase
+        .from('players')
+        .update({ photo_url: data.publicUrl })
+        .eq('id', player.id);
+      if (updateError) throw updateError;
+
+      toast({ title: 'Photo Updated', description: `Photo updated for ${player.name}` });
+      // Refresh player data
+      handlePlayerClick({ id: player.id });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to update photo', variant: 'destructive' });
+    }
+  };
+
+  const handleDeletePhoto = async (player: any) => {
+    if (!player.photoUrl) return;
+    if (!confirm(`Delete photo for ${player.name}?`)) return;
+    try {
+      const { error } = await supabase
+        .from('players')
+        .update({ photo_url: null })
+        .eq('id', player.id);
+      if (error) throw error;
+      toast({ title: 'Photo Deleted', description: `Photo deleted for ${player.name}` });
+      handlePlayerClick({ id: player.id });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Failed to delete photo', variant: 'destructive' });
     }
   };
 
@@ -738,6 +834,11 @@ export default function DashboardMobile() {
               player={selectedPlayerData.player}
               team={selectedPlayerData.team}
               onClose={handlePlayerCardClose}
+              onSaveFunStats={handleSaveFunStats}
+              onSavePlayStyle={handleSavePlayStyle}
+              onSaveCardDesign={handleSaveCardDesign}
+              onUpdatePhoto={handleUpdatePhoto}
+              onDeletePhoto={handleDeletePhoto}
             />
           )}
         </DialogContent>
