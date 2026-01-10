@@ -22,6 +22,7 @@ import { PlayerCommentsModal } from '@/components/players/mobile/PlayerCommentsM
 import { PlayerHistoryModal } from '@/components/players/mobile/PlayerHistoryModal';
 import { PlayerParentsModal } from '@/components/players/mobile/PlayerParentsModal';
 import { PlayerTrainingPlansModal } from '@/components/players/PlayerTrainingPlansModal';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 // Use the actual database player type
 type DatabasePlayerRow = {
@@ -461,8 +462,7 @@ export default function PlayerManagementMobile() {
         <div className="space-y-4">
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading players...</p>
+              <LoadingSpinner size="md" message="Loading players..." />
             </div>
           ) : filteredPlayers.length === 0 ? (
             <div className="text-center py-8">

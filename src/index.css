@@ -131,6 +131,36 @@
   animation: splashLogo 0.6s ease-out forwards;
 }
 
+/* Logo Spinner Animation */
+@keyframes logoPathDraw {
+  0% {
+    stroke-dashoffset: 200;
+    stroke: hsl(var(--muted-foreground));
+  }
+  50% {
+    stroke: hsl(142 100% 38%);
+  }
+  100% {
+    stroke-dashoffset: 0;
+    stroke: hsl(142 100% 38%);
+  }
+}
+
+.logo-path {
+  stroke-dasharray: 200;
+  animation: logoPathDraw 1.5s ease-in-out infinite;
+}
+
+.logo-path-delay-1 { animation-delay: 0.1s; }
+.logo-path-delay-2 { animation-delay: 0.15s; }
+.logo-path-delay-3 { animation-delay: 0.2s; }
+.logo-path-delay-4 { animation-delay: 0.25s; }
+.logo-path-delay-5 { animation-delay: 0.3s; }
+.logo-path-delay-6 { animation-delay: 0.35s; }
+.logo-path-delay-7 { animation-delay: 0.4s; }
+.logo-path-delay-8 { animation-delay: 0.45s; }
+.logo-path-delay-9 { animation-delay: 0.5s; }
+
 @layer components {
   .player-availability-amber {
     @apply border-puma-amber border-2;
