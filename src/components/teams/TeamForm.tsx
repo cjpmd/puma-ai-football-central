@@ -159,6 +159,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 value={formData.seasonStart}
                 onChange={(e) => setFormData(prev => ({ ...prev, seasonStart: e.target.value }))}
                 required
+                className="min-w-0 h-10 appearance-none"
               />
             </div>
             
@@ -170,6 +171,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ team, clubs, onSubmit, onCan
                 value={formData.seasonEnd}
                 onChange={(e) => setFormData(prev => ({ ...prev, seasonEnd: e.target.value }))}
                 required
+                className="min-w-0 h-10 appearance-none"
               />
             </div>
           </div>

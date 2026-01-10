@@ -188,7 +188,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
         {required && <span className="text-red-500">*</span>}
         {isLoading && <span className="text-sm text-muted-foreground">(Loading...)</span>}
       </Label>
-      <div className="relative">
+      <div className="relative w-full">
         <Input
           ref={inputRef}
           id="location"
@@ -198,7 +198,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
           onFocus={handleInputFocus}
           placeholder={placeholder}
           required={required}
-          className="pr-10"
+          className="pr-10 w-full min-w-0"
           disabled={isLoading}
           autoComplete="off"
         />
