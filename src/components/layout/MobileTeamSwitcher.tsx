@@ -1,6 +1,9 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Check, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { Check, Users, LogOut } from 'lucide-react';
 import { useTeamContext } from '@/contexts/TeamContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Team } from '@/types';
 
 interface MobileTeamSwitcherProps {
@@ -10,6 +13,7 @@ interface MobileTeamSwitcherProps {
 
 export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps) {
   const { currentTeam, setCurrentTeam, availableTeams, viewMode, setViewMode } = useTeamContext();
+  const { signOut } = useAuth();
 
   const handleSelectTeam = (team: Team | null) => {
     if (team === null) {
@@ -21,6 +25,11 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
     onClose();
   };
 
+  const handleLogout = async () => {
+    await signOut();
+    onClose();
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -29,12 +38,12 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
+      <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl flex flex-col">
         <SheetHeader className="pb-4">
           <SheetTitle className="text-xl">Switch Team</SheetTitle>
         </SheetHeader>
         
-        <div className="space-y-2 overflow-y-auto max-h-[calc(80vh-100px)] pb-safe-bottom">
+        <div className="flex-1 space-y-2 overflow-y-auto pb-4">
           {/* All Teams Option */}
           <button
             onClick={() => handleSelectTeam(null)}
@@ -93,6 +102,19 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
               </button>
             );
           })}
+        </div>
+
+        {/* Logout Button */}
+        <div className="pt-2 pb-safe-bottom">
+          <Separator className="mb-4" />
+          <Button 
+            variant="ghost" 
+            className="w-full flex items-center justify-center gap-2 text-destructive hover:bg-destructive/10"
+            onClick={handleLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Search, Plus, Key, UserPlus } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Search, Plus, Key, UserPlus, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,6 +56,8 @@ type DatabasePlayerRow = {
   play_style?: string;
   linking_code?: string;
   parent_id?: string;
+  medical_conditions?: string;
+  medical_treatment?: string;
   created_at: string;
   updated_at: string;
 };
@@ -85,6 +88,7 @@ export default function PlayerManagementMobile() {
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [showCodeManagement, setShowCodeManagement] = useState(false);
   const [showStaffManagement, setShowStaffManagement] = useState(false);
+  const [showMedicalSummary, setShowMedicalSummary] = useState(false);
 
   // Permission checks
   const canManageTeam = () => {
@@ -149,6 +153,8 @@ export default function PlayerManagementMobile() {
         parentId: player.parent_id,
         leaveDate: player.leave_date,
         leaveComments: player.leave_comments,
+        medicalConditions: player.medical_conditions,
+        medicalTreatment: player.medical_treatment,
         createdAt: player.created_at,
         updatedAt: player.updated_at
       }));
@@ -511,6 +517,16 @@ export default function PlayerManagementMobile() {
                 <span className="hidden sm:inline ml-1">Staff</span>
               </Button>
             )}
+            <Button 
+              variant="outline" 
+              onClick={() => setShowMedicalSummary(true)}
+              className="flex-shrink-0 px-3"
+              size="sm"
+              title="Medical"
+            >
+              <Heart className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1">Medical</span>
+            </Button>
           </div>
         )}
 
@@ -707,6 +723,61 @@ export default function PlayerManagementMobile() {
           onUpdate={() => loadPlayers()}
         />
       )}
+
+      {/* Medical Summary Sheet */}
+      <Sheet open={showMedicalSummary} onOpenChange={setShowMedicalSummary}>
+        <SheetContent side="bottom" className="h-[85vh] flex flex-col">
+          <SheetHeader className="border-b pb-4">
+            <SheetTitle className="flex items-center gap-2">
+              <Heart className="h-5 w-5 text-red-500" />
+              Medical Conditions Summary
+            </SheetTitle>
+          </SheetHeader>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            {players.filter(p => p.medicalConditions || p.medicalTreatment).length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Heart className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <p>No players with medical conditions recorded</p>
+              </div>
+            ) : (
+              players
+                .filter(p => p.medicalConditions || p.medicalTreatment)
+                .map(player => (
+                  <div key={player.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-center gap-3">
+                      {player.photoUrl ? (
+                        <img src={player.photoUrl} alt={player.name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold">
+                          {player.squadNumber || '?'}
+                        </div>
+                      )}
+                      <div>
+                        <h4 className="font-semibold">{player.name}</h4>
+                        <p className="text-sm text-muted-foreground">#{player.squadNumber}</p>
+                      </div>
+                    </div>
+                    
+                    {player.medicalConditions && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Conditions</p>
+                        <p className="text-sm">{player.medicalConditions}</p>
+                      </div>
+                    )}
+                    
+                    {player.medicalTreatment && (
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground">Treatment / Medicines</p>
+                        <p className="text-sm">{player.medicalTreatment}</p>
+                      </div>
+                    )}
+                  </div>
+                ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </MobileLayout>
   );
 }

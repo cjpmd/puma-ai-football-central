@@ -3,8 +3,10 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Heart } from 'lucide-react';
 import { Player } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +37,9 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
     squadNumber: player.squadNumber || 0,
     dateOfBirth: player.dateOfBirth || '',
     type: player.type || 'outfield',
-    availability: player.availability || 'green'
+    availability: player.availability || 'green',
+    medicalConditions: player.medicalConditions || '',
+    medicalTreatment: player.medicalTreatment || ''
   });
 
   const handleSave = async () => {
@@ -57,7 +61,9 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
           squad_number: formData.squadNumber,
           date_of_birth: formData.dateOfBirth,
           type: formData.type,
-          availability: formData.availability
+          availability: formData.availability,
+          medical_conditions: formData.medicalConditions || null,
+          medical_treatment: formData.medicalTreatment || null
         })
         .eq('id', player.id);
 
@@ -160,6 +166,36 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
                     <SelectItem value="red">Unavailable</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Medical Information Section */}
+              <div className="space-y-4 border-t pt-4 mt-4">
+                <h4 className="font-medium text-sm flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  Medical Information
+                </h4>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="medicalConditions">Medical Conditions</Label>
+                  <Textarea
+                    id="medicalConditions"
+                    value={formData.medicalConditions}
+                    onChange={(e) => setFormData(prev => ({ ...prev, medicalConditions: e.target.value }))}
+                    placeholder="e.g., Asthma, Diabetes, Allergies..."
+                    rows={2}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="medicalTreatment">Treatment / Medicines</Label>
+                  <Textarea
+                    id="medicalTreatment"
+                    value={formData.medicalTreatment}
+                    onChange={(e) => setFormData(prev => ({ ...prev, medicalTreatment: e.target.value }))}
+                    placeholder="e.g., Inhaler for asthma, EpiPen..."
+                    rows={2}
+                  />
+                </div>
               </div>
             </TabsContent>
             

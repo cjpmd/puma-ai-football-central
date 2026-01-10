@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { User, Camera } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +15,11 @@ import { MobileImageEditor } from '@/components/players/MobileImageEditor';
 interface EditProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
+}
+
+interface UserRoleData {
+  teamRoles: { role: string; teams: { name: string } | null }[];
+  clubRoles: { role: string; clubs: { name: string } | null }[];
 }
 
 export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onClose }) => {
@@ -29,12 +35,21 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
     confirmPassword: ''
   });
   
+  // User roles state
+  const [userRoles, setUserRoles] = useState<UserRoleData>({ teamRoles: [], clubRoles: [] });
+  
   // Avatar state
   const [avatarFile, setAvatarFile] = useState<Blob | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const formatRole = (role: string) => {
+    return role.split('_').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' ');
+  };
 
   // Sync form data when modal opens or profile/user changes
   useEffect(() => {
@@ -52,6 +67,28 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
       setAvatarPreview(null);
       setShowImageEditor(false);
       setSelectedImageUrl(null);
+      
+      // Fetch user roles
+      const fetchRoles = async () => {
+        if (!profile?.id) return;
+        
+        const { data: teamRoles } = await supabase
+          .from('user_teams')
+          .select('role, teams(name)')
+          .eq('user_id', profile.id);
+          
+        const { data: clubRoles } = await supabase
+          .from('user_clubs')
+          .select('role, clubs(name)')
+          .eq('user_id', profile.id);
+          
+        setUserRoles({ 
+          teamRoles: (teamRoles || []) as any, 
+          clubRoles: (clubRoles || []) as any 
+        });
+      };
+
+      fetchRoles();
     }
   }, [isOpen, profile, user]);
 
@@ -277,6 +314,62 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                         placeholder="Confirm new password"
                       />
                     </div>
+                  </div>
+                </div>
+
+                {/* Roles Section - Read Only */}
+                <div className="border-t pt-4">
+                  <h4 className="font-medium mb-3">Your Roles</h4>
+                  <div className="space-y-3">
+                    {/* Team Roles */}
+                    {userRoles.teamRoles.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Team Roles</p>
+                        <div className="flex flex-wrap gap-2">
+                          {userRoles.teamRoles.map((tr, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {formatRole(tr.role)} - {tr.teams?.name || 'Unknown'}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Club Roles */}
+                    {userRoles.clubRoles.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Club Roles</p>
+                        <div className="flex flex-wrap gap-2">
+                          {userRoles.clubRoles.map((cr, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {formatRole(cr.role)} - {cr.clubs?.name || 'Unknown'}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Profile Roles */}
+                    {profile?.roles && profile.roles.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Profile Roles</p>
+                        <div className="flex flex-wrap gap-2">
+                          {profile.roles.map((role, idx) => (
+                            <Badge key={idx} variant="outline" className="text-xs">
+                              {formatRole(role)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {userRoles.teamRoles.length === 0 && userRoles.clubRoles.length === 0 && (!profile?.roles || profile.roles.length === 0) && (
+                      <p className="text-sm text-muted-foreground">No roles assigned</p>
+                    )}
+                    
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Contact your team or club administrator to modify roles.
+                    </p>
                   </div>
                 </div>
 
