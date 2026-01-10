@@ -119,9 +119,9 @@ export function CodeManagementModal({ isOpen, onClose, teamId }: CodeManagementM
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>Code Management</DialogTitle>
+          <DialogTitle className="text-lg">Code Management</DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
@@ -130,142 +130,168 @@ export function CodeManagementModal({ isOpen, onClose, teamId }: CodeManagementM
           </div>
         ) : (
           <Tabs defaultValue="team" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="team">Team Code</TabsTrigger>
-              <TabsTrigger value="players">Player Codes</TabsTrigger>
-              <TabsTrigger value="usage">Usage History</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 h-auto">
+              <TabsTrigger value="team" className="text-xs sm:text-sm py-2 px-1">Team Code</TabsTrigger>
+              <TabsTrigger value="players" className="text-xs sm:text-sm py-2 px-1">Player Codes</TabsTrigger>
+              <TabsTrigger value="usage" className="text-xs sm:text-sm py-2 px-1">Usage</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="team" className="space-y-4">
+            <TabsContent value="team" className="space-y-4 mt-4">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                    <Users className="w-4 h-4 sm:w-5 sm:h-5" />
                     Team Join Code
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-xs sm:text-sm">
                     Share this code with players, parents, and staff to join your team
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <code className="bg-muted px-3 py-2 rounded font-mono text-lg flex-1">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <code className="bg-muted px-3 py-2 rounded font-mono text-base sm:text-lg flex-1 text-center sm:text-left">
                       {teamCode}
                     </code>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(teamCode, 'Team')}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={regenerateTeamCode}
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
+                    <div className="flex gap-2 justify-center sm:justify-start">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(teamCode, 'Team')}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        <span className="sm:hidden">Copy</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={regenerateTeamCode}
+                        className="flex-1 sm:flex-none"
+                      >
+                        <RefreshCw className="w-4 h-4 mr-1" />
+                        <span className="sm:hidden">New</span>
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
+                  <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground justify-center sm:justify-start">
+                    <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
                     Expires: {formatDate(teamCodeExpiry)}
                   </div>
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="players" className="space-y-4">
+            <TabsContent value="players" className="space-y-4 mt-4">
               <div className="grid gap-4">
                 {players.map((player) => (
                   <Card key={player.id}>
-                    <CardHeader className="pb-3">
+                    <CardHeader className="pb-3 px-3 sm:px-6">
                       <div className="flex items-center gap-3">
                         {player.photo_url ? (
                           <img 
                             src={player.photo_url} 
                             alt={player.name}
-                            className="w-10 h-10 rounded-full"
+                            className="w-10 h-10 rounded-full flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold">
+                          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-sm font-bold flex-shrink-0">
                             {player.name.slice(0, 2).toUpperCase()}
                           </div>
                         )}
-                        <div>
-                          <CardTitle className="text-lg">{player.name}</CardTitle>
-                          <CardDescription>#{player.squad_number}</CardDescription>
+                        <div className="min-w-0">
+                          <CardTitle className="text-base sm:text-lg truncate">{player.name}</CardTitle>
+                          <CardDescription className="text-xs">#{player.squad_number}</CardDescription>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-3">
+                    <CardContent className="space-y-3 px-3 sm:px-6">
+                      {/* Player Code */}
                       <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">
+                        <div className="flex flex-col gap-2">
+                          <Badge variant="secondary" className="self-start text-xs">
                             <User className="w-3 h-3 mr-1" />
                             Player Code
                           </Badge>
-                          <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
-                            {player.linking_code}
-                          </code>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(player.linking_code, 'Player')}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => regeneratePlayerCode(player.id, 'player')}
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-muted px-2 py-1 rounded text-xs sm:text-sm flex-1 truncate">
+                              {player.linking_code}
+                            </code>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(player.linking_code, 'Player')}
+                              className="flex-shrink-0 h-8 w-8 p-0"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => regeneratePlayerCode(player.id, 'player')}
+                              className="flex-shrink-0 h-8 w-8 p-0"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">
+                        
+                        {/* Parent Code */}
+                        <div className="flex flex-col gap-2">
+                          <Badge variant="secondary" className="self-start text-xs">
                             <Users className="w-3 h-3 mr-1" />
                             Parent Code
                           </Badge>
-                          <code className="bg-muted px-2 py-1 rounded text-sm flex-1">
-                            {player.parent_linking_code}
-                          </code>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => copyToClipboard(player.parent_linking_code, 'Parent')}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => regeneratePlayerCode(player.id, 'parent')}
-                          >
-                            <RefreshCw className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-2">
+                            <code className="bg-muted px-2 py-1 rounded text-xs sm:text-sm flex-1 truncate">
+                              {player.parent_linking_code}
+                            </code>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => copyToClipboard(player.parent_linking_code, 'Parent')}
+                              className="flex-shrink-0 h-8 w-8 p-0"
+                            >
+                              <Copy className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => regeneratePlayerCode(player.id, 'parent')}
+                              className="flex-shrink-0 h-8 w-8 p-0"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
                   </Card>
                 ))}
+                {players.length === 0 && (
+                  <Card>
+                    <CardContent className="pt-4">
+                      <p className="text-center text-muted-foreground text-sm">
+                        No players found
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
               </div>
             </TabsContent>
 
-            <TabsContent value="usage" className="space-y-4">
+            <TabsContent value="usage" className="space-y-4 mt-4">
               <div className="space-y-3">
                 {codeUsage.map((usage) => (
                   <Card key={usage.id}>
-                    <CardContent className="pt-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Code: {usage.code_used}</p>
-                          <p className="text-sm text-muted-foreground">
+                    <CardContent className="pt-4 px-3 sm:px-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="font-medium text-sm truncate">Code: {usage.code_used}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">
                             Joined as {usage.role_joined} on {formatDate(usage.joined_at)}
                           </p>
                         </div>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="self-start sm:self-center text-xs">
                           {usage.role_joined}
                         </Badge>
                       </div>
@@ -275,7 +301,7 @@ export function CodeManagementModal({ isOpen, onClose, teamId }: CodeManagementM
                 {codeUsage.length === 0 && (
                   <Card>
                     <CardContent className="pt-4">
-                      <p className="text-center text-muted-foreground">
+                      <p className="text-center text-muted-foreground text-sm">
                         No code usage history yet
                       </p>
                     </CardContent>
