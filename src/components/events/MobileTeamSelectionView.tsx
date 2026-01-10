@@ -29,6 +29,7 @@ interface MobileTeamSelectionViewProps {
   isExpanded?: boolean;
   onTeamDeleted?: () => void;
   canEdit?: boolean;
+  onTeamIndexChange?: (index: number) => void;
 }
 
 interface TeamSelection {
@@ -53,7 +54,8 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   onClose,
   isExpanded = false,
   onTeamDeleted,
-  canEdit = false
+  canEdit = false,
+  onTeamIndexChange
 }) => {
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
@@ -146,7 +148,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
           .from('event_selections')
           .select(`
             *,
-            performance_categories!inner(name)
+            performance_categories(name)
           `)
           .eq('event_id', event.id)
           .eq('team_id', teamId)
@@ -346,7 +348,10 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
               key={team.teamNumber}
               variant={index === currentTeamIndex ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setCurrentTeamIndex(index)}
+              onClick={() => {
+                setCurrentTeamIndex(index);
+                onTeamIndexChange?.(index);
+              }}
               className="flex-shrink-0 text-xs px-2 py-1"
             >
               {getTeamDisplayName(team, index)}

@@ -80,6 +80,7 @@ export default function CalendarEventsMobile() {
   const [pendingAvailability, setPendingAvailability] = useState<any[]>([]);
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
+  const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
   const { toast } = useToast();
   const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
@@ -1108,6 +1109,7 @@ export default function CalendarEventsMobile() {
                     loadEvents();
                   }}
                   canEdit={canEditEvents()}
+                  onTeamIndexChange={(index) => setSelectedTeamIndex(index)}
                 />
               </div>
 
@@ -1225,6 +1227,7 @@ export default function CalendarEventsMobile() {
             setShowTeamSelection(false);
             setShowEventDetails(true);
           }}
+          initialTeamIndex={selectedTeamIndex}
         />
       )}
 

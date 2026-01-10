@@ -56,13 +56,15 @@ interface EnhancedTeamSelectionManagerProps {
   teamId?: string;
   isOpen: boolean;
   onClose: () => void;
+  initialTeamIndex?: number;
 }
 
 export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManagerProps> = ({
   event,
   teamId: propTeamId,
   isOpen,
-  onClose
+  onClose,
+  initialTeamIndex
 }) => {
   const { user } = useAuth();
   const isMobile = useMobileDetection();
@@ -76,6 +78,13 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const [staffLinksRefresh, setStaffLinksRefresh] = useState(0);
   const [hasAutoSyncedFormation, setHasAutoSyncedFormation] = useState(false);
   const [showAIBuilder, setShowAIBuilder] = useState(false);
+
+  // Sync currentTeamIndex when modal opens with initialTeamIndex
+  useEffect(() => {
+    if (isOpen && initialTeamIndex !== undefined && initialTeamIndex >= 0) {
+      setCurrentTeamIndex(initialTeamIndex);
+    }
+  }, [isOpen, initialTeamIndex]);
 
   // Helper function to extract staff IDs from staff_selection
   const extractStaffIds = (staffSelection: any[]): string[] => {
