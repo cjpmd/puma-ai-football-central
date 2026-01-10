@@ -28,6 +28,7 @@ interface MobileTeamSelectionViewProps {
   onClose?: () => void;
   isExpanded?: boolean;
   onTeamDeleted?: () => void;
+  refreshTrigger?: number;
   canEdit?: boolean;
   onTeamIndexChange?: (index: number) => void;
 }
@@ -55,6 +56,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
   isExpanded = false,
   onTeamDeleted,
   canEdit = false,
+  refreshTrigger,
   onTeamIndexChange
 }) => {
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
@@ -242,7 +244,7 @@ export const MobileTeamSelectionView: React.FC<MobileTeamSelectionViewProps> = (
     if (event.event_type === 'training') {
       loadTrainingDrills();
     }
-  }, [event.id, teamId]);
+  }, [event.id, teamId, refreshTrigger]);
 
   // Load training drills
   const loadTrainingDrills = async () => {

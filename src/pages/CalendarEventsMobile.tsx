@@ -39,6 +39,7 @@ import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilitySe
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 import { EventAvailabilitySection } from '@/components/events/EventAvailabilitySection';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 // Helper to get color-coded event type label
 const getEventTypeLabel = (eventType: string): { label: string; colorClass: string } => {
@@ -81,6 +82,7 @@ export default function CalendarEventsMobile() {
   const [eventTimeContexts, setEventTimeContexts] = useState<{[eventId: string]: UserTeamContext}>({});
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
+  const [teamRefreshTrigger, setTeamRefreshTrigger] = useState(0);
   const { toast } = useToast();
   const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
@@ -402,6 +404,7 @@ export default function CalendarEventsMobile() {
         .eq('id', selectedEvent.id);
       
       toast({ title: 'Team added successfully' });
+      setTeamRefreshTrigger(prev => prev + 1);
       loadEvents();
     } catch (error) {
       console.error('Error adding team:', error);
@@ -812,8 +815,7 @@ export default function CalendarEventsMobile() {
 
         {loading ? (
           <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-muted-foreground">Loading events...</p>
+            <LoadingSpinner size="md" message="Loading events..." />
           </div>
         ) : paginatedEvents.length === 0 ? (
           <div className="text-center py-8">
@@ -1110,6 +1112,7 @@ export default function CalendarEventsMobile() {
                   }}
                   canEdit={canEditEvents()}
                   onTeamIndexChange={(index) => setSelectedTeamIndex(index)}
+                  refreshTrigger={teamRefreshTrigger}
                 />
               </div>
 

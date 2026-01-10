@@ -16,6 +16,7 @@ import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
 import { QuickAvailabilityControls } from '@/components/events/QuickAvailabilityControls';
 import { MobileEventForm } from '@/components/events/MobileEventForm';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface LiveStats {
   playersCount: number;
@@ -300,7 +301,7 @@ export default function DashboardMobile() {
     return (
       <MobileLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <LoadingSpinner size="lg" />
         </div>
       </MobileLayout>
     );

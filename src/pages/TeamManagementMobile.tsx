@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useClubContext } from '@/contexts/ClubContext';
 import { useTeamContext } from '@/contexts/TeamContext';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface Team {
   id: string;
@@ -118,8 +119,7 @@ export default function TeamManagementMobile() {
         <div className="space-y-3">
           {loading ? (
             <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-              <p className="mt-2 text-sm text-muted-foreground">Loading teams...</p>
+              <LoadingSpinner size="md" message="Loading teams..." />
             </div>
           ) : filteredTeams.length === 0 ? (
             <div className="text-center py-8">
