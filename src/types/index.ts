@@ -209,6 +209,8 @@ export type Player = {
   funStats?: Record<string, number>; // Added for FIFA-style fun stats
   playStyle?: string; // Added for FIFA-style play styles
   user_id?: string; // Added to support direct user link for the player
+  medicalConditions?: string; // Medical conditions (e.g., Asthma, Allergies)
+  medicalTreatment?: string; // Treatment or medicines for medical conditions
   created_at?: string;
   updated_at?: string;
 };

@@ -2363,6 +2363,8 @@ export type Database = {
           leave_date: string | null
           linking_code: string | null
           match_stats: Json | null
+          medical_conditions: string | null
+          medical_treatment: string | null
           name: string
           objectives: Json | null
           parent_id: string | null
@@ -2393,6 +2395,8 @@ export type Database = {
           leave_date?: string | null
           linking_code?: string | null
           match_stats?: Json | null
+          medical_conditions?: string | null
+          medical_treatment?: string | null
           name: string
           objectives?: Json | null
           parent_id?: string | null
@@ -2423,6 +2427,8 @@ export type Database = {
           leave_date?: string | null
           linking_code?: string | null
           match_stats?: Json | null
+          medical_conditions?: string | null
+          medical_treatment?: string | null
           name?: string
           objectives?: Json | null
           parent_id?: string | null

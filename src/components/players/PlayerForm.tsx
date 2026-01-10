@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Heart } from 'lucide-react';
 import { Player } from '@/types';
 import { PlayerKitDetails } from './PlayerKitDetails';
 import { PlayerKitTracking } from './PlayerKitTracking';
@@ -30,7 +32,9 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
     availability: player?.availability || 'green' as 'amber' | 'green' | 'red',
     subscriptionType: player?.subscriptionType || 'full_squad' as 'full_squad' | 'training' | 'trialist',
     kit_sizes: player?.kit_sizes || {},
-    nameOnShirt: (player?.kit_sizes as any)?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || '')
+    nameOnShirt: (player?.kit_sizes as any)?.nameOnShirt || (player?.name?.split(' ').slice(-1)[0] || ''),
+    medicalConditions: player?.medicalConditions || '',
+    medicalTreatment: player?.medicalTreatment || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,7 +63,9 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
       kit_sizes: {
         ...formData.kit_sizes,
         nameOnShirt: formData.nameOnShirt
-      }
+      },
+      medicalConditions: formData.medicalConditions || undefined,
+      medicalTreatment: formData.medicalTreatment || undefined
     });
   };
 
@@ -168,7 +174,38 @@ export const PlayerForm: React.FC<PlayerFormProps> = ({
               className="bg-muted"
             />
           </div>
+        </div>
 
+        {/* Medical Information Section */}
+        <div className="border-t pt-4 mt-4">
+          <h4 className="font-medium mb-3 flex items-center gap-2">
+            <Heart className="h-4 w-4 text-red-500" />
+            Medical Information
+          </h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="medicalConditions">Medical Conditions</Label>
+              <Textarea
+                id="medicalConditions"
+                value={formData.medicalConditions}
+                onChange={(e) => setFormData({ ...formData, medicalConditions: e.target.value })}
+                placeholder="e.g., Asthma, Diabetes, Allergies..."
+                rows={3}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="medicalTreatment">Treatment / Medicines</Label>
+              <Textarea
+                id="medicalTreatment"
+                value={formData.medicalTreatment}
+                onChange={(e) => setFormData({ ...formData, medicalTreatment: e.target.value })}
+                placeholder="e.g., Inhaler for asthma, EpiPen..."
+                rows={3}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="flex justify-end space-x-2 pt-4">
