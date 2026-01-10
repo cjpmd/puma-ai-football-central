@@ -23,13 +23,14 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Geometric Puma/Lion head - simplified polygonal design */}
-      {/* Outer head shape */}
+      {/* Geometric Lion/Puma head - shield-like hexagonal design */}
+      
+      {/* Outer shield shape */}
       <path 
         className="logo-path"
-        d="M50 10 L30 20 L15 35 L10 55 L15 75 L30 88 L50 95 L70 88 L85 75 L90 55 L85 35 L70 20 Z"
+        d="M50 5 L20 20 L10 50 L20 80 L50 95 L80 80 L90 50 L80 20 Z"
         stroke="hsl(var(--muted-foreground))"
-        strokeWidth="2"
+        strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
@@ -38,7 +39,7 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
       {/* Left ear */}
       <path 
         className="logo-path logo-path-delay-1"
-        d="M30 20 L20 8 L15 25 L15 35"
+        d="M20 20 L8 12 L10 30"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -49,7 +50,7 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
       {/* Right ear */}
       <path 
         className="logo-path logo-path-delay-2"
-        d="M70 20 L80 8 L85 25 L85 35"
+        d="M80 20 L92 12 L90 30"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -57,10 +58,32 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
         fill="none"
       />
       
-      {/* Inner face details - forehead */}
+      {/* Forehead center line */}
       <path 
         className="logo-path logo-path-delay-3"
-        d="M35 30 L50 25 L65 30"
+        d="M50 5 L50 35"
+        stroke="hsl(var(--muted-foreground))"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      
+      {/* Forehead left facet */}
+      <path 
+        className="logo-path logo-path-delay-3"
+        d="M50 5 L30 25 L50 35"
+        stroke="hsl(var(--muted-foreground))"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      
+      {/* Forehead right facet */}
+      <path 
+        className="logo-path logo-path-delay-4"
+        d="M50 5 L70 25 L50 35"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -70,8 +93,8 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
       
       {/* Left eye area */}
       <path 
-        className="logo-path logo-path-delay-4"
-        d="M25 45 L35 40 L45 45 L35 50 Z"
+        className="logo-path logo-path-delay-5"
+        d="M20 35 L35 30 L40 42 L25 50 Z"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -82,7 +105,7 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
       {/* Right eye area */}
       <path 
         className="logo-path logo-path-delay-5"
-        d="M75 45 L65 40 L55 45 L65 50 Z"
+        d="M80 35 L65 30 L60 42 L75 50 Z"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -93,7 +116,7 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
       {/* Nose bridge */}
       <path 
         className="logo-path logo-path-delay-6"
-        d="M50 45 L45 60 L50 65 L55 60 L50 45"
+        d="M50 35 L45 50 L50 58 L55 50 L50 35"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -101,10 +124,10 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
         fill="none"
       />
       
-      {/* Mouth/jaw area */}
+      {/* Left cheek facet */}
       <path 
         className="logo-path logo-path-delay-7"
-        d="M35 70 L50 75 L65 70 L60 82 L50 85 L40 82 Z"
+        d="M10 50 L25 50 L30 65 L20 80"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -112,10 +135,21 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
         fill="none"
       />
       
-      {/* Cheek lines - left */}
+      {/* Right cheek facet */}
+      <path 
+        className="logo-path logo-path-delay-7"
+        d="M90 50 L75 50 L70 65 L80 80"
+        stroke="hsl(var(--muted-foreground))"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      
+      {/* Mouth/jaw - upper */}
       <path 
         className="logo-path logo-path-delay-8"
-        d="M20 55 L30 60 L35 70"
+        d="M30 65 L50 58 L70 65"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
@@ -123,10 +157,21 @@ export const LogoSpinner: React.FC<LogoSpinnerProps> = ({
         fill="none"
       />
       
-      {/* Cheek lines - right */}
+      {/* Mouth/jaw - lower with teeth hint */}
       <path 
         className="logo-path logo-path-delay-9"
-        d="M80 55 L70 60 L65 70"
+        d="M30 65 L40 75 L50 72 L60 75 L70 65"
+        stroke="hsl(var(--muted-foreground))"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      
+      {/* Chin */}
+      <path 
+        className="logo-path logo-path-delay-9"
+        d="M40 75 L50 85 L60 75"
         stroke="hsl(var(--muted-foreground))"
         strokeWidth="2"
         strokeLinecap="round"
