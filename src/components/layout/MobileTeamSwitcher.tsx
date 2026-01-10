@@ -38,12 +38,12 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl flex flex-col">
-        <SheetHeader className="pb-4">
+      <SheetContent side="bottom" className="h-auto max-h-[85vh] rounded-t-3xl flex flex-col">
+        <SheetHeader className="pb-4 flex-shrink-0">
           <SheetTitle className="text-xl">Switch Team</SheetTitle>
         </SheetHeader>
         
-        <div className="flex-1 space-y-2 overflow-y-auto pb-4">
+        <div className="flex-1 space-y-2 overflow-y-auto min-h-0">
           {/* All Teams Option */}
           <button
             onClick={() => handleSelectTeam(null)}
@@ -104,9 +104,8 @@ export function MobileTeamSwitcher({ isOpen, onClose }: MobileTeamSwitcherProps)
           })}
         </div>
 
-        {/* Logout Button */}
-        <div className="pt-2 pb-safe-bottom">
-          <Separator className="mb-4" />
+        {/* Logout Button - Always visible at bottom */}
+        <div className="flex-shrink-0 pt-4 pb-4 border-t mt-4">
           <Button 
             variant="ghost" 
             className="w-full flex items-center justify-center gap-2 text-destructive hover:bg-destructive/10"
