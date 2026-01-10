@@ -447,6 +447,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
                       type="date"
                       value={playerDob}
                       onChange={(e) => setPlayerDob(e.target.value)}
+                      className="min-w-0 h-10 appearance-none"
                     />
                   </div>
                 </>

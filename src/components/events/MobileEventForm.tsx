@@ -61,7 +61,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     location: '',
     latitude: null as number | null,
     longitude: null as number | null,
-    type: 'training' as 'training' | 'match' | 'fixture' | 'friendly',
+    type: 'training' as 'training' | 'match' | 'fixture' | 'friendly' | 'tournament' | 'festival',
     opponent: '',
     isHome: true,
     gameFormat: defaultGameFormat,
@@ -202,7 +202,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
     }
   };
 
-  const isMatchType = ['match', 'fixture', 'friendly'].includes(formData.type);
+  const isMatchType = ['match', 'fixture', 'friendly', 'tournament', 'festival'].includes(formData.type);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 pb-24 overflow-y-auto">
@@ -227,6 +227,8 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
                   <SelectItem value="training">Training</SelectItem>
                   <SelectItem value="fixture">Fixture</SelectItem>
                   <SelectItem value="friendly">Friendly</SelectItem>
+                  <SelectItem value="tournament">Tournament</SelectItem>
+                  <SelectItem value="festival">Festival</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -131,6 +131,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
                   type="date"
                   value={formData.dateOfBirth}
                   onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                  className="min-w-0 h-10 appearance-none"
                 />
               </div>
 

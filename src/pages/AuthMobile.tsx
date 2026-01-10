@@ -1,23 +1,30 @@
-
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Eye, EyeOff, Mail, Lock, User, Phone } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ChevronRight, Users, UserPlus, Building2, ArrowLeft } from 'lucide-react';
+import { UnifiedSignupWizard } from '@/components/auth/UnifiedSignupWizard';
+import { TeamSetupWizard } from '@/components/auth/TeamSetupWizard';
+import { ClubSetupWizard } from '@/components/auth/ClubSetupWizard';
+
+type View = 'options' | 'login';
 
 export default function AuthMobile() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [view, setView] = useState<View>('options');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    name: '',
-    phone: ''
+    password: ''
   });
+  
+  // Wizard states
+  const [showJoinTeamWizard, setShowJoinTeamWizard] = useState(false);
+  const [showTeamSetupWizard, setShowTeamSetupWizard] = useState(false);
+  const [showClubSetupWizard, setShowClubSetupWizard] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -26,44 +33,24 @@ export default function AuthMobile() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      if (isLogin) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: formData.email,
-          password: formData.password,
-        });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
 
-        if (error) throw error;
+      if (error) throw error;
 
-        toast({
-          title: 'Success',
-          description: 'Successfully signed in!',
-        });
-        
-        navigate('/dashboard');
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-          options: {
-            data: {
-              name: formData.name,
-              phone: formData.phone,
-            }
-          }
-        });
-
-        if (error) throw error;
-
-        toast({
-          title: 'Success',
-          description: 'Account created! Please check your email to verify your account.',
-        });
-      }
+      toast({
+        title: 'Success',
+        description: 'Successfully signed in!',
+      });
+      
+      navigate('/dashboard');
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -75,98 +62,163 @@ export default function AuthMobile() {
     }
   };
 
+  const handleWizardSuccess = () => {
+    navigate('/dashboard');
+  };
+
+  // Options View - Spond-style entry screen
+  if (view === 'options') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        {/* Header */}
+        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+          {/* Logo and App Name */}
+          <div className="text-center space-y-3 mb-10">
+            <div className="flex justify-center">
+              <img 
+                src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+                alt="Puma AI" 
+                className="w-20 h-20"
+              />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Puma AI</h1>
+            <p className="text-muted-foreground">Team Management Made Simple</p>
+          </div>
+
+          {/* Option Cards */}
+          <div className="w-full max-w-sm space-y-3">
+            {/* Join Existing Team */}
+            <button
+              onClick={() => setShowJoinTeamWizard(true)}
+              className="w-full p-4 bg-card border border-border rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Join an Existing Team</h3>
+                  <p className="text-sm text-muted-foreground">
+                    I have a team code to join
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </button>
+
+            {/* Set Up New Team */}
+            <button
+              onClick={() => setShowTeamSetupWizard(true)}
+              className="w-full p-4 bg-card border border-border rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <UserPlus className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Set Up A New Team</h3>
+                  <p className="text-sm text-muted-foreground">
+                    I want to create and manage my own team
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </button>
+
+            {/* Set Up New Club */}
+            <button
+              onClick={() => setShowClubSetupWizard(true)}
+              className="w-full p-4 bg-card border border-border rounded-xl text-left flex items-center justify-between hover:bg-muted/50 transition-colors active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">Set Up A New Club</h3>
+                  <p className="text-sm text-muted-foreground">
+                    I want to create a club with multiple teams
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+            </button>
+          </div>
+
+          {/* Sign In Link */}
+          <div className="mt-10 text-center">
+            <p className="text-muted-foreground">Already have an account?</p>
+            <Button 
+              variant="link" 
+              onClick={() => setView('login')}
+              className="text-primary font-medium"
+            >
+              Sign In
+            </Button>
+          </div>
+        </div>
+
+        {/* Wizards */}
+        <UnifiedSignupWizard
+          isOpen={showJoinTeamWizard}
+          onClose={() => setShowJoinTeamWizard(false)}
+          onSuccess={handleWizardSuccess}
+          onSwitchToLogin={() => {
+            setShowJoinTeamWizard(false);
+            setView('login');
+          }}
+        />
+        
+        <TeamSetupWizard
+          isOpen={showTeamSetupWizard}
+          onClose={() => setShowTeamSetupWizard(false)}
+          onSuccess={handleWizardSuccess}
+        />
+        
+        <ClubSetupWizard
+          isOpen={showClubSetupWizard}
+          onClose={() => setShowClubSetupWizard(false)}
+          onSuccess={handleWizardSuccess}
+        />
+      </div>
+    );
+  }
+
+  // Login View
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
+        {/* Back Button */}
+        <Button
+          variant="ghost"
+          onClick={() => setView('options')}
+          className="flex items-center gap-2 text-muted-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </Button>
+
         {/* Logo/Header */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <img 
-              src="/lovable-uploads/0e7b2d9e-64e2-46da-8a4f-01a3e2cd50df.png" 
-              alt="Team Manager" 
+              src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+              alt="Puma AI" 
               className="w-16 h-16"
             />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Team Manager</h1>
-          <p className="text-gray-600">Manage your teams like a pro</p>
+          <h1 className="text-2xl font-bold text-foreground">Welcome Back</h1>
+          <p className="text-muted-foreground">Sign in to your account</p>
         </div>
 
-        {/* Auth Toggle */}
-        <div className="flex bg-gray-100 rounded-lg p-1">
-          <button
-            onClick={() => setIsLogin(true)}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-              isLogin 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => setIsLogin(false)}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-              !isLogin 
-                ? 'bg-white text-gray-900 shadow-sm' 
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        {/* Auth Form */}
+        {/* Login Form */}
         <Card>
-          <CardHeader className="space-y-1 pb-4">
-            <CardTitle className="text-xl">
-              {isLogin ? 'Welcome back' : 'Create account'}
-            </CardTitle>
-            <CardDescription>
-              {isLogin 
-                ? 'Enter your credentials to access your account' 
-                : 'Fill in your details to create a new account'
-              }
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Full Name</label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange('name', e.target.value)}
-                        className="pl-10 h-12"
-                        required={!isLogin}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-700">Phone Number</label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                      <Input
-                        type="tel"
-                        placeholder="Enter your phone number"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
-                        className="pl-10 h-12"
-                      />
-                    </div>
-                  </div>
-                </>
-              )}
-              
+          <CardContent className="pt-6">
+            <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Email</label>
+                <label className="text-sm font-medium text-foreground">Email</label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="email"
                     placeholder="Enter your email"
@@ -179,9 +231,9 @@ export default function AuthMobile() {
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Password</label>
+                <label className="text-sm font-medium text-foreground">Password</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
@@ -193,7 +245,7 @@ export default function AuthMobile() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -205,22 +257,32 @@ export default function AuthMobile() {
                 className="w-full h-12 text-base"
                 disabled={loading}
               >
-                {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
+                {loading ? 'Signing In...' : 'Sign In'}
               </Button>
             </form>
 
-            {isLogin && (
-              <div className="mt-4 text-center">
-                <Link 
-                  to="/forgot-password" 
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
-            )}
+            <div className="mt-4 text-center">
+              <Button 
+                variant="link" 
+                className="text-sm text-muted-foreground"
+              >
+                Forgot your password?
+              </Button>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Sign Up Link */}
+        <div className="text-center">
+          <p className="text-muted-foreground">Don't have an account?</p>
+          <Button 
+            variant="link" 
+            onClick={() => setView('options')}
+            className="text-primary font-medium"
+          >
+            Get Started
+          </Button>
+        </div>
       </div>
     </div>
   );
