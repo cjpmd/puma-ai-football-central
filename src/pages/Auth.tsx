@@ -91,7 +91,14 @@ const Auth = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Welcome</CardTitle>
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+              alt="Puma AI" 
+              className="w-16 h-16"
+            />
+          </div>
+          <CardTitle className="text-2xl text-center">Welcome to Puma AI</CardTitle>
           <CardDescription className="text-center">
             Sign in to your account or join a team
           </CardDescription>

@@ -70,23 +70,24 @@ export default function AuthMobile() {
   if (view === 'options') {
     return (
       <div className="min-h-screen bg-background flex flex-col">
-        {/* Header */}
-        <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-          {/* Logo and App Name */}
-          <div className="text-center space-y-3 mb-10">
-            <div className="flex justify-center">
-              <img 
-                src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
-                alt="Puma AI" 
-                className="w-20 h-20"
-              />
-            </div>
-            <h1 className="text-2xl font-bold text-foreground">Puma AI</h1>
-            <p className="text-muted-foreground">Team Management Made Simple</p>
+        {/* Top Header with Logo */}
+        <div className="pt-safe px-6 py-8 text-center">
+          <div className="flex justify-center mb-3">
+            <img 
+              src="/lovable-uploads/0b482bd3-18fb-49dd-8a03-f68969572c7e.png" 
+              alt="Puma AI" 
+              className="w-20 h-20"
+            />
           </div>
+          <h1 className="text-2xl font-bold text-foreground">Puma AI</h1>
+          <p className="text-muted-foreground">Team Management Made Simple</p>
+        </div>
+        
+        {/* Content */}
+        <div className="flex-1 flex flex-col px-6 pb-safe">
 
           {/* Option Cards */}
-          <div className="w-full max-w-sm space-y-3">
+          <div className="w-full space-y-3">
             {/* Join Existing Team */}
             <button
               onClick={() => setShowJoinTeamWizard(true)}
@@ -146,7 +147,7 @@ export default function AuthMobile() {
           </div>
 
           {/* Sign In Link */}
-          <div className="mt-10 text-center">
+          <div className="mt-auto pt-8 pb-4 text-center">
             <p className="text-muted-foreground">Already have an account?</p>
             <Button 
               variant="link" 
