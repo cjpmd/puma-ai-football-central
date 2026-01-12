@@ -69,6 +69,7 @@ export default function PlayerManagementMobile() {
   const { toast } = useToast();
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode } = useTeamContext();
+  const { user } = useAuth();
 
   const { hasPermission, isGlobalAdmin } = useAuthorization();
 
@@ -89,6 +90,9 @@ export default function PlayerManagementMobile() {
   const [showCodeManagement, setShowCodeManagement] = useState(false);
   const [showStaffManagement, setShowStaffManagement] = useState(false);
   const [showMedicalSummary, setShowMedicalSummary] = useState(false);
+  
+  // User-player links for access control
+  const [userPlayerLinks, setUserPlayerLinks] = useState<{player_id: string; relationship: string}[]>([]);
 
   // Permission checks
   const canManageTeam = () => {
@@ -104,6 +108,29 @@ export default function PlayerManagementMobile() {
     return hasPermission({ resource: 'staff', action: 'manage', resourceId: currentTeam.id }) ||
            hasPermission({ resource: 'staff', action: 'manage' });
   };
+
+  // Check if current user is linked to a specific player as "self" (hide Manage Parents for them)
+  const isPlayerSelf = (playerId: string): boolean => {
+    return userPlayerLinks.some(link => link.player_id === playerId && link.relationship === 'self');
+  };
+
+  // Fetch user's player links for access control
+  useEffect(() => {
+    const fetchUserPlayerLinks = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('user_players')
+        .select('player_id, relationship')
+        .eq('user_id', user.id);
+      
+      if (!error && data) {
+        setUserPlayerLinks(data);
+      }
+    };
+    
+    fetchUserPlayerLinks();
+  }, [user?.id]);
 
   useEffect(() => {
     loadPlayers();

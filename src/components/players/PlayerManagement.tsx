@@ -26,15 +26,41 @@ interface PlayerManagementProps {
   team: Team;
 }
 
+// Type for user-player relationship
+interface UserPlayerLink {
+  player_id: string;
+  relationship: string;
+}
+
 export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [subscriptionFilter, setSubscriptionFilter] = useState<string>('all');
   const [showPlayerForm, setShowPlayerForm] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
+  const [userPlayerLinks, setUserPlayerLinks] = useState<UserPlayerLink[]>([]);
+
+  // Fetch user's player links to determine access control
+  useEffect(() => {
+    const fetchUserPlayerLinks = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('user_players')
+        .select('player_id, relationship')
+        .eq('user_id', user.id);
+      
+      if (!error && data) {
+        setUserPlayerLinks(data);
+      }
+    };
+    
+    fetchUserPlayerLinks();
+  }, [user?.id]);
 
   // Fetch active players
   const { data: players = [], isLoading, error } = useQuery({
@@ -45,13 +71,10 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
     },
   });
 
-  // Debug logging
-  useEffect(() => {
-    console.log('PlayerManagement: Team:', team);
-    console.log('PlayerManagement: Players data:', players);
-    console.log('PlayerManagement: Loading state:', isLoading);
-    console.log('PlayerManagement: Error:', error);
-  }, [team, players, isLoading, error]);
+  // Check if current user is linked to a specific player as "self" (hide Manage Parents)
+  const isPlayerSelf = (playerId: string): boolean => {
+    return userPlayerLinks.some(link => link.player_id === playerId && link.relationship === 'self');
+  };
 
   // Create player mutation
   const createPlayerMutation = useMutation({

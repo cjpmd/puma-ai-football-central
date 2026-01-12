@@ -8,7 +8,8 @@ import { PasswordStrength } from "@/components/ui/password-strength";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { teamCodeService } from "@/services/teamCodeService";
-import { ArrowLeft, Users, User, UserCheck, Shield, Loader2, CheckCircle } from "lucide-react";
+import { playerCodeService, PlayerWithCodes } from "@/services/playerCodeService";
+import { ArrowLeft, Users, User, UserCheck, Shield, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { sanitizeText } from "@/utils/inputValidation";
 
 interface UnifiedSignupWizardProps {
@@ -18,7 +19,7 @@ interface UnifiedSignupWizardProps {
   onSwitchToLogin?: () => void;
 }
 
-type Step = "code" | "role" | "details" | "account" | "complete";
+type Step = "code" | "role" | "playerCode" | "details" | "account" | "complete";
 type Role = "player" | "parent" | "staff";
 
 interface TeamInfo {
@@ -35,11 +36,13 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Role-specific details
-  const [playerName, setPlayerName] = useState("");
-  const [playerDob, setPlayerDob] = useState("");
+  // Player code for linking
+  const [playerCode, setPlayerCode] = useState("");
+  const [matchedPlayer, setMatchedPlayer] = useState<PlayerWithCodes | null>(null);
+  const [playerCodeError, setPlayerCodeError] = useState<string | null>(null);
+  
+  // Staff role selection
   const [staffRole, setStaffRole] = useState("team_coach");
-  const [parentChildName, setParentChildName] = useState("");
   
   // Account details
   const [fullName, setFullName] = useState("");
@@ -52,10 +55,10 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
     setTeamCode("");
     setTeamInfo(null);
     setSelectedRole(null);
-    setPlayerName("");
-    setPlayerDob("");
+    setPlayerCode("");
+    setMatchedPlayer(null);
+    setPlayerCodeError(null);
     setStaffRole("team_coach");
-    setParentChildName("");
     setFullName("");
     setEmail("");
     setPassword("");
@@ -104,23 +107,73 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       toast.error("Please select a role");
       return;
     }
-    setStep("details");
+    
+    // Players and Parents need to enter a player code
+    if (selectedRole === "player" || selectedRole === "parent") {
+      setStep("playerCode");
+    } else {
+      // Staff go directly to staff details
+      setStep("details");
+    }
+  };
+
+  const handleVerifyPlayerCode = async () => {
+    if (!playerCode.trim()) {
+      setPlayerCodeError("Please enter a player code");
+      return;
+    }
+
+    setIsLoading(true);
+    setPlayerCodeError(null);
+
+    try {
+      let player: PlayerWithCodes | null = null;
+
+      if (selectedRole === "player") {
+        // Use player linking code
+        player = await playerCodeService.getPlayerByLinkingCode(playerCode.trim());
+        
+        if (!player) {
+          setPlayerCodeError("Invalid player code. Please check the code and try again.");
+          return;
+        }
+      } else if (selectedRole === "parent") {
+        // Use parent linking code
+        player = await playerCodeService.getPlayerByParentLinkingCode(playerCode.trim());
+        
+        if (!player) {
+          setPlayerCodeError("Invalid parent code. Please check the code and try again.");
+          return;
+        }
+
+        // Check if parent code is expired
+        if (player.parent_linking_code_expires_at && new Date(player.parent_linking_code_expires_at) < new Date()) {
+          setPlayerCodeError("This parent code has expired. Please ask the team manager for a new code.");
+          return;
+        }
+      }
+
+      if (player) {
+        setMatchedPlayer(player);
+        // Pre-fill the full name with the player's name for players
+        if (selectedRole === "player") {
+          setFullName(player.name);
+        }
+        setStep("account");
+      }
+    } catch (error) {
+      console.error("Error verifying player code:", error);
+      setPlayerCodeError("Failed to verify code. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDetailsSubmit = () => {
-    // Validate role-specific details
-    if (selectedRole === "player" && !playerName.trim()) {
-      toast.error("Please enter your name as it appears on the team roster");
-      return;
-    }
+    // Only staff reach this step now
     if (selectedRole === "staff" && !staffRole) {
       toast.error("Please select your staff role");
       return;
-    }
-    
-    // Pre-fill account name from player name if applicable
-    if (selectedRole === "player" && playerName && !fullName) {
-      setFullName(playerName);
     }
     
     setStep("account");
@@ -185,36 +238,60 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       // Now create role-specific associations
       const userId = authData.user.id;
 
-      if (selectedRole === "player") {
-        // Create player record and link
-        const { data: playerData, error: playerError } = await supabase
-          .from("players")
+      if (selectedRole === "player" && matchedPlayer) {
+        // Link user to existing player
+        const { error: linkError } = await supabase
+          .from("user_players")
           .insert({
-            name: sanitizeText(playerName.trim()),
-            team_id: teamInfo!.id,
-            date_of_birth: playerDob || "2010-01-01",
-            squad_number: 0, // Will be assigned later by team manager
-            type: "player"
-          })
-          .select()
-          .single();
-
-        if (playerError) {
-          console.error("Error creating player:", playerError);
-        } else if (playerData) {
-          // Link user to player
-          await supabase.from("user_players").insert({
             user_id: userId,
-            player_id: playerData.id,
+            player_id: matchedPlayer.id,
             relationship: "self"
           });
-          
-          // Add player role to profile
-          await supabase
-            .from("profiles")
-            .update({ roles: ["player"] })
-            .eq("id", userId);
+
+        if (linkError) {
+          console.error("Error linking user to player:", linkError);
         }
+
+        // Add user to team as player
+        await supabase.from("user_teams").insert({
+          team_id: matchedPlayer.team_id,
+          user_id: userId,
+          role: "team_player"
+        });
+          
+        // Add player role to profile
+        await supabase
+          .from("profiles")
+          .update({ roles: ["player"] })
+          .eq("id", userId);
+
+      } else if (selectedRole === "parent" && matchedPlayer) {
+        // Link user to player as parent
+        const { error: linkError } = await supabase
+          .from("user_players")
+          .insert({
+            user_id: userId,
+            player_id: matchedPlayer.id,
+            relationship: "parent"
+          });
+
+        if (linkError) {
+          console.error("Error linking parent to player:", linkError);
+        }
+
+        // Add user to team as parent
+        await supabase.from("user_teams").insert({
+          team_id: matchedPlayer.team_id,
+          user_id: userId,
+          role: "team_parent"
+        });
+
+        // Update profile with parent role
+        await supabase
+          .from("profiles")
+          .update({ roles: ["parent"] })
+          .eq("id", userId);
+
       } else if (selectedRole === "staff") {
         // Create user_teams entry for staff
         await supabase.from("user_teams").insert({
@@ -232,20 +309,6 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         await supabase
           .from("profiles")
           .update({ roles: [roleMap[staffRole] || "coach"] })
-          .eq("id", userId);
-          
-      } else if (selectedRole === "parent") {
-        // Create user_teams entry as parent viewer
-        await supabase.from("user_teams").insert({
-          user_id: userId,
-          team_id: teamInfo!.id,
-          role: "parent"
-        });
-
-        // Update profile with parent role
-        await supabase
-          .from("profiles")
-          .update({ roles: ["parent"] })
           .eq("id", userId);
       }
 
@@ -275,8 +338,15 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
 
   const goBack = () => {
     if (step === "role") setStep("code");
+    else if (step === "playerCode") setStep("role");
     else if (step === "details") setStep("role");
-    else if (step === "account") setStep("details");
+    else if (step === "account") {
+      if (selectedRole === "player" || selectedRole === "parent") {
+        setStep("playerCode");
+      } else {
+        setStep("details");
+      }
+    }
   };
 
   const getRoleIcon = (role: Role) => {
@@ -295,6 +365,14 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
     }
   };
 
+  // Calculate progress steps based on role
+  const getProgressSteps = () => {
+    if (selectedRole === "staff") {
+      return ["code", "role", "details", "account"];
+    }
+    return ["code", "role", "playerCode", "account"];
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[450px]">
@@ -309,6 +387,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
               <DialogTitle>
                 {step === "code" && "Join a Team"}
                 {step === "role" && "Select Your Role"}
+                {step === "playerCode" && (selectedRole === "player" ? "Enter Your Player Code" : "Enter Parent Code")}
                 {step === "details" && "Your Details"}
                 {step === "account" && "Create Account"}
                 {step === "complete" && "Welcome!"}
@@ -316,6 +395,10 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
               <DialogDescription>
                 {step === "code" && "Enter the team code shared with you"}
                 {step === "role" && `Joining ${teamInfo?.name}`}
+                {step === "playerCode" && (selectedRole === "player" 
+                  ? "Ask your team manager for your player linking code"
+                  : "Ask the team manager for your child's parent linking code"
+                )}
                 {step === "details" && "Tell us a bit more about yourself"}
                 {step === "account" && "Set up your login credentials"}
                 {step === "complete" && "You're all set!"}
@@ -425,34 +508,90 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
             </div>
           )}
 
-          {/* Step 3: Role-Specific Details */}
-          {step === "details" && (
+          {/* Step 3: Player Code (for Player/Parent roles) */}
+          {step === "playerCode" && (
             <div className="space-y-4">
-              {selectedRole === "player" && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="playerName">Your Name (as on team roster)</Label>
-                    <Input
-                      id="playerName"
-                      placeholder="First Last"
-                      value={playerName}
-                      onChange={(e) => setPlayerName(sanitizeText(e.target.value))}
-                      maxLength={100}
-                    />
+              {/* Team Info Reminder */}
+              <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                {teamInfo?.logo_url ? (
+                  <img 
+                    src={teamInfo.logo_url} 
+                    alt={teamInfo.name} 
+                    className="h-10 w-10 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Users className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="playerDob">Date of Birth (optional)</Label>
-                    <Input
-                      id="playerDob"
-                      type="date"
-                      value={playerDob}
-                      onChange={(e) => setPlayerDob(e.target.value)}
-                      className="min-w-0 h-10 appearance-none"
-                    />
-                  </div>
-                </>
+                )}
+                <div>
+                  <p className="font-medium text-sm">{teamInfo?.name}</p>
+                  <p className="text-xs text-muted-foreground capitalize">Joining as {selectedRole}</p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="playerCode">
+                  {selectedRole === "player" ? "Player Code" : "Parent Code"}
+                </Label>
+                <Input
+                  id="playerCode"
+                  placeholder={selectedRole === "player" ? "Enter your player code" : "Enter parent linking code"}
+                  value={playerCode}
+                  onChange={(e) => {
+                    setPlayerCode(e.target.value);
+                    setPlayerCodeError(null);
+                  }}
+                  className="text-center text-lg tracking-wider font-mono"
+                  maxLength={20}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {selectedRole === "player" 
+                    ? "Your team manager can provide your unique player code"
+                    : "Ask the team manager for your child's parent linking code"
+                  }
+                </p>
+              </div>
+
+              {playerCodeError && (
+                <div className="flex items-center gap-2 p-3 bg-destructive/10 rounded-lg text-destructive text-sm">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{playerCodeError}</span>
+                </div>
               )}
 
+              {matchedPlayer && (
+                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <div>
+                    <p className="font-medium text-sm text-green-800 dark:text-green-200">
+                      {selectedRole === "player" ? "Linking to:" : "Linking as parent of:"}
+                    </p>
+                    <p className="text-sm text-green-700 dark:text-green-300">{matchedPlayer.name}</p>
+                  </div>
+                </div>
+              )}
+
+              <Button 
+                onClick={handleVerifyPlayerCode} 
+                className="w-full"
+                disabled={isLoading || !playerCode.trim()}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify & Continue"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* Step 4: Staff Details (only for staff role) */}
+          {step === "details" && (
+            <div className="space-y-4">
               {selectedRole === "staff" && (
                 <div className="space-y-2">
                   <Label>Your Role on the Team</Label>
@@ -477,31 +616,30 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
                 </div>
               )}
 
-              {selectedRole === "parent" && (
-                <div className="space-y-2">
-                  <Label htmlFor="parentChildName">Your Child's Name (optional)</Label>
-                  <Input
-                    id="parentChildName"
-                    placeholder="You can link to your child's profile later"
-                    value={parentChildName}
-                    onChange={(e) => setParentChildName(sanitizeText(e.target.value))}
-                    maxLength={100}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    You'll be able to link to your child's player profile after signing up
-                  </p>
-                </div>
-              )}
-
               <Button onClick={handleDetailsSubmit} className="w-full">
                 Continue
               </Button>
             </div>
           )}
 
-          {/* Step 4: Account Creation */}
+          {/* Step 5: Account Creation */}
           {step === "account" && (
             <div className="space-y-4">
+              {/* Show matched player info for player/parent */}
+              {matchedPlayer && (selectedRole === "player" || selectedRole === "parent") && (
+                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <UserCheck className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs text-green-700 dark:text-green-300">
+                      {selectedRole === "player" ? "Creating account for:" : "Parent account for:"}
+                    </p>
+                    <p className="font-medium text-sm text-green-800 dark:text-green-200 truncate">
+                      {matchedPlayer.name}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
@@ -560,7 +698,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
             </div>
           )}
 
-          {/* Step 5: Complete */}
+          {/* Step 6: Complete */}
           {step === "complete" && (
             <div className="text-center space-y-4 py-4">
               <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
@@ -570,6 +708,12 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
                 <h3 className="font-semibold text-lg">Welcome to {teamInfo?.name}!</h3>
                 <p className="text-muted-foreground text-sm mt-1">
                   You've successfully joined as a {selectedRole}.
+                  {matchedPlayer && selectedRole === "player" && (
+                    <span className="block mt-1">Your profile is linked to {matchedPlayer.name}.</span>
+                  )}
+                  {matchedPlayer && selectedRole === "parent" && (
+                    <span className="block mt-1">You're linked as a parent of {matchedPlayer.name}.</span>
+                  )}
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -583,11 +727,11 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         {/* Progress Indicator */}
         {step !== "complete" && (
           <div className="flex justify-center gap-2 pb-2">
-            {["code", "role", "details", "account"].map((s, i) => (
+            {getProgressSteps().map((s, i) => (
               <div
                 key={s}
                 className={`h-2 w-2 rounded-full transition-colors ${
-                  ["code", "role", "details", "account"].indexOf(step) >= i
+                  getProgressSteps().indexOf(step) >= i
                     ? "bg-primary"
                     : "bg-muted"
                 }`}
