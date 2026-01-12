@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Check, Building2, Users, ChevronDown } from 'lucide-react';
+import { Check, Building2, Users, ChevronDown, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +28,8 @@ interface HeaderEntitySwitcherProps {
 }
 
 export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitcherProps) {
-  const { teams: allUserTeams } = useAuth();
+  const { teams: allUserTeams, signOut } = useAuth();
+  const navigate = useNavigate();
   const { currentClub, availableClubs, setCurrentClub } = useClubContext();
   const { currentTeam, availableTeams, setCurrentTeam, viewMode, setViewMode } = useTeamContext();
   const { currentView } = useSmartView();
@@ -364,14 +366,14 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
 
       {/* Mobile Sheet */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl">
-          <SheetHeader className="pb-4">
+        <SheetContent side="bottom" className="h-[80vh] rounded-t-3xl flex flex-col">
+          <SheetHeader className="pb-4 flex-shrink-0">
             <SheetTitle className="text-xl">
               {displayType === 'club' ? 'Switch Club' : 'Switch Team'}
             </SheetTitle>
           </SheetHeader>
           
-          <div className="space-y-2 overflow-y-auto max-h-[calc(80vh-100px)] pb-safe-bottom">
+          <div className="space-y-2 overflow-y-auto flex-1">
             {displayType === 'club' ? (
               // Club list
               availableClubs.map((club) => {
@@ -471,6 +473,21 @@ export function HeaderEntitySwitcher({ variant = 'desktop' }: HeaderEntitySwitch
                 })}
               </>
             )}
+          </div>
+          
+          {/* Sign Out Button - Always visible at bottom */}
+          <div className="flex-shrink-0 border-t pt-4 pb-safe mt-4">
+            <button
+              onClick={async () => {
+                await signOut();
+                setOpen(false);
+                navigate('/auth');
+              }}
+              className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="font-medium">Sign Out</span>
+            </button>
           </div>
         </SheetContent>
       </Sheet>

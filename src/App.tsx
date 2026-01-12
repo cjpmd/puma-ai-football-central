@@ -17,6 +17,7 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AccountLinking from "./pages/AccountLinking";
 import Auth from "./pages/Auth";
+import AuthMobile from "./pages/AuthMobile";
 import Dashboard from "./pages/Dashboard";
 import DashboardMobile from "./pages/DashboardMobile";
 import PlayerManagement from "./pages/PlayerManagement";
@@ -69,7 +70,15 @@ const AppContent = () => {
       {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
       <Routes>
         <Route path="/" element={<Navigate to="/auth" replace />} />
-        <Route path="/auth" element={<Auth />} />
+        <Route 
+          path="/auth" 
+          element={
+            <ResponsiveRoute
+              desktopComponent={<Auth />}
+              mobileComponent={<AuthMobile />}
+            />
+          }
+        />
         <Route path="/login" element={<Navigate to="/auth" replace />} />
         <Route path="/account-linking" element={<AccountLinking />} />
         <Route 
