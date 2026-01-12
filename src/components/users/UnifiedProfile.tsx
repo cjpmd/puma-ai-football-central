@@ -23,6 +23,7 @@ import { EditProfileModal } from './EditProfileModal';
 import { UnifiedLinkedAccounts } from './UnifiedLinkedAccounts';
 import { RoleAwareCalendar } from './RoleAwareCalendar';
 import { formatPlayerName } from '@/utils/nameUtils';
+import { StaffKitSection } from '@/components/staff/StaffKitSection';
 
 interface RoleContext {
   type: 'player' | 'parent' | 'staff' | 'admin';
@@ -382,7 +383,13 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
                 {activeRoleData?.type === 'staff' && (
                   <div className="space-y-4">
                     <p>Team management and coaching tools</p>
-                    {/* Add staff-specific content */}
+                    {/* Coaching Kit for this staff role */}
+                    {effectiveUserId && (
+                      <StaffKitSection 
+                        userId={effectiveUserId}
+                        onUpdate={loadProfileData}
+                      />
+                    )}
                   </div>
                 )}
                 
@@ -417,14 +424,23 @@ export const UnifiedProfile: React.FC<UnifiedProfileProps> = ({
         </TabsContent>
 
         <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Settings</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">Settings coming soon...</p>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {/* Coaching Kit for staff */}
+            {userRoles.some(r => r.type === 'staff') && effectiveUserId && (
+              <StaffKitSection 
+                userId={effectiveUserId}
+                onUpdate={loadProfileData}
+              />
+            )}
+            <Card>
+              <CardHeader>
+                <CardTitle>Settings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">Settings coming soon...</p>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

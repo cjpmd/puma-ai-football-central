@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { PushNotificationSetup } from '@/components/notifications/PushNotificationSetup';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
+import { StaffKitSection } from '@/components/staff/StaffKitSection';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -372,6 +373,14 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({ isOpen, onCl
                     </p>
                   </div>
                 </div>
+
+                {/* Coaching Kit Section - for staff members */}
+                {profile?.id && (
+                  <StaffKitSection 
+                    userId={profile.id} 
+                    onUpdate={() => {}}
+                  />
+                )}
 
                 <div className="border-t pt-4">
                   <h4 className="font-medium mb-3">Notifications</h4>
