@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TeamForm } from '@/components/teams/TeamForm';
 import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
-import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
+import { StaffManagementModal } from '@/components/teams/StaffManagementModal';
 import { CodeManagementModal } from '@/components/codes/CodeManagementModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
@@ -660,7 +660,7 @@ const TeamManagement = () => {
                 loadData();
               }}
             />
-            <TeamStaffModal
+            <StaffManagementModal
               team={selectedTeam}
               isOpen={isStaffModalOpen}
               onClose={() => {
