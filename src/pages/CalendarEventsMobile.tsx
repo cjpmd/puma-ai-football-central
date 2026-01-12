@@ -831,7 +831,9 @@ export default function CalendarEventsMobile() {
                 
                 <div className="space-y-2">
                   {periodEvents.map((event) => {
-                    const team = teams?.find(t => t.id === event.team_id);
+                    // Use allTeams/authTeams for badge lookup to cover all clubs in "All Teams" view
+                    const team = (allTeams || authTeams || []).find(t => t.id === event.team_id) 
+                      || teams?.find(t => t.id === event.team_id);
                     const completed = isEventCompleted(event);
                     const eventDate = new Date(event.date);
                     const teamScores = getAllTeamScores(event);
