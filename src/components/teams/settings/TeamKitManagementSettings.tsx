@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Package, Shirt, Settings, Plus, Trash2, Upload, Image, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Package, Shirt, Settings, Plus, Trash2, Upload, Image, Users, UserCheck } from 'lucide-react';
 import { Team } from '@/types/index';
 import { KitManagementModal } from '../KitManagementModal';
 import { TeamKitSettings } from './TeamKitSettings';
@@ -19,12 +20,15 @@ interface TeamKitManagementSettingsProps {
   onUpdate: (teamData: Partial<Team>) => void;
 }
 
+type KitType = 'playing' | 'coaching' | 'both';
+
 interface KitItem {
   id: string;
   name: string;
   category: string;
   size_category: string;
   available_sizes: string[];
+  kit_type: KitType;
 }
 
 interface ClothingSize {
@@ -41,6 +45,7 @@ interface DbKitItem {
   category: string;
   size_category: string;
   available_sizes: any; // JSON type from Supabase
+  kit_type: string;
 }
 
 export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps> = ({
@@ -56,11 +61,13 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
   const [isSizeDialogOpen, setIsSizeDialogOpen] = useState(false);
   const [isEditSizeDialogOpen, setIsEditSizeDialogOpen] = useState(false);
   const [isKitOverviewOpen, setIsKitOverviewOpen] = useState(false);
+  const [kitTypeFilter, setKitTypeFilter] = useState<'all' | KitType>('all');
   const [newItem, setNewItem] = useState({ 
     name: '', 
     category: 'clothing', 
     size_category: 'clothing',
-    selectedSizes: [] as string[]
+    selectedSizes: [] as string[],
+    kit_type: 'playing' as KitType
   });
   const [editingItem, setEditingItem] = useState<KitItem | null>(null);
   const [newSize, setNewSize] = useState({ size_name: '', category: 'clothing' });
@@ -99,7 +106,8 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         name: item.name,
         category: item.category,
         size_category: item.size_category || 'clothing',
-        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : []
+        available_sizes: Array.isArray(item.available_sizes) ? item.available_sizes.map(String) : [],
+        kit_type: (item.kit_type as KitType) || 'playing'
       }));
 
       setKitItems(transformedItems);
@@ -127,7 +135,8 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
           name: newItem.name,
           category: newItem.category,
           size_category: newItem.size_category,
-          available_sizes: newItem.selectedSizes
+          available_sizes: newItem.selectedSizes,
+          kit_type: newItem.kit_type
         }]);
 
       if (error) throw error;
@@ -136,7 +145,8 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         name: '', 
         category: 'clothing', 
         size_category: 'clothing',
-        selectedSizes: []
+        selectedSizes: [],
+        kit_type: 'playing'
       });
       setIsAddItemDialogOpen(false);
       loadKitConfiguration();
@@ -172,7 +182,8 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
           name: editingItem.name,
           category: editingItem.category,
           size_category: editingItem.size_category,
-          available_sizes: editingItem.available_sizes
+          available_sizes: editingItem.available_sizes,
+          kit_type: editingItem.kit_type
         })
         .eq('id', editingItem.id);
 
@@ -339,6 +350,23 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
     return clothingSizes.filter(size => size.category === category);
   };
 
+  const getKitTypeBadge = (kitType: KitType) => {
+    switch (kitType) {
+      case 'playing':
+        return <Badge variant="default" className="bg-blue-500 text-white text-xs">Playing</Badge>;
+      case 'coaching':
+        return <Badge variant="secondary" className="bg-purple-500 text-white text-xs">Coaching</Badge>;
+      case 'both':
+        return <Badge variant="outline" className="text-xs">Both</Badge>;
+      default:
+        return null;
+    }
+  };
+
+  const filteredKitItems = kitTypeFilter === 'all' 
+    ? kitItems 
+    : kitItems.filter(item => item.kit_type === kitTypeFilter || item.kit_type === 'both');
+
   if (loading) {
     return <div className="text-center py-8">Loading kit configuration...</div>;
   }
@@ -348,7 +376,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       <div>
         <h3 className="text-lg font-semibold">Kit Management</h3>
         <p className="text-sm text-muted-foreground">
-          Manage kit items, sizes, designs, and track kit issued to players
+          Manage kit items, sizes, designs, and track kit issued to players and staff
         </p>
       </div>
 
@@ -387,7 +415,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                 Kit Issue Management
               </CardTitle>
               <CardDescription>
-                Track which kit items have been issued to players
+                Track which kit items have been issued to players and staff
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -409,7 +437,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
         <TabsContent value="items" className="space-y-4">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Kit Items Configuration</CardTitle>
                   <CardDescription>
@@ -421,13 +449,42 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                   Add Item
                 </Button>
               </div>
+              {/* Kit Type Filter */}
+              <div className="flex flex-wrap gap-2 mt-4">
+                <Badge 
+                  variant={kitTypeFilter === 'all' ? 'default' : 'outline'}
+                  className="cursor-pointer"
+                  onClick={() => setKitTypeFilter('all')}
+                >
+                  All Kit
+                </Badge>
+                <Badge 
+                  variant={kitTypeFilter === 'playing' ? 'default' : 'outline'}
+                  className={`cursor-pointer ${kitTypeFilter === 'playing' ? 'bg-blue-500' : ''}`}
+                  onClick={() => setKitTypeFilter('playing')}
+                >
+                  <Shirt className="h-3 w-3 mr-1" />
+                  Playing Kit
+                </Badge>
+                <Badge 
+                  variant={kitTypeFilter === 'coaching' ? 'default' : 'outline'}
+                  className={`cursor-pointer ${kitTypeFilter === 'coaching' ? 'bg-purple-500' : ''}`}
+                  onClick={() => setKitTypeFilter('coaching')}
+                >
+                  <UserCheck className="h-3 w-3 mr-1" />
+                  Coaching Kit
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {kitItems.map((item) => (
+                {filteredKitItems.map((item) => (
                   <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div>
-                      <h4 className="font-medium">{item.name}</h4>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-medium">{item.name}</h4>
+                        {getKitTypeBadge(item.kit_type)}
+                      </div>
                       <p className="text-sm text-muted-foreground capitalize">{item.category}</p>
                       <p className="text-xs text-muted-foreground">
                         {item.available_sizes.length} sizes configured
@@ -451,9 +508,11 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                     </div>
                   </div>
                 ))}
-                {kitItems.length === 0 && (
+                {filteredKitItems.length === 0 && (
                   <p className="text-center text-muted-foreground py-4">
-                    No kit items configured yet. Add some items to get started.
+                    {kitTypeFilter === 'all' 
+                      ? 'No kit items configured yet. Add some items to get started.'
+                      : `No ${kitTypeFilter} kit items configured yet.`}
                   </p>
                 )}
               </div>
@@ -544,7 +603,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                 Kit Size Overview
               </CardTitle>
               <CardDescription>
-                View all players and their configured kit sizes by item
+                View all players and staff with their configured kit sizes by item
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -591,18 +650,43 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                 </Select>
               </div>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="size-category">Size Category</Label>
-              <Select value={newItem.size_category} onValueChange={(value) => setNewItem({ ...newItem, size_category: value })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="clothing">Clothing Sizes</SelectItem>
-                  <SelectItem value="boots">Boot Sizes</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="size-category">Size Category</Label>
+                <Select value={newItem.size_category} onValueChange={(value) => setNewItem({ ...newItem, size_category: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="clothing">Clothing Sizes</SelectItem>
+                    <SelectItem value="boots">Boot Sizes</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="kit-type">Kit Type *</Label>
+                <Select value={newItem.kit_type} onValueChange={(value: KitType) => setNewItem({ ...newItem, kit_type: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="playing">
+                      <span className="flex items-center gap-2">
+                        <Shirt className="h-4 w-4" />
+                        Playing Kit (Players)
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="coaching">
+                      <span className="flex items-center gap-2">
+                        <UserCheck className="h-4 w-4" />
+                        Coaching Kit (Staff)
+                      </span>
+                    </SelectItem>
+                    <SelectItem value="both">Both</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -672,20 +756,48 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-size-category">Size Category</Label>
-                <Select 
-                  value={editingItem.size_category} 
-                  onValueChange={(value) => setEditingItem({ ...editingItem, size_category: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="clothing">Clothing Sizes</SelectItem>
-                    <SelectItem value="boots">Boot Sizes</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-size-category">Size Category</Label>
+                  <Select 
+                    value={editingItem.size_category} 
+                    onValueChange={(value) => setEditingItem({ ...editingItem, size_category: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="clothing">Clothing Sizes</SelectItem>
+                      <SelectItem value="boots">Boot Sizes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-kit-type">Kit Type *</Label>
+                  <Select 
+                    value={editingItem.kit_type} 
+                    onValueChange={(value: KitType) => setEditingItem({ ...editingItem, kit_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="playing">
+                        <span className="flex items-center gap-2">
+                          <Shirt className="h-4 w-4" />
+                          Playing Kit (Players)
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="coaching">
+                        <span className="flex items-center gap-2">
+                          <UserCheck className="h-4 w-4" />
+                          Coaching Kit (Staff)
+                        </span>
+                      </SelectItem>
+                      <SelectItem value="both">Both</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
