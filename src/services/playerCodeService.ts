@@ -229,9 +229,9 @@ export const playerCodeService = {
     const { error: updateError } = await supabase
       .from('players')
       .update({
-        parent_linking_code: newCode,
-        parent_linking_code_expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-      })
+      parent_linking_code: newCode,
+      parent_linking_code_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days expiry
+    })
       .eq('id', playerId);
     
     if (updateError) throw updateError;

@@ -7,26 +7,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Team, TeamStaff } from '@/types/team';
-import { UserPlus, Trash2, Users, Mail, Phone, Edit, Search, Link2 } from 'lucide-react';
+import { UserPlus, Trash2, Users, Mail, Phone, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { userInvitationService } from '@/services/userInvitationService';
 
 interface StaffManagementModalProps {
   team: Team;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: (teamData: Partial<Team>) => void;
-}
-
-interface ExistingUser {
-  id: string;
-  full_name: string;
-  email: string;
-  avatar_url?: string;
-  roles?: string[];
 }
 
 export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
@@ -37,7 +27,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 }) => {
   const [staff, setStaff] = useState<TeamStaff[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isInvitingStaff, setIsInvitingStaff] = useState(false);
+  const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
   const [newStaff, setNewStaff] = useState({
     name: '',
@@ -45,12 +35,6 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     phone: '',
     role: 'coach' as TeamStaff['role']
   });
-  const [inviteTab, setInviteTab] = useState<'new' | 'existing'>('new');
-  const [userSearch, setUserSearch] = useState('');
-  const [existingUsers, setExistingUsers] = useState<ExistingUser[]>([]);
-  const [searchingUsers, setSearchingUsers] = useState(false);
-  const [selectedExistingUser, setSelectedExistingUser] = useState<ExistingUser | null>(null);
-  const [existingUserRole, setExistingUserRole] = useState<TeamStaff['role']>('coach');
   const { toast } = useToast();
 
   // Reset state when modal opens/closes
@@ -59,64 +43,18 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       console.log('StaffManagementModal: Modal opened for team:', team.id);
       setStaff([]);
       setLoading(true);
-      setIsInvitingStaff(false);
+      setIsAddingStaff(false);
       setEditingStaff(null);
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setInviteTab('new');
-      setUserSearch('');
-      setExistingUsers([]);
-      setSelectedExistingUser(null);
       loadStaff();
     } else if (!isOpen) {
       // Clean up state when modal closes
       setStaff([]);
-      setIsInvitingStaff(false);
+      setIsAddingStaff(false);
       setEditingStaff(null);
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setUserSearch('');
-      setExistingUsers([]);
-      setSelectedExistingUser(null);
     }
   }, [isOpen, team?.id]);
-
-  // Search for existing users when typing
-  useEffect(() => {
-    const searchUsers = async () => {
-      if (userSearch.length < 2) {
-        setExistingUsers([]);
-        return;
-      }
-
-      setSearchingUsers(true);
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('id, name, email, avatar_url')
-          .or(`name.ilike.%${userSearch}%,email.ilike.%${userSearch}%`)
-          .limit(10);
-
-        if (error) throw error;
-
-        // Filter out users already on the team
-        const existingStaffIds = staff.map(s => s.user_id);
-        const filteredUsers = (data || []).filter(u => !existingStaffIds.includes(u.id));
-        
-        setExistingUsers(filteredUsers.map(u => ({
-          id: u.id,
-          full_name: u.name || 'Unknown',
-          email: u.email || '',
-          avatar_url: u.avatar_url
-        })));
-      } catch (error) {
-        console.error('Error searching users:', error);
-      } finally {
-        setSearchingUsers(false);
-      }
-    };
-
-    const debounce = setTimeout(searchUsers, 300);
-    return () => clearTimeout(debounce);
-  }, [userSearch, staff]);
 
   const loadStaff = async () => {
     if (!team?.id) {
@@ -191,30 +129,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
-  const handleInviteStaff = async () => {
+  const handleAddStaff = async () => {
     if (!newStaff.name.trim()) {
       toast({
         title: 'Validation Error',
         description: 'Staff name is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!newStaff.email.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Staff email is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newStaff.email.trim())) {
-      toast({
-        title: 'Validation Error',
-        description: 'Please enter a valid email address',
         variant: 'destructive',
       });
       return;
@@ -230,85 +149,47 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
 
     try {
-      console.log('StaffManagementModal: Inviting staff member:', newStaff);
+      console.log('StaffManagementModal: Adding staff member:', newStaff);
 
-      await userInvitationService.inviteUser({
-        email: newStaff.email.trim(),
-        name: newStaff.name.trim(),
-        role: 'staff',
-        teamId: team.id
-      });
-
-      console.log('StaffManagementModal: Staff invitation sent successfully');
-
-      // Reset form
-      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-      setIsInvitingStaff(false);
-      
-      toast({
-        title: 'Invitation Sent',
-        description: `Invitation sent to ${newStaff.name} at ${newStaff.email}`,
-      });
-    } catch (error: any) {
-      console.error('StaffManagementModal: Error inviting staff:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to send invitation',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const handleLinkExistingUser = async () => {
-    if (!selectedExistingUser || !team?.id) {
-      toast({
-        title: 'Error',
-        description: 'Please select a user to link',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    try {
-      // Add to team_staff table
+      // Create staff record directly (no invitation needed)
       const { error } = await supabase
         .from('team_staff')
         .insert({
           team_id: team.id,
-          user_id: selectedExistingUser.id,
-          name: selectedExistingUser.full_name,
-          email: selectedExistingUser.email,
-          role: existingUserRole,
+          name: newStaff.name.trim(),
+          email: newStaff.email.trim() || null,
+          phone: newStaff.phone.trim() || null,
+          role: newStaff.role,
         });
 
       if (error) throw error;
 
-      toast({
-        title: 'Staff Linked',
-        description: `${selectedExistingUser.full_name} has been added to the team as ${existingUserRole}`,
-      });
+      console.log('StaffManagementModal: Staff member added successfully');
 
-      // Reset and reload
-      setSelectedExistingUser(null);
-      setUserSearch('');
-      setExistingUsers([]);
-      setIsInvitingStaff(false);
+      // Reset form and reload
+      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+      setIsAddingStaff(false);
       await loadStaff();
+      
+      toast({
+        title: 'Staff Added',
+        description: `${newStaff.name} has been added to the team`,
+      });
     } catch (error: any) {
-      console.error('Error linking user:', error);
+      console.error('StaffManagementModal: Error adding staff:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to link user',
+        description: error.message || 'Failed to add staff member',
         variant: 'destructive',
       });
     }
   };
 
   const handleUpdateStaff = async () => {
-    if (!editingStaff || !newStaff.name.trim() || !newStaff.email.trim()) {
+    if (!editingStaff || !newStaff.name.trim()) {
       toast({
         title: 'Error',
-        description: 'Name and email are required',
+        description: 'Name is required',
         variant: 'destructive',
       });
       return;
@@ -321,7 +202,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         .from('team_staff')
         .update({
           name: newStaff.name.trim(),
-          email: newStaff.email.trim(),
+          email: newStaff.email.trim() || null,
           phone: newStaff.phone.trim() || null,
           role: newStaff.role,
           updated_at: new Date().toISOString()
@@ -420,7 +301,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg truncate pr-8">Staff - {team.name}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Invite staff members or link existing users to join your team.
+            Add and manage staff members for your team.
           </DialogDescription>
         </DialogHeader>
         
@@ -428,7 +309,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
             <h3 className="text-base font-semibold">Team Staff</h3>
             <Button 
-              onClick={() => setIsInvitingStaff(true)}
+              onClick={() => setIsAddingStaff(true)}
               disabled={loading}
               size="sm"
               className="bg-puma-blue-500 hover:bg-puma-blue-600"
@@ -438,7 +319,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
             </Button>
           </div>
 
-          {(isInvitingStaff || editingStaff) && (
+          {(isAddingStaff || editingStaff) && (
             <Card>
               <CardHeader className="pb-3 px-3 sm:px-6">
                 <CardTitle className="text-base">
@@ -446,264 +327,88 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 </CardTitle>
                 {!editingStaff && (
                   <CardDescription className="text-xs sm:text-sm">
-                    Invite someone new or link an existing user
+                    Add a new staff member to the team. They can link their account later.
                   </CardDescription>
                 )}
               </CardHeader>
               <CardContent className="space-y-4 px-3 sm:px-6">
-                {!editingStaff && (
-                  <Tabs value={inviteTab} onValueChange={(v) => setInviteTab(v as 'new' | 'existing')}>
-                    <TabsList className="grid w-full grid-cols-2 h-auto">
-                      <TabsTrigger value="new" className="text-xs sm:text-sm py-2">Invite New</TabsTrigger>
-                      <TabsTrigger value="existing" className="text-xs sm:text-sm py-2">Link Existing</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="new" className="mt-4 space-y-4">
-                      <div className="grid grid-cols-1 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="staffName" className="text-sm">Name *</Label>
-                          <Input
-                            id="staffName"
-                            value={newStaff.name}
-                            onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
-                            placeholder="Enter full name"
-                            maxLength={100}
-                            className="h-10"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="staffEmail" className="text-sm">Email *</Label>
-                          <Input
-                            id="staffEmail"
-                            type="email"
-                            value={newStaff.email}
-                            onChange={(e) => setNewStaff(prev => ({ ...prev, email: e.target.value }))}
-                            placeholder="Enter email address"
-                            maxLength={255}
-                            className="h-10"
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-2">
-                            <Label htmlFor="staffPhone" className="text-sm">Phone</Label>
-                            <Input
-                              id="staffPhone"
-                              value={newStaff.phone}
-                              onChange={(e) => setNewStaff(prev => ({ ...prev, phone: e.target.value }))}
-                              placeholder="Phone"
-                              maxLength={20}
-                              className="h-10"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="staffRole" className="text-sm">Role</Label>
-                            <Select 
-                              value={newStaff.role}
-                              onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
-                            >
-                              <SelectTrigger id="staffRole" className="h-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="manager">Manager</SelectItem>
-                                <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
-                                <SelectItem value="coach">Coach</SelectItem>
-                                <SelectItem value="helper">Helper</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Button onClick={handleInviteStaff} size="sm" className="flex-1 sm:flex-none">
-                          Send Invitation
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => {
-                            setIsInvitingStaff(false);
-                            setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="existing" className="mt-4 space-y-4">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-sm">Search Users</Label>
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              value={userSearch}
-                              onChange={(e) => setUserSearch(e.target.value)}
-                              placeholder="Search by name or email..."
-                              className="pl-10 h-10"
-                            />
-                          </div>
-                        </div>
-
-                        {searchingUsers && (
-                          <p className="text-sm text-muted-foreground">Searching...</p>
-                        )}
-
-                        {existingUsers.length > 0 && (
-                          <div className="space-y-2 max-h-48 overflow-y-auto">
-                            {existingUsers.map((user) => (
-                              <div
-                                key={user.id}
-                                onClick={() => setSelectedExistingUser(user)}
-                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                                  selectedExistingUser?.id === user.id 
-                                    ? 'border-primary bg-primary/5' 
-                                    : 'border-border hover:bg-muted/50'
-                                }`}
-                              >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                                    {user.full_name?.slice(0, 2).toUpperCase() || '??'}
-                                  </div>
-                                  <div className="min-w-0 flex-1">
-                                    <p className="font-medium text-sm truncate">{user.full_name}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {selectedExistingUser && (
-                          <div className="space-y-3 pt-2 border-t">
-                            <div className="flex items-center gap-2 text-sm">
-                              <Link2 className="h-4 w-4" />
-                              <span>Link as:</span>
-                              <Select 
-                                value={existingUserRole}
-                                onValueChange={(value) => setExistingUserRole(value as TeamStaff['role'])}
-                              >
-                                <SelectTrigger className="h-8 w-32">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="manager">Manager</SelectItem>
-                                  <SelectItem value="assistant_manager">Asst Manager</SelectItem>
-                                  <SelectItem value="coach">Coach</SelectItem>
-                                  <SelectItem value="helper">Helper</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div className="flex gap-2">
-                          <Button 
-                            onClick={handleLinkExistingUser} 
-                            size="sm" 
-                            className="flex-1 sm:flex-none"
-                            disabled={!selectedExistingUser}
-                          >
-                            <Link2 className="h-4 w-4 mr-2" />
-                            Link User
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => {
-                              setIsInvitingStaff(false);
-                              setUserSearch('');
-                              setExistingUsers([]);
-                              setSelectedExistingUser(null);
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                )}
-
-                {editingStaff && (
-                  <>
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="editStaffName" className="text-sm">Name *</Label>
-                        <Input
-                          id="editStaffName"
-                          value={newStaff.name}
-                          onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
-                          placeholder="Enter full name"
-                          maxLength={100}
-                          className="h-10"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="editStaffEmail" className="text-sm">Email *</Label>
-                        <Input
-                          id="editStaffEmail"
-                          type="email"
-                          value={newStaff.email}
-                          onChange={(e) => setNewStaff(prev => ({ ...prev, email: e.target.value }))}
-                          placeholder="Enter email address"
-                          maxLength={255}
-                          disabled={!!editingStaff}
-                          className="h-10"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="editStaffPhone" className="text-sm">Phone</Label>
-                          <Input
-                            id="editStaffPhone"
-                            value={newStaff.phone}
-                            onChange={(e) => setNewStaff(prev => ({ ...prev, phone: e.target.value }))}
-                            placeholder="Phone"
-                            maxLength={20}
-                            className="h-10"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="editStaffRole" className="text-sm">Role</Label>
-                          <Select 
-                            value={newStaff.role}
-                            onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
-                          >
-                            <SelectTrigger id="editStaffRole" className="h-10">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="manager">Manager</SelectItem>
-                              <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
-                              <SelectItem value="coach">Coach</SelectItem>
-                              <SelectItem value="helper">Helper</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="staffName" className="text-sm">Name *</Label>
+                    <Input
+                      id="staffName"
+                      value={newStaff.name}
+                      onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Enter full name"
+                      maxLength={100}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="staffEmail" className="text-sm">Email (optional)</Label>
+                    <Input
+                      id="staffEmail"
+                      type="email"
+                      value={newStaff.email}
+                      onChange={(e) => setNewStaff(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="Enter email address"
+                      maxLength={255}
+                      className="h-10"
+                      disabled={!!editingStaff?.user_id}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="staffPhone" className="text-sm">Phone</Label>
+                      <Input
+                        id="staffPhone"
+                        value={newStaff.phone}
+                        onChange={(e) => setNewStaff(prev => ({ ...prev, phone: e.target.value }))}
+                        placeholder="Phone"
+                        maxLength={20}
+                        className="h-10"
+                      />
                     </div>
-                    
-                    <div className="flex gap-2">
-                      <Button onClick={handleUpdateStaff} size="sm" className="flex-1 sm:flex-none">
-                        Update Staff Member
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        onClick={() => {
-                          setEditingStaff(null);
-                          setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
-                        }}
+                    <div className="space-y-2">
+                      <Label htmlFor="staffRole" className="text-sm">Role</Label>
+                      <Select 
+                        value={newStaff.role}
+                        onValueChange={(value) => setNewStaff(prev => ({ ...prev, role: value as TeamStaff['role'] }))}
                       >
-                        Cancel
-                      </Button>
+                        <SelectTrigger id="staffRole" className="h-10">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manager">Manager</SelectItem>
+                          <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
+                          <SelectItem value="coach">Coach</SelectItem>
+                          <SelectItem value="helper">Helper</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </>
-                )}
+                  </div>
+                </div>
+                
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={editingStaff ? handleUpdateStaff : handleAddStaff} 
+                    size="sm" 
+                    className="flex-1 sm:flex-none"
+                  >
+                    {editingStaff ? 'Update Staff Member' : 'Add Staff Member'}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      setIsAddingStaff(false);
+                      setEditingStaff(null);
+                      setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -717,10 +422,10 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Active Staff */}
+              {/* Active Staff (Linked) */}
               {linkedStaff.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-green-700">Active Staff ({linkedStaff.length})</h4>
+                  <h4 className="font-semibold text-sm text-green-700">Linked Staff ({linkedStaff.length})</h4>
                   {linkedStaff.map((staffMember) => (
                     <Card key={staffMember.id}>
                       <CardContent className="p-3 sm:p-4">
@@ -735,12 +440,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                 <Badge className={`text-white text-xs ${getRoleColor(staffMember.role)}`}>
                                   {getRoleLabel(staffMember.role)}
                                 </Badge>
+                                <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                                  Linked
+                                </Badge>
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground mt-1">
-                                <div className="flex items-center gap-1 truncate">
-                                  <Mail className="h-3 w-3 flex-shrink-0" />
-                                  <span className="truncate">{staffMember.email}</span>
-                                </div>
+                                {staffMember.email && (
+                                  <div className="flex items-center gap-1 truncate">
+                                    <Mail className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{staffMember.email}</span>
+                                  </div>
+                                )}
                                 {staffMember.phone && (
                                   <div className="flex items-center gap-1">
                                     <Phone className="h-3 w-3 flex-shrink-0" />
@@ -787,12 +497,12 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 </div>
               )}
 
-              {/* Pending Staff */}
+              {/* Unlinked Staff */}
               {unlinkedStaff.length > 0 && (
                 <div className="space-y-3">
-                  <h4 className="font-semibold text-sm text-orange-700">Pending Invitations ({unlinkedStaff.length})</h4>
+                  <h4 className="font-semibold text-sm text-orange-700">Not Yet Linked ({unlinkedStaff.length})</h4>
                   <p className="text-xs text-muted-foreground">
-                    These staff members haven't created accounts yet.
+                    These staff members haven't linked their accounts yet. They can join using a team code.
                   </p>
                   {unlinkedStaff.map((staffMember) => (
                     <Card key={staffMember.id} className="border-orange-200">
@@ -809,12 +519,22 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                   {getRoleLabel(staffMember.role)}
                                 </Badge>
                                 <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">
-                                  Pending
+                                  Not Linked
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1 truncate">
-                                <Mail className="h-3 w-3 flex-shrink-0" />
-                                <span className="truncate">{staffMember.email}</span>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground mt-1">
+                                {staffMember.email && (
+                                  <div className="flex items-center gap-1 truncate">
+                                    <Mail className="h-3 w-3 flex-shrink-0" />
+                                    <span className="truncate">{staffMember.email}</span>
+                                  </div>
+                                )}
+                                {staffMember.phone && (
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3 flex-shrink-0" />
+                                    {staffMember.phone}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
@@ -857,19 +577,11 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
               {/* Empty State */}
               {staff.length === 0 && (
-                <Card className="border-dashed border-2">
-                  <CardContent className="py-6 text-center">
-                    <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                    <h3 className="font-semibold text-sm mb-2">No Staff Members</h3>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Start by inviting your team's coaching staff and helpers.
-                    </p>
-                    <Button onClick={() => setIsInvitingStaff(true)} size="sm">
-                      <UserPlus className="h-4 w-4 mr-2" />
-                      Add Staff Member
-                    </Button>
-                  </CardContent>
-                </Card>
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="text-sm">No staff members yet</p>
+                  <p className="text-xs mt-1">Add staff members to help manage your team</p>
+                </div>
               )}
             </div>
           )}
