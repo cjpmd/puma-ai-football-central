@@ -10,7 +10,6 @@ import { TeamForm } from '@/components/teams/TeamForm';
 import { TeamSettingsModal } from '@/components/teams/TeamSettingsModal';
 import { TeamStaffModal } from '@/components/teams/TeamStaffModal';
 import { CodeManagementModal } from '@/components/codes/CodeManagementModal';
-import { StaffManagementButton } from '@/components/teams/StaffManagementButton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useSmartView } from '@/contexts/SmartViewContext';
@@ -484,12 +483,6 @@ const TeamManagement = () => {
           <UserPlus className="mr-2 h-4 w-4" />
           Staff {team.isReadOnly ? '(View)' : ''}
         </Button>
-        {!team.isReadOnly && (
-          <StaffManagementButton 
-            teamId={team.id} 
-            teamName={team.name}
-          />
-        )}
         <Button 
           size="sm" 
           onClick={() => {

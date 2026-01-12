@@ -22,7 +22,6 @@ import { useMobileDetection } from '@/hooks/useMobileDetection';
 import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadManagement';
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
-import { StaffAccountLinkingModal } from '@/components/teams/StaffAccountLinkingModal';
 import { AITeamBuilderDialog } from './AITeamBuilderDialog';
 
 // Helper function to create a default period with the first available formation
@@ -1165,16 +1164,6 @@ return (
       </DialogContent>
     </Dialog>
 
-    {/* Staff Linking Modal */}
-    <StaffAccountLinkingModal
-      isOpen={linkModalOpen}
-      onClose={() => {
-        setLinkModalOpen(false);
-        setStaffLinksRefresh((v) => v + 1);
-      }}
-      teamId={teamId}
-      teamName={(teamData as any)?.name || 'Team'}
-    />
 
     {/* AI Team Builder Dialog */}
     {currentTeam && (

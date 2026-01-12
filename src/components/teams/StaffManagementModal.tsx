@@ -1,16 +1,26 @@
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Team, TeamStaff } from '@/types/team';
-import { UserPlus, Trash2, Users, Mail, Phone, Edit } from 'lucide-react';
+import { UserPlus, Trash2, Users, Mail, Phone, Edit, Check, ChevronsUpDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+
+interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  currentRole: string;
+}
 
 interface StaffManagementModalProps {
   team: Team;
@@ -29,6 +39,10 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
+  const [nameSearchOpen, setNameSearchOpen] = useState(false);
+  const [nameSearchValue, setNameSearchValue] = useState('');
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
@@ -45,16 +59,65 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       setLoading(true);
       setIsAddingStaff(false);
       setEditingStaff(null);
+      setSelectedUser(null);
+      setNameSearchValue('');
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       loadStaff();
+      loadTeamMembers();
     } else if (!isOpen) {
-      // Clean up state when modal closes
       setStaff([]);
       setIsAddingStaff(false);
       setEditingStaff(null);
+      setSelectedUser(null);
+      setNameSearchValue('');
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
     }
   }, [isOpen, team?.id]);
+
+  const loadTeamMembers = async () => {
+    if (!team?.id) return;
+    
+    try {
+      // Get existing team members from user_teams (parents, players, etc.)
+      const { data: members, error } = await supabase
+        .from('user_teams')
+        .select(`
+          user_id,
+          role,
+          profiles:user_id(id, name, email)
+        `)
+        .eq('team_id', team.id);
+      
+      if (error) throw error;
+
+      // Get existing staff user_ids to exclude
+      const { data: existingStaff } = await supabase
+        .from('team_staff')
+        .select('user_id')
+        .eq('team_id', team.id)
+        .not('user_id', 'is', null);
+
+      const existingStaffUserIds = new Set((existingStaff || []).map(s => s.user_id));
+
+      // Transform and filter out those already staff
+      const availableMembers: TeamMember[] = (members || [])
+        .filter((m: any) => m.profiles && !existingStaffUserIds.has(m.user_id))
+        .map((m: any) => ({
+          id: m.user_id,
+          name: m.profiles?.name || 'Unknown',
+          email: m.profiles?.email || '',
+          currentRole: formatRoleForDisplay(m.role)
+        }));
+
+      setTeamMembers(availableMembers);
+    } catch (error) {
+      console.error('Error loading team members:', error);
+    }
+  };
+
+  const formatRoleForDisplay = (role: string): string => {
+    return role.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
 
   const loadStaff = async () => {
     if (!team?.id) {
@@ -80,36 +143,18 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       console.log('StaffManagementModal: Raw staff data:', data);
 
       if (data) {
-        const staffMembers: TeamStaff[] = data.map(record => {
-          try {
-            return {
-              id: record.id,
-              name: record.name || '',
-              email: record.email || '',
-              phone: record.phone || '',
-              role: record.role as TeamStaff['role'],
-              user_id: record.user_id || undefined,
-              coachingBadges: [],
-              certificates: [],
-              createdAt: record.created_at,
-              updatedAt: record.updated_at
-            };
-          } catch (parseError) {
-            console.error('StaffManagementModal: Error parsing staff record:', parseError, record);
-            return {
-              id: record.id,
-              name: record.name || 'Unknown',
-              email: record.email || '',
-              phone: record.phone || '',
-              role: (record.role as TeamStaff['role']) || 'helper',
-              user_id: record.user_id || undefined,
-              coachingBadges: [],
-              certificates: [],
-              createdAt: record.created_at,
-              updatedAt: record.updated_at
-            };
-          }
-        });
+        const staffMembers: TeamStaff[] = data.map(record => ({
+          id: record.id,
+          name: record.name || '',
+          email: record.email || '',
+          phone: record.phone || '',
+          role: record.role as TeamStaff['role'],
+          user_id: record.user_id || undefined,
+          coachingBadges: [],
+          certificates: [],
+          createdAt: record.created_at,
+          updatedAt: record.updated_at
+        }));
         
         console.log('StaffManagementModal: Processed staff:', staffMembers);
         setStaff(staffMembers);
@@ -129,11 +174,38 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
+  const handleSelectTeamMember = (member: TeamMember) => {
+    setSelectedUser(member);
+    setNewStaff({
+      ...newStaff,
+      name: member.name,
+      email: member.email,
+      phone: member.phone || ''
+    });
+    setNameSearchOpen(false);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedUser(null);
+    setNewStaff({ name: '', email: '', phone: '', role: newStaff.role });
+    setNameSearchValue('');
+  };
+
   const handleAddStaff = async () => {
     if (!newStaff.name.trim()) {
       toast({
         title: 'Validation Error',
         description: 'Staff name is required',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Email is required for new staff (not existing users)
+    if (!selectedUser && !newStaff.email.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Email is required for new staff members',
         variant: 'destructive',
       });
       return;
@@ -149,9 +221,24 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
 
     try {
-      console.log('StaffManagementModal: Adding staff member:', newStaff);
+      console.log('StaffManagementModal: Adding staff member:', newStaff, 'selectedUser:', selectedUser);
 
-      // Create staff record directly (no invitation needed)
+      let userId = selectedUser?.id || null;
+      
+      // If not selecting existing user, check if user with this email exists
+      if (!selectedUser && newStaff.email.trim()) {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('email', newStaff.email.trim().toLowerCase())
+          .maybeSingle();
+        
+        if (existingUser) {
+          userId = existingUser.id;
+        }
+      }
+
+      // Create staff record
       const { error } = await supabase
         .from('team_staff')
         .insert({
@@ -160,20 +247,46 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           email: newStaff.email.trim() || null,
           phone: newStaff.phone.trim() || null,
           role: newStaff.role,
+          user_id: userId,
         });
 
       if (error) throw error;
+
+      // If we have a user_id, also add/update user_teams entry
+      if (userId) {
+        const { error: userTeamsError } = await supabase
+          .from('user_teams')
+          .upsert({
+            user_id: userId,
+            team_id: team.id,
+            role: newStaff.role
+          }, { 
+            onConflict: 'user_id,team_id',
+            ignoreDuplicates: false 
+          });
+        
+        if (userTeamsError) {
+          console.error('Error upserting user_teams:', userTeamsError);
+        }
+      }
 
       console.log('StaffManagementModal: Staff member added successfully');
 
       // Reset form and reload
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
+      setSelectedUser(null);
+      setNameSearchValue('');
       setIsAddingStaff(false);
       await loadStaff();
+      await loadTeamMembers();
+      
+      const message = userId 
+        ? `${newStaff.name} has been added and linked to the team`
+        : `${newStaff.name} has been added. They will be linked when they sign up with ${newStaff.email}`;
       
       toast({
         title: 'Staff Added',
-        description: `${newStaff.name} has been added to the team`,
+        description: message,
       });
     } catch (error: any) {
       console.error('StaffManagementModal: Error adding staff:', error);
@@ -216,10 +329,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
 
       console.log('StaffManagementModal: Staff member updated successfully');
 
-      // Reload staff list
       await loadStaff();
       
-      // Reset form
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       setEditingStaff(null);
       
@@ -253,8 +364,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
       
       console.log('StaffManagementModal: Staff member removed successfully');
       
-      // Reload staff list
       await loadStaff();
+      await loadTeamMembers();
       
       toast({
         title: 'Success',
@@ -286,12 +397,20 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     ).join(' ');
   };
 
-  // Don't render if no team
+  // Filter team members by search
+  const filteredTeamMembers = useMemo(() => {
+    if (!nameSearchValue) return teamMembers;
+    const search = nameSearchValue.toLowerCase();
+    return teamMembers.filter(m => 
+      m.name.toLowerCase().includes(search) ||
+      m.email.toLowerCase().includes(search)
+    );
+  }, [teamMembers, nameSearchValue]);
+
   if (!team) {
     return null;
   }
 
-  // Split staff into linked and unlinked
   const linkedStaff = staff.filter(s => s.user_id);
   const unlinkedStaff = staff.filter(s => !s.user_id);
 
@@ -327,25 +446,136 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 </CardTitle>
                 {!editingStaff && (
                   <CardDescription className="text-xs sm:text-sm">
-                    Add a new staff member to the team. They can link their account later.
+                    Search for an existing team member or enter details for a new staff member.
                   </CardDescription>
                 )}
               </CardHeader>
               <CardContent className="space-y-4 px-3 sm:px-6">
                 <div className="grid grid-cols-1 gap-4">
+                  {/* Name field - with search for existing members (only when adding, not editing) */}
                   <div className="space-y-2">
                     <Label htmlFor="staffName" className="text-sm">Name *</Label>
-                    <Input
-                      id="staffName"
-                      value={newStaff.name}
-                      onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Enter full name"
-                      maxLength={100}
-                      className="h-10"
-                    />
+                    {editingStaff ? (
+                      <Input
+                        id="staffName"
+                        value={newStaff.name}
+                        onChange={(e) => setNewStaff(prev => ({ ...prev, name: e.target.value }))}
+                        placeholder="Enter full name"
+                        maxLength={100}
+                        className="h-10"
+                      />
+                    ) : (
+                      <Popover open={nameSearchOpen} onOpenChange={setNameSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={nameSearchOpen}
+                            className="w-full justify-between h-10 font-normal"
+                          >
+                            {selectedUser ? (
+                              <span className="flex items-center gap-2">
+                                {selectedUser.name}
+                                <Badge variant="secondary" className="text-xs">
+                                  {selectedUser.currentRole}
+                                </Badge>
+                              </span>
+                            ) : newStaff.name ? (
+                              <span>{newStaff.name} (New)</span>
+                            ) : (
+                              <span className="text-muted-foreground">Search existing members or type name...</span>
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-full p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput 
+                              placeholder="Search team members..." 
+                              value={nameSearchValue}
+                              onValueChange={setNameSearchValue}
+                            />
+                            <CommandList>
+                              <CommandEmpty>
+                                {nameSearchValue && (
+                                  <div className="py-2">
+                                    <Button
+                                      variant="ghost"
+                                      className="w-full justify-start"
+                                      onClick={() => {
+                                        setNewStaff(prev => ({ ...prev, name: nameSearchValue }));
+                                        setSelectedUser(null);
+                                        setNameSearchOpen(false);
+                                      }}
+                                    >
+                                      <UserPlus className="mr-2 h-4 w-4" />
+                                      Add "{nameSearchValue}" as new staff
+                                    </Button>
+                                  </div>
+                                )}
+                              </CommandEmpty>
+                              {filteredTeamMembers.length > 0 && (
+                                <CommandGroup heading="Existing Team Members">
+                                  {filteredTeamMembers.map((member) => (
+                                    <CommandItem
+                                      key={member.id}
+                                      onSelect={() => handleSelectTeamMember(member)}
+                                      className="cursor-pointer"
+                                    >
+                                      <Check
+                                        className={cn(
+                                          "mr-2 h-4 w-4",
+                                          selectedUser?.id === member.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                      <div className="flex flex-col">
+                                        <span>{member.name}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {member.currentRole} • {member.email}
+                                        </span>
+                                      </div>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              )}
+                              {nameSearchValue && (
+                                <CommandGroup heading="Or add new">
+                                  <CommandItem
+                                    onSelect={() => {
+                                      setNewStaff(prev => ({ ...prev, name: nameSearchValue }));
+                                      setSelectedUser(null);
+                                      setNameSearchOpen(false);
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <UserPlus className="mr-2 h-4 w-4" />
+                                    Add "{nameSearchValue}" as new staff member
+                                  </CommandItem>
+                                </CommandGroup>
+                              )}
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                    {selectedUser && !editingStaff && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={handleClearSelection}
+                      >
+                        Clear selection
+                      </Button>
+                    )}
                   </div>
+                  
+                  {/* Email field */}
                   <div className="space-y-2">
-                    <Label htmlFor="staffEmail" className="text-sm">Email (optional)</Label>
+                    <Label htmlFor="staffEmail" className="text-sm">
+                      Email {!selectedUser && !editingStaff && <span className="text-red-500">*</span>}
+                    </Label>
                     <Input
                       id="staffEmail"
                       type="email"
@@ -354,9 +584,16 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                       placeholder="Enter email address"
                       maxLength={255}
                       className="h-10"
-                      disabled={!!editingStaff?.user_id}
+                      disabled={!!selectedUser || !!editingStaff?.user_id}
                     />
+                    {!selectedUser && !editingStaff && (
+                      <p className="text-xs text-muted-foreground">
+                        Used to automatically link when they create an account
+                      </p>
+                    )}
                   </div>
+                  
+                  {/* Phone and Role */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="staffPhone" className="text-sm">Phone</Label>
@@ -403,6 +640,8 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                     onClick={() => {
                       setIsAddingStaff(false);
                       setEditingStaff(null);
+                      setSelectedUser(null);
+                      setNameSearchValue('');
                       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
                     }}
                   >
@@ -502,7 +741,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                 <div className="space-y-3">
                   <h4 className="font-semibold text-sm text-orange-700">Not Yet Linked ({unlinkedStaff.length})</h4>
                   <p className="text-xs text-muted-foreground">
-                    These staff members haven't linked their accounts yet. They can join using a team code.
+                    These staff members will be automatically linked when they sign up with their email address.
                   </p>
                   {unlinkedStaff.map((staffMember) => (
                     <Card key={staffMember.id} className="border-orange-200">
