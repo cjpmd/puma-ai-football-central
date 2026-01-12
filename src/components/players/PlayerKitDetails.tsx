@@ -52,10 +52,12 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
         return;
       }
 
+      // Only load playing kit items (kit_type = 'playing' or 'both')
       const { data: kitItemsData, error } = await supabase
         .from('team_kit_items')
         .select('*')
         .eq('team_id', player.team_id)
+        .or('kit_type.eq.playing,kit_type.eq.both')
         .order('name');
 
       if (error) throw error;
@@ -136,10 +138,10 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Kit Details
+          Playing Kit Details
         </CardTitle>
         <CardDescription>
-          Specify kit sizes and shirt name for each configured kit item
+          Specify kit sizes and shirt name for playing kit items
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -156,7 +158,7 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
 
         {kitItems.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            No kit items configured for this team yet. Configure kit items in team settings first.
+            No playing kit items configured for this team yet. Configure kit items in team settings first.
           </div>
         ) : (
           <>

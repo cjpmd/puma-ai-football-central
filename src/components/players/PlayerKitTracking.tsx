@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Package, Calendar, User } from 'lucide-react';
+import { Package, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Player {
@@ -45,10 +45,12 @@ export const PlayerKitTracking: React.FC<PlayerKitTrackingProps> = ({ player }) 
         return;
       }
 
+      // Only load playing kit issues (kit_type = 'playing' or 'both')
       const { data: kitIssuesData, error } = await supabase
         .from('team_kit_issues')
         .select('*')
         .eq('team_id', player.team_id)
+        .or('kit_type.eq.playing,kit_type.eq.both')
         .order('date_issued', { ascending: false });
 
       if (error) throw error;
@@ -83,7 +85,7 @@ export const PlayerKitTracking: React.FC<PlayerKitTrackingProps> = ({ player }) 
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Kit Issued
+            Playing Kit Issued
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -98,16 +100,16 @@ export const PlayerKitTracking: React.FC<PlayerKitTrackingProps> = ({ player }) 
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="h-5 w-5" />
-          Kit Issued
+          Playing Kit Issued
         </CardTitle>
         <CardDescription>
-          Track of kit items issued to this player
+          Track of playing kit items issued to this player
         </CardDescription>
       </CardHeader>
       <CardContent>
         {kitIssues.length === 0 ? (
           <div className="text-center py-4 text-muted-foreground">
-            No kit has been issued to this player yet.
+            No playing kit has been issued to this player yet.
           </div>
         ) : (
           <div className="space-y-3">

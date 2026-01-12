@@ -3227,6 +3227,7 @@ export type Database = {
           kit_type: string
           player_ids: Json
           quantity: number
+          staff_ids: Json | null
           team_id: string
           updated_at: string
         }
@@ -3241,6 +3242,7 @@ export type Database = {
           kit_type?: string
           player_ids?: Json
           quantity?: number
+          staff_ids?: Json | null
           team_id: string
           updated_at?: string
         }
@@ -3255,6 +3257,7 @@ export type Database = {
           kit_type?: string
           player_ids?: Json
           quantity?: number
+          staff_ids?: Json | null
           team_id?: string
           updated_at?: string
         }
