@@ -19,7 +19,7 @@ interface UnifiedSignupWizardProps {
   onSwitchToLogin?: () => void;
 }
 
-type Step = "code" | "role" | "playerCode" | "details" | "account" | "complete";
+type Step = "code" | "role" | "playerCode" | "account" | "complete";
 type Role = "player" | "parent" | "staff";
 
 interface TeamInfo {
@@ -41,8 +41,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
   const [matchedPlayer, setMatchedPlayer] = useState<PlayerWithCodes | null>(null);
   const [playerCodeError, setPlayerCodeError] = useState<string | null>(null);
   
-  // Staff role selection
-  const [staffRole, setStaffRole] = useState("team_coach");
+  // Staff role selection - removed, now assigned by team manager after approval
   
   // Account details
   const [fullName, setFullName] = useState("");
@@ -58,7 +57,6 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
     setPlayerCode("");
     setMatchedPlayer(null);
     setPlayerCodeError(null);
-    setStaffRole("team_coach");
     setFullName("");
     setEmail("");
     setPassword("");
@@ -112,8 +110,8 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
     if (selectedRole === "player" || selectedRole === "parent") {
       setStep("playerCode");
     } else {
-      // Staff go directly to staff details
-      setStep("details");
+      // Staff go directly to account creation (no role selection - assigned by team manager)
+      setStep("account");
     }
   };
 
@@ -167,16 +165,6 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleDetailsSubmit = () => {
-    // Only staff reach this step now
-    if (selectedRole === "staff" && !staffRole) {
-      toast.error("Please select your staff role");
-      return;
-    }
-    
-    setStep("account");
   };
 
   const handleCreateAccount = async () => {
@@ -293,23 +281,52 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           .eq("id", userId);
 
       } else if (selectedRole === "staff") {
-        // Create user_teams entry for staff
-        await supabase.from("user_teams").insert({
-          user_id: userId,
-          team_id: teamInfo!.id,
-          role: staffRole
-        });
+        // Check if there's an existing team_staff record with matching email (pre-created by manager)
+        const { data: existingStaff } = await supabase
+          .from('team_staff')
+          .select('id, role')
+          .eq('team_id', teamInfo!.id)
+          .eq('email', email.trim().toLowerCase())
+          .is('user_id', null)
+          .single();
 
-        // Update profile with staff role
-        const roleMap: Record<string, string> = {
-          team_manager: "team_manager",
-          team_assistant_manager: "team_assistant_manager",
-          team_coach: "coach"
-        };
-        await supabase
-          .from("profiles")
-          .update({ roles: [roleMap[staffRole] || "coach"] })
-          .eq("id", userId);
+        if (existingStaff) {
+          // Auto-link to existing staff record
+          await supabase
+            .from('team_staff')
+            .update({ user_id: userId })
+            .eq('id', existingStaff.id);
+          
+          // Add to user_teams with their assigned role
+          await supabase.from('user_teams').insert({
+            user_id: userId,
+            team_id: teamInfo!.id,
+            role: existingStaff.role === 'manager' ? 'team_manager' : 
+                  existingStaff.role === 'assistant_manager' ? 'team_assistant_manager' : 
+                  'team_coach'
+          });
+
+          // Update profile with staff role
+          await supabase
+            .from("profiles")
+            .update({ roles: ["coach"] })
+            .eq("id", userId);
+        } else {
+          // Create pending staff request
+          await supabase.from('staff_requests').insert({
+            team_id: teamInfo!.id,
+            user_id: userId,
+            name: fullName.trim(),
+            email: email.trim().toLowerCase(),
+            status: 'pending'
+          });
+
+          // Update profile with pending status
+          await supabase
+            .from("profiles")
+            .update({ roles: ["pending_staff"] })
+            .eq("id", userId);
+        }
       }
 
       // Track code usage
@@ -339,12 +356,11 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
   const goBack = () => {
     if (step === "role") setStep("code");
     else if (step === "playerCode") setStep("role");
-    else if (step === "details") setStep("role");
     else if (step === "account") {
       if (selectedRole === "player" || selectedRole === "parent") {
         setStep("playerCode");
       } else {
-        setStep("details");
+        setStep("role");
       }
     }
   };
@@ -368,7 +384,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
   // Calculate progress steps based on role
   const getProgressSteps = () => {
     if (selectedRole === "staff") {
-      return ["code", "role", "details", "account"];
+      return ["code", "role", "account"];
     }
     return ["code", "role", "playerCode", "account"];
   };
@@ -388,9 +404,8 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
                 {step === "code" && "Join a Team"}
                 {step === "role" && "Select Your Role"}
                 {step === "playerCode" && (selectedRole === "player" ? "Enter Your Player Code" : "Enter Parent Code")}
-                {step === "details" && "Your Details"}
                 {step === "account" && "Create Account"}
-                {step === "complete" && "Welcome!"}
+                {step === "complete" && (selectedRole === "staff" ? "Request Submitted!" : "Welcome!")}
               </DialogTitle>
               <DialogDescription>
                 {step === "code" && "Enter the team code shared with you"}
@@ -399,7 +414,6 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
                   ? "Ask your team manager for your player linking code"
                   : "Ask the team manager for your child's parent linking code"
                 )}
-                {step === "details" && "Tell us a bit more about yourself"}
                 {step === "account" && "Set up your login credentials"}
                 {step === "complete" && "You're all set!"}
               </DialogDescription>
@@ -589,40 +603,8 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
             </div>
           )}
 
-          {/* Step 4: Staff Details (only for staff role) */}
-          {step === "details" && (
-            <div className="space-y-4">
-              {selectedRole === "staff" && (
-                <div className="space-y-2">
-                  <Label>Your Role on the Team</Label>
-                  <RadioGroup 
-                    value={staffRole} 
-                    onValueChange={setStaffRole}
-                    className="space-y-2"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="team_manager" id="team_manager" />
-                      <Label htmlFor="team_manager" className="cursor-pointer">Team Manager</Label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="team_assistant_manager" id="team_assistant_manager" />
-                      <Label htmlFor="team_assistant_manager" className="cursor-pointer">Assistant Manager</Label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <RadioGroupItem value="team_coach" id="team_coach" />
-                      <Label htmlFor="team_coach" className="cursor-pointer">Coach</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
 
-              <Button onClick={handleDetailsSubmit} className="w-full">
-                Continue
-              </Button>
-            </div>
-          )}
-
-          {/* Step 5: Account Creation */}
+          {/* Step 4: Account Creation */}
           {step === "account" && (
             <div className="space-y-4">
               {/* Show matched player info for player/parent */}
@@ -698,21 +680,29 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
             </div>
           )}
 
-          {/* Step 6: Complete */}
+          {/* Step 5: Complete */}
           {step === "complete" && (
             <div className="text-center space-y-4 py-4">
               <div className="mx-auto w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Welcome to {teamInfo?.name}!</h3>
+                <h3 className="font-semibold text-lg">
+                  {selectedRole === "staff" ? "Request Submitted!" : `Welcome to ${teamInfo?.name}!`}
+                </h3>
                 <p className="text-muted-foreground text-sm mt-1">
-                  You've successfully joined as a {selectedRole}.
-                  {matchedPlayer && selectedRole === "player" && (
-                    <span className="block mt-1">Your profile is linked to {matchedPlayer.name}.</span>
-                  )}
-                  {matchedPlayer && selectedRole === "parent" && (
-                    <span className="block mt-1">You're linked as a parent of {matchedPlayer.name}.</span>
+                  {selectedRole === "staff" ? (
+                    "Your request to join the team has been sent to the team manager for approval. You'll be notified once approved."
+                  ) : (
+                    <>
+                      You've successfully joined as a {selectedRole}.
+                      {matchedPlayer && selectedRole === "player" && (
+                        <span className="block mt-1">Your profile is linked to {matchedPlayer.name}.</span>
+                      )}
+                      {matchedPlayer && selectedRole === "parent" && (
+                        <span className="block mt-1">You're linked as a parent of {matchedPlayer.name}.</span>
+                      )}
+                    </>
                   )}
                 </p>
               </div>

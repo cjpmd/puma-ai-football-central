@@ -13,65 +13,61 @@ export interface PlayerWithCodes {
 }
 
 export const playerCodeService = {
-  // Get player by linking code (for player connection)
+  // Get player by linking code (for player connection) - uses RPC for anonymous access
   async getPlayerByLinkingCode(linkingCode: string): Promise<PlayerWithCodes | null> {
     const { data, error } = await supabase
-      .from('players')
-      .select(`
-        id,
-        name,
-        squad_number,
-        team_id,
-        linking_code,
-        parent_linking_code,
-        parent_linking_code_expires_at,
-        photo_url,
-        teams!players_team_id_fkey (
-          name
-        )
-      `)
-      .eq('linking_code', linkingCode)
-      .single();
+      .rpc('verify_player_linking_code', { code: linkingCode });
     
     if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
+      console.error('Error verifying player linking code:', error);
+      return null;
     }
     
+    if (!data || data.length === 0) return null;
+    
+    const result = data[0];
     return {
-      ...data,
-      team_name: data.teams?.name || 'Unknown Team'
+      id: result.player_id,
+      name: result.player_name,
+      squad_number: result.squad_number,
+      team_id: result.team_id,
+      team_name: result.team_name,
+      linking_code: linkingCode,
+      parent_linking_code: '',
+      parent_linking_code_expires_at: '',
+      photo_url: result.photo_url
     };
   },
 
-  // Get player by parent linking code (for parent connection)
+  // Get player by parent linking code (for parent connection) - uses RPC for anonymous access
   async getPlayerByParentLinkingCode(parentCode: string): Promise<PlayerWithCodes | null> {
     const { data, error } = await supabase
-      .from('players')
-      .select(`
-        id,
-        name,
-        squad_number,
-        team_id,
-        linking_code,
-        parent_linking_code,
-        parent_linking_code_expires_at,
-        photo_url,
-        teams!players_team_id_fkey (
-          name
-        )
-      `)
-      .eq('parent_linking_code', parentCode)
-      .single();
+      .rpc('verify_parent_linking_code', { code: parentCode });
     
     if (error) {
-      if (error.code === 'PGRST116') return null;
-      throw error;
+      console.error('Error verifying parent linking code:', error);
+      return null;
+    }
+    
+    if (!data || data.length === 0) return null;
+    
+    const result = data[0];
+    
+    // Check if expired
+    if (result.is_expired) {
+      return null;
     }
     
     return {
-      ...data,
-      team_name: data.teams?.name || 'Unknown Team'
+      id: result.player_id,
+      name: result.player_name,
+      squad_number: result.squad_number,
+      team_id: result.team_id,
+      team_name: result.team_name,
+      linking_code: '',
+      parent_linking_code: parentCode,
+      parent_linking_code_expires_at: '', // We know it's not expired if we get here
+      photo_url: result.photo_url
     };
   },
 
