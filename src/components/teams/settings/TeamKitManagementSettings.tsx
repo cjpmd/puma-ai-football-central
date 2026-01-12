@@ -353,12 +353,30 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       </div>
 
       <Tabs defaultValue="issue" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="issue">Issue Kit</TabsTrigger>
-          <TabsTrigger value="design">Kit Design</TabsTrigger>
-          <TabsTrigger value="items">Kit Items</TabsTrigger>
-          <TabsTrigger value="sizes">Sizes</TabsTrigger>
-          <TabsTrigger value="overview">Kit Overview</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-5 gap-0.5">
+          <TabsTrigger value="issue" className="text-xs sm:text-sm px-1 sm:px-3">
+            <Package className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">Issue Kit</span>
+            <span className="sm:hidden">Issue</span>
+          </TabsTrigger>
+          <TabsTrigger value="design" className="text-xs sm:text-sm px-1 sm:px-3">
+            <Shirt className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">Kit Design</span>
+            <span className="sm:hidden">Design</span>
+          </TabsTrigger>
+          <TabsTrigger value="items" className="text-xs sm:text-sm px-1 sm:px-3">
+            <Settings className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">Kit Items</span>
+            <span className="sm:hidden">Items</span>
+          </TabsTrigger>
+          <TabsTrigger value="sizes" className="text-xs sm:text-sm px-1 sm:px-3">
+            <span>Sizes</span>
+          </TabsTrigger>
+          <TabsTrigger value="overview" className="text-xs sm:text-sm px-1 sm:px-3">
+            <Users className="h-4 w-4 sm:hidden" />
+            <span className="hidden sm:inline">Kit Overview</span>
+            <span className="sm:hidden">Overview</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="issue" className="space-y-4">
