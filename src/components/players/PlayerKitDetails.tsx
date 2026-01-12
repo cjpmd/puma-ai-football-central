@@ -45,6 +45,13 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
     try {
       setLoading(true);
 
+      if (!player.team_id) {
+        console.error('No team_id provided for player kit details');
+        setKitItems([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: kitItemsData, error } = await supabase
         .from('team_kit_items')
         .select('*')

@@ -38,6 +38,13 @@ export const PlayerKitTracking: React.FC<PlayerKitTrackingProps> = ({ player }) 
     try {
       setLoading(true);
 
+      if (!player.team_id) {
+        console.error('No team_id provided for player kit tracking');
+        setKitIssues([]);
+        setLoading(false);
+        return;
+      }
+
       const { data: kitIssuesData, error } = await supabase
         .from('team_kit_issues')
         .select('*')

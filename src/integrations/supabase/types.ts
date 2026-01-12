@@ -3224,6 +3224,7 @@ export type Database = {
           kit_item_id: string | null
           kit_item_name: string
           kit_size: string | null
+          kit_type: string
           player_ids: Json
           quantity: number
           team_id: string
@@ -3237,6 +3238,7 @@ export type Database = {
           kit_item_id?: string | null
           kit_item_name: string
           kit_size?: string | null
+          kit_type?: string
           player_ids?: Json
           quantity?: number
           team_id: string
@@ -3250,6 +3252,7 @@ export type Database = {
           kit_item_id?: string | null
           kit_item_name?: string
           kit_size?: string | null
+          kit_type?: string
           player_ids?: Json
           quantity?: number
           team_id?: string
@@ -3299,6 +3302,7 @@ export type Database = {
           category: string
           created_at: string
           id: string
+          kit_type: string
           name: string
           size_category: string | null
           team_id: string
@@ -3309,6 +3313,7 @@ export type Database = {
           category?: string
           created_at?: string
           id?: string
+          kit_type?: string
           name: string
           size_category?: string | null
           team_id: string
@@ -3319,6 +3324,7 @@ export type Database = {
           category?: string
           created_at?: string
           id?: string
+          kit_type?: string
           name?: string
           size_category?: string | null
           team_id?: string
@@ -3473,6 +3479,7 @@ export type Database = {
           created_at: string | null
           email: string
           id: string
+          kit_sizes: Json | null
           linking_code: string | null
           name: string
           phone: string | null
@@ -3490,6 +3497,7 @@ export type Database = {
           created_at?: string | null
           email: string
           id?: string
+          kit_sizes?: Json | null
           linking_code?: string | null
           name: string
           phone?: string | null
@@ -3507,6 +3515,7 @@ export type Database = {
           created_at?: string | null
           email?: string
           id?: string
+          kit_sizes?: Json | null
           linking_code?: string | null
           name?: string
           phone?: string | null

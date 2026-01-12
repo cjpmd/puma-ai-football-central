@@ -203,7 +203,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
               <PlayerKitDetails 
                 player={{
                   id: player.id,
-                  team_id: player.teamId,
+                  team_id: player.team_id || player.teamId || '',
                   kit_sizes: player.kit_sizes
                 }}
                 onUpdate={() => {}}
@@ -215,7 +215,7 @@ export const EditPlayerModal: React.FC<EditPlayerModalProps> = ({
                 player={{
                   id: player.id,
                   name: player.name,
-                  team_id: player.teamId
+                  team_id: player.team_id || player.teamId || ''
                 }}
               />
             </TabsContent>
