@@ -2,7 +2,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp } from 'lucide-react';
+import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp, Settings } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
@@ -460,6 +460,13 @@ export default function DashboardMobile() {
     return profile.roles.some(role => managementRoles.includes(role));
   };
 
+  // Team Settings access - only for managers and admins (not coaches)
+  const canAccessTeamSettings = () => {
+    if (!profile?.roles) return false;
+    const settingsRoles = ['global_admin', 'club_admin', 'team_manager', 'team_assistant_manager'];
+    return profile.roles.some(role => settingsRoles.includes(role));
+  };
+
   const getInitials = (name: string) => {
     return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
   };
@@ -654,6 +661,21 @@ export default function DashboardMobile() {
                       <Users className="w-4 h-4 text-blue-600" />
                     </div>
                     <span className="text-sm text-gray-900">View Team</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </Link>
+                <div className="h-px bg-gray-100 mx-4" />
+              </>
+            )}
+            
+            {canAccessTeamSettings() && currentTeam && (
+              <>
+                <Link to={`/team-settings/${currentTeam.id}`} className="w-full flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Settings className="w-4 h-4 text-gray-600" />
+                    </div>
+                    <span className="text-sm text-gray-900">Team Settings</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </Link>

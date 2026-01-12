@@ -51,6 +51,7 @@ import MyTeamMobile from "./pages/MyTeamMobile";
 import GameDayMobile from "./pages/GameDayMobile";
 import AdminPlayStyles from "./pages/AdminPlayStyles";
 import AdminPlayStylesMobile from "./pages/AdminPlayStylesMobile";
+import TeamSettingsMobile from "./pages/TeamSettingsMobile";
 
 const queryClient = new QueryClient();
 
@@ -258,6 +259,17 @@ const AppContent = () => {
               <ResponsiveRoute
                 desktopComponent={<AdminPlayStyles />}
                 mobileComponent={<AdminPlayStylesMobile />}
+              />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/team-settings/:id" 
+          element={
+            <ProtectedRoute>
+              <ResponsiveRoute
+                desktopComponent={<TeamManagement />}
+                mobileComponent={<TeamSettingsMobile />}
               />
             </ProtectedRoute>
           }
