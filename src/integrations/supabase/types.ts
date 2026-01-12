@@ -4927,6 +4927,10 @@ export type Database = {
         }[]
       }
       calculate_event_score: { Args: { event_uuid: string }; Returns: Json }
+      can_manage_team_settings: {
+        Args: { p_team_id: string }
+        Returns: boolean
+      }
       check_password_strength: { Args: { password: string }; Returns: boolean }
       check_rate_limit_enhanced: {
         Args: {
