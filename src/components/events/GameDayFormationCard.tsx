@@ -7,6 +7,7 @@ import { matchEventService } from '@/services/matchEventService';
 import { playerMatchStatsService } from '@/services/stats/playerMatchStatsService';
 import { toast } from 'sonner';
 import FPLPitch from './FPLPitch';
+
 interface PlayerPosition {
   playerId: string;
   playerName: string;
@@ -31,6 +32,86 @@ interface SubstitutePlayer {
   isUsed?: boolean;
   photo_url?: string;
 }
+
+interface PitchPlayerProps {
+  pos: PlayerPosition;
+  eventId: string;
+  teamId: string;
+  cardStatus: PlayerCardStatus;
+  substitutes: SubstitutePlayer[];
+  renderPlayerBadges: (playerId: string) => React.ReactNode;
+  onEventSelect: (playerId: string, eventType: MatchEventType) => void;
+  onEventDelete: () => void;
+  onSubstitution: (playerOffId: string, playerOnId: string, playerOffName: string, playerOnName: string) => void;
+}
+
+// Separate component to properly use hooks for each player
+const PitchPlayer: React.FC<PitchPlayerProps> = ({
+  pos,
+  eventId,
+  teamId,
+  cardStatus,
+  substitutes,
+  renderPlayerBadges,
+  onEventSelect,
+  onEventDelete,
+  onSubstitution,
+}) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isGoalkeeper = pos.positionGroup === 'goalkeeper';
+  
+  const longPressHandlers = useLongPress(() => {
+    setIsMenuOpen(true);
+  });
+
+  return (
+    <GameDayPlayerEventMenu
+      eventId={eventId}
+      playerId={pos.playerId}
+      playerName={pos.playerName}
+      teamId={teamId}
+      isGoalkeeper={isGoalkeeper}
+      cardStatus={cardStatus}
+      availableSubstitutes={substitutes}
+      onEventSelect={(eventType) => onEventSelect(pos.playerId, eventType)}
+      onEventDelete={onEventDelete}
+      onSubstitution={onSubstitution}
+    >
+      <div
+        className="absolute"
+        style={{
+          left: `${pos.x}%`,
+          top: `${pos.y}%`,
+          transform: 'translate(-50%, -50%)',
+          zIndex: 20,
+          touchAction: 'none',
+        }}
+        {...longPressHandlers}
+      >
+        {/* Show replaced player name label */}
+        {pos.replacedPlayerName && (
+          <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-[8px] font-bold px-2 py-0.5 rounded whitespace-nowrap z-30">
+            {pos.replacedPlayerName.split(' ')[0]}
+          </div>
+        )}
+        
+        {/* FPL-style player token */}
+        <div className="relative">
+          {/* Event Badges */}
+          {renderPlayerBadges(pos.playerId)}
+          
+          <FPLPlayerToken
+            name={pos.playerName}
+            squadNumber={pos.squadNumber}
+            positionGroup={pos.positionGroup}
+            isCaptain={pos.isCaptain}
+            size="pitch"
+          />
+        </div>
+      </div>
+    </GameDayPlayerEventMenu>
+  );
+};
 
 interface GameDayFormationCardProps {
   eventId: string;
@@ -60,7 +141,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
   currentMinute = 0,
 }) => {
   const [playerCardStatuses, setPlayerCardStatuses] = useState<Record<string, PlayerCardStatus>>({});
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCardStatuses = async () => {
@@ -89,7 +169,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       toast.success(`${eventType.replace('_', ' ')} recorded!`);
       onEventCreated(newEvent);
       await playerMatchStatsService.updateEventPlayerStats(eventId);
-      setSelectedPlayer(null);
     } catch (error) {
       console.error('Error creating match event:', error);
       toast.error('Failed to record event');
@@ -124,7 +203,6 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
       }
       
       onEventCreated(newEvent);
-      setSelectedPlayer(null);
     } catch (error) {
       console.error('Error creating substitution:', error);
       toast.error("Failed to create substitution");
@@ -202,59 +280,20 @@ export const GameDayFormationCard: React.FC<GameDayFormationCardProps> = ({
         <div className="formation-players-container">
           {positions.map((pos) => {
             const cardStatus = playerCardStatuses[pos.playerId] || { hasYellow: false, hasRed: false };
-            const isGoalkeeper = pos.positionGroup === 'goalkeeper';
             
-            const longPressHandlers = useLongPress(() => {
-              setSelectedPlayer(pos.playerId);
-            });
-
             return (
-              <GameDayPlayerEventMenu
+              <PitchPlayer
                 key={pos.playerId}
+                pos={pos}
                 eventId={eventId}
-                playerId={pos.playerId}
-                playerName={pos.playerName}
                 teamId={teamId}
-                isGoalkeeper={isGoalkeeper}
                 cardStatus={cardStatus}
-                availableSubstitutes={substitutes}
-                onEventSelect={(eventType) => handleEventSelect(pos.playerId, eventType)}
+                substitutes={substitutes}
+                renderPlayerBadges={renderPlayerBadges}
+                onEventSelect={handleEventSelect}
                 onEventDelete={handleEventDelete}
                 onSubstitution={handleSubstitution}
-              >
-                <div
-                  className="absolute"
-                  style={{
-                    left: `${pos.x}%`,
-                    top: `${pos.y}%`,
-                    transform: 'translate(-50%, -50%)',
-                    zIndex: 20,
-                    touchAction: 'none',
-                  }}
-                  {...longPressHandlers}
-                >
-                  {/* Show replaced player name label */}
-                  {pos.replacedPlayerName && (
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-yellow-400 text-black text-[8px] font-bold px-2 py-0.5 rounded whitespace-nowrap z-30">
-                      {pos.replacedPlayerName.split(' ')[0]}
-                    </div>
-                  )}
-                  
-                  {/* FPL-style player token */}
-                  <div className="relative">
-                    {/* Event Badges */}
-                    {renderPlayerBadges(pos.playerId)}
-                    
-                    <FPLPlayerToken
-                      name={pos.playerName}
-                      squadNumber={pos.squadNumber}
-                      positionGroup={pos.positionGroup}
-                      isCaptain={pos.isCaptain}
-                      size="pitch"
-                    />
-                  </div>
-                </div>
-              </GameDayPlayerEventMenu>
+              />
             );
           })}
         </div>
