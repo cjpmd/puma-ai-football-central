@@ -2869,6 +2869,73 @@ export type Database = {
           },
         ]
       }
+      staff_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          notes: string | null
+          requested_at: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          team_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          notes?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          team_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          requested_at?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          team_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "linked_teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "team_staff_roles"
+            referencedColumns: ["team_id"]
+          },
+          {
+            foreignKeyName: "staff_requests_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_clothing_sizes: {
         Row: {
           category: string
@@ -5033,6 +5100,29 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      verify_parent_linking_code: {
+        Args: { code: string }
+        Returns: {
+          is_expired: boolean
+          photo_url: string
+          player_id: string
+          player_name: string
+          squad_number: number
+          team_id: string
+          team_name: string
+        }[]
+      }
+      verify_player_linking_code: {
+        Args: { code: string }
+        Returns: {
+          photo_url: string
+          player_id: string
+          player_name: string
+          squad_number: number
+          team_id: string
+          team_name: string
+        }[]
       }
     }
     Enums: {

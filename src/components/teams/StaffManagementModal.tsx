@@ -8,11 +8,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Team, TeamStaff } from '@/types/team';
-import { UserPlus, Trash2, Users, Mail, Phone, Edit, Check, ChevronsUpDown } from 'lucide-react';
+import { UserPlus, Trash2, Users, Mail, Phone, Edit, Check, ChevronsUpDown, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
+interface StaffRequest {
+  id: string;
+  team_id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  status: string;
+  requested_at: string;
+}
 
 interface TeamMember {
   id: string;
@@ -36,6 +47,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   onUpdate
 }) => {
   const [staff, setStaff] = useState<TeamStaff[]>([]);
+  const [staffRequests, setStaffRequests] = useState<StaffRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddingStaff, setIsAddingStaff] = useState(false);
   const [editingStaff, setEditingStaff] = useState<TeamStaff | null>(null);
@@ -43,6 +55,7 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
   const [selectedUser, setSelectedUser] = useState<TeamMember | null>(null);
   const [nameSearchOpen, setNameSearchOpen] = useState(false);
   const [nameSearchValue, setNameSearchValue] = useState('');
+  const [approvalRoles, setApprovalRoles] = useState<Record<string, TeamStaff['role']>>({});
   const [newStaff, setNewStaff] = useState({
     name: '',
     email: '',
@@ -56,23 +69,54 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     if (isOpen && team?.id) {
       console.log('StaffManagementModal: Modal opened for team:', team.id);
       setStaff([]);
+      setStaffRequests([]);
       setLoading(true);
       setIsAddingStaff(false);
       setEditingStaff(null);
       setSelectedUser(null);
       setNameSearchValue('');
+      setApprovalRoles({});
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
       loadStaff();
       loadTeamMembers();
+      loadStaffRequests();
     } else if (!isOpen) {
       setStaff([]);
+      setStaffRequests([]);
       setIsAddingStaff(false);
       setEditingStaff(null);
       setSelectedUser(null);
       setNameSearchValue('');
+      setApprovalRoles({});
       setNewStaff({ name: '', email: '', phone: '', role: 'coach' });
     }
   }, [isOpen, team?.id]);
+
+  const loadStaffRequests = async () => {
+    if (!team?.id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('staff_requests')
+        .select('*')
+        .eq('team_id', team.id)
+        .eq('status', 'pending')
+        .order('requested_at', { ascending: true });
+      
+      if (error) throw error;
+      
+      setStaffRequests(data || []);
+      
+      // Initialize approval roles
+      const roles: Record<string, TeamStaff['role']> = {};
+      (data || []).forEach(req => {
+        roles[req.id] = 'coach';
+      });
+      setApprovalRoles(prev => ({ ...prev, ...roles }));
+    } catch (error) {
+      console.error('Error loading staff requests:', error);
+    }
+  };
 
   const loadTeamMembers = async () => {
     if (!team?.id) return;
@@ -381,6 +425,88 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     }
   };
 
+  const handleApproveRequest = async (request: StaffRequest) => {
+    try {
+      const role = approvalRoles[request.id] || 'coach';
+      
+      // Create team_staff entry
+      await supabase.from('team_staff').insert({
+        team_id: team.id,
+        user_id: request.user_id,
+        name: request.name,
+        email: request.email,
+        role: role
+      });
+      
+      // Add to user_teams
+      await supabase.from('user_teams').insert({
+        user_id: request.user_id,
+        team_id: team.id,
+        role: role === 'manager' ? 'team_manager' : 
+              role === 'assistant_manager' ? 'team_assistant_manager' : 
+              'team_coach'
+      });
+      
+      // Update request status
+      const { data: { user } } = await supabase.auth.getUser();
+      await supabase.from('staff_requests')
+        .update({ 
+          status: 'approved',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', request.id);
+      
+      // Update the user's profile
+      await supabase.from('profiles')
+        .update({ roles: ['coach'] })
+        .eq('id', request.user_id);
+      
+      toast({
+        title: 'Request Approved',
+        description: `${request.name} has been added as ${getRoleLabel(role)}`
+      });
+      
+      await loadStaff();
+      await loadStaffRequests();
+    } catch (error: any) {
+      console.error('Error approving request:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to approve request',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleRejectRequest = async (request: StaffRequest) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      await supabase.from('staff_requests')
+        .update({ 
+          status: 'rejected',
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', request.id);
+      
+      toast({
+        title: 'Request Rejected',
+        description: `${request.name}'s request has been rejected`
+      });
+      
+      await loadStaffRequests();
+    } catch (error: any) {
+      console.error('Error rejecting request:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reject request',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const getRoleColor = (role: TeamStaff['role']) => {
     switch (role) {
       case 'manager': return 'bg-blue-500';
@@ -395,6 +521,18 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
     return role.replace('_', ' ').split(' ').map(word => 
       word.charAt(0).toUpperCase() + word.slice(1)
     ).join(' ');
+  };
+
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString();
   };
 
   // Filter team members by search
@@ -424,19 +562,30 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-            <h3 className="text-base font-semibold">Team Staff</h3>
-            <Button 
-              onClick={() => setIsAddingStaff(true)}
-              disabled={loading}
-              size="sm"
-              className="bg-puma-blue-500 hover:bg-puma-blue-600"
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Staff
-            </Button>
-          </div>
+        <Tabs defaultValue="staff" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4">
+            <TabsTrigger value="staff">Staff Members</TabsTrigger>
+            <TabsTrigger value="requests" className="relative">
+              Pending Requests
+              {staffRequests.length > 0 && (
+                <Badge className="ml-2 bg-orange-500 text-white text-xs px-1.5 py-0.5">{staffRequests.length}</Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="staff" className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+              <h3 className="text-base font-semibold">Team Staff</h3>
+              <Button 
+                onClick={() => setIsAddingStaff(true)}
+                disabled={loading}
+                size="sm"
+                className="bg-puma-blue-500 hover:bg-puma-blue-600"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Staff
+              </Button>
+            </div>
 
           {(isAddingStaff || editingStaff) && (
             <Card>
@@ -824,7 +973,81 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
               )}
             </div>
           )}
-        </div>
+          </TabsContent>
+
+          <TabsContent value="requests" className="space-y-4">
+            {staffRequests.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Clock className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-sm">No pending requests</p>
+                <p className="text-xs mt-1">Staff members who sign up via the team code will appear here</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {staffRequests.map((request) => (
+                  <Card key={request.id} className="border-orange-200">
+                    <CardContent className="p-3 sm:p-4">
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
+                            <Clock className="h-5 w-5 text-orange-600" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-sm">{request.name}</h4>
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{request.email}</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Requested {formatTimeAgo(request.requested_at)}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                          <Select 
+                            value={approvalRoles[request.id] || 'coach'}
+                            onValueChange={(value) => setApprovalRoles(prev => ({ ...prev, [request.id]: value as TeamStaff['role'] }))}
+                          >
+                            <SelectTrigger className="h-9 flex-1">
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="manager">Manager</SelectItem>
+                              <SelectItem value="assistant_manager">Assistant Manager</SelectItem>
+                              <SelectItem value="coach">Coach</SelectItem>
+                              <SelectItem value="helper">Helper</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
+                              onClick={() => handleApproveRequest(request)}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="flex-1 sm:flex-none text-red-600 hover:text-red-700"
+                              onClick={() => handleRejectRequest(request)}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
