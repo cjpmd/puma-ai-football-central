@@ -8,7 +8,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
 import { eventsService } from '@/services/eventsService';
 import { format, getDay } from 'date-fns';
 import { Calendar, Clock, Users, X, Repeat, UserCheck, ClipboardList } from 'lucide-react';
@@ -18,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { LocationInput } from '@/components/ui/location-input';
+import { useTeamContext } from '@/contexts/TeamContext';
 interface MobileEventFormProps {
   onClose: () => void;
   onEventCreated: () => void;
@@ -37,12 +37,11 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
   onClose,
   onEventCreated
 }) => {
-  const { teams } = useAuth();
+  const { currentTeam } = useTeamContext();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  // Get team settings for defaults
-  const currentTeam = teams?.[0];
+  // Get team settings for defaults from the selected team
   const defaultGameFormat = useMemo(() => 
     (currentTeam?.gameFormat as GameFormat) || '7-a-side', 
     [currentTeam?.gameFormat]
@@ -122,10 +121,10 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!teams?.[0]?.id) {
+    if (!currentTeam?.id) {
       toast({
         title: 'Error',
-        description: 'No team found',
+        description: 'No team selected',
         variant: 'destructive',
       });
       return;
@@ -148,10 +147,10 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
         gameFormat: formData.gameFormat,
         gameDuration: formData.gameDuration,
         notes: formData.notes || undefined,
-        teamId: teams[0].id,
+        teamId: currentTeam.id,
         // Multi-team support for fixtures/friendlies/tournaments/festivals
         teams: isMatchType && formData.numTeams > 1 ? Array.from({ length: formData.numTeams }, (_, i) => ({
-          id: teams[0].id,
+          id: currentTeam.id,
           team_number: i + 1,
           start_time: formData.startTime || null,
           meeting_time: null
