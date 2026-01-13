@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Eye, EyeOff, Mail, Lock, ChevronRight, Users, UserPlus, Building2, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ChevronRight, Users, UserPlus, Building2, ArrowLeft, Loader2 } from 'lucide-react';
 import { UnifiedSignupWizard } from '@/components/auth/UnifiedSignupWizard';
 import { TeamSetupWizard } from '@/components/auth/TeamSetupWizard';
 import { ClubSetupWizard } from '@/components/auth/ClubSetupWizard';
@@ -25,6 +26,11 @@ export default function AuthMobile() {
   const [showJoinTeamWizard, setShowJoinTeamWizard] = useState(false);
   const [showTeamSetupWizard, setShowTeamSetupWizard] = useState(false);
   const [showClubSetupWizard, setShowClubSetupWizard] = useState(false);
+  
+  // Forgot password states
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -64,6 +70,45 @@ export default function AuthMobile() {
 
   const handleWizardSuccess = () => {
     navigate('/dashboard');
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail) {
+      toast({
+        title: 'Email required',
+        description: 'Please enter your email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Check your email',
+        description: 'We\'ve sent you a password reset link.',
+      });
+      setShowForgotPassword(false);
+      setForgotPasswordEmail('');
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to send reset email',
+        variant: 'destructive',
+      });
+    } finally {
+      setForgotPasswordLoading(false);
+    }
   };
 
   // Options View - Spond-style entry screen
@@ -266,10 +311,63 @@ export default function AuthMobile() {
               <Button 
                 variant="link" 
                 className="text-sm text-muted-foreground"
+                onClick={() => setShowForgotPassword(true)}
               >
                 Forgot your password?
               </Button>
             </div>
+
+            {/* Forgot Password Sheet */}
+            <Sheet open={showForgotPassword} onOpenChange={setShowForgotPassword}>
+              <SheetContent side="bottom" className="h-auto rounded-t-xl">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Reset Password</SheetTitle>
+                  <SheetDescription>
+                    Enter your email and we'll send you a reset link.
+                  </SheetDescription>
+                </SheetHeader>
+                <form onSubmit={handleForgotPassword} className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Email</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="email"
+                        value={forgotPasswordEmail}
+                        onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        className="pl-10 h-12"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 pb-safe">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowForgotPassword(false)}
+                      className="flex-1 h-12"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={forgotPasswordLoading}
+                      className="flex-1 h-12"
+                    >
+                      {forgotPasswordLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'Send Link'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </SheetContent>
+            </Sheet>
           </CardContent>
         </Card>
 
