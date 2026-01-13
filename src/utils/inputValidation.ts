@@ -73,7 +73,7 @@ export const validateName = (name: string): { isValid: boolean; error?: string }
   return { isValid: true };
 };
 
-// Generic text sanitization
+// Generic text sanitization (preserves spaces for typing, trim on submit)
 export const sanitizeText = (text: string): string => {
   if (!text) return '';
   
@@ -84,10 +84,10 @@ export const sanitizeText = (text: string): string => {
   });
 
   // Additional cleanup for potential script injection
+  // Note: Don't trim here - that should happen on form submit, not during typing
   return sanitized
     .replace(/javascript:/gi, '')
-    .replace(/on\w+\s*=/gi, '')
-    .trim();
+    .replace(/on\w+\s*=/gi, '');
 };
 
 // HTML content sanitization (for rich text)
