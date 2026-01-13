@@ -52,6 +52,8 @@ import GameDayMobile from "./pages/GameDayMobile";
 import AdminPlayStyles from "./pages/AdminPlayStyles";
 import AdminPlayStylesMobile from "./pages/AdminPlayStylesMobile";
 import TeamSettingsMobile from "./pages/TeamSettingsMobile";
+import ResetPassword from "./pages/ResetPassword";
+import ResetPasswordMobile from "./pages/ResetPasswordMobile";
 
 const queryClient = new QueryClient();
 
@@ -81,6 +83,15 @@ const AppContent = () => {
           }
         />
         <Route path="/login" element={<Navigate to="/auth" replace />} />
+        <Route 
+          path="/reset-password" 
+          element={
+            <ResponsiveRoute
+              desktopComponent={<ResetPassword />}
+              mobileComponent={<ResetPasswordMobile />}
+            />
+          }
+        />
         <Route path="/account-linking" element={<AccountLinking />} />
         <Route 
           path="/dashboard" 
