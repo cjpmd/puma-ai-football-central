@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Team } from '@/types';
-import { Shield, Eye, EyeOff } from 'lucide-react';
+import { Shield, Eye, EyeOff, Gamepad2, Users, LayoutGrid } from 'lucide-react';
 
 interface TeamPrivacySettingsProps {
   team: Team;
@@ -23,6 +23,12 @@ interface PrivacySettings {
   hideTeamSelectionFromParents: boolean;
   hideMatchReportFromParents: boolean;
   hideDeleteButtonFromParents: boolean;
+  hideGameDayFromParents: boolean;
+  hideGameDayFromPlayers: boolean;
+  hideSetupFromParents: boolean;
+  hideSetupFromPlayers: boolean;
+  hideFormationFromParents: boolean;
+  hideFormationFromPlayers: boolean;
 }
 
 export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, onUpdate }) => {
@@ -34,7 +40,13 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
     hideEditButtonFromParents: false,
     hideTeamSelectionFromParents: false,
     hideMatchReportFromParents: false,
-    hideDeleteButtonFromParents: false
+    hideDeleteButtonFromParents: false,
+    hideGameDayFromParents: true,
+    hideGameDayFromPlayers: true,
+    hideSetupFromParents: true,
+    hideSetupFromPlayers: true,
+    hideFormationFromParents: true,
+    hideFormationFromPlayers: true
   });
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +73,13 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
           hideEditButtonFromParents: (data as any).hide_edit_button_from_parents ?? false,
           hideTeamSelectionFromParents: (data as any).hide_team_selection_from_parents ?? false,
           hideMatchReportFromParents: (data as any).hide_match_report_from_parents ?? false,
-          hideDeleteButtonFromParents: (data as any).hide_delete_button_from_parents ?? false
+          hideDeleteButtonFromParents: (data as any).hide_delete_button_from_parents ?? false,
+          hideGameDayFromParents: (data as any).hide_gameday_from_parents ?? true,
+          hideGameDayFromPlayers: (data as any).hide_gameday_from_players ?? true,
+          hideSetupFromParents: (data as any).hide_setup_from_parents ?? true,
+          hideSetupFromPlayers: (data as any).hide_setup_from_players ?? true,
+          hideFormationFromParents: (data as any).hide_formation_from_parents ?? true,
+          hideFormationFromPlayers: (data as any).hide_formation_from_players ?? true
         });
       }
     } catch (error: any) {
@@ -85,7 +103,15 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
           hide_edit_button_from_parents: settings.hideEditButtonFromParents,
           hide_team_selection_from_parents: settings.hideTeamSelectionFromParents,
           hide_match_report_from_parents: settings.hideMatchReportFromParents,
-          hide_delete_button_from_parents: settings.hideDeleteButtonFromParents
+          hide_delete_button_from_parents: settings.hideDeleteButtonFromParents,
+          hide_gameday_from_parents: settings.hideGameDayFromParents,
+          hide_gameday_from_players: settings.hideGameDayFromPlayers,
+          hide_setup_from_parents: settings.hideSetupFromParents,
+          hide_setup_from_players: settings.hideSetupFromPlayers,
+          hide_formation_from_parents: settings.hideFormationFromParents,
+          hide_formation_from_players: settings.hideFormationFromPlayers
+        }, {
+          onConflict: 'team_id'
         });
 
       if (error) throw error;
@@ -187,11 +213,113 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-4 w-4" />
-              Button Visibility for Parents
+              <Gamepad2 className="h-4 w-4" />
+              Game Day Button Visibility
             </CardTitle>
             <CardDescription>
-              Control which action buttons are visible to parent users on calendar events
+              Control who can see the Game Day button on calendar events
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-gameday-parents" className="text-sm font-medium">
+                Show Game Day to parents
+              </Label>
+              <Switch
+                id="hide-gameday-parents"
+                checked={!settings.hideGameDayFromParents}
+                onCheckedChange={(checked) => updateSetting('hideGameDayFromParents', !checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-gameday-players" className="text-sm font-medium">
+                Show Game Day to players
+              </Label>
+              <Switch
+                id="hide-gameday-players"
+                checked={!settings.hideGameDayFromPlayers}
+                onCheckedChange={(checked) => updateSetting('hideGameDayFromPlayers', !checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Team Selection Button Visibility
+            </CardTitle>
+            <CardDescription>
+              Control who can see the Team Selection (Set Up) button on calendar events
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-setup-parents" className="text-sm font-medium">
+                Show Team Selection to parents
+              </Label>
+              <Switch
+                id="hide-setup-parents"
+                checked={!settings.hideSetupFromParents}
+                onCheckedChange={(checked) => updateSetting('hideSetupFromParents', !checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-setup-players" className="text-sm font-medium">
+                Show Team Selection to players
+              </Label>
+              <Switch
+                id="hide-setup-players"
+                checked={!settings.hideSetupFromPlayers}
+                onCheckedChange={(checked) => updateSetting('hideSetupFromPlayers', !checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              Formation Tab Visibility
+            </CardTitle>
+            <CardDescription>
+              Control who can see the Formation tab in Team Manager
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-formation-parents" className="text-sm font-medium">
+                Show Formation to parents
+              </Label>
+              <Switch
+                id="hide-formation-parents"
+                checked={!settings.hideFormationFromParents}
+                onCheckedChange={(checked) => updateSetting('hideFormationFromParents', !checked)}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="hide-formation-players" className="text-sm font-medium">
+                Show Formation to players
+              </Label>
+              <Switch
+                id="hide-formation-players"
+                checked={!settings.hideFormationFromPlayers}
+                onCheckedChange={(checked) => updateSetting('hideFormationFromPlayers', !checked)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Other Button Visibility for Parents
+            </CardTitle>
+            <CardDescription>
+              Control which other action buttons are visible to parent users on calendar events
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

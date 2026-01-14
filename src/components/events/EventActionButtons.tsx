@@ -33,6 +33,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
 }) => {
   const { settings } = useTeamPrivacy(event.team_id);
   const isParent = currentView === 'parent';
+  const isPlayer = currentView === 'player';
   const isTrainingEvent = event.event_type === 'training';
   const isMatchEvent = event.event_type === 'match' || event.event_type === 'friendly' || event.event_type === 'fixture';
 
@@ -42,8 +43,22 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   const isFullSize = size === 'md';
 
   const shouldShowButton = (buttonType: keyof typeof settings) => {
-    if (!isParent) return true; // Always show to non-parents
+    if (!isParent) return true; // Always show to non-parents (except specific player restrictions)
     return !settings[buttonType]; // Hide if setting is true for parents
+  };
+
+  // Check visibility for Game Day button (respects both parent and player settings)
+  const shouldShowGameDay = () => {
+    if (isParent && settings.hideGameDayFromParents) return false;
+    if (isPlayer && settings.hideGameDayFromPlayers) return false;
+    return true;
+  };
+
+  // Check visibility for Team Selection button (respects both parent and player settings)
+  const shouldShowTeamSelection = () => {
+    if (isParent && settings.hideSetupFromParents) return false;
+    if (isPlayer && settings.hideSetupFromPlayers) return false;
+    return true;
   };
 
   const containerClass = size === 'sm' ? "flex flex-wrap gap-1 mt-3 pt-3 border-t" : size === 'md' ? "flex gap-2 pt-3 border-t" : "flex gap-1";
@@ -63,7 +78,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
         </Button>
       )}
       
-      {shouldShowButton('hideTeamSelectionFromParents') && (
+      {shouldShowTeamSelection() && (
         <Button
           variant={isFullSize ? "outline" : "ghost"}
           size="sm"
@@ -102,7 +117,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
         </Button>
       )}
 
-      {isMatchEvent && onGameDay && (
+      {isMatchEvent && onGameDay && shouldShowGameDay() && (
         <Button
           variant={isFullSize ? "default" : "ghost"}
           size="sm"

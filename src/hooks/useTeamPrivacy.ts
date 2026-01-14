@@ -10,6 +10,12 @@ interface TeamPrivacySettings {
   hideTeamSelectionFromParents: boolean;
   hideMatchReportFromParents: boolean;
   hideDeleteButtonFromParents: boolean;
+  hideGameDayFromParents: boolean;
+  hideGameDayFromPlayers: boolean;
+  hideSetupFromParents: boolean;
+  hideSetupFromPlayers: boolean;
+  hideFormationFromParents: boolean;
+  hideFormationFromPlayers: boolean;
 }
 
 export const useTeamPrivacy = (teamId: string) => {
@@ -21,7 +27,13 @@ export const useTeamPrivacy = (teamId: string) => {
     hideEditButtonFromParents: false,
     hideTeamSelectionFromParents: false,
     hideMatchReportFromParents: false,
-    hideDeleteButtonFromParents: false
+    hideDeleteButtonFromParents: false,
+    hideGameDayFromParents: true,
+    hideGameDayFromPlayers: true,
+    hideSetupFromParents: true,
+    hideSetupFromPlayers: true,
+    hideFormationFromParents: true,
+    hideFormationFromPlayers: true
   });
   const [loading, setLoading] = useState(true);
 
@@ -49,7 +61,13 @@ export const useTeamPrivacy = (teamId: string) => {
           hideEditButtonFromParents: data.hide_edit_button_from_parents ?? false,
           hideTeamSelectionFromParents: data.hide_team_selection_from_parents ?? false,
           hideMatchReportFromParents: data.hide_match_report_from_parents ?? false,
-          hideDeleteButtonFromParents: data.hide_delete_button_from_parents ?? false
+          hideDeleteButtonFromParents: data.hide_delete_button_from_parents ?? false,
+          hideGameDayFromParents: data.hide_gameday_from_parents ?? true,
+          hideGameDayFromPlayers: data.hide_gameday_from_players ?? true,
+          hideSetupFromParents: data.hide_setup_from_parents ?? true,
+          hideSetupFromPlayers: data.hide_setup_from_players ?? true,
+          hideFormationFromParents: data.hide_formation_from_parents ?? true,
+          hideFormationFromPlayers: data.hide_formation_from_players ?? true
         });
       }
     } catch (error) {

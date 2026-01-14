@@ -3340,7 +3340,13 @@ export type Database = {
           created_at: string
           hide_delete_button_from_parents: boolean | null
           hide_edit_button_from_parents: boolean | null
+          hide_formation_from_parents: boolean
+          hide_formation_from_players: boolean
+          hide_gameday_from_parents: boolean
+          hide_gameday_from_players: boolean
           hide_match_report_from_parents: boolean | null
+          hide_setup_from_parents: boolean
+          hide_setup_from_players: boolean
           hide_team_selection_from_parents: boolean | null
           id: string
           show_player_stats_to_parents: boolean
@@ -3354,7 +3360,13 @@ export type Database = {
           created_at?: string
           hide_delete_button_from_parents?: boolean | null
           hide_edit_button_from_parents?: boolean | null
+          hide_formation_from_parents?: boolean
+          hide_formation_from_players?: boolean
+          hide_gameday_from_parents?: boolean
+          hide_gameday_from_players?: boolean
           hide_match_report_from_parents?: boolean | null
+          hide_setup_from_parents?: boolean
+          hide_setup_from_players?: boolean
           hide_team_selection_from_parents?: boolean | null
           id?: string
           show_player_stats_to_parents?: boolean
@@ -3368,7 +3380,13 @@ export type Database = {
           created_at?: string
           hide_delete_button_from_parents?: boolean | null
           hide_edit_button_from_parents?: boolean | null
+          hide_formation_from_parents?: boolean
+          hide_formation_from_players?: boolean
+          hide_gameday_from_parents?: boolean
+          hide_gameday_from_players?: boolean
           hide_match_report_from_parents?: boolean | null
+          hide_setup_from_parents?: boolean
+          hide_setup_from_players?: boolean
           hide_team_selection_from_parents?: boolean | null
           id?: string
           show_player_stats_to_parents?: boolean
