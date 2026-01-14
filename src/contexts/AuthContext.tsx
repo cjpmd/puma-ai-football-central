@@ -205,6 +205,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw profileError;
       }
 
+      // Fetch managed player IDs from user_players table
+      const { data: playerLinks } = await supabase
+        .from('user_players')
+        .select('player_id')
+        .eq('user_id', userId);
+
+      const managedPlayerIds = playerLinks?.map(link => link.player_id) || [];
+      console.log('Managed player IDs loaded:', managedPlayerIds);
+
       const transformedProfile: Profile = {
         id: profileData.id,
         name: profileData.name,
@@ -215,6 +224,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         coaching_badges: Array.isArray(profileData.coaching_badges) 
           ? profileData.coaching_badges 
           : [],
+        managed_player_ids: managedPlayerIds,
         created_at: profileData.created_at,
         updated_at: profileData.updated_at,
       };
