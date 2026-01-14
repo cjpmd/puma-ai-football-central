@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useAuthorization } from './AuthorizationContext';
 
-export type ViewRole = 'parent' | 'coach' | 'team_manager' | 'club_admin' | 'global_admin';
+export type ViewRole = 'parent' | 'player' | 'coach' | 'team_manager' | 'club_admin' | 'global_admin';
 
 interface SmartViewContextType {
   currentView: ViewRole;
@@ -113,6 +113,7 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const getViewLabel = (view: ViewRole): string => {
     const labels: Record<ViewRole, string> = {
       parent: 'Parent',
+      player: 'Player',
       coach: 'Coach',
       team_manager: 'Team Manager',
       club_admin: 'Club Admin',

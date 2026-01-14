@@ -23,6 +23,8 @@ import { AvailabilityDrivenSquadManagement } from './AvailabilityDrivenSquadMana
 import { getFormationsByFormat } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
 import { AITeamBuilderDialog } from './AITeamBuilderDialog';
+import { useTeamPrivacy } from '@/hooks/useTeamPrivacy';
+import { useSmartView } from '@/contexts/SmartViewContext';
 
 // Helper function to create a default period with the first available formation
 const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): FormationPeriod => {
@@ -67,7 +69,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 }) => {
   const { user } = useAuth();
   const isMobile = useMobileDetection();
+  const { currentView } = useSmartView();
   const teamId = propTeamId || event.team_id;
+  const { settings: privacySettings } = useTeamPrivacy(teamId);
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -1047,23 +1051,36 @@ return (
           </div>
 
         <div className="flex-1 min-h-0 overflow-hidden w-full max-w-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col w-full max-w-full">
-            <div className={`${isMobile ? 'px-2 pb-2 pt-0' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
-                  <Users className="h-3 w-3" />
-                  Squad
-                </TabsTrigger>
-                <TabsTrigger value="staff" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
-                  <UserPlus className="h-3 w-3" />
-                  Staff
-                </TabsTrigger>
-                <TabsTrigger value={isTrainingEvent ? "training-plan" : "formation"} className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
-                  <Gamepad2 className="h-3 w-3" />
-                  {isTrainingEvent ? "Training Plan" : "Formation"}
-                </TabsTrigger>
-              </TabsList>
-            </div>
+          {/* Determine if Formation tab should be shown based on privacy settings */}
+          {(() => {
+            const isParent = currentView === 'parent';
+            const isPlayer = currentView === 'player';
+            const showFormationTab = !(
+              (isParent && privacySettings.hideFormationFromParents) ||
+              (isPlayer && privacySettings.hideFormationFromPlayers)
+            );
+            const tabCount = showFormationTab ? 3 : 2;
+            
+            return (
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full min-h-0 flex flex-col w-full max-w-full">
+                <div className={`${isMobile ? 'px-2 pb-2 pt-0' : 'p-6'} flex-shrink-0 w-full max-w-full`}>
+                  <TabsList className={`grid w-full grid-cols-${tabCount}`}>
+                    <TabsTrigger value="squad" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                      <Users className="h-3 w-3" />
+                      Squad
+                    </TabsTrigger>
+                    <TabsTrigger value="staff" className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                      <UserPlus className="h-3 w-3" />
+                      Staff
+                    </TabsTrigger>
+                    {showFormationTab && (
+                      <TabsTrigger value={isTrainingEvent ? "training-plan" : "formation"} className={`flex items-center gap-1 ${isMobile ? 'text-xs' : ''}`}>
+                        <Gamepad2 className="h-3 w-3" />
+                        {isTrainingEvent ? "Training Plan" : "Formation"}
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
+                </div>
 
             <div className={`flex-1 min-h-0 px-2 pb-2 w-full max-w-full ${activeTab === 'formation' ? 'overflow-hidden' : 'overflow-y-auto'}`}>
               <TabsContent value="squad" className="mt-0 h-auto data-[state=active]:block data-[state=inactive]:hidden" style={{ height: 'auto' }}>
@@ -1144,6 +1161,8 @@ return (
               )}
             </div>
           </Tabs>
+            );
+          })()}
         </div>
       </div>
       </DialogContent>
