@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { format, isToday, isTomorrow } from 'date-fns';
+import { getSharedUserIds, getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
 
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
@@ -281,23 +282,29 @@ export default function DashboardMobile() {
         .order('date', { ascending: true })
         .limit(5);
 
-      // Fetch user availability for all upcoming events
+      // Fetch user availability for all upcoming events - including shared users
       const upcomingEventIds = upcomingEventsData?.map(e => e.id) || [];
+      const sharedUserIds = await getSharedUserIds(user.id);
+      
       const { data: userAvailabilityData } = await supabase
         .from('event_availability')
-        .select('event_id, status, role')
-        .eq('user_id', user.id)
+        .select('event_id, status, role, user_id')
+        .in('user_id', sharedUserIds)
         .in('event_id', upcomingEventIds);
 
-      // Create availability map - prioritize: available > unavailable > pending
+      // Group by event and get best status (available > unavailable > pending)
       const availabilityMap = new Map<string, string>();
+      const eventGroups = new Map<string, Array<{ status: string; user_id: string }>>();
+      
       userAvailabilityData?.forEach(record => {
-        const existing = availabilityMap.get(record.event_id);
-        if (!existing || 
-            (record.status === 'available') || 
-            (record.status === 'unavailable' && existing === 'pending')) {
-          availabilityMap.set(record.event_id, record.status);
-        }
+        const existing = eventGroups.get(record.event_id) || [];
+        existing.push({ status: record.status, user_id: record.user_id });
+        eventGroups.set(record.event_id, existing);
+      });
+      
+      eventGroups.forEach((records, eventId) => {
+        const { status } = getBestAvailabilityStatus(records);
+        availabilityMap.set(eventId, status);
       });
 
       const upcomingEvents = upcomingEventsData?.map(event => ({
@@ -405,15 +412,26 @@ export default function DashboardMobile() {
       });
 
       const eventIds = upcomingEventsForAvailability.map(event => event.id);
+      
+      // Check existing availability for all shared users
       const { data: existingAvailability } = await supabase
         .from('event_availability')
-        .select('event_id, status')
-        .eq('user_id', user.id)
+        .select('event_id, status, user_id')
+        .in('user_id', sharedUserIds)
         .in('event_id', eventIds);
 
+      // Group by event and check if any shared user has responded
+      const eventResponseGroups = new Map<string, Array<{ status: string; user_id: string }>>();
+      existingAvailability?.forEach(a => {
+        const existing = eventResponseGroups.get(a.event_id) || [];
+        existing.push({ status: a.status, user_id: a.user_id });
+        eventResponseGroups.set(a.event_id, existing);
+      });
+
       const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
-        const existingRecord = existingAvailability?.find(a => a.event_id === event.id);
-        return !existingRecord || existingRecord.status === 'pending';
+        const records = eventResponseGroups.get(event.id) || [];
+        const { status } = getBestAvailabilityStatus(records);
+        return status === 'pending';
       });
 
       const pendingAvailabilityData = eventsNeedingAvailability.map(event => ({

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { getSharedUserIds, getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
 
 export interface AvailabilityState {
   eventId: string;
@@ -39,25 +40,45 @@ export const useAvailabilityState = (eventId?: string) => {
 
   const loadAvailabilityForEvent = useCallback(async (eventId: string, userId: string) => {
     try {
+      // Get all user IDs that share this player's availability
+      const sharedUserIds = await getSharedUserIds(userId);
+
+      // Fetch availability for all shared users
       const { data, error } = await supabase
         .from('event_availability')
         .select('*')
         .eq('event_id', eventId)
-        .eq('user_id', userId);
+        .in('user_id', sharedUserIds);
 
       if (error) throw error;
 
-      // Update global state with fresh data
-      if (data) {
-        data.forEach(availability => {
-          const key = getAvailabilityKey(eventId, userId, availability.role as 'player' | 'staff');
+      // Group by role and get best status
+      if (data && data.length > 0) {
+        const playerRecords = data.filter(r => r.role === 'player');
+        const staffRecords = data.filter(r => r.role === 'staff');
+
+        if (playerRecords.length > 0) {
+          const bestPlayer = getBestAvailabilityStatus(playerRecords);
+          const key = getAvailabilityKey(eventId, userId, 'player');
           globalAvailabilityState.set(key, {
             eventId,
-            role: availability.role as 'player' | 'staff',
-            status: availability.status as 'pending' | 'available' | 'unavailable',
+            role: 'player',
+            status: bestPlayer.status as 'pending' | 'available' | 'unavailable',
             userId
           });
-        });
+        }
+
+        if (staffRecords.length > 0) {
+          const bestStaff = getBestAvailabilityStatus(staffRecords);
+          const key = getAvailabilityKey(eventId, userId, 'staff');
+          globalAvailabilityState.set(key, {
+            eventId,
+            role: 'staff',
+            status: bestStaff.status as 'pending' | 'available' | 'unavailable',
+            userId
+          });
+        }
+
         notifySubscribers();
       }
     } catch (error) {
