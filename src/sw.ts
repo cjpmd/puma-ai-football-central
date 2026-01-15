@@ -14,8 +14,14 @@ precacheAndRoute(self.__WB_MANIFEST);
 // Clean up old caches
 cleanupOutdatedCaches();
 
+// Handle skip waiting message from PWAUpdatePrompt
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Claim clients immediately
-self.skipWaiting();
 clientsClaim();
 
 // Cache Supabase API calls

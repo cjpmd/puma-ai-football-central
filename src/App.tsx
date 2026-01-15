@@ -12,6 +12,7 @@ import { TeamProvider } from "@/contexts/TeamContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ResponsiveRoute } from "@/components/routing/ResponsiveRoute";
 import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
+import { PWAUpdatePrompt } from "@/components/pwa/PWAUpdatePrompt";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -291,6 +292,7 @@ const AppContent = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <PWAInstallPrompt />
+      <PWAUpdatePrompt />
     </>
   );
 };
