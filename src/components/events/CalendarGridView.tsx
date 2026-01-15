@@ -531,7 +531,6 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
                             event={event}
                             completed={completed}
                             matchType={matchType}
-                            currentView={currentView}
                             onEditEvent={onEditEvent}
                             onTeamSelection={onTeamSelection}
                             onPostGameEdit={onPostGameEdit}

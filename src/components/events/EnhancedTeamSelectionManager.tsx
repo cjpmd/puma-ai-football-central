@@ -24,7 +24,7 @@ import { getFormationsByFormat } from '@/utils/formationUtils';
 import { EventStaffAssignmentSection } from './EventStaffAssignmentSection';
 import { AITeamBuilderDialog } from './AITeamBuilderDialog';
 import { useTeamPrivacy } from '@/hooks/useTeamPrivacy';
-import { useSmartView } from '@/contexts/SmartViewContext';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 // Helper function to create a default period with the first available formation
 const createDefaultPeriod = (gameFormat: string, gameDuration: number = 50): FormationPeriod => {
@@ -69,7 +69,7 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
 }) => {
   const { user } = useAuth();
   const isMobile = useMobileDetection();
-  const { currentView } = useSmartView();
+  const { isRestrictedParent, isRestrictedPlayer } = useEffectiveRole();
   const teamId = propTeamId || event.team_id;
   const { settings: privacySettings } = useTeamPrivacy(teamId);
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
@@ -1053,11 +1053,9 @@ return (
         <div className="flex-1 min-h-0 overflow-hidden w-full max-w-full">
           {/* Determine if Formation tab should be shown based on privacy settings */}
           {(() => {
-            const isParent = currentView === 'parent';
-            const isPlayer = currentView === 'player';
             const showFormationTab = !(
-              (isParent && privacySettings.hideFormationFromParents) ||
-              (isPlayer && privacySettings.hideFormationFromPlayers)
+              (isRestrictedParent && privacySettings.hideFormationFromParents) ||
+              (isRestrictedPlayer && privacySettings.hideFormationFromPlayers)
             );
             const tabCount = showFormationTab ? 3 : 2;
             
