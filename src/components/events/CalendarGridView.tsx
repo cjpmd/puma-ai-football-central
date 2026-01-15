@@ -318,7 +318,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       if (existing) {
         return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
       } else {
-        return [...prev, { eventId, status, source: 'direct' }];
+        return [...prev, { eventId, status, source: role === 'staff' ? 'staff' : 'player' as const }];
       }
     });
   };

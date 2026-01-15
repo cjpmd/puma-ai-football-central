@@ -712,7 +712,9 @@ export type Database = {
           created_at: string
           event_id: string
           id: string
+          last_updated_by: string | null
           notification_sent_at: string | null
+          player_id: string | null
           responded_at: string | null
           role: string
           status: string
@@ -723,7 +725,9 @@ export type Database = {
           created_at?: string
           event_id: string
           id?: string
+          last_updated_by?: string | null
           notification_sent_at?: string | null
+          player_id?: string | null
           responded_at?: string | null
           role: string
           status?: string
@@ -734,7 +738,9 @@ export type Database = {
           created_at?: string
           event_id?: string
           id?: string
+          last_updated_by?: string | null
           notification_sent_at?: string | null
+          player_id?: string | null
           responded_at?: string | null
           role?: string
           status?: string
@@ -747,6 +753,27 @@ export type Database = {
             columns: ["event_id"]
             isOneToOne: false
             referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_availability_last_updated_by_fkey"
+            columns: ["last_updated_by"]
+            isOneToOne: false
+            referencedRelation: "all_user_roles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "event_availability_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player_profiles"
+            referencedColumns: ["player_id"]
+          },
+          {
+            foreignKeyName: "event_availability_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
             referencedColumns: ["id"]
           },
           {
