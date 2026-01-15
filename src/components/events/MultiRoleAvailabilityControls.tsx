@@ -71,52 +71,58 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
     setLoading(true);
     try {
-      // First check if the user was invited to this event
-      const { data: invitations, error: invError } = await supabase
-        .from('event_invitations')
-        .select('invitee_type, player_id, staff_id')
-        .eq('event_id', eventId)
-        .eq('user_id', user.id);
+      // First get the user's linked player ID (if any)
+      const { data: userPlayerLink } = await supabase
+        .from('user_players')
+        .select('player_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
 
-      if (invError) {
-        console.error('Error checking event invitations:', invError);
+      const linkedPlayerId = userPlayerLink?.player_id || null;
+
+      // Check for player invitations by player_id (shared across linked accounts)
+      let hasPlayerInvitation = false;
+      if (linkedPlayerId) {
+        const { data: playerInvitations } = await supabase
+          .from('event_invitations')
+          .select('id')
+          .eq('event_id', eventId)
+          .eq('player_id', linkedPlayerId)
+          .limit(1);
+        
+        hasPlayerInvitation = (playerInvitations && playerInvitations.length > 0);
       }
 
+      // Check for staff invitations by user_id
+      const { data: staffInvitations } = await supabase
+        .from('event_invitations')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('user_id', user.id)
+        .eq('invitee_type', 'staff')
+        .limit(1);
+
+      const hasStaffInvitation = (staffInvitations && staffInvitations.length > 0);
+
       // If no invitations found at all, check if it's an "everyone" event
-      if (!invitations || invitations.length === 0) {
+      if (!hasPlayerInvitation && !hasStaffInvitation) {
         const { data: anyInvitations } = await supabase
           .from('event_invitations')
           .select('id')
           .eq('event_id', eventId)
           .limit(1);
 
-        // If no invitations exist for this event, it's an "everyone" event
-        // Otherwise, this user wasn't invited
+        // If invitations exist for this event but user wasn't invited, exit
         if (anyInvitations && anyInvitations.length > 0) {
           console.log('User not invited to this event');
           setAvailabilities([]);
           setLoading(false);
           return;
         }
-      }
 
-      // User was invited - ensure role availability records exist for invited roles only
-      const invitedRoles: Set<'player' | 'staff'> = new Set();
-      
-      if (invitations && invitations.length > 0) {
-        invitations.forEach(inv => {
-          invitedRoles.add(inv.invitee_type as 'player' | 'staff');
-        });
-      } else {
         // "Everyone" event - check what roles this user has
-        const { data: playerLink } = await supabase
-          .from('user_players')
-          .select('id')
-          .eq('user_id', user.id)
-          .limit(1);
-        
-        if (playerLink && playerLink.length > 0) {
-          invitedRoles.add('player');
+        if (linkedPlayerId) {
+          hasPlayerInvitation = true;
         }
 
         const { data: staffLink } = await supabase
@@ -126,24 +132,59 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
           .limit(1);
 
         if (staffLink && staffLink.length > 0) {
-          invitedRoles.add('staff');
+          hasPlayerInvitation = true; // They can respond as player if linked
         }
       }
 
-      // Only ensure availability records for invited roles
+      const invitedRoles: Set<'player' | 'staff'> = new Set();
+      if (hasPlayerInvitation && linkedPlayerId) {
+        invitedRoles.add('player');
+      }
+      if (hasStaffInvitation) {
+        invitedRoles.add('staff');
+      }
+
+      // Ensure availability records exist for invited roles
       for (const role of Array.from(invitedRoles)) {
-        await multiRoleAvailabilityService.createStaffAvailabilityRecord(eventId, user.id, role);
+        if (role === 'player' && linkedPlayerId) {
+          await multiRoleAvailabilityService.createPlayerAvailabilityRecord(eventId, user.id, linkedPlayerId);
+        } else if (role === 'staff') {
+          await multiRoleAvailabilityService.createStaffAvailabilityRecord(eventId, user.id, 'staff');
+        }
       }
       
-      // Then fetch the availability data for invited roles only
-      const { data, error } = await supabase
-        .from('event_availability')
-        .select('*')
-        .eq('event_id', eventId)
-        .eq('user_id', user.id)
-        .in('role', Array.from(invitedRoles));
+      // Fetch availability records - player by player_id, staff by user_id
+      const availabilityRecords: EventAvailability[] = [];
 
-      if (error) throw error;
+      // Fetch player availability by player_id (shared across linked users)
+      if (invitedRoles.has('player') && linkedPlayerId) {
+        const { data: playerAvail } = await supabase
+          .from('event_availability')
+          .select('*')
+          .eq('event_id', eventId)
+          .eq('player_id', linkedPlayerId)
+          .eq('role', 'player')
+          .maybeSingle();
+        
+        if (playerAvail) {
+          availabilityRecords.push(playerAvail as EventAvailability);
+        }
+      }
+
+      // Fetch staff availability by user_id (not shared)
+      if (invitedRoles.has('staff')) {
+        const { data: staffAvail } = await supabase
+          .from('event_availability')
+          .select('*')
+          .eq('event_id', eventId)
+          .eq('user_id', user.id)
+          .eq('role', 'staff')
+          .maybeSingle();
+        
+        if (staffAvail) {
+          availabilityRecords.push(staffAvail as EventAvailability);
+        }
+      }
 
       // Get user profile information
       const { data: profileData, error: profileError } = await supabase
@@ -158,35 +199,30 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
 
       // Get linked player information for player role
       let linkedPlayerData = null;
-      const { data: playerData, error: playerError } = await supabase
-        .from('user_players')
-        .select('players(name, photo_url)')
-        .eq('user_id', user.id)
-        .single();
+      if (linkedPlayerId) {
+        const { data: playerData } = await supabase
+          .from('players')
+          .select('name, photo_url')
+          .eq('id', linkedPlayerId)
+          .single();
 
-      if (playerError) {
-        console.log('No player record found for user:', user.id);
-      } else if (playerData?.players) {
-        linkedPlayerData = playerData.players;
-        console.log('Found linked player for user:', user.id, 'player:', linkedPlayerData.name);
+        if (playerData) {
+          linkedPlayerData = playerData;
+          console.log('Found linked player:', linkedPlayerData.name);
+        }
       }
 
       if (profileData) {
         setUserProfile({
           id: profileData.id,
           name: profileData.name,
-          photoUrl: undefined, // Will be set per role in rendering
+          photoUrl: undefined,
           linkedPlayer: linkedPlayerData
-        });
-        console.log('Set user profile:', {
-          id: profileData.id,
-          name: profileData.name,
-          hasLinkedPlayer: !!linkedPlayerData
         });
       }
 
-      console.log('DEBUG - Event Availability:', data);
-      setAvailabilities((data || []) as EventAvailability[]);
+      console.log('DEBUG - Event Availability:', availabilityRecords);
+      setAvailabilities(availabilityRecords);
     } catch (error) {
       console.error('Error loading availability data:', error);
       toast.error('Failed to load availability data');
