@@ -189,10 +189,24 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const isTeamManager = (teamId?: string): boolean => {
     if (isGlobalAdmin) return true;
+    
+    // Check profile roles
+    const hasManagerProfileRole = profile?.roles?.includes('manager') || profile?.roles?.includes('team_manager');
+    
+    // Check user_teams for actual manager roles (not team_parent)
+    const managerRoles = ['team_manager', 'team_assistant_manager', 'manager', 'admin'];
+    const hasManagerTeamRole = teams.some(team => 
+      team.userRole && managerRoles.includes(team.userRole)
+    );
+    
     if (!teamId) {
-      return (profile?.roles?.includes('manager') || profile?.roles?.includes('team_manager')) || teams.length > 0;
+      return hasManagerProfileRole || hasManagerTeamRole;
     }
-    return teams.some(team => team.id === teamId);
+    
+    // For specific team, check if user has manager role for that team
+    return teams.some(team => 
+      team.id === teamId && team.userRole && managerRoles.includes(team.userRole)
+    );
   };
 
   const value: AuthorizationContextType = {
