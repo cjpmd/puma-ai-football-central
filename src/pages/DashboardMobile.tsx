@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { format, isToday, isTomorrow } from 'date-fns';
-import { getSharedUserIds, getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
+import { getLinkedPlayerIds, getPlayerAvailabilityForEvents, getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
 
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
@@ -282,29 +282,36 @@ export default function DashboardMobile() {
         .order('date', { ascending: true })
         .limit(5);
 
-      // Fetch user availability for all upcoming events - including shared users
+      // Fetch user availability for all upcoming events using player-based approach
       const upcomingEventIds = upcomingEventsData?.map(e => e.id) || [];
-      const sharedUserIds = await getSharedUserIds(user.id);
       
-      const { data: userAvailabilityData } = await supabase
+      // Get linked player IDs for this user
+      const linkedPlayerIds = await getLinkedPlayerIds(user.id);
+      
+      // Fetch player availability by player_id (shared across linked users)
+      const playerAvailabilityData = await getPlayerAvailabilityForEvents(linkedPlayerIds, upcomingEventIds);
+      
+      // Also fetch staff availability by user_id (staff don't share)
+      const { data: staffAvailabilityData } = await supabase
         .from('event_availability')
-        .select('event_id, status, role, user_id')
-        .in('user_id', sharedUserIds)
-        .in('event_id', upcomingEventIds);
+        .select('event_id, status, user_id')
+        .eq('user_id', user.id)
+        .in('event_id', upcomingEventIds)
+        .eq('role', 'staff');
 
-      // Group by event and get best status (available > unavailable > pending)
+      // Build availability map - player availability takes priority
       const availabilityMap = new Map<string, string>();
-      const eventGroups = new Map<string, Array<{ status: string; user_id: string }>>();
       
-      userAvailabilityData?.forEach(record => {
-        const existing = eventGroups.get(record.event_id) || [];
-        existing.push({ status: record.status, user_id: record.user_id });
-        eventGroups.set(record.event_id, existing);
+      // First add player availability (by player_id - shared)
+      playerAvailabilityData.forEach(record => {
+        availabilityMap.set(record.event_id, record.status);
       });
       
-      eventGroups.forEach((records, eventId) => {
-        const { status } = getBestAvailabilityStatus(records);
-        availabilityMap.set(eventId, status);
+      // Then add staff availability if no player availability exists
+      staffAvailabilityData?.forEach(record => {
+        if (!availabilityMap.has(record.event_id)) {
+          availabilityMap.set(record.event_id, record.status);
+        }
       });
 
       const upcomingEvents = upcomingEventsData?.map(event => ({
@@ -413,25 +420,40 @@ export default function DashboardMobile() {
 
       const eventIds = upcomingEventsForAvailability.map(event => event.id);
       
-      // Check existing availability for all shared users
-      const { data: existingAvailability } = await supabase
+      // Check existing player availability by player_id
+      const pendingPlayerAvailability = await getPlayerAvailabilityForEvents(linkedPlayerIds, eventIds);
+      
+      // Check existing staff availability by user_id
+      const { data: pendingStaffAvailability } = await supabase
         .from('event_availability')
-        .select('event_id, status, user_id')
-        .in('user_id', sharedUserIds)
-        .in('event_id', eventIds);
+        .select('event_id, status')
+        .eq('user_id', user.id)
+        .in('event_id', eventIds)
+        .eq('role', 'staff');
 
-      // Group by event and check if any shared user has responded
-      const eventResponseGroups = new Map<string, Array<{ status: string; user_id: string }>>();
-      existingAvailability?.forEach(a => {
-        const existing = eventResponseGroups.get(a.event_id) || [];
-        existing.push({ status: a.status, user_id: a.user_id });
-        eventResponseGroups.set(a.event_id, existing);
+      // Build a map of event -> best status
+      const pendingStatusMap = new Map<string, string>();
+      
+      // Add player availability
+      pendingPlayerAvailability.forEach(a => {
+        const current = pendingStatusMap.get(a.event_id);
+        if (!current || a.status !== 'pending') {
+          pendingStatusMap.set(a.event_id, a.status);
+        }
+      });
+      
+      // Add staff availability if no player status or player is pending
+      pendingStaffAvailability?.forEach(a => {
+        const current = pendingStatusMap.get(a.event_id);
+        if (!current || (current === 'pending' && a.status !== 'pending')) {
+          pendingStatusMap.set(a.event_id, a.status);
+        }
       });
 
       const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
-        const records = eventResponseGroups.get(event.id) || [];
-        const { status } = getBestAvailabilityStatus(records);
-        return status === 'pending';
+        const status = pendingStatusMap.get(event.id);
+        // Show pending if no record exists or status is 'pending'
+        return !status || status === 'pending';
       });
 
       const pendingAvailabilityData = eventsNeedingAvailability.map(event => ({

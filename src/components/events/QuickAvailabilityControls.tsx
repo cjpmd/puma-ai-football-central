@@ -88,15 +88,19 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
       let linkedPlayerData = null;
       const { data: playerData, error: playerError } = await supabase
         .from('user_players')
-        .select('players(name, photo_url)')
+        .select('player_id, players(name, photo_url)')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (playerError) {
         console.log('No player record found for user:', user.id);
-      } else if (playerData?.players) {
-        linkedPlayerData = playerData.players;
-        console.log('Found linked player for user:', user.id, 'player:', linkedPlayerData.name);
+      } else if (playerData) {
+        // Cache the player_id for availability lookups
+        setCachedPlayerId(playerData.player_id);
+        if (playerData.players) {
+          linkedPlayerData = playerData.players;
+          console.log('Found linked player for user:', user.id, 'player:', linkedPlayerData.name, 'playerId:', playerData.player_id);
+        }
       }
 
       if (profileData) {
