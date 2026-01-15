@@ -191,6 +191,11 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
     }
 
     setIsLoading(true);
+    
+    // Track if account was created successfully
+    let accountCreated = false;
+    let userId: string | null = null;
+    
     try {
       const redirectUrl = `${window.location.origin}/`;
       
@@ -220,11 +225,26 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         return;
       }
 
+      // Account was successfully created
+      accountCreated = true;
+      userId = authData.user.id;
+
       // Wait a moment for the profile trigger to complete
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Now create role-specific associations
-      const userId = authData.user.id;
+      // Try to sign in immediately to establish session for RLS
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: sanitizeText(email.toLowerCase().trim()),
+        password
+      });
+
+      if (signInError) {
+        console.warn("Auto sign-in after signup failed:", signInError);
+        // Continue anyway - associations may still work or user can reset password
+      }
+
+      // Track association errors but don't fail the whole flow
+      const associationErrors: string[] = [];
 
       if (selectedRole === "player" && matchedPlayer) {
         // Link user to existing player
@@ -238,14 +258,20 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
 
         if (linkError) {
           console.error("Error linking user to player:", linkError);
+          associationErrors.push("player link");
         }
 
         // Add user to team as player
-        await supabase.from("user_teams").insert({
+        const { error: teamError } = await supabase.from("user_teams").insert({
           team_id: matchedPlayer.team_id,
           user_id: userId,
           role: "team_player"
         });
+
+        if (teamError) {
+          console.error("Error adding to team:", teamError);
+          associationErrors.push("team membership");
+        }
           
         // Add player role to profile
         await supabase
@@ -265,14 +291,20 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
 
         if (linkError) {
           console.error("Error linking parent to player:", linkError);
+          associationErrors.push("parent link");
         }
 
         // Add user to team as parent
-        await supabase.from("user_teams").insert({
+        const { error: teamError } = await supabase.from("user_teams").insert({
           team_id: matchedPlayer.team_id,
           user_id: userId,
           role: "team_parent"
         });
+
+        if (teamError) {
+          console.error("Error adding to team:", teamError);
+          associationErrors.push("team membership");
+        }
 
         // Update profile with parent role
         await supabase
@@ -298,13 +330,18 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
             .eq('id', existingStaff.id);
           
           // Add to user_teams with their assigned role
-          await supabase.from('user_teams').insert({
+          const { error: teamError } = await supabase.from('user_teams').insert({
             user_id: userId,
             team_id: teamInfo!.id,
             role: existingStaff.role === 'manager' ? 'team_manager' : 
                   existingStaff.role === 'assistant_manager' ? 'team_assistant_manager' : 
                   'team_coach'
           });
+
+          if (teamError) {
+            console.error("Error adding staff to team:", teamError);
+            associationErrors.push("team membership");
+          }
 
           // Update profile with staff role
           await supabase
@@ -313,13 +350,18 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
             .eq("id", userId);
         } else {
           // Create pending staff request
-          await supabase.from('staff_requests').insert({
+          const { error: requestError } = await supabase.from('staff_requests').insert({
             team_id: teamInfo!.id,
             user_id: userId,
             name: fullName.trim(),
             email: email.trim().toLowerCase(),
             status: 'pending'
           });
+
+          if (requestError) {
+            console.error("Error creating staff request:", requestError);
+            associationErrors.push("staff request");
+          }
 
           // Update profile with pending status
           await supabase
@@ -329,14 +371,27 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         }
       }
 
-      // Track code usage
-      await teamCodeService.trackCodeUsage(
-        teamInfo!.id,
-        teamCode,
-        userId,
-        selectedRole!
-      );
+      // Track code usage (non-critical, don't fail on error)
+      try {
+        await teamCodeService.trackCodeUsage(
+          teamInfo!.id,
+          teamCode,
+          userId,
+          selectedRole!
+        );
+      } catch (trackError) {
+        console.error("Error tracking code usage:", trackError);
+      }
 
+      // Show appropriate message based on association results
+      if (associationErrors.length > 0) {
+        console.warn("Some associations failed:", associationErrors);
+        toast.warning("Account created with minor issues", {
+          description: "Your account is ready. Contact your team manager if you have issues accessing the team."
+        });
+      }
+
+      // Always proceed to complete step since account was created
       setStep("complete");
       
       // Auto-redirect to dashboard after brief success message
@@ -345,9 +400,22 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       }, 1500);
     } catch (error) {
       console.error("Signup error:", error);
-      toast.error("Something went wrong", {
-        description: "Please try again later"
-      });
+      
+      // Only show error if account wasn't created
+      if (!accountCreated) {
+        toast.error("Failed to create account", {
+          description: "Please try again later"
+        });
+      } else {
+        // Account was created but something else failed
+        toast.warning("Account created", {
+          description: "Please sign in and contact your team manager if you have issues."
+        });
+        setStep("complete");
+        setTimeout(() => {
+          onSuccess();
+        }, 1500);
+      }
     } finally {
       setIsLoading(false);
     }
