@@ -262,15 +262,7 @@ export const MultiRoleAvailabilityControls: React.FC<MultiRoleAvailabilityContro
   };
 
   const getRoleStatus = (role: 'player' | 'staff'): 'pending' | 'available' | 'unavailable' => {
-    if (!user?.id) return 'pending';
-    
-    // Check persistent state first
-    const persistentStatus = getAvailabilityStatus(eventId, user.id, role);
-    if (persistentStatus) {
-      return persistentStatus;
-    }
-    
-    // Fallback to local state
+    // Fallback to local state - the persistent state is async now
     const availability = availabilities.find(a => a.role === role);
     return availability?.status || 'pending';
   };

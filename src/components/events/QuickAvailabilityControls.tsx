@@ -1,27 +1,25 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Check, X, Clock } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useStaffAvailability } from '@/hooks/useStaffAvailability';
 import { formatPlayerName } from '@/utils/nameUtils';
 import { useAvailabilityState } from '@/hooks/useAvailabilityState';
-import { multiRoleAvailabilityService } from '@/services/multiRoleAvailabilityService';
 
 interface UserProfile {
   id: string;
   name: string;
   photoUrl?: string;
   linkedPlayer?: {
+    id: string;
     name: string;
     photo_url?: string;
   };
 }
-
-type RoleType = 'player' | 'staff';
 
 interface QuickAvailabilityControlsProps {
   eventId: string;
@@ -39,6 +37,7 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   const [isUpdating, setIsUpdating] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [invitedRoleSources, setInvitedRoleSources] = useState<Set<string>>(new Set());
+  const [cachedPlayerId, setCachedPlayerId] = useState<string | null>(null);
   const { user } = useAuth();
   const { 
     userRoles, 
@@ -46,7 +45,11 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
     updateAvailability: updateStaffAvailability, 
     getRoleStatus: getStaffRoleStatus 
   } = useStaffAvailability(eventId, user?.id);
-  const { updateAvailability: updatePersistentAvailability, getAvailabilityStatus } = useAvailabilityState(eventId);
+  const { 
+    updateAvailability: updatePersistentAvailability, 
+    getAvailabilityStatusSync,
+    loadAvailabilityForEvent 
+  } = useAvailabilityState(eventId);
 
   const getInitials = (name: string) => {
     return name
@@ -186,7 +189,8 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   };
 
   const renderRoleAvailability = (role: 'player' | 'staff', roleLabel: string) => {
-    const status = user?.id ? getAvailabilityStatus(eventId, user.id, role) || getStaffRoleStatus(role) : null;
+    const playerId = role === 'player' ? cachedPlayerId || undefined : undefined;
+    const status = getAvailabilityStatusSync(eventId, role, playerId) || getStaffRoleStatus(role) || null;
     const buttonSize = size === 'sm' ? 'h-6 w-12 px-2' : 'h-7 w-16 px-3';
     const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
     const textSize = size === 'sm' ? 'text-xs' : 'text-sm';
@@ -282,7 +286,8 @@ export const QuickAvailabilityControls: React.FC<QuickAvailabilityControlsProps>
   if (!singleRoleEntry) return null;
   if (!invitedRoleSources.has(`${singleRoleEntry.role}:${singleRoleEntry.sourceId}`)) return null;
   const singleRole = singleRoleEntry.role;
-  const status = user?.id ? (getAvailabilityStatus(eventId, user.id, singleRole) || getStaffRoleStatus(singleRole) || currentStatus) : currentStatus;
+  const singlePlayerId = singleRole === 'player' ? cachedPlayerId || undefined : undefined;
+  const status = getAvailabilityStatusSync(eventId, singleRole, singlePlayerId) || getStaffRoleStatus(singleRole) || currentStatus;
   const buttonSize = size === 'sm' ? 'h-6 w-6 p-0' : 'h-7 w-7 p-0';
   const iconSize = size === 'sm' ? 'h-3 w-3' : 'h-4 w-4';
   const textSize = size === 'sm' ? 'text-xs' : 'text-sm';

@@ -4,15 +4,16 @@ export interface UserRole {
   role: 'player' | 'staff';
   sourceId: string;
   sourceType: string;
-  playerName?: string; // For parent-linked players
-  staffName?: string; // For staff members
+  playerName?: string;
+  staffName?: string;
 }
 
 export interface AvailabilityStatus {
   role: 'player' | 'staff';
   status: 'pending' | 'available' | 'unavailable';
   sourceId: string;
-  playerName?: string; // For parent-linked players
+  playerName?: string;
+  playerId?: string;
 }
 
 export const multiRoleAvailabilityService = {
@@ -24,7 +25,6 @@ export const multiRoleAvailabilityService = {
 
     if (error) throw error;
 
-    // Get player names for parent-linked players and staff names
     const rolesWithNames = await Promise.all(data.map(async (row: any) => {
       let playerName = undefined;
       let staffName = undefined;
@@ -60,40 +60,54 @@ export const multiRoleAvailabilityService = {
   },
 
   async getUserAvailabilityStatuses(eventId: string, userId: string): Promise<AvailabilityStatus[]> {
-    const { data, error } = await supabase
+    // Get the linked player for this user
+    const { data: userPlayer } = await supabase
+      .from('user_players')
+      .select('player_id, players(name)')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const results: AvailabilityStatus[] = [];
+
+    // For player role, fetch by player_id (shared across all linked users)
+    if (userPlayer?.player_id) {
+      const { data: playerAvailability } = await supabase
+        .from('event_availability')
+        .select('role, status')
+        .eq('event_id', eventId)
+        .eq('player_id', userPlayer.player_id)
+        .eq('role', 'player')
+        .maybeSingle();
+
+      if (playerAvailability) {
+        results.push({
+          role: 'player',
+          status: playerAvailability.status as 'pending' | 'available' | 'unavailable',
+          sourceId: userPlayer.player_id,
+          playerName: userPlayer.players?.name,
+          playerId: userPlayer.player_id
+        });
+      }
+    }
+
+    // For staff role, fetch by user_id (not shared)
+    const { data: staffAvailability } = await supabase
       .from('event_availability')
       .select('role, status')
       .eq('event_id', eventId)
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .eq('role', 'staff')
+      .maybeSingle();
 
-    if (error) throw error;
+    if (staffAvailability) {
+      results.push({
+        role: 'staff',
+        status: staffAvailability.status as 'pending' | 'available' | 'unavailable',
+        sourceId: userId
+      });
+    }
 
-    // Get player names for player role records (these might be parent-linked players)
-    const statusesWithNames = await Promise.all(data.map(async (row: any) => {
-      let playerName = undefined;
-      
-      if (row.role === 'player') {
-        // Try to find the player this availability record is for
-        const { data: userPlayer } = await supabase
-          .from('user_players')
-          .select('player_id, players(name)')
-          .eq('user_id', userId)
-          .single();
-        
-        if (userPlayer?.players) {
-          playerName = userPlayer.players.name;
-        }
-      }
-
-      return {
-        role: row.role,
-        status: row.status,
-        sourceId: userId,
-        playerName
-      };
-    }));
-
-    return statusesWithNames;
+    return results;
   },
 
   async updateRoleAvailability(
@@ -102,16 +116,101 @@ export const multiRoleAvailabilityService = {
     role: 'player' | 'staff',
     status: 'available' | 'unavailable' | 'pending'
   ): Promise<void> {
+    if (role === 'player') {
+      // Get the linked player ID
+      const { data: userPlayer } = await supabase
+        .from('user_players')
+        .select('player_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (!userPlayer?.player_id) {
+        throw new Error('No linked player found for user');
+      }
+
+      // Check if a record exists for this player
+      const { data: existing } = await supabase
+        .from('event_availability')
+        .select('id')
+        .eq('event_id', eventId)
+        .eq('player_id', userPlayer.player_id)
+        .eq('role', 'player')
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing record
+        const { error } = await supabase
+          .from('event_availability')
+          .update({
+            status,
+            last_updated_by: userId,
+            responded_at: status !== 'pending' ? new Date().toISOString() : null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existing.id);
+
+        if (error) throw error;
+      } else {
+        // Create new record
+        const { error } = await supabase
+          .from('event_availability')
+          .insert({
+            event_id: eventId,
+            user_id: userId,
+            player_id: userPlayer.player_id,
+            role: 'player',
+            status,
+            last_updated_by: userId,
+            responded_at: status !== 'pending' ? new Date().toISOString() : null
+          });
+
+        if (error) throw error;
+      }
+    } else {
+      // Staff availability - user-based
+      const { error } = await supabase
+        .from('event_availability')
+        .upsert({
+          event_id: eventId,
+          user_id: userId,
+          role: 'staff',
+          status,
+          last_updated_by: userId,
+          responded_at: status !== 'pending' ? new Date().toISOString() : null
+        }, {
+          onConflict: 'event_id,user_id,role'
+        });
+
+      if (error) throw error;
+    }
+  },
+
+  async createPlayerAvailabilityRecord(
+    eventId: string,
+    userId: string,
+    playerId: string
+  ): Promise<void> {
+    // Check if a record already exists for this player
+    const { data: existing } = await supabase
+      .from('event_availability')
+      .select('id, status')
+      .eq('event_id', eventId)
+      .eq('player_id', playerId)
+      .eq('role', 'player')
+      .maybeSingle();
+
+    if (existing) return; // Record already exists
+
+    // Create new pending record
     const { error } = await supabase
       .from('event_availability')
-      .upsert({
+      .insert({
         event_id: eventId,
         user_id: userId,
-        role,
-        status,
-        responded_at: status !== 'pending' ? new Date().toISOString() : null
-      }, {
-        onConflict: 'event_id,user_id,role'
+        player_id: playerId,
+        role: 'player',
+        status: 'pending',
+        notification_sent_at: new Date().toISOString()
       });
 
     if (error) throw error;
@@ -122,24 +221,37 @@ export const multiRoleAvailabilityService = {
     userId: string,
     role: 'player' | 'staff' = 'staff'
   ): Promise<void> {
-    // Do NOT overwrite an existing response. Only create if missing.
-    const { data: existing, error: checkError } = await supabase
+    if (role === 'player') {
+      // For player role, use player-based record
+      const { data: userPlayer } = await supabase
+        .from('user_players')
+        .select('player_id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (userPlayer?.player_id) {
+        await this.createPlayerAvailabilityRecord(eventId, userId, userPlayer.player_id);
+      }
+      return;
+    }
+
+    // Staff role - user-based
+    const { data: existing } = await supabase
       .from('event_availability')
       .select('id, status')
       .eq('event_id', eventId)
       .eq('user_id', userId)
-      .eq('role', role)
+      .eq('role', 'staff')
       .maybeSingle();
 
-    if (checkError) throw checkError;
-    if (existing) return; // Respect existing choice (available/unavailable/pending)
+    if (existing) return;
 
     const { error } = await supabase
       .from('event_availability')
       .insert({
         event_id: eventId,
         user_id: userId,
-        role,
+        role: 'staff',
         status: 'pending',
         notification_sent_at: new Date().toISOString()
       });
@@ -151,14 +263,13 @@ export const multiRoleAvailabilityService = {
     const availabilityRecords = [];
 
     for (const staff of staffSelections) {
-      // Get user linked to this staff member
-      const { data: userStaff, error: userError } = await supabase
+      const { data: userStaff } = await supabase
         .from('user_staff')
         .select('user_id')
         .eq('staff_id', staff.staffId)
         .maybeSingle();
 
-      if (userError || !userStaff) continue;
+      if (!userStaff) continue;
 
       availabilityRecords.push({
         event_id: eventId,
@@ -181,45 +292,38 @@ export const multiRoleAvailabilityService = {
   },
 
   async ensureAllRoleAvailabilityRecords(eventId: string, userId: string): Promise<void> {
-    // Get all roles this user has for this event
     const userRoles = await this.getUserRolesForEvent(eventId, userId);
     
-    // Create availability records for each role the user has
-    const records = userRoles.map(role => ({
-      event_id: eventId,
-      user_id: userId,
-      role: role.role,
-      status: 'pending' as const,
-      notification_sent_at: new Date().toISOString()
-    }));
+    for (const role of userRoles) {
+      if (role.role === 'player') {
+        // Get player_id for this user
+        const { data: userPlayer } = await supabase
+          .from('user_players')
+          .select('player_id')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-    if (records.length > 0) {
-      const { error } = await supabase
-        .from('event_availability')
-        .upsert(records, {
-          onConflict: 'event_id,user_id,role'
-        });
-
-      if (error) throw error;
+        if (userPlayer?.player_id) {
+          await this.createPlayerAvailabilityRecord(eventId, userId, userPlayer.player_id);
+        }
+      } else {
+        await this.createStaffAvailabilityRecord(eventId, userId, 'staff');
+      }
     }
   },
 
-  // Check if user was invited to an event (in ANY role: direct user, linked player, or linked staff)
   async isUserInvitedToEvent(eventId: string, userId: string): Promise<boolean> {
     try {
-      // Fetch invitations for the event
       const { data: invitations, error: invError } = await supabase
         .from('event_invitations')
         .select('user_id, player_id, staff_id, invitee_type')
         .eq('event_id', eventId);
       if (invError) throw invError;
 
-      // If no invitations exist for this event, do NOT assume "everyone"; treat as not invited
       if (!invitations || invitations.length === 0) {
         return false;
       }
 
-      // Collect linked player and staff IDs for this user
       const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
         supabase.from('user_players').select('player_id').eq('user_id', userId),
         supabase.from('user_staff').select('staff_id').eq('user_id', userId)
@@ -228,13 +332,9 @@ export const multiRoleAvailabilityService = {
       const linkedPlayerIds = (userPlayers || []).map((r: any) => r.player_id);
       const linkedStaffIds = (userStaff || []).map((r: any) => r.staff_id);
 
-      // Determine if invited in any way
       const invited = invitations.some((inv: any) =>
-        // Player-specific invitation must match a linked player
         (inv.player_id && linkedPlayerIds.includes(inv.player_id)) ||
-        // Staff-specific invitation must match a linked staff
         (inv.staff_id && linkedStaffIds.includes(inv.staff_id)) ||
-        // Direct user invitation only counts for staff invites
         (inv.user_id === userId && inv.invitee_type === 'staff')
       );
 
@@ -245,7 +345,6 @@ export const multiRoleAvailabilityService = {
     }
   },
 
-  // Get which roles the user is invited for this event (player/staff)
   async getInvitedRolesForUser(eventId: string, userId: string): Promise<Array<'player' | 'staff'>> {
     try {
       const { data: invitations, error: invError } = await supabase
@@ -254,7 +353,6 @@ export const multiRoleAvailabilityService = {
         .eq('event_id', eventId);
       if (invError) throw invError;
 
-      // If there are no invitations, do not assume access
       if (!invitations || invitations.length === 0) {
         return [];
       }

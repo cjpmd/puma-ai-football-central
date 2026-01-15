@@ -361,7 +361,7 @@ export default function CalendarEventsMobile() {
       if (existing) {
         return prev.map(a => a.eventId === eventId ? { ...a, status } : a);
       } else {
-        return [...prev, { eventId, status, source: 'direct' }];
+        return [...prev, { eventId, status, source: 'player' as const }];
       }
     });
   };
