@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getPersonalizedGreeting } from '@/utils/nameUtils';
 import { format, isToday, isTomorrow } from 'date-fns';
 import { getLinkedPlayerIds, getPlayerAvailabilityForEvents, getBestAvailabilityStatus } from '@/services/sharedAvailabilityService';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 import { EditProfileModal } from '@/components/users/EditProfileModal';
 import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModal';
@@ -41,6 +42,7 @@ export default function DashboardMobile() {
   const { teams, allTeams, connectedPlayers, profile, user } = useAuth();
   const { currentTeam, viewMode, availableTeams, setCurrentTeam, setViewMode } = useTeamContext();
   const { toast } = useToast();
+  const { hasStaffAccess, isRestrictedParent, isRestrictedPlayer } = useEffectiveRole();
   const [stats, setStats] = useState<LiveStats>({
     playersCount: 0,
     eventsCount: 0,
@@ -54,6 +56,7 @@ export default function DashboardMobile() {
   const [showMobileEventForm, setShowMobileEventForm] = useState(false);
   const [selectedPlayerData, setSelectedPlayerData] = useState<any>(null);
   const [showPlayerCard, setShowPlayerCard] = useState(false);
+  const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
   
   // Player action modal states for Dashboard FIFA card
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -63,6 +66,20 @@ export default function DashboardMobile() {
   const [commentsModalOpen, setCommentsModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [parentsModalOpen, setParentsModalOpen] = useState(false);
+
+  // Helper to check if scores should be shown for an event's team
+  const shouldShowScoresForEvent = (event: any) => {
+    // Staff always see scores
+    if (hasStaffAccess) return true;
+    
+    const settings = teamPrivacySettings.get(event.team_id);
+    if (!settings) return true; // Default to showing if no settings loaded
+    
+    if (isRestrictedParent && !settings.show_scores_to_parents) return false;
+    if (isRestrictedPlayer && !settings.show_scores_to_players) return false;
+    
+    return true;
+  };
 
   const handleAvailabilityStatusChange = (eventId: string, status: 'available' | 'unavailable') => {
     setStats(prevStats => ({
@@ -256,7 +273,18 @@ export default function DashboardMobile() {
       }
       
       const teamIds = teamsToUse.map(team => team.id);
+
+      // Load privacy settings for all teams
+      const { data: privacyData } = await supabase
+        .from('team_privacy_settings')
+        .select('team_id, show_scores_to_parents, show_scores_to_players')
+        .in('team_id', teamIds);
       
+      const settingsMap = new Map<string, any>();
+      privacyData?.forEach(setting => {
+        settingsMap.set(setting.team_id, setting);
+      });
+      setTeamPrivacySettings(settingsMap);
       const { count: playersCount } = await supabase
         .from('players')
         .select('*', { count: 'exact', head: true })
@@ -834,7 +862,8 @@ export default function DashboardMobile() {
             {stats.recentResults.length > 0 ? (
               <>
                 {stats.recentResults.map((event, index) => {
-                  const result = getResultFromScores(event.our_score, event.opponent_score);
+                  const showScores = shouldShowScoresForEvent(event);
+                  const result = showScores ? getResultFromScores(event.our_score, event.opponent_score) : null;
                   return (
                     <div key={event.id}>
                       {index > 0 && <div className="h-px bg-gray-100 mx-4" />}
@@ -849,8 +878,9 @@ export default function DashboardMobile() {
                           </span>
                         </div>
                         
-                        {/* Colored accent based on result */}
+                        {/* Colored accent based on result - gray if scores hidden */}
                         <div className={`w-1 self-stretch rounded-full ${
+                          !showScores ? 'bg-gray-300' :
                           result?.result === 'W' ? 'bg-green-400' : 
                           result?.result === 'L' ? 'bg-red-400' : 'bg-gray-400'
                         }`} />
@@ -861,16 +891,22 @@ export default function DashboardMobile() {
                             <p className="font-semibold text-gray-900 truncate">
                               vs {event.opponent}
                             </p>
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-lg font-bold text-gray-900">
-                                {event.our_score}-{event.opponent_score}
+                            {showScores ? (
+                              <div className="flex items-center gap-2 shrink-0">
+                                <span className="text-lg font-bold text-gray-900">
+                                  {event.our_score}-{event.opponent_score}
+                                </span>
+                                {result && (
+                                  <Badge className={`${result.color} text-white text-xs px-1.5`}>
+                                    {result.result}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground italic">
+                                Score hidden
                               </span>
-                              {result && (
-                                <Badge className={`${result.color} text-white text-xs px-1.5`}>
-                                  {result.result}
-                                </Badge>
-                              )}
-                            </div>
+                            )}
                           </div>
                           <p className="text-sm text-gray-500">
                             {event.team_context?.name}

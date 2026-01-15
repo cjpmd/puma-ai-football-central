@@ -324,43 +324,43 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <Label htmlFor="hide-edit-parents" className="text-sm font-medium">
-                Hide Edit button from parents
+              <Label htmlFor="show-edit-parents" className="text-sm font-medium">
+                Show Edit button to parents
               </Label>
               <Switch
-                id="hide-edit-parents"
-                checked={settings.hideEditButtonFromParents}
-                onCheckedChange={(checked) => updateSetting('hideEditButtonFromParents', checked)}
+                id="show-edit-parents"
+                checked={!settings.hideEditButtonFromParents}
+                onCheckedChange={(checked) => updateSetting('hideEditButtonFromParents', !checked)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="hide-team-selection-parents" className="text-sm font-medium">
-                Hide Team Selection button from parents
+              <Label htmlFor="show-team-selection-parents" className="text-sm font-medium">
+                Show Team Selection button to parents
               </Label>
               <Switch
-                id="hide-team-selection-parents"
-                checked={settings.hideTeamSelectionFromParents}
-                onCheckedChange={(checked) => updateSetting('hideTeamSelectionFromParents', checked)}
+                id="show-team-selection-parents"
+                checked={!settings.hideTeamSelectionFromParents}
+                onCheckedChange={(checked) => updateSetting('hideTeamSelectionFromParents', !checked)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="hide-match-report-parents" className="text-sm font-medium">
-                Hide Match Report button from parents
+              <Label htmlFor="show-match-report-parents" className="text-sm font-medium">
+                Show Match Report button to parents
               </Label>
               <Switch
-                id="hide-match-report-parents"
-                checked={settings.hideMatchReportFromParents}
-                onCheckedChange={(checked) => updateSetting('hideMatchReportFromParents', checked)}
+                id="show-match-report-parents"
+                checked={!settings.hideMatchReportFromParents}
+                onCheckedChange={(checked) => updateSetting('hideMatchReportFromParents', !checked)}
               />
             </div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="hide-delete-parents" className="text-sm font-medium">
-                Hide Delete button from parents
+              <Label htmlFor="show-delete-parents" className="text-sm font-medium">
+                Show Delete button to parents
               </Label>
               <Switch
-                id="hide-delete-parents"
-                checked={settings.hideDeleteButtonFromParents}
-                onCheckedChange={(checked) => updateSetting('hideDeleteButtonFromParents', checked)}
+                id="show-delete-parents"
+                checked={!settings.hideDeleteButtonFromParents}
+                onCheckedChange={(checked) => updateSetting('hideDeleteButtonFromParents', !checked)}
               />
             </div>
           </CardContent>

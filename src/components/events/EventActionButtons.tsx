@@ -2,13 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Edit, Users, Trophy, Trash2, ClipboardList, Gamepad2 } from 'lucide-react';
 import { DatabaseEvent } from '@/types/event';
 import { useTeamPrivacy } from '@/hooks/useTeamPrivacy';
-import { ViewRole } from '@/contexts/SmartViewContext';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface EventActionButtonsProps {
   event: DatabaseEvent;
   completed: boolean;
   matchType: boolean;
-  currentView: ViewRole;
   onEditEvent: (event: DatabaseEvent) => void;
   onTeamSelection: (event: DatabaseEvent) => void;
   onPostGameEdit: (event: DatabaseEvent) => void;
@@ -22,7 +21,6 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   event,
   completed,
   matchType,
-  currentView,
   onEditEvent,
   onTeamSelection,
   onPostGameEdit,
@@ -32,8 +30,7 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   size = 'xs'
 }) => {
   const { settings } = useTeamPrivacy(event.team_id);
-  const isParent = currentView === 'parent';
-  const isPlayer = currentView === 'player';
+  const { isRestrictedParent, isRestrictedPlayer, currentView } = useEffectiveRole();
   const isTrainingEvent = event.event_type === 'training';
   const isMatchEvent = event.event_type === 'match' || event.event_type === 'friendly' || event.event_type === 'fixture';
 
@@ -42,22 +39,23 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
   const iconClass = size === 'xs' ? "h-3 w-3" : "h-4 w-4";
   const isFullSize = size === 'md';
 
+  // Only apply restrictions if user is a restricted parent (parent without staff access)
   const shouldShowButton = (buttonType: keyof typeof settings) => {
-    if (!isParent) return true; // Always show to non-parents (except specific player restrictions)
-    return !settings[buttonType]; // Hide if setting is true for parents
+    if (!isRestrictedParent) return true;
+    return !settings[buttonType];
   };
 
   // Check visibility for Game Day button (respects both parent and player settings)
   const shouldShowGameDay = () => {
-    if (isParent && settings.hideGameDayFromParents) return false;
-    if (isPlayer && settings.hideGameDayFromPlayers) return false;
+    if (isRestrictedParent && settings.hideGameDayFromParents) return false;
+    if (isRestrictedPlayer && settings.hideGameDayFromPlayers) return false;
     return true;
   };
 
   // Check visibility for Team Selection button (respects both parent and player settings)
   const shouldShowTeamSelection = () => {
-    if (isParent && settings.hideSetupFromParents) return false;
-    if (isPlayer && settings.hideSetupFromPlayers) return false;
+    if (isRestrictedParent && settings.hideSetupFromParents) return false;
+    if (isRestrictedPlayer && settings.hideSetupFromPlayers) return false;
     return true;
   };
 
@@ -91,15 +89,17 @@ export const EventActionButtons: React.FC<EventActionButtonsProps> = ({
         </Button>
       )}
       
-      {completed && matchType && shouldShowButton('hideMatchReportFromParents') && (
+      {/* Match Report button - always show for match types but disabled before completion */}
+      {matchType && shouldShowButton('hideMatchReportFromParents') && (
         <Button
           variant="ghost"
           size="sm"
           className={buttonClass}
           onClick={() => onPostGameEdit(event)}
-          title="Post-Game Editor"
+          title={completed ? "Match Report" : "Available after match"}
+          disabled={!completed}
         >
-          <Trophy className={iconClass} />
+          <Trophy className={`${iconClass} ${!completed ? 'opacity-50' : ''}`} />
           {isFullSize && <span className="ml-2">Match Report</span>}
         </Button>
       )}

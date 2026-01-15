@@ -40,6 +40,7 @@ import { ManageConnectionsModal } from '@/components/users/ManageConnectionsModa
 import { getUserContextForEvent, formatEventTimeDisplay, UserTeamContext } from '@/utils/teamTimingUtils';
 import { EventAvailabilitySection } from '@/components/events/EventAvailabilitySection';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 // Helper to get color-coded event type label
 const getEventTypeLabel = (eventType: string): { label: string; colorClass: string } => {
@@ -83,11 +84,23 @@ export default function CalendarEventsMobile() {
   const [invitedEventIds, setInvitedEventIds] = useState<Set<string>>(new Set());
   const [selectedTeamIndex, setSelectedTeamIndex] = useState(0);
   const [teamRefreshTrigger, setTeamRefreshTrigger] = useState(0);
+  const [teamPrivacySettings, setTeamPrivacySettings] = useState<Map<string, any>>(new Map());
   const { toast } = useToast();
   const { user, profile, teams: authTeams, allTeams } = useAuth();
   const { filteredTeams: teams } = useClubContext();
   const { currentTeam, viewMode, availableTeams } = useTeamContext();
   const { hasPermission } = useAuthorization();
+  const { hasStaffAccess, isRestrictedParent, isRestrictedPlayer } = useEffectiveRole();
+
+  // Helper to check if scores should be shown for an event
+  const shouldShowScoresForEvent = (event: DatabaseEvent) => {
+    if (hasStaffAccess) return true;
+    const settings = teamPrivacySettings.get(event.team_id);
+    if (!settings) return true;
+    if (isRestrictedParent && !settings.show_scores_to_parents) return false;
+    if (isRestrictedPlayer && !settings.show_scores_to_players) return false;
+    return true;
+  };
 
   // Check if user can create events (admin or manager roles only)
   const canCreateEvents = () => {
@@ -217,6 +230,18 @@ export default function CalendarEventsMobile() {
       if (teamsToQuery.length === 0) return;
 
       const teamIds = teamsToQuery.map(t => t.id);
+
+      // Load privacy settings for all teams
+      const { data: privacyData } = await supabase
+        .from('team_privacy_settings')
+        .select('team_id, show_scores_to_parents, show_scores_to_players')
+        .in('team_id', teamIds);
+      
+      const settingsMap = new Map<string, any>();
+      privacyData?.forEach(setting => {
+        settingsMap.set(setting.team_id, setting);
+      });
+      setTeamPrivacySettings(settingsMap);
 
       const { data, error } = await supabase
         .from('events')
@@ -888,8 +913,8 @@ export default function CalendarEventsMobile() {
                                 {team?.name}
                               </p>
                               
-                              {/* Scores for completed matches */}
-                              {completed && teamScores.length > 0 && (
+                              {/* Scores for completed matches - respect privacy settings */}
+                              {completed && teamScores.length > 0 && shouldShowScoresForEvent(event) && (
                                 <div className="flex items-center gap-2 pt-1">
                                   {teamScores.map((score, index) => (
                                     <div key={index} className="flex items-center gap-1">
@@ -1044,8 +1069,8 @@ export default function CalendarEventsMobile() {
                 )}
               </div>
 
-              {/* Show scores for all teams using performance category names */}
-              {getAllTeamScores(selectedEvent).length > 0 && (
+              {/* Show scores for all teams using performance category names - respect privacy settings */}
+              {selectedEvent && shouldShowScoresForEvent(selectedEvent) && getAllTeamScores(selectedEvent).length > 0 && (
                 <div>
                   <h4 className="font-medium mb-2">Scores</h4>
                   <div className="space-y-2">
