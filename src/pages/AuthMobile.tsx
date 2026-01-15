@@ -14,7 +14,7 @@ import { ClubSetupWizard } from '@/components/auth/ClubSetupWizard';
 type View = 'options' | 'login';
 
 export default function AuthMobile() {
-  const [view, setView] = useState<View>('options');
+  const [view, setView] = useState<View>('login');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
