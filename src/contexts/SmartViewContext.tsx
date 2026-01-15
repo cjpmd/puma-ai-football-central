@@ -56,10 +56,15 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       console.log('Added parent view');
     }
     
-    // Check for coach role (based on user teams relationship)
-    if (teams && teams.length > 0) {
+    // Check for coach role (only if user has an actual staff role, not just team_parent)
+    const staffRoles = ['coach', 'team_coach', 'team_manager', 'team_assistant_manager', 'admin', 'manager', 'global_admin'];
+    const hasStaffRole = teams && teams.some(team => 
+      team.userRole && staffRoles.includes(team.userRole)
+    );
+    
+    if (hasStaffRole) {
       views.push('coach');
-      console.log('Added coach view');
+      console.log('Added coach view - user has staff role:', teams.map(t => t.userRole));
     }
     
     // Check for team manager role
