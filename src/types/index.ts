@@ -61,6 +61,7 @@ export type Team = {
   };
   isReadOnly?: boolean; // For linked teams
   kitDesigns?: any; // Added this property
+  userRole?: string; // User's role for this team from user_teams
   createdAt: string;
   updatedAt: string;
 };

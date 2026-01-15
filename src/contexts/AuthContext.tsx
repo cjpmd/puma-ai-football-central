@@ -308,7 +308,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             headerImageUrl: item.teams.header_image_url,
             createdAt: item.teams.created_at,
             updatedAt: item.teams.updated_at,
-            // Keep existing properties for backward compatibility
+            userRole: item.role, // Include user's role for this team
           };
           
           teamMap.set(teamId, teamData);
