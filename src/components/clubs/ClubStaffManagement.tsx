@@ -114,10 +114,13 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       // Combine both sources - use a Map to avoid duplicates
       const staffMap = new Map<string, any>();
 
+      // Define staff-only roles (excludes parents and players)
+      const staffOnlyRoles = ['manager', 'team_manager', 'assistant_manager', 'team_assistant_manager', 'coach', 'team_coach', 'helper', 'admin', 'global_admin', 'club_admin'];
+      const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'assistant_manager', 'team_assistant_manager'];
+
       // Add team_staff records first
       teamStaffData?.forEach(member => {
         const teamData = clubTeams.find(ct => ct.team_id === member.team_id)?.teams;
-        const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'team_assistant_manager'];
         const requiresPvg = pvgRequiredRoles.includes(member.role);
         
         const key = `${member.user_id || member.email}-${member.team_id}`;
@@ -138,14 +141,16 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         });
       });
 
-      // Add user_teams records if not already in map
+      // Add user_teams records if not already in map - filter out parents and players
       userTeamsData?.forEach(ut => {
         const profile = ut.profiles as any;
         const key = `${ut.user_id}-${ut.team_id}`;
         
+        // Skip if not a staff role (exclude parents and players)
+        if (!staffOnlyRoles.includes(ut.role)) return;
+        
         if (!staffMap.has(key) && profile) {
           const teamData = clubTeams.find(ct => ct.team_id === ut.team_id)?.teams;
-          const pvgRequiredRoles = ['manager', 'team_manager', 'coach', 'team_coach', 'team_assistant_manager'];
           const requiresPvg = pvgRequiredRoles.includes(ut.role);
           
           staffMap.set(key, {

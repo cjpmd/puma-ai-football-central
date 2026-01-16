@@ -26,6 +26,8 @@ interface StaffMember {
   team_name: string;
   team_id: string;
   user_id?: string;
+  pvg_checked: boolean;
+  pvg_checked_at?: string;
 }
 
 interface TeamMember {
@@ -79,6 +81,8 @@ export default function StaffManagementMobile() {
           qualifications,
           user_id,
           team_id,
+          pvg_checked,
+          pvg_checked_at,
           teams:team_id(name)
         `)
         .in('team_id', teams.map(t => t.id))
@@ -95,7 +99,9 @@ export default function StaffManagementMobile() {
         qualifications: member.qualifications || [],
         team_name: member.teams?.name || 'Unknown Team',
         team_id: member.team_id,
-        user_id: member.user_id
+        user_id: member.user_id,
+        pvg_checked: member.pvg_checked || false,
+        pvg_checked_at: member.pvg_checked_at
       }));
       
       setStaff(transformedStaff);
@@ -438,6 +444,19 @@ export default function StaffManagementMobile() {
                         >
                           {member.user_id ? 'Linked' : 'Not Linked'}
                         </Badge>
+                        {['manager', 'team_manager', 'assistant_manager', 'coach'].includes(member.role) && (
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs",
+                              member.pvg_checked 
+                                ? "text-green-600 border-green-600" 
+                                : "text-red-600 border-red-600"
+                            )}
+                          >
+                            {member.pvg_checked ? 'PVG ✓' : 'PVG Required'}
+                          </Badge>
+                        )}
                       </div>
                       {member.qualifications && member.qualifications.length > 0 && (
                         <div className="flex items-center mt-1 text-sm text-muted-foreground">

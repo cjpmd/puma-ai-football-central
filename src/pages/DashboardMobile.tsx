@@ -2,7 +2,7 @@ import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp, Settings } from 'lucide-react';
+import { Calendar, Users, Plus, User, Link2, AlertCircle, Check, ChevronRight, TrendingUp, Settings, Building2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTeamContext } from '@/contexts/TeamContext';
@@ -39,7 +39,7 @@ interface LiveStats {
 
 export default function DashboardMobile() {
   const navigate = useNavigate();
-  const { teams, allTeams, connectedPlayers, profile, user } = useAuth();
+  const { teams, allTeams, connectedPlayers, profile, user, clubs } = useAuth();
   const { currentTeam, viewMode, availableTeams, setCurrentTeam, setViewMode } = useTeamContext();
   const { toast } = useToast();
   const { hasStaffAccess, isRestrictedParent, isRestrictedPlayer } = useEffectiveRole();
@@ -448,53 +448,69 @@ export default function DashboardMobile() {
 
       const eventIds = upcomingEventsForAvailability.map(event => event.id);
       
-      // Check existing player availability by player_id
-      const pendingPlayerAvailability = await getPlayerAvailabilityForEvents(linkedPlayerIds, eventIds);
+      // Check if user has linked players or is team staff
+      const hasLinkedPlayers = linkedPlayerIds.length > 0;
       
-      // Check existing staff availability by user_id
-      const { data: pendingStaffAvailability } = await supabase
-        .from('event_availability')
-        .select('event_id, status')
+      // Check if user is team staff
+      const { data: staffCheck } = await supabase
+        .from('team_staff')
+        .select('id')
         .eq('user_id', user.id)
-        .in('event_id', eventIds)
-        .eq('role', 'staff');
+        .limit(1);
+      const isTeamStaff = staffCheck && staffCheck.length > 0;
 
-      // Build a map of event -> best status
-      const pendingStatusMap = new Map<string, string>();
+      // Only show availability requests if user has linked players OR is team staff
+      let pendingAvailabilityData: any[] = [];
       
-      // Add player availability
-      pendingPlayerAvailability.forEach(a => {
-        const current = pendingStatusMap.get(a.event_id);
-        if (!current || a.status !== 'pending') {
-          pendingStatusMap.set(a.event_id, a.status);
-        }
-      });
-      
-      // Add staff availability if no player status or player is pending
-      pendingStaffAvailability?.forEach(a => {
-        const current = pendingStatusMap.get(a.event_id);
-        if (!current || (current === 'pending' && a.status !== 'pending')) {
-          pendingStatusMap.set(a.event_id, a.status);
-        }
-      });
+      if (hasLinkedPlayers || isTeamStaff) {
+        // Check existing player availability by player_id
+        const pendingPlayerAvailability = await getPlayerAvailabilityForEvents(linkedPlayerIds, eventIds);
+        
+        // Check existing staff availability by user_id
+        const { data: pendingStaffAvailability } = await supabase
+          .from('event_availability')
+          .select('event_id, status')
+          .eq('user_id', user.id)
+          .in('event_id', eventIds)
+          .eq('role', 'staff');
 
-      const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
-        const status = pendingStatusMap.get(event.id);
-        // Show pending if no record exists or status is 'pending'
-        return !status || status === 'pending';
-      });
+        // Build a map of event -> best status
+        const pendingStatusMap = new Map<string, string>();
+        
+        // Add player availability
+        pendingPlayerAvailability.forEach(a => {
+          const current = pendingStatusMap.get(a.event_id);
+          if (!current || a.status !== 'pending') {
+            pendingStatusMap.set(a.event_id, a.status);
+          }
+        });
+        
+        // Add staff availability if no player status or player is pending
+        pendingStaffAvailability?.forEach(a => {
+          const current = pendingStatusMap.get(a.event_id);
+          if (!current || (current === 'pending' && a.status !== 'pending')) {
+            pendingStatusMap.set(a.event_id, a.status);
+          }
+        });
 
-      const pendingAvailabilityData = eventsNeedingAvailability.map(event => ({
-        id: `${event.id}_${user.id}`,
-        event_id: event.id,
-        user_id: user.id,
-        role: 'player',
-        status: 'pending',
-        events: {
-          ...event,
-          team_context: event.team_context
-        }
-      }));
+        const eventsNeedingAvailability = upcomingEventsForAvailability.filter(event => {
+          const status = pendingStatusMap.get(event.id);
+          // Show pending if no record exists or status is 'pending'
+          return !status || status === 'pending';
+        });
+
+        pendingAvailabilityData = eventsNeedingAvailability.map(event => ({
+          id: `${event.id}_${user.id}`,
+          event_id: event.id,
+          user_id: user.id,
+          role: 'player',
+          status: 'pending',
+          events: {
+            ...event,
+            team_context: event.team_context
+          }
+        }));
+      }
 
       setStats({
         playersCount: playersCount || 0,
@@ -744,6 +760,22 @@ export default function DashboardMobile() {
                       <Settings className="w-4 h-4 text-gray-600" />
                     </div>
                     <span className="text-sm text-gray-900">Team Settings</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                </Link>
+                <div className="h-px bg-gray-100 mx-4" />
+              </>
+            )}
+
+            {/* Club Management - for users with clubs */}
+            {clubs && clubs.length > 0 && (
+              <>
+                <Link to="/clubs" className="w-full flex items-center justify-between px-4 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center">
+                      <Building2 className="w-4 h-4 text-indigo-600" />
+                    </div>
+                    <span className="text-sm text-gray-900">Club Management</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </Link>

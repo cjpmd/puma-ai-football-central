@@ -194,7 +194,21 @@ export const ClubManagement = () => {
     setIsClubDialogOpen(true);
   };
 
-  const ClubCard = ({ club, isLinked = false }: { club: Club; isLinked?: boolean }) => (
+  const ClubCard = ({ club, isLinked = false }: { club: Club; isLinked?: boolean }) => {
+    const [teamCount, setTeamCount] = useState(0);
+
+    useEffect(() => {
+      const fetchTeamCount = async () => {
+        const { count } = await supabase
+          .from('club_teams')
+          .select('*', { count: 'exact', head: true })
+          .eq('club_id', club.id);
+        setTeamCount(count || 0);
+      };
+      fetchTeamCount();
+    }, [club.id]);
+
+    return (
     <Card key={club.id} className={`hover:shadow-lg transition-shadow ${isLinked ? 'border-dashed opacity-75' : ''}`}>
       <CardHeader>
         <div className="flex justify-between items-start">
@@ -245,7 +259,7 @@ export const ClubManagement = () => {
             <span className="text-muted-foreground">Teams:</span>
             <span className="font-medium flex items-center gap-1">
               <Users className="h-3 w-3" />
-              {club.teams?.length || 0}
+              {teamCount}
             </span>
           </div>
           <div className="flex justify-between items-center text-sm">
@@ -289,7 +303,8 @@ export const ClubManagement = () => {
         )}
       </CardFooter>
     </Card>
-  );
+    );
+  };
 
   const allClubs = [...clubs, ...linkedClubs];
   const selectedClubData = allClubs.find(c => c.id === selectedClubForView);
