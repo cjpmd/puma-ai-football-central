@@ -724,17 +724,21 @@ export default function DashboardMobile() {
               <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quick Actions</h2>
             </div>
             
-            {canManageTeam() && currentTeam && (
+            {canManageTeam() && (
               <>
                 <button
-                  onClick={() => setShowMobileEventForm(true)}
-                  className="w-full flex items-center justify-between px-4 py-2.5"
+                  onClick={() => currentTeam && setShowMobileEventForm(true)}
+                  disabled={!currentTeam}
+                  className={`w-full flex items-center justify-between px-4 py-2.5 ${!currentTeam ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">
-                      <Plus className="w-4 h-4 text-green-600" />
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentTeam ? 'bg-green-50' : 'bg-gray-100'}`}>
+                      <Plus className={`w-4 h-4 ${currentTeam ? 'text-green-600' : 'text-gray-400'}`} />
                     </div>
-                    <span className="text-sm text-gray-900">Create Event</span>
+                    <div className="flex flex-col items-start">
+                      <span className={`text-sm ${currentTeam ? 'text-gray-900' : 'text-gray-400'}`}>Create Event</span>
+                      {!currentTeam && <span className="text-xs text-gray-400">Select a team first</span>}
+                    </div>
                   </div>
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </button>
