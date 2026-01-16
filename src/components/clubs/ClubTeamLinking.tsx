@@ -237,17 +237,17 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Link New Team */}
+    <div className="space-y-4">
+      {/* Link New Team - Mobile Optimized */}
       <Card>
-        <CardHeader>
-          <CardTitle>Link Team to {clubName}</CardTitle>
-          <CardDescription>Connect independent teams to this club</CardDescription>
+        <CardHeader className="p-3 sm:p-4 pb-2">
+          <CardTitle className="text-base sm:text-lg">Link Team to {clubName}</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Connect independent teams to this club</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
+        <CardContent className="p-3 sm:p-4 pt-0">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
             <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-              <SelectTrigger className="flex-1">
+              <SelectTrigger className="w-full sm:flex-1">
                 <SelectValue placeholder="Select a team to link" />
               </SelectTrigger>
               <SelectContent>
@@ -258,7 +258,7 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={linkTeam} disabled={!selectedTeamId}>
+            <Button onClick={linkTeam} disabled={!selectedTeamId} className="w-full sm:w-auto">
               <Link className="mr-2 h-4 w-4" />
               Link Team
             </Button>
@@ -272,44 +272,42 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
           {/* Unassigned Teams Warning */}
           {unassignedTeams.length > 0 && (
             <Card className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200">
-                  <AlertTriangle className="h-5 w-5" />
+              <CardHeader className="p-3 sm:p-4 pb-2">
+                <CardTitle className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 text-sm sm:text-base">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                   Unassigned Teams
                 </CardTitle>
-                <CardDescription className="text-yellow-700 dark:text-yellow-300">
-                  These teams are linked to the club but not assigned to a year group. Assign them for better organization.
+                <CardDescription className="text-yellow-700 dark:text-yellow-300 text-xs sm:text-sm">
+                  Assign these teams to a year group for better organization.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
+              <CardContent className="p-3 sm:p-4 pt-0">
+                <div className="space-y-2 sm:space-y-3">
                   {unassignedTeams.map((team) => (
-                    <div key={team.id} className="flex items-center justify-between p-3 border border-yellow-200 dark:border-yellow-800 rounded-lg bg-white dark:bg-gray-900">
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <span className="font-medium">{team.name}</span>
-                          <span className="text-muted-foreground ml-2">({team.age_group})</span>
+                    <div key={team.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 border border-yellow-200 dark:border-yellow-800 rounded-lg bg-white dark:bg-gray-900">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
+                          <span className="font-medium text-sm truncate block">{team.name}</span>
+                          <span className="text-muted-foreground text-xs">{team.age_group}</span>
                         </div>
-                        <Badge variant="outline" className="text-yellow-700 border-yellow-300">
-                          No Year Group
-                        </Badge>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
                         <Select onValueChange={(yearGroupId) => assignTeamToYearGroup(team.id, yearGroupId)}>
-                          <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Assign to year group" />
+                          <SelectTrigger className="flex-1 sm:w-36 h-8 text-xs">
+                            <SelectValue placeholder="Assign to..." />
                           </SelectTrigger>
                           <SelectContent>
                             {yearGroups.map((yg) => (
                               <SelectItem key={yg.id} value={yg.id}>
-                                {yg.name} {yg.playing_format && `(${yg.playing_format})`}
+                                {yg.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                         <Button 
                           variant="outline" 
-                          size="sm" 
+                          size="sm"
+                          className="h-8 w-8 p-0 flex-shrink-0"
                           onClick={() => unlinkTeam(team.id)}
                         >
                           <Unlink className="h-4 w-4" />
@@ -322,38 +320,34 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
             </Card>
           )}
 
-          {/* Teams by Year Group */}
+          {/* Teams by Year Group - Mobile Optimized */}
           {assignedTeams.map(([yearGroupId, teams]) => {
             const yearGroup = yearGroups.find(yg => yg.id === yearGroupId);
             return (
               <Card key={yearGroupId}>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    {yearGroup?.name || 'Unknown Year Group'}
+                <CardHeader className="p-3 sm:p-4 pb-2">
+                  <CardTitle className="flex flex-wrap items-center gap-2 text-sm sm:text-base">
+                    <Users className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                    <span className="truncate">{yearGroup?.name || 'Unknown Year Group'}</span>
                     {yearGroup?.playing_format && (
-                      <Badge variant="secondary">{yearGroup.playing_format}</Badge>
+                      <Badge variant="secondary" className="text-xs">{yearGroup.playing_format}</Badge>
                     )}
                   </CardTitle>
-                  <CardDescription>
-                    {teams.length} team{teams.length !== 1 ? 's' : ''} in this year group
+                  <CardDescription className="text-xs sm:text-sm">
+                    {teams.length} team{teams.length !== 1 ? 's' : ''}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
+                <CardContent className="p-3 sm:p-4 pt-0">
+                  <div className="space-y-2">
                     {teams.map((team) => (
-                      <div key={team.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          <div>
-                            <span className="font-medium">{team.name}</span>
-                            <span className="text-muted-foreground ml-2">({team.age_group})</span>
+                      <div key={team.id} className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 sm:p-3 border rounded-lg">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium text-sm truncate block">{team.name}</span>
+                            <span className="text-muted-foreground text-xs">{team.age_group}</span>
                           </div>
-                          <Badge variant="outline" className="text-green-700 border-green-300">
-                            <Users className="h-3 w-3 mr-1" />
-                            {yearGroup?.name}
-                          </Badge>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 w-full sm:w-auto">
                           <Select 
                             value={team.year_group_id || ''} 
                             onValueChange={(yearGroupId) => {
@@ -364,27 +358,25 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
                               }
                             }}
                           >
-                            <SelectTrigger className="w-48">
-                              <SelectValue placeholder="Reassign year group">
-                                <Settings className="h-4 w-4 mr-2" />
-                                Change Year Group
-                              </SelectValue>
+                            <SelectTrigger className="flex-1 sm:w-36 h-8 text-xs">
+                              <SelectValue placeholder="Move to..." />
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="remove" className="text-red-600">
-                                Remove from Year Group
+                                Remove
                               </SelectItem>
                               <Separator />
                               {yearGroups.filter(yg => yg.id !== team.year_group_id).map((yg) => (
                                 <SelectItem key={yg.id} value={yg.id}>
-                                  {yg.name} {yg.playing_format && `(${yg.playing_format})`}
+                                  {yg.name}
                                 </SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
                           <Button 
                             variant="outline" 
-                            size="sm" 
+                            size="sm"
+                            className="h-8 w-8 p-0 flex-shrink-0"
                             onClick={() => unlinkTeam(team.id)}
                           >
                             <Unlink className="h-4 w-4" />

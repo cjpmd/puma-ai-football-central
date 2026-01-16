@@ -309,28 +309,28 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     .filter((team, index, arr) => arr.findIndex(t => t.id === team.id) === index);
 
   return (
-    <div className="space-y-6">
-      {/* Team Summaries */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-4">
+      {/* Team Summaries - Mobile Optimized */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {Object.values(teamSummaries).map((summary: any, index) => (
           <Card key={index}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">{summary.teamName}</CardTitle>
-              <CardDescription>{summary.ageGroup}</CardDescription>
+            <CardHeader className="pb-2 p-3 sm:p-4">
+              <CardTitle className="text-sm font-medium truncate">{summary.teamName}</CardTitle>
+              <CardDescription className="text-xs">{summary.ageGroup}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span>Total Staff:</span>
-                  <span className="font-semibold">{summary.totalStaff}</span>
+            <CardContent className="p-3 sm:p-4 pt-0">
+              <div className="grid grid-cols-3 gap-2 text-xs sm:text-sm">
+                <div className="text-center">
+                  <div className="font-semibold">{summary.totalStaff}</div>
+                  <div className="text-muted-foreground text-xs">Staff</div>
                 </div>
-                <div className="flex justify-between">
-                  <span>PVG Checked:</span>
-                  <span className="text-green-600 font-semibold">{summary.pvgCheckedCount}</span>
+                <div className="text-center">
+                  <div className="font-semibold text-green-600">{summary.pvgCheckedCount}</div>
+                  <div className="text-muted-foreground text-xs">PVG ✓</div>
                 </div>
-                <div className="flex justify-between">
-                  <span>Pending PVG:</span>
-                  <span className="text-orange-600 font-semibold">{summary.totalStaff - summary.pvgCheckedCount}</span>
+                <div className="text-center">
+                  <div className="font-semibold text-orange-600">{summary.totalStaff - summary.pvgCheckedCount}</div>
+                  <div className="text-muted-foreground text-xs">Pending</div>
                 </div>
               </div>
             </CardContent>
@@ -338,27 +338,27 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
         ))}
       </div>
 
-      {/* Filters */}
+      {/* Filters - Mobile Optimized */}
       <Card>
-        <CardHeader>
-          <CardTitle>Staff Management - {clubName}</CardTitle>
-          <CardDescription>
-            Manage staff from all linked teams with PVG tracking. Only Managers and Coaches require PVG verification.
+        <CardHeader className="pb-2 p-3 sm:p-4">
+          <CardTitle className="text-base sm:text-lg">Staff Management - {clubName}</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            Managers and Coaches require PVG verification.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-6">
+        <CardContent className="p-3 sm:p-4 pt-0">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search staff by name, email, or role..."
+                placeholder="Search staff..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
             <Select value={selectedTeam} onValueChange={setSelectedTeam}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by team" />
               </SelectTrigger>
               <SelectContent>
@@ -372,12 +372,12 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
             </Select>
           </div>
 
-          {/* Staff List */}
+          {/* Staff List - Mobile Optimized */}
           {filteredStaff.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="font-semibold mb-2">No Staff Found</h3>
-              <p className="text-muted-foreground">
+            <div className="text-center py-6">
+              <Users className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="font-semibold mb-1 text-sm">No Staff Found</h3>
+              <p className="text-muted-foreground text-xs">
                 {staff.length === 0 
                   ? "No teams are linked to this club yet."
                   : "No staff match your current filters."
@@ -385,72 +385,65 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2">
               {filteredStaff.map((member) => (
-                <Card key={member.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          {member.pvgChecked ? (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
-                          ) : (
-                            <Shield className="h-5 w-5 text-orange-500" />
-                          )}
-                        </div>
-                        <div>
-                          <h4 className="font-semibold">{member.name}</h4>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{member.email}</span>
-                            {member.phone && (
-                              <>
-                                <span>•</span>
-                                <span>{member.phone}</span>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                            <span>{member.teamName}</span>
-                            <span>•</span>
-                            <Badge variant="outline" className="capitalize">
-                              {member.role}
-                            </Badge>
-                          </div>
-                        </div>
+                <div 
+                  key={member.id} 
+                  className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-3 border rounded-lg hover:bg-muted/50 transition-colors"
+                >
+                  {/* Staff Info */}
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className="flex-shrink-0 mt-0.5">
+                      {member.pvgChecked ? (
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <Shield className="h-5 w-5 text-orange-500" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-medium text-sm truncate">{member.name}</h4>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {member.email}
                       </div>
-                      <div className="flex items-center gap-4">
-                        {member.requiresPvg ? (
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`pvg-${member.id}`}
-                              checked={member.pvgChecked}
-                              onCheckedChange={(checked) => 
-                                updatePVGStatus(member.id, checked as boolean)
-                              }
-                            />
-                            <label 
-                              htmlFor={`pvg-${member.id}`} 
-                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                            >
-                              PVG Verified
-                            </label>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <div className="text-xs text-muted-foreground bg-gray-100 px-2 py-1 rounded">
-                              PVG Not Required
-                            </div>
-                          </div>
-                        )}
-                        {member.pvgCheckedAt && member.requiresPvg && (
-                          <div className="text-xs text-muted-foreground">
-                            Verified: {new Date(member.pvgCheckedAt).toLocaleDateString()}
-                          </div>
-                        )}
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-xs text-muted-foreground">{member.teamName}</span>
+                        <Badge variant="outline" className="capitalize text-xs h-5">
+                          {member.role}
+                        </Badge>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                  
+                  {/* PVG Control */}
+                  <div className="flex items-center justify-between sm:justify-end gap-2 flex-shrink-0 pl-8 sm:pl-0">
+                    {member.requiresPvg ? (
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`pvg-${member.id}`}
+                          checked={member.pvgChecked}
+                          onCheckedChange={(checked) => 
+                            updatePVGStatus(member.id, checked as boolean)
+                          }
+                        />
+                        <label 
+                          htmlFor={`pvg-${member.id}`} 
+                          className="text-xs font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                        >
+                          PVG Verified
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                        PVG Not Required
+                      </div>
+                    )}
+                    {member.pvgCheckedAt && member.requiresPvg && (
+                      <div className="text-xs text-muted-foreground hidden sm:block">
+                        {new Date(member.pvgCheckedAt).toLocaleDateString()}
+                      </div>
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           )}
