@@ -31,6 +31,7 @@ import TeamManagement from "./pages/TeamManagement";
 import TeamManagementMobile from "./pages/TeamManagementMobile";
 import { ClubManagement } from "./pages/ClubManagement";
 import ClubManagementMobile from "./pages/ClubManagementMobile";
+import ClubDetailsMobile from "./pages/ClubDetailsMobile";
 import DataRecovery from "./pages/DataRecovery";
 import EmailTestPage from "./pages/EmailTestPage";
 import AvailabilityConfirmation from "./pages/AvailabilityConfirmation";
@@ -156,6 +157,17 @@ const AppContent = () => {
               <ResponsiveRoute
                 desktopComponent={<ClubManagement />}
                 mobileComponent={<ClubManagementMobile />}
+              />
+            </ProtectedRoute>
+          }
+        />
+        <Route 
+          path="/clubs/:id" 
+          element={
+            <ProtectedRoute>
+              <ResponsiveRoute
+                desktopComponent={<ClubManagement />}
+                mobileComponent={<ClubDetailsMobile />}
               />
             </ProtectedRoute>
           }
