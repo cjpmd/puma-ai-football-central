@@ -227,6 +227,8 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
       setIsCreating(false);
     }
   };
+
+  const assignTeamToYearGroup = async (teamId: string, yearGroupId: string) => {
     try {
       const { error } = await supabase
         .from('teams')

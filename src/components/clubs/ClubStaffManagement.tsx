@@ -292,6 +292,8 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
       toast({ title: 'Error', description: 'Failed to remove staff', variant: 'destructive' });
     }
   };
+
+  const filterStaff = () => {
     let filtered = staff;
 
     if (searchTerm) {
