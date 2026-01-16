@@ -538,8 +538,19 @@ export default function DashboardMobile() {
     return { result: 'D', color: 'bg-gray-500' };
   };
 
+  // Check if user is club-only (has club roles but no team roles)
+  const isClubOnlyUser = () => {
+    if (!clubs || clubs.length === 0) return false;
+    // Check if user has any direct team roles (not club_member which is our marker)
+    const hasTeamRole = teams?.some(t => t.userRole && t.userRole !== 'club_member' && t.userRole !== 'team_parent');
+    const hasConnectedPlayers = connectedPlayers && connectedPlayers.length > 0;
+    return !hasTeamRole && !hasConnectedPlayers;
+  };
+
   const canManageTeam = () => {
     if (!profile?.roles) return false;
+    // Club-only users (no team roles) should not create events
+    if (isClubOnlyUser()) return false;
     const managementRoles = ['global_admin', 'club_admin', 'manager', 'team_manager', 'team_coach', 'team_assistant_manager', 'coach', 'staff'];
     return profile.roles.some(role => managementRoles.includes(role));
   };
@@ -594,8 +605,8 @@ export default function DashboardMobile() {
             </h1>
           </div>
 
-          {/* Availability Status Banner */}
-          {stats.pendingAvailability.length > 0 ? (
+          {/* Availability Status Banner - hide for club-only users */}
+          {!isClubOnlyUser() && stats.pendingAvailability.length > 0 && (
             <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
               <Link to="/calendar" className="flex items-center justify-between px-4 py-2.5">
                 <div className="flex items-center gap-3">
@@ -613,7 +624,8 @@ export default function DashboardMobile() {
                 </div>
               </Link>
             </div>
-          ) : (
+          )}
+          {!isClubOnlyUser() && stats.pendingAvailability.length === 0 && (
             <div className="bg-white rounded-2xl shadow-sm px-4 py-2.5">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-green-50 flex items-center justify-center">

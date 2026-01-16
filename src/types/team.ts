@@ -39,6 +39,7 @@ export interface Team {
   seasonStart: string;
   seasonEnd: string;
   clubId?: string;
+  yearGroupId?: string; // Year group this team belongs to
   subscriptionType: string;
   gameFormat: string;
   gameDuration?: number; // Added game duration in minutes

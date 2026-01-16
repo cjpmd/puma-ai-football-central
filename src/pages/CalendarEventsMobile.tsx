@@ -1199,11 +1199,15 @@ export default function CalendarEventsMobile() {
                       GAME DAY
                     </Button>
                   )}
-                  {isEventCompleted(selectedEvent) && (
+                  {/* Report button - always show for matches, disabled until completed */}
+                  {(selectedEvent.event_type === 'match' || selectedEvent.event_type === 'friendly' || selectedEvent.event_type === 'fixture') && (
                     <Button
                       variant="outline"
                       size="sm"
+                      disabled={!isEventCompleted(selectedEvent)}
+                      className={!isEventCompleted(selectedEvent) ? 'opacity-50' : ''}
                       onClick={() => handleEventAction(selectedEvent, 'report')}
+                      title={!isEventCompleted(selectedEvent) ? 'Available after match' : 'Match Report'}
                     >
                       REPORT
                     </Button>

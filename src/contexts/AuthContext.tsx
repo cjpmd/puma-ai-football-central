@@ -245,6 +245,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching teams for user:', userId);
       
+      // First, get teams from user_teams (direct team roles)
       const { data, error } = await supabase
         .from('user_teams')
         .select(`
@@ -266,16 +267,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log('Raw team data:', data);
 
-      if (!data || data.length === 0) {
-        console.log('No teams found for user');
-        setTeams([]);
-        return;
-      }
-
       // Deduplicate teams by team ID and aggregate roles
       const teamMap = new Map<string, Team>();
       
-      data.forEach((item: any) => {
+      data?.forEach((item: any) => {
         const teamId = item.teams.id;
         
         if (teamMap.has(teamId)) {
@@ -315,8 +310,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
+      // Also fetch teams linked to user's clubs (for club-only admins)
+      const { data: userClubsData } = await supabase
+        .from('user_clubs')
+        .select('club_id')
+        .eq('user_id', userId);
+      
+      if (userClubsData && userClubsData.length > 0) {
+        const clubIds = userClubsData.map(uc => uc.club_id);
+        console.log('User belongs to clubs:', clubIds);
+        
+        // Fetch teams linked to these clubs
+        const { data: clubTeamsData } = await supabase
+          .from('club_teams')
+          .select(`
+            club_id,
+            teams (
+              id, name, age_group, season_start, season_end, club_id, 
+              year_group_id, game_format, subscription_type, 
+              performance_categories, kit_icons, logo_url, kit_designs,
+              manager_name, manager_email, manager_phone, game_duration,
+              header_display_type, header_image_url, created_at, updated_at
+            )
+          `)
+          .in('club_id', clubIds);
+        
+        // Add club teams to the map if not already present
+        clubTeamsData?.forEach((item: any) => {
+          const teamId = item.teams.id;
+          
+          if (!teamMap.has(teamId)) {
+            const teamData: Team = {
+              id: item.teams.id,
+              name: item.teams.name,
+              ageGroup: item.teams.age_group,
+              seasonStart: item.teams.season_start,
+              seasonEnd: item.teams.season_end,
+              clubId: item.teams.club_id,
+              yearGroupId: item.teams.year_group_id,
+              gameFormat: item.teams.game_format as GameFormat,
+              subscriptionType: (item.teams.subscription_type as SubscriptionType) || 'free',
+              performanceCategories: item.teams.performance_categories || [],
+              kitIcons: typeof item.teams.kit_icons === 'object' && item.teams.kit_icons !== null ? 
+                item.teams.kit_icons as { home: string; away: string; training: string; goalkeeper: string; } : 
+                { home: '', away: '', training: '', goalkeeper: '' },
+              logoUrl: item.teams.logo_url,
+              kitDesigns: item.teams.kit_designs ? item.teams.kit_designs as any : undefined,
+              managerName: item.teams.manager_name,
+              managerEmail: item.teams.manager_email,
+              managerPhone: item.teams.manager_phone,
+              gameDuration: item.teams.game_duration || 90,
+              headerDisplayType: item.teams.header_display_type,
+              headerImageUrl: item.teams.header_image_url,
+              createdAt: item.teams.created_at,
+              updatedAt: item.teams.updated_at,
+              userRole: 'club_member', // Mark as club-based access (no direct team role)
+            };
+            
+            teamMap.set(teamId, teamData);
+            console.log('Added club team:', teamData.name);
+          }
+        });
+      }
+
       const deduplicatedTeams = Array.from(teamMap.values());
-      console.log('Deduplicated teams:', deduplicatedTeams);
+      console.log('All teams (including club teams):', deduplicatedTeams.length);
+      
+      if (deduplicatedTeams.length === 0) {
+        console.log('No teams found for user');
+      }
+      
       setTeams(deduplicatedTeams);
       
       // Update allTeams after teams are loaded
