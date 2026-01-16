@@ -91,7 +91,7 @@ export const PlayerKitSizesOverview: React.FC<PlayerKitSizesOverviewProps> = ({ 
     const rows = filteredPlayers.map(player => [
       player.squadNumber || '-',
       player.name,
-      ...kitItems.map(item => player.kitSizes[item.toLowerCase()] || player.kitSizes[item] || '-')
+      ...kitItems.map(item => player.kitSizes[item] || '-')
     ]);
 
     const csvContent = [
@@ -168,7 +168,7 @@ export const PlayerKitSizesOverview: React.FC<PlayerKitSizesOverviewProps> = ({ 
                     </TableCell>
                     <TableCell className="font-medium">{player.name}</TableCell>
                     {kitItems.map(item => {
-                      const size = player.kitSizes[item.toLowerCase()] || player.kitSizes[item] || null;
+                      const size = player.kitSizes[item] || null;
                       return (
                         <TableCell key={item} className="text-center">
                           {size ? (

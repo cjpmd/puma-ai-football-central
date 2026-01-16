@@ -12,6 +12,7 @@ import { Package, Shirt, Settings, Plus, Trash2, Upload, Image, Users, UserCheck
 import { Team } from '@/types/index';
 import { KitManagementModal } from '../KitManagementModal';
 import { TeamKitSettings } from './TeamKitSettings';
+import { PlayerKitSizesOverview } from '@/components/clubs/PlayerKitSizesOverview';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -615,6 +616,19 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Player Kit Sizes Overview Dialog */}
+      <Dialog open={isKitOverviewOpen} onOpenChange={setIsKitOverviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Player Kit Sizes - {team.name}</DialogTitle>
+            <DialogDescription>
+              View all player kit sizes for easy ordering
+            </DialogDescription>
+          </DialogHeader>
+          <PlayerKitSizesOverview teamId={team.id} teamName={team.name} />
+        </DialogContent>
+      </Dialog>
 
       {/* Add Kit Item Dialog with Size Selection */}
       <Dialog open={isAddItemDialogOpen} onOpenChange={setIsAddItemDialogOpen}>
