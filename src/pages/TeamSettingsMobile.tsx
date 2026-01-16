@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { 
   Settings, Image, Monitor, Trophy, Target, Star, Wifi, 
-  Wrench, Package, User, Shield, GitBranch, ChevronRight, ChevronLeft
+  Wrench, Package, User, Shield, GitBranch, ChevronRight, ChevronLeft, Building2
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +28,7 @@ import { TeamEquipmentSettings } from '@/components/teams/settings/TeamEquipment
 import { TeamNameDisplaySettings } from '@/components/teams/settings/TeamNameDisplaySettings';
 import { TeamPrivacySettings } from '@/components/teams/settings/TeamPrivacySettings';
 import { TeamSplitSettings } from '@/components/teams/settings/TeamSplitSettings';
+import { TeamClubAssociation } from '@/components/teams/settings/TeamClubAssociation';
 
 interface SettingsSection {
   id: string;
@@ -132,6 +133,7 @@ export default function TeamSettingsMobile() {
   const settingsSections: SettingsSection[] = [
     // General
     { id: 'basic', label: 'Basic Info', description: 'Team name, age group, and season', icon: <Settings className="w-5 h-5" />, group: 'General' },
+    { id: 'club-association', label: 'Club Association', description: 'Link team to a club', icon: <Building2 className="w-5 h-5" />, group: 'General' },
     { id: 'logo', label: 'Team Logo', description: 'Upload and manage team logo', icon: <Image className="w-5 h-5" />, group: 'General' },
     { id: 'header', label: 'Mobile Header', description: 'Customize header display', icon: <Monitor className="w-5 h-5" />, group: 'General' },
     { id: 'name-display', label: 'Name Display', description: 'How player names appear', icon: <User className="w-5 h-5" />, group: 'General' },
@@ -170,6 +172,8 @@ export default function TeamSettingsMobile() {
     switch (activeSection) {
       case 'basic':
         return <TeamBasicSettings team={team} onUpdate={handleUpdate} onSave={handleSave} isSaving={isSaving} />;
+      case 'club-association':
+        return <TeamClubAssociation team={team} onUpdate={handleUpdate} />;
       case 'logo':
         return <TeamLogoSettings team={team} onUpdate={handleUpdate} />;
       case 'header':

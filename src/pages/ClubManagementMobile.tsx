@@ -1,17 +1,20 @@
-
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Search, Plus, Settings, Building2, Users, Trophy } from 'lucide-react';
+import { Search, Plus, Building2, Users, Trophy, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ClubForm } from '@/components/clubs/ClubForm';
+import { Club } from '@/types/index';
 
-interface Club {
+interface ClubWithCount {
   id: string;
   name: string;
   logo_url?: string;
@@ -22,11 +25,13 @@ interface Club {
 }
 
 export default function ClubManagementMobile() {
-  const [clubs, setClubs] = useState<Club[]>([]);
+  const navigate = useNavigate();
+  const [clubs, setClubs] = useState<ClubWithCount[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, refreshUserData } = useAuth();
 
   useEffect(() => {
     loadClubs();
@@ -51,7 +56,7 @@ export default function ClubManagementMobile() {
 
       if (error) throw error;
       
-      const transformedClubs: Club[] = (data || []).map((club: any) => ({
+      const transformedClubs: ClubWithCount[] = (data || []).map((club: any) => ({
         id: club.id,
         name: club.name,
         logo_url: club.logo_url,
@@ -70,6 +75,34 @@ export default function ClubManagementMobile() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCreateClub = async (clubData: Partial<Club>) => {
+    try {
+      const { data, error } = await supabase.from('clubs').insert([{
+        name: clubData.name,
+        reference_number: clubData.referenceNumber,
+        subscription_type: clubData.subscriptionType || 'free',
+        logo_url: clubData.logoUrl
+      }]).select().single();
+
+      if (error) throw error;
+
+      await refreshUserData();
+      setShowCreateDialog(false);
+      loadClubs();
+      
+      toast({
+        title: 'Club created',
+        description: `${clubData.name} has been created successfully.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error creating club',
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -96,7 +129,7 @@ export default function ClubManagementMobile() {
   };
 
   return (
-    <MobileLayout>
+    <MobileLayout headerTitle="Club Management">
       <div className="space-y-4">
         {/* Search and Actions */}
         <div className="flex gap-3">
@@ -109,7 +142,7 @@ export default function ClubManagementMobile() {
               className="pl-10 h-12"
             />
           </div>
-          <Button size="sm" className="h-12 px-3">
+          <Button size="sm" className="h-12 px-3" onClick={() => setShowCreateDialog(true)}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>
@@ -125,10 +158,21 @@ export default function ClubManagementMobile() {
             <div className="text-center py-8">
               <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground">No clubs found</p>
+              <Button 
+                variant="link" 
+                className="mt-2"
+                onClick={() => setShowCreateDialog(true)}
+              >
+                Create your first club
+              </Button>
             </div>
           ) : (
             filteredClubs.map((club) => (
-              <Card key={club.id} className="touch-manipulation">
+              <Card 
+                key={club.id} 
+                className="touch-manipulation cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate(`/clubs/${club.id}`)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-4">
                     <Avatar className="h-12 w-12">
@@ -144,9 +188,7 @@ export default function ClubManagementMobile() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <h3 className="font-medium text-lg truncate">{club.name}</h3>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <Settings className="h-4 w-4" />
-                        </Button>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                       </div>
                       <div className="flex items-center space-x-2 mt-1">
                         <Badge className={`text-white text-xs ${getSubscriptionColor(club.subscription_type)}`}>
@@ -158,7 +200,7 @@ export default function ClubManagementMobile() {
                         </div>
                       </div>
                       {club.serial_number && (
-                        <div className="text-sm text-muted-foreground mt-1">
+                        <div className="text-sm text-muted-foreground mt-1 font-mono">
                           #{club.serial_number}
                         </div>
                       )}
@@ -170,6 +212,20 @@ export default function ClubManagementMobile() {
           )}
         </div>
       </div>
+
+      {/* Create Club Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Club</DialogTitle>
+          </DialogHeader>
+          <ClubForm 
+            club={null} 
+            onSubmit={handleCreateClub} 
+            onCancel={() => setShowCreateDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </MobileLayout>
   );
 }
