@@ -3,11 +3,15 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Link, Unlink, Users, AlertTriangle, Settings } from 'lucide-react';
+import { Link, Unlink, Users, AlertTriangle, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { GameFormat } from '@/types';
 
 interface Team {
   id: string;
@@ -39,6 +43,11 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
   const [yearGroups, setYearGroups] = useState<YearGroup[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [showCreateTeam, setShowCreateTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [newTeamAgeGroup, setNewTeamAgeGroup] = useState('');
+  const [newTeamFormat, setNewTeamFormat] = useState<GameFormat>('7-a-side');
+  const [isCreating, setIsCreating] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -167,7 +176,57 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
     }
   };
 
-  const assignTeamToYearGroup = async (teamId: string, yearGroupId: string) => {
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim() || !newTeamAgeGroup.trim()) {
+      toast({ title: 'Error', description: 'Please fill in team name and age group', variant: 'destructive' });
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const currentDate = new Date();
+      const seasonStart = new Date(currentDate.getFullYear(), 7, 1).toISOString().split('T')[0];
+      const seasonEnd = new Date(currentDate.getFullYear() + 1, 5, 30).toISOString().split('T')[0];
+
+      // Create the team
+      const { data: teamData, error: teamError } = await supabase
+        .from('teams')
+        .insert({
+          name: newTeamName.trim(),
+          age_group: newTeamAgeGroup.trim(),
+          game_format: newTeamFormat,
+          club_id: clubId,
+          season_start: seasonStart,
+          season_end: seasonEnd,
+          subscription_type: 'free'
+        })
+        .select()
+        .single();
+
+      if (teamError) throw teamError;
+
+      // Link to club_teams
+      const { error: linkError } = await supabase
+        .from('club_teams')
+        .insert({ club_id: clubId, team_id: teamData.id });
+
+      if (linkError) throw linkError;
+
+      toast({ title: 'Team Created', description: `${newTeamName} has been created and linked to the club` });
+      
+      setNewTeamName('');
+      setNewTeamAgeGroup('');
+      setNewTeamFormat('7-a-side');
+      setShowCreateTeam(false);
+      loadTeams();
+      onTeamLinked?.();
+    } catch (error: any) {
+      console.error('Error creating team:', error);
+      toast({ title: 'Error', description: error.message || 'Failed to create team', variant: 'destructive' });
+    } finally {
+      setIsCreating(false);
+    }
+  };
     try {
       const { error } = await supabase
         .from('teams')
@@ -238,13 +297,14 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Link New Team - Mobile Optimized */}
+      {/* Link/Create Team - Mobile Optimized */}
       <Card>
         <CardHeader className="p-3 sm:p-4 pb-2">
-          <CardTitle className="text-base sm:text-lg">Link Team to {clubName}</CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Connect independent teams to this club</CardDescription>
+          <CardTitle className="text-base sm:text-lg">Teams - {clubName}</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Link existing teams or create new ones</CardDescription>
         </CardHeader>
-        <CardContent className="p-3 sm:p-4 pt-0">
+        <CardContent className="p-3 sm:p-4 pt-0 space-y-3">
+          {/* Link Existing Team */}
           <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
             <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
               <SelectTrigger className="w-full sm:flex-1">
@@ -263,8 +323,70 @@ export const ClubTeamLinking: React.FC<ClubTeamLinkingProps> = ({
               Link Team
             </Button>
           </div>
+          
+          {/* Create New Team */}
+          <div className="border-t pt-3">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => setShowCreateTeam(true)}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create New Team
+            </Button>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Create Team Dialog */}
+      <Dialog open={showCreateTeam} onOpenChange={setShowCreateTeam}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Create New Team</DialogTitle>
+            <DialogDescription>Create a new team for {clubName}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="teamName">Team Name</Label>
+              <Input
+                id="teamName"
+                placeholder="e.g., U12 Blues"
+                value={newTeamName}
+                onChange={(e) => setNewTeamName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ageGroup">Age Group</Label>
+              <Input
+                id="ageGroup"
+                placeholder="e.g., 2015s, U12"
+                value={newTeamAgeGroup}
+                onChange={(e) => setNewTeamAgeGroup(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gameFormat">Game Format</Label>
+              <Select value={newTeamFormat} onValueChange={(v: GameFormat) => setNewTeamFormat(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5-a-side">5v5</SelectItem>
+                  <SelectItem value="7-a-side">7v7</SelectItem>
+                  <SelectItem value="9-a-side">9v9</SelectItem>
+                  <SelectItem value="11-a-side">11v11</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setShowCreateTeam(false)}>Cancel</Button>
+            <Button onClick={handleCreateTeam} disabled={isCreating}>
+              {isCreating ? 'Creating...' : 'Create Team'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Teams Grouped by Year Group */}
       {linkedTeams.length > 0 && (

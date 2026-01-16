@@ -2,11 +2,19 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Search, Calendar } from 'lucide-react';
+import { Users, Search, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { PlayerParentLinkManager } from '@/components/players/PlayerParentLinkManager';
+
+interface LinkedParent {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface Player {
   id: string;
@@ -20,6 +28,7 @@ interface Player {
   ageGroup: string;
   availability: string;
   matchStats: any;
+  linkedParents: LinkedParent[];
 }
 
 interface ClubPlayerManagementProps {
@@ -37,6 +46,8 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [teamSummaries, setTeamSummaries] = useState<Record<string, any>>({});
+  const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
+  const [showLinkManager, setShowLinkManager] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -85,7 +96,38 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
 
       if (playersError) throw playersError;
 
-      // Transform data to include team information
+      // Get all player IDs
+      const playerIds = playersData?.map(p => p.id) || [];
+
+      // Fetch linked parents for all players
+      const { data: userPlayers } = await supabase
+        .from('user_players')
+        .select(`
+          player_id,
+          profiles:user_id (
+            id,
+            name,
+            email
+          )
+        `)
+        .in('player_id', playerIds);
+
+      // Create a map of player_id to linked parents
+      const parentMap = (userPlayers || []).reduce((acc, up: any) => {
+        if (!acc[up.player_id]) {
+          acc[up.player_id] = [];
+        }
+        if (up.profiles) {
+          acc[up.player_id].push({
+            id: up.profiles.id,
+            name: up.profiles.name || '',
+            email: up.profiles.email || ''
+          });
+        }
+        return acc;
+      }, {} as Record<string, LinkedParent[]>);
+
+      // Transform data to include team information and linked parents
       const playersWithTeams = playersData?.map(player => {
         const teamData = clubTeams.find(ct => ct.team_id === player.team_id)?.teams;
         return {
@@ -106,7 +148,8 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
             playerOfTheMatchCount: 0,
             minutesByPosition: {},
             recentGames: []
-          }
+          },
+          linkedParents: parentMap[player.id] || []
         };
       }) || [];
 
@@ -301,8 +344,28 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
                       </div>
                     </div>
                   </div>
-                  <div className="text-right text-xs text-muted-foreground flex-shrink-0 ml-2">
-                    <div>{player.matchStats?.totalGames || 0} games</div>
+                  <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      onClick={() => {
+                        setSelectedPlayer(player);
+                        setShowLinkManager(true);
+                      }}
+                    >
+                      <UserPlus className="h-3 w-3 mr-1" />
+                      {player.linkedParents.length > 0 ? (
+                        <Badge variant="secondary" className="h-5 text-xs">
+                          {player.linkedParents.length}
+                        </Badge>
+                      ) : (
+                        'Link'
+                      )}
+                    </Button>
+                    <div className="text-right text-xs text-muted-foreground hidden sm:block">
+                      {player.matchStats?.totalGames || 0} games
+                    </div>
                   </div>
                 </div>
               ))}
@@ -310,6 +373,20 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Parent Link Manager Modal */}
+      {selectedPlayer && (
+        <PlayerParentLinkManager
+          isOpen={showLinkManager}
+          onClose={() => {
+            setShowLinkManager(false);
+            setSelectedPlayer(null);
+          }}
+          playerId={selectedPlayer.id}
+          playerName={selectedPlayer.name}
+          onLinksUpdated={loadClubPlayers}
+        />
+      )}
     </div>
   );
 };

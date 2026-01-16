@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, Search, Shield, CheckCircle } from 'lucide-react';
+import { Users, Search, Shield, CheckCircle, Plus, Trash2, Building2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ClubStaffInviteModal } from './ClubStaffInviteModal';
 
 interface StaffMember {
   id: string;
@@ -26,6 +27,14 @@ interface StaffMember {
   requiresPvg: boolean;
 }
 
+interface ClubStaff {
+  id: string;
+  userId: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface ClubStaffManagementProps {
   clubId: string;
   clubName: string;
@@ -36,16 +45,19 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
   clubName
 }) => {
   const [staff, setStaff] = useState<StaffMember[]>([]);
+  const [clubStaff, setClubStaff] = useState<ClubStaff[]>([]);
   const [filteredStaff, setFilteredStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<string>('all');
   const [teamSummaries, setTeamSummaries] = useState<Record<string, any>>({});
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     if (clubId) {
       loadClubStaff();
+      loadClubLevelStaff();
     }
   }, [clubId]);
 
@@ -217,7 +229,69 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
     }
   };
 
-  const filterStaff = () => {
+  const loadClubLevelStaff = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('user_clubs')
+        .select(`
+          id,
+          user_id,
+          role,
+          profiles:user_id (
+            id,
+            name,
+            email
+          )
+        `)
+        .eq('club_id', clubId);
+
+      if (error) throw error;
+
+      const clubStaffData = data?.map((uc: any) => ({
+        id: uc.id,
+        userId: uc.user_id,
+        name: uc.profiles?.name || '',
+        email: uc.profiles?.email || '',
+        role: uc.role
+      })) || [];
+
+      setClubStaff(clubStaffData);
+    } catch (error: any) {
+      console.error('Error loading club staff:', error);
+    }
+  };
+
+  const updateClubRole = async (staffId: string, newRole: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_clubs')
+        .update({ role: newRole })
+        .eq('id', staffId);
+
+      if (error) throw error;
+
+      toast({ title: 'Role Updated', description: 'Staff role has been updated' });
+      loadClubLevelStaff();
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to update role', variant: 'destructive' });
+    }
+  };
+
+  const removeClubStaff = async (staffId: string) => {
+    try {
+      const { error } = await supabase
+        .from('user_clubs')
+        .delete()
+        .eq('id', staffId);
+
+      if (error) throw error;
+
+      toast({ title: 'Staff Removed', description: 'Staff member has been removed from the club' });
+      loadClubLevelStaff();
+    } catch (error: any) {
+      toast({ title: 'Error', description: 'Failed to remove staff', variant: 'destructive' });
+    }
+  };
     let filtered = staff;
 
     if (searchTerm) {
@@ -310,6 +384,68 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
 
   return (
     <div className="space-y-4">
+      {/* Club Staff Section */}
+      <Card>
+        <CardHeader className="pb-2 p-3 sm:p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                <Building2 className="h-5 w-5" />
+                Club Staff
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm">
+                Staff with club-wide permissions
+              </CardDescription>
+            </div>
+            <Button size="sm" onClick={() => setShowInviteModal(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Add
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-4 pt-0">
+          {clubStaff.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground text-sm">
+              No club-level staff configured
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {clubStaff.map((member) => (
+                <div key={member.id} className="flex items-center justify-between p-3 border rounded-lg">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium text-sm truncate">{member.name}</div>
+                    <div className="text-xs text-muted-foreground truncate">{member.email}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Select 
+                      value={member.role} 
+                      onValueChange={(role) => updateClubRole(member.id, role)}
+                    >
+                      <SelectTrigger className="w-28 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="club_admin">Admin</SelectItem>
+                        <SelectItem value="club_chair">Chair</SelectItem>
+                        <SelectItem value="club_secretary">Secretary</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0 text-destructive"
+                      onClick={() => removeClubStaff(member.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Team Summaries - Mobile Optimized */}
       <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {Object.values(teamSummaries).map((summary: any, index) => (
@@ -449,6 +585,15 @@ export const ClubStaffManagement: React.FC<ClubStaffManagementProps> = ({
           )}
         </CardContent>
       </Card>
+
+      {/* Invite Modal */}
+      <ClubStaffInviteModal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        clubId={clubId}
+        clubName={clubName}
+        onInviteSent={loadClubLevelStaff}
+      />
     </div>
   );
 };
