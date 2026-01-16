@@ -26,22 +26,36 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
   onSave,
   isSaving
 }) => {
+  const [yearGroup, setYearGroup] = useState<YearGroup | null>(null);
+  const [isClubTeam, setIsClubTeam] = useState(!!team.clubId);
+
   // Check if team belongs to a club and load year group info
   useEffect(() => {
     const checkClubMembership = async () => {
+      // Get yearGroupId from team object - check both camelCase and snake_case
+      const yearGroupId = team.yearGroupId || (team as any).year_group_id;
+      
+      console.log('TeamBasicSettings: Checking club membership', { 
+        clubId: team.clubId, 
+        yearGroupId,
+        teamData: team 
+      });
+      
       if (team.clubId) {
         setIsClubTeam(true);
         
         // Load year group if team has one
-        if ((team as any).yearGroupId) {
+        if (yearGroupId) {
           try {
+            console.log('Loading year group:', yearGroupId);
             const { data, error } = await supabase
               .from('year_groups')
               .select('*')
-              .eq('id', (team as any).yearGroupId)
+              .eq('id', yearGroupId)
               .single();
 
             if (!error && data) {
+              console.log('Year group loaded:', data);
               // Transform database response to match YearGroup interface
               const transformedYearGroup = {
                 id: data.id,
@@ -55,10 +69,15 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
                 updatedAt: data.updated_at
               };
               setYearGroup(transformedYearGroup);
+            } else if (error) {
+              console.error('Error loading year group:', error);
             }
           } catch (error) {
             console.error('Error loading year group:', error);
           }
+        } else {
+          console.log('No year group ID found for team');
+          setYearGroup(null);
         }
       } else {
         setIsClubTeam(false);
@@ -67,7 +86,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     };
 
     checkClubMembership();
-  }, [team.clubId, (team as any).yearGroupId]);
+  }, [team.clubId, team.yearGroupId]);
   const [formData, setFormData] = useState({
     name: team.name || '',
     ageGroup: team.ageGroup || '',
@@ -82,9 +101,6 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
     homeLatitude: team.homeLatitude || null,
     homeLongitude: team.homeLongitude || null
   });
-
-  const [yearGroup, setYearGroup] = useState<YearGroup | null>(null);
-  const [isClubTeam, setIsClubTeam] = useState(false);
 
   const handleInputChange = (field: string, value: any) => {
     try {
