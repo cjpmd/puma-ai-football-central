@@ -10,7 +10,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Team, TeamStaff } from '@/types/team';
-import { UserPlus, Trash2, Users, Mail, Phone, Edit, Check, ChevronsUpDown, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { UserPlus, Trash2, Users, Mail, Phone, Edit, Check, ChevronsUpDown, Clock, CheckCircle, XCircle, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
@@ -194,6 +194,9 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
           phone: record.phone || '',
           role: record.role as TeamStaff['role'],
           user_id: record.user_id || undefined,
+          pvgChecked: record.pvg_checked || false,
+          pvgCheckedBy: record.pvg_checked_by || undefined,
+          pvgCheckedAt: record.pvg_checked_at || undefined,
           coachingBadges: [],
           certificates: [],
           createdAt: record.created_at,
@@ -831,6 +834,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                 <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
                                   Linked
                                 </Badge>
+                                {staffMember.pvgChecked ? (
+                                  <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    PVG ✓
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    PVG Required
+                                  </Badge>
+                                )}
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground mt-1">
                                 {staffMember.email && (
@@ -909,6 +923,17 @@ export const StaffManagementModal: React.FC<StaffManagementModalProps> = ({
                                 <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">
                                   Not Linked
                                 </Badge>
+                                {staffMember.pvgChecked ? (
+                                  <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    PVG ✓
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-orange-600 border-orange-600 text-xs">
+                                    <Shield className="h-3 w-3 mr-1" />
+                                    PVG Required
+                                  </Badge>
+                                )}
                               </div>
                               <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs text-muted-foreground mt-1">
                                 {staffMember.email && (
