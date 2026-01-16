@@ -276,15 +276,15 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-bold">Year Groups</h2>
-          <p className="text-muted-foreground">
-            Organize teams by age cohort (e.g., U8s, U10s, 2015s)
+          <h2 className="text-lg sm:text-2xl font-bold">Year Groups</h2>
+          <p className="text-muted-foreground text-xs sm:text-sm">
+            Organize teams by age cohort
           </p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
+        <Button onClick={() => setShowForm(true)} size="sm" className="w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Year Group
         </Button>
@@ -292,20 +292,20 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
 
       {yearGroups.length === 0 ? (
         <Card>
-          <CardContent className="p-6 text-center">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No year groups yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create year groups to organize your teams by age cohort
+          <CardContent className="p-4 sm:p-6 text-center">
+            <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-3" />
+            <h3 className="text-base sm:text-lg font-semibold mb-2">No year groups yet</h3>
+            <p className="text-muted-foreground text-xs sm:text-sm mb-4">
+              Create year groups to organize your teams
             </p>
-            <Button onClick={() => setShowForm(true)}>
+            <Button onClick={() => setShowForm(true)} size="sm">
               <Plus className="h-4 w-4 mr-2" />
               Create First Year Group
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {yearGroups.map((yearGroup: any) => (
             <YearGroupCard
               key={yearGroup.id}
@@ -359,22 +359,23 @@ export const YearGroupManagement = ({ clubId, onTeamManagement }: YearGroupManag
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Team Management Modal */}
+      {/* Team Management Modal - Mobile Optimized */}
       <Dialog open={showTeamManagement} onOpenChange={setShowTeamManagement}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-3 sm:p-6">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
+                className="h-8 w-8 p-0"
                 onClick={() => setShowTeamManagement(false)}
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
-              <div>
-                <DialogTitle>Manage Teams - {selectedYearGroup?.name}</DialogTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Assign and organize teams within this year group
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-base sm:text-lg truncate">Manage Teams - {selectedYearGroup?.name}</DialogTitle>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Assign and organize teams
                 </p>
               </div>
             </div>

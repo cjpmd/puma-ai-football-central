@@ -127,61 +127,63 @@ export const ClubSummaryReport: React.FC<ClubSummaryReportProps> = ({ clubId, cl
   }
 
   return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-3 sm:space-y-4">
+      {/* Summary Cards - Mobile Optimized */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
-          <CardContent className="pt-4 pb-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Trophy className="h-6 w-6 text-blue-600" />
+          <CardContent className="p-3 sm:pt-4 sm:pb-4 text-center">
+            <div className="flex items-center justify-center mb-1 sm:mb-2">
+              <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             </div>
-            <div className="text-3xl font-bold text-blue-700">{summary.totalTeams}</div>
-            <div className="text-sm text-blue-600">Total Teams</div>
+            <div className="text-2xl sm:text-3xl font-bold text-blue-700">{summary.totalTeams}</div>
+            <div className="text-xs sm:text-sm text-blue-600">Teams</div>
           </CardContent>
         </Card>
         
         <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20">
-          <CardContent className="pt-4 pb-4 text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Users className="h-6 w-6 text-green-600" />
+          <CardContent className="p-3 sm:pt-4 sm:pb-4 text-center">
+            <div className="flex items-center justify-center mb-1 sm:mb-2">
+              <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
             </div>
-            <div className="text-3xl font-bold text-green-700">{summary.totalPlayers}</div>
-            <div className="text-sm text-green-600">Total Players</div>
+            <div className="text-2xl sm:text-3xl font-bold text-green-700">{summary.totalPlayers}</div>
+            <div className="text-xs sm:text-sm text-green-600">Players</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Age Group Breakdown */}
+      {/* Age Group Breakdown - Mobile Optimized */}
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base">Breakdown by Age Group</CardTitle>
+        <CardHeader className="p-3 sm:p-4 pb-2">
+          <CardTitle className="text-sm sm:text-base">Breakdown by Age Group</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 pt-0">
           {summary.ageGroups.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Age Group</TableHead>
-                  <TableHead className="text-center">Teams</TableHead>
-                  <TableHead className="text-center">Players</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {summary.ageGroups.map((ag) => (
-                  <TableRow key={ag.ageGroup}>
-                    <TableCell>
-                      <Badge variant="outline">{ag.ageGroup}</Badge>
-                    </TableCell>
-                    <TableCell className="text-center font-medium">{ag.teamCount}</TableCell>
-                    <TableCell className="text-center font-medium">{ag.playerCount}</TableCell>
+            <div className="overflow-x-auto -mx-3 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs sm:text-sm">Age Group</TableHead>
+                    <TableHead className="text-center text-xs sm:text-sm">Teams</TableHead>
+                    <TableHead className="text-center text-xs sm:text-sm">Players</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {summary.ageGroups.map((ag) => (
+                    <TableRow key={ag.ageGroup}>
+                      <TableCell className="py-2">
+                        <Badge variant="outline" className="text-xs">{ag.ageGroup}</Badge>
+                      </TableCell>
+                      <TableCell className="text-center font-medium text-sm py-2">{ag.teamCount}</TableCell>
+                      <TableCell className="text-center font-medium text-sm py-2">{ag.playerCount}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p>No teams linked to this club yet</p>
+            <div className="text-center py-4 text-muted-foreground">
+              <Building2 className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs sm:text-sm">No teams linked to this club yet</p>
             </div>
           )}
         </CardContent>

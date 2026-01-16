@@ -724,7 +724,7 @@ export default function DashboardMobile() {
               <h2 className="text-xs font-medium text-gray-500 uppercase tracking-wide">Quick Actions</h2>
             </div>
             
-            {canManageTeam() && (
+            {canManageTeam() && currentTeam && (
               <>
                 <button
                   onClick={() => setShowMobileEventForm(true)}
@@ -739,18 +739,18 @@ export default function DashboardMobile() {
                   <ChevronRight className="w-4 h-4 text-gray-400" />
                 </button>
                 <div className="h-px bg-gray-100 mx-4" />
-                <Link to="/players" className="w-full flex items-center justify-between px-4 py-2.5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                      <Users className="w-4 h-4 text-blue-600" />
-                    </div>
-                    <span className="text-sm text-gray-900">View Team</span>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                </Link>
-                <div className="h-px bg-gray-100 mx-4" />
               </>
             )}
+            <Link to="/players" className="w-full flex items-center justify-between px-4 py-2.5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                  <Users className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="text-sm text-gray-900">View Team</span>
+              </div>
+              <ChevronRight className="w-4 h-4 text-gray-400" />
+            </Link>
+            <div className="h-px bg-gray-100 mx-4" />
             
             {canAccessTeamSettings() && currentTeam && (
               <>
