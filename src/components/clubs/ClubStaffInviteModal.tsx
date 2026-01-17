@@ -18,7 +18,7 @@ interface ClubStaffInviteModalProps {
 
 const CLUB_ROLES = [
   { value: 'club_admin', label: 'Club Admin', description: 'Full access to all club features' },
-  { value: 'club_chair', label: 'Club Chair', description: 'Leadership role with overview access' },
+  { value: 'club_chair', label: 'Club Chair', description: 'Leadership role with full access to all features' },
   { value: 'club_secretary', label: 'Club Secretary', description: 'Administrative access' },
 ];
 

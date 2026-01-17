@@ -77,6 +77,7 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
         userData?.user_roles?.forEach((role: string) => {
           switch (role) {
             case 'club_admin':
+            case 'club_chair': // Leadership role with full access
               basePermissions.add('users:invite');
               basePermissions.add('users:manage');
               basePermissions.add('clubs:manage');
@@ -182,7 +183,9 @@ export const AuthorizationProvider: React.FC<{ children: React.ReactNode }> = ({
   
   const isClubAdmin = (clubId?: string): boolean => {
     if (isGlobalAdmin) return true;
-    if (!profile?.roles?.includes('club_admin')) return false;
+    // Check for both club_admin AND club_chair (leadership role with full access)
+    const hasClubLeadershipRole = profile?.roles?.includes('club_admin') || profile?.roles?.includes('club_chair');
+    if (!hasClubLeadershipRole) return false;
     if (!clubId) return true; // General club admin check
     return clubs.some(club => club.id === clubId);
   };
