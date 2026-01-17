@@ -28,17 +28,20 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, signOut, teams, clubs, connectedPlayers } = useAuth();
-  const { isGlobalAdmin } = useAuthorization();
   const location = useLocation();
   const navigate = useNavigate();
   
-  // Handle case where SmartView context might not be available
+  // Handle case where contexts might not be available
   let currentView: string = 'parent';
   let isMultiRoleUser = false;
   let navigation: any[] = [];
   let quickActions: any[] = [];
+  let isGlobalAdmin = false;
   
   try {
+    const authorization = useAuthorization();
+    isGlobalAdmin = authorization.isGlobalAdmin;
+    
     const smartView = useSmartView();
     currentView = smartView.currentView;
     isMultiRoleUser = smartView.isMultiRoleUser;
@@ -47,8 +50,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     navigation = smartNav.navigation;
     quickActions = smartNav.quickActions;
   } catch (error) {
-    // SmartView context not available, use fallback navigation
-    console.log('SmartView context not available, using fallback navigation');
+    // Context not available, use fallback navigation
+    console.log('Context not available, using fallback navigation');
     navigation = [
       { name: 'Dashboard', href: '/dashboard', icon: Menu, priority: 1 },
       { name: 'Players', href: '/players', icon: Menu, priority: 2 },
