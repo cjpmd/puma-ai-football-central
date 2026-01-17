@@ -43,6 +43,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [userPlayerLinks, setUserPlayerLinks] = useState<UserPlayerLink[]>([]);
+  const [parentCounts, setParentCounts] = useState<Record<string, number>>({});
 
   // Fetch user's player links to determine access control
   useEffect(() => {
@@ -70,6 +71,29 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
       return playersService.getActivePlayersByTeamId(team.id);
     },
   });
+
+  // Fetch parent counts for all players
+  useEffect(() => {
+    const fetchParentCounts = async () => {
+      if (players.length === 0) return;
+      
+      const playerIds = players.map(p => p.id);
+      const { data, error } = await supabase
+        .from('user_players')
+        .select('player_id')
+        .in('player_id', playerIds);
+      
+      if (!error && data) {
+        const counts = data.reduce((acc, item) => {
+          acc[item.player_id] = (acc[item.player_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+        setParentCounts(counts);
+      }
+    };
+    
+    fetchParentCounts();
+  }, [players]);
 
   // Check if current user is linked to a specific player as "self" (hide Manage Parents)
   const isPlayerSelf = (playerId: string): boolean => {
@@ -439,6 +463,7 @@ export const PlayerManagement: React.FC<PlayerManagementProps> = ({ team }) => {
                   team={team}
                   onEdit={handleEditPlayer}
                   onManageParents={handleManageParents}
+                  linkedParentsCount={parentCounts[player.id] || 0}
                   onRemoveFromSquad={handleRemoveFromSquad}
                   onUpdatePhoto={handleUpdatePhoto}
                   onDeletePhoto={handleDeletePlayerPhoto}

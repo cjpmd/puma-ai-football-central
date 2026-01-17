@@ -18,6 +18,7 @@ interface FifaStylePlayerCardProps {
   team?: Team;
   onEdit?: (player: Player) => void;
   onManageParents?: (player: Player) => void;
+  linkedParentsCount?: number;
   onRemoveFromSquad?: (player: Player) => void;
   onUpdatePhoto?: (player: Player, file: File) => void;
   onDeletePhoto?: (player: Player) => void;
@@ -94,6 +95,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   team,
   onEdit,
   onManageParents,
+  linkedParentsCount,
   onRemoveFromSquad,
   onUpdatePhoto,
   onDeletePhoto,
@@ -671,12 +673,19 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs"
+                  className="w-full h-8 border-white/20 hover:bg-white/10 text-white bg-transparent text-xs flex items-center justify-center gap-1"
                   onClick={e => handleButtonAction(e, onManageParents, 'Manage Parents')}
                   title="Manage Parents"
                   disabled={!onManageParents}
                 >
                   <Users className="h-3 w-3" />
+                  {linkedParentsCount !== undefined && linkedParentsCount > 0 ? (
+                    <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-white/20 text-white border-0">
+                      {linkedParentsCount}
+                    </Badge>
+                  ) : (
+                    <span className="text-[10px]">Link</span>
+                  )}
                 </Button>
 
                 <Button
