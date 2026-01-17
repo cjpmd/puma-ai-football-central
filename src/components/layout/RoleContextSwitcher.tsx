@@ -17,11 +17,12 @@ import {
   ChevronDown 
 } from 'lucide-react';
 
-const roleIcons = {
+const roleIcons: Record<string, typeof User> = {
   parent: User,
   coach: Users,
   team_manager: Crown,
   club_admin: Building2,
+  club_chair: Building2, // Leadership role - same icon as club_admin
   global_admin: Settings,
 };
 
