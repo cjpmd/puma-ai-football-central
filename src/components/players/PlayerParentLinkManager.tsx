@@ -48,34 +48,52 @@ export function PlayerParentLinkManager({
     try {
       setLoading(true);
       
-      const { data, error } = await supabase
+      // Step 1: Fetch user_players links (no embedded join to avoid FK issues)
+      const { data: userPlayersData, error: linksError } = await supabase
         .from('user_players')
-        .select(`
-          id,
-          user_id,
-          relationship,
-          profiles:user_id (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('id, user_id, relationship')
         .eq('player_id', playerId);
 
-      if (error) throw error;
+      if (linksError) {
+        console.error('Error fetching user_players:', linksError.code, linksError.message);
+        throw linksError;
+      }
 
-      const parents = data?.map((link: any) => ({
+      if (!userPlayersData || userPlayersData.length === 0) {
+        setLinkedParents([]);
+        return;
+      }
+
+      // Step 2: Fetch profiles for the linked user IDs
+      const userIds = [...new Set(userPlayersData.map(link => link.user_id))];
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, name, email')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError.code, profilesError.message);
+        throw profilesError;
+      }
+
+      // Step 3: Build profile map and assemble result
+      const profileMap = (profilesData || []).reduce((acc, profile) => {
+        acc[profile.id] = profile;
+        return acc;
+      }, {} as Record<string, { id: string; name: string | null; email: string | null }>);
+
+      const parents = userPlayersData.map((link) => ({
         id: link.id,
         userId: link.user_id,
-        name: link.profiles?.name || 'Unknown',
-        email: link.profiles?.email || '',
+        name: profileMap[link.user_id]?.name || 'Unknown',
+        email: profileMap[link.user_id]?.email || '',
         relationship: link.relationship || 'parent'
-      })) || [];
+      }));
 
       setLinkedParents(parents);
     } catch (error: any) {
-      console.error('Error loading linked parents:', error);
-      toast({ title: 'Error', description: 'Failed to load linked parents', variant: 'destructive' });
+      console.error('Error loading linked parents:', error.code, error.message, error);
+      toast({ title: 'Error', description: `Failed to load linked parents: ${error.message || 'Unknown error'}`, variant: 'destructive' });
     } finally {
       setLoading(false);
     }

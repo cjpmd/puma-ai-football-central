@@ -99,29 +99,47 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
       // Get all player IDs
       const playerIds = playersData?.map(p => p.id) || [];
 
-      // Fetch linked parents for all players
-      const { data: userPlayers } = await supabase
+      // Step 1: Fetch user_players links (no embedded join to avoid FK issues)
+      const { data: userPlayersData, error: userPlayersError } = await supabase
         .from('user_players')
-        .select(`
-          player_id,
-          profiles:user_id (
-            id,
-            name,
-            email
-          )
-        `)
+        .select('player_id, user_id')
         .in('player_id', playerIds);
 
-      // Create a map of player_id to linked parents
-      const parentMap = (userPlayers || []).reduce((acc, up: any) => {
+      if (userPlayersError) {
+        console.error('Error fetching user_players:', userPlayersError.code, userPlayersError.message);
+      }
+
+      // Step 2: Fetch profiles for linked user IDs
+      const userIds = [...new Set((userPlayersData || []).map(up => up.user_id))];
+      let profileMap: Record<string, { id: string; name: string | null; email: string | null }> = {};
+      
+      if (userIds.length > 0) {
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, name, email')
+          .in('id', userIds);
+
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError.code, profilesError.message);
+        }
+
+        profileMap = (profilesData || []).reduce((acc, profile) => {
+          acc[profile.id] = profile;
+          return acc;
+        }, {} as Record<string, { id: string; name: string | null; email: string | null }>);
+      }
+
+      // Step 3: Build map of player_id to linked parents
+      const parentMap = (userPlayersData || []).reduce((acc, up) => {
         if (!acc[up.player_id]) {
           acc[up.player_id] = [];
         }
-        if (up.profiles) {
+        const profile = profileMap[up.user_id];
+        if (profile) {
           acc[up.player_id].push({
-            id: up.profiles.id,
-            name: up.profiles.name || '',
-            email: up.profiles.email || ''
+            id: profile.id,
+            name: profile.name || '',
+            email: profile.email || ''
           });
         }
         return acc;
