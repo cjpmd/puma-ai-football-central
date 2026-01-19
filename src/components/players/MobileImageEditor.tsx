@@ -94,69 +94,64 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     if (!imageRef.current || !containerRef.current) return;
 
     const canvas = document.createElement('canvas');
-    const canvasSize = 400; // Output size
+    const canvasSize = 400;
     canvas.width = canvasSize;
     canvas.height = canvasSize;
     const ctx = canvas.getContext('2d')!;
 
-    // Get the container size (preview area)
-    const containerSize = 192; // w-48 = 12rem = 192px
-    
-    // Scale factor from preview to canvas
+    const containerSize = 192; // Preview container size
     const scaleFactor = canvasSize / containerSize;
 
     const img = imageRef.current;
     const imgNaturalWidth = img.naturalWidth;
     const imgNaturalHeight = img.naturalHeight;
 
-    // Calculate how the image fills the container (object-cover behavior)
-    const containerAspect = 1; // Square container
+    // Calculate object-cover base dimensions (how image fills 192px container)
+    const containerAspect = 1;
     const imgAspect = imgNaturalWidth / imgNaturalHeight;
     
-    let drawWidth: number;
-    let drawHeight: number;
+    let baseWidth: number;
+    let baseHeight: number;
     
     if (imgAspect > containerAspect) {
-      // Image is wider - height fills container, width overflows
-      const baseScale = containerSize / imgNaturalHeight;
-      drawHeight = containerSize;
-      drawWidth = imgNaturalWidth * baseScale;
+      // Wider image: height fills container
+      baseHeight = containerSize;
+      baseWidth = containerSize * imgAspect;
     } else {
-      // Image is taller - width fills container, height overflows
-      const baseScale = containerSize / imgNaturalWidth;
-      drawWidth = containerSize;
-      drawHeight = imgNaturalHeight * baseScale;
+      // Taller image: width fills container
+      baseWidth = containerSize;
+      baseHeight = containerSize / imgAspect;
     }
+
+    // Object-cover centers the image, so calculate offset
+    const baseOffsetX = (containerSize - baseWidth) / 2;
+    const baseOffsetY = (containerSize - baseHeight) / 2;
 
     // Create circular clipping path
     ctx.beginPath();
     ctx.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, Math.PI * 2);
     ctx.clip();
 
-    // Apply transformations
     ctx.save();
     
-    // Move to center of canvas
-    ctx.translate(canvasSize / 2, canvasSize / 2);
+    // Scale everything from preview coords to canvas coords
+    ctx.scale(scaleFactor, scaleFactor);
     
-    // Apply user's scale (relative to base, scaled from container to canvas)
-    ctx.scale(scaleFactor * touchState.scale, scaleFactor * touchState.scale);
+    // Move to center of container (transform origin)
+    ctx.translate(containerSize / 2, containerSize / 2);
     
-    // Apply user's translate (in container space)
+    // Apply user transforms (CSS order: translate then scale, but in canvas we reverse)
+    ctx.scale(touchState.scale, touchState.scale);
     ctx.translate(touchState.translateX, touchState.translateY);
     
-    // Draw image centered at origin, using the object-cover dimensions
-    ctx.drawImage(
-      img,
-      -drawWidth / 2,
-      -drawHeight / 2,
-      drawWidth,
-      drawHeight
-    );
+    // Move back from center
+    ctx.translate(-containerSize / 2, -containerSize / 2);
+    
+    // Draw image at its object-cover position
+    ctx.drawImage(img, baseOffsetX, baseOffsetY, baseWidth, baseHeight);
     
     ctx.restore();
 
-    // Export as blob
     canvas.toBlob((blob) => {
       if (blob) {
         onSave(blob);
