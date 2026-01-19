@@ -94,29 +94,66 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     if (!imageRef.current || !containerRef.current) return;
 
     const canvas = document.createElement('canvas');
-    const size = 400; // Output size
-    canvas.width = size;
-    canvas.height = size;
+    const canvasSize = 400; // Output size
+    canvas.width = canvasSize;
+    canvas.height = canvasSize;
     const ctx = canvas.getContext('2d')!;
+
+    // Get the container size (preview area)
+    const containerSize = 192; // w-48 = 12rem = 192px
+    
+    // Scale factor from preview to canvas
+    const scaleFactor = canvasSize / containerSize;
+
+    const img = imageRef.current;
+    const imgNaturalWidth = img.naturalWidth;
+    const imgNaturalHeight = img.naturalHeight;
+
+    // Calculate how the image fills the container (object-cover behavior)
+    const containerAspect = 1; // Square container
+    const imgAspect = imgNaturalWidth / imgNaturalHeight;
+    
+    let drawWidth: number;
+    let drawHeight: number;
+    
+    if (imgAspect > containerAspect) {
+      // Image is wider - height fills container, width overflows
+      const baseScale = containerSize / imgNaturalHeight;
+      drawHeight = containerSize;
+      drawWidth = imgNaturalWidth * baseScale;
+    } else {
+      // Image is taller - width fills container, height overflows
+      const baseScale = containerSize / imgNaturalWidth;
+      drawWidth = containerSize;
+      drawHeight = imgNaturalHeight * baseScale;
+    }
 
     // Create circular clipping path
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+    ctx.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, Math.PI * 2);
     ctx.clip();
-
-    // Calculate the image dimensions
-    const img = imageRef.current;
-    const imgWidth = img.naturalWidth;
-    const imgHeight = img.naturalHeight;
 
     // Apply transformations
     ctx.save();
-    ctx.translate(size / 2, size / 2);
-    ctx.scale(touchState.scale, touchState.scale);
+    
+    // Move to center of canvas
+    ctx.translate(canvasSize / 2, canvasSize / 2);
+    
+    // Apply user's scale (relative to base, scaled from container to canvas)
+    ctx.scale(scaleFactor * touchState.scale, scaleFactor * touchState.scale);
+    
+    // Apply user's translate (in container space)
     ctx.translate(touchState.translateX, touchState.translateY);
     
-    // Draw image centered
-    ctx.drawImage(img, -imgWidth / 2, -imgHeight / 2, imgWidth, imgHeight);
+    // Draw image centered at origin, using the object-cover dimensions
+    ctx.drawImage(
+      img,
+      -drawWidth / 2,
+      -drawHeight / 2,
+      drawWidth,
+      drawHeight
+    );
+    
     ctx.restore();
 
     // Export as blob
