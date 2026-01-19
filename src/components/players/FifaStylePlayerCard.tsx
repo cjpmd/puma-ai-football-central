@@ -548,10 +548,17 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <img 
                       src={player.photoUrl} 
                       alt={determinedDisplayName}
-                      className="h-full w-full object-cover"
-                      style={{
-                        maskImage: 'radial-gradient(circle, black 60%, transparent 100%)',
-                        WebkitMaskImage: 'radial-gradient(circle, black 60%, transparent 100%)'
+                      className="h-full w-full object-cover object-center"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        console.log('[FifaCard] Photo loaded:', {
+                          url: player.photoUrl,
+                          naturalWidth: img.naturalWidth,
+                          naturalHeight: img.naturalHeight
+                        });
+                      }}
+                      onError={(e) => {
+                        console.error('[FifaCard] Photo failed to load:', player.photoUrl, e);
                       }}
                     />
                   ) : (

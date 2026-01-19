@@ -127,10 +127,9 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     const baseOffsetX = (containerSize - baseWidth) / 2;
     const baseOffsetY = (containerSize - baseHeight) / 2;
 
-    // Create circular clipping path
-    ctx.beginPath();
-    ctx.arc(canvasSize / 2, canvasSize / 2, canvasSize / 2, 0, Math.PI * 2);
-    ctx.clip();
+    // Fill with white background to avoid transparency issues
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
 
     ctx.save();
     
