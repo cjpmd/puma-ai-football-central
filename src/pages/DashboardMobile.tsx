@@ -200,13 +200,37 @@ export default function DashboardMobile() {
 
   const handleUpdatePhoto = async (player: any, file: File) => {
     try {
-      toast({ title: 'Uploading Photo', description: `Uploading photo for ${player.name}...` });
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${player.id}-${Math.random()}.${fileExt}`;
+      toast({ title: 'Uploading Photo', description: `Processing and uploading photo for ${player.name}...` });
+      
+      // Import the utility dynamically to avoid circular deps
+      const { prepareImageForUpload, isHeicFormat, isSupportedImageFormat, formatFileSize } = await import('@/utils/imageUtils');
+      
+      // Validate format
+      if (isHeicFormat(file)) {
+        throw new Error('HEIC/HEIF format is not supported. Please convert to JPEG or PNG.');
+      }
+      if (!isSupportedImageFormat(file)) {
+        throw new Error(`Unsupported format: ${file.type || 'unknown'}. Use JPEG, PNG, or WebP.`);
+      }
+      
+      // Process the image
+      const processedBlob = await prepareImageForUpload(file, {
+        maxDimension: 1024,
+        quality: 0.85,
+        outputFormat: 'image/jpeg',
+      });
+      
+      console.log(`[DashboardMobile] Photo processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
+      
+      const fileName = `${player.id}/${Date.now()}.jpg`;
       
       const { error: uploadError } = await supabase.storage
         .from('player_photos')
-        .upload(fileName, file);
+        .upload(fileName, processedBlob, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+          upsert: true,
+        });
       if (uploadError) throw uploadError;
 
       const { data } = supabase.storage.from('player_photos').getPublicUrl(fileName);
@@ -221,7 +245,12 @@ export default function DashboardMobile() {
       // Refresh player data
       handlePlayerClick({ id: player.id });
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'Failed to update photo', variant: 'destructive' });
+      console.error('[DashboardMobile] Photo upload error:', error);
+      toast({ 
+        title: 'Upload Failed', 
+        description: error.message || 'Failed to update photo. Please try again.', 
+        variant: 'destructive' 
+      });
     }
   };
 
