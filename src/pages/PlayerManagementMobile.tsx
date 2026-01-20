@@ -269,16 +269,38 @@ export default function PlayerManagementMobile() {
     try {
       toast({ 
         title: 'Uploading Photo', 
-        description: `Uploading photo for ${player.name}...`,
+        description: `Processing and uploading photo for ${player.name}...`,
       });
 
-      // Upload to Supabase storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${player.id}-${Math.random()}.${fileExt}`;
+      // Import the utility dynamically
+      const { prepareImageForUpload, isHeicFormat, isSupportedImageFormat, formatFileSize } = await import('@/utils/imageUtils');
+      
+      // Validate format
+      if (isHeicFormat(file)) {
+        throw new Error('HEIC/HEIF format is not supported. Please convert to JPEG or PNG.');
+      }
+      if (!isSupportedImageFormat(file)) {
+        throw new Error(`Unsupported format: ${file.type || 'unknown'}. Use JPEG, PNG, or WebP.`);
+      }
+      
+      // Process the image (resize/compress)
+      const processedBlob = await prepareImageForUpload(file, {
+        maxDimension: 1024,
+        quality: 0.85,
+        outputFormat: 'image/jpeg',
+      });
+      
+      console.log(`[PlayerManagementMobile] Photo processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
+      
+      const fileName = `${player.id}/${Date.now()}.jpg`;
       
       const { error: uploadError } = await supabase.storage
         .from('player_photos')
-        .upload(fileName, file);
+        .upload(fileName, processedBlob, {
+          contentType: 'image/jpeg',
+          cacheControl: '3600',
+          upsert: true,
+        });
 
       if (uploadError) throw uploadError;
 
@@ -302,9 +324,10 @@ export default function PlayerManagementMobile() {
       
       loadPlayers();
     } catch (error: any) {
+      console.error('[PlayerManagementMobile] Photo upload error:', error);
       toast({
-        title: 'Error',
-        description: error.message || 'Failed to update photo',
+        title: 'Upload Failed',
+        description: error.message || 'Failed to update photo. Please try again.',
         variant: 'destructive',
       });
     }

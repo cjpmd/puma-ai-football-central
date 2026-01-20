@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Parent, PlayerTransfer, AttributeHistory } from '@/types';
+import { prepareImageForUpload, isHeicFormat, isSupportedImageFormat, formatFileSize } from '@/utils/imageUtils';
 
 // Helper to transform DB player to frontend Player
 const transformPlayer = (dbPlayer: any): Player => {
@@ -173,20 +174,54 @@ export const playersService = {
   },
 
   async uploadPlayerPhoto(playerId: string, file: File): Promise<string> {
-    console.log(`Uploading photo for player ${playerId}:`, file.name);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${playerId}/${Date.now()}.${fileExt}`;
+    console.log(`[playersService] Uploading photo for player ${playerId}:`, {
+      name: file.name,
+      type: file.type,
+      size: formatFileSize(file.size),
+    });
     
+    // Validate and preprocess the image
+    if (isHeicFormat(file)) {
+      throw new Error('HEIC/HEIF format is not supported. Please convert to JPEG or PNG before uploading.');
+    }
+    
+    if (!isSupportedImageFormat(file)) {
+      throw new Error(`Unsupported image format: ${file.type || 'unknown'}. Please use JPEG, PNG, or WebP.`);
+    }
+    
+    // Resize and compress the image to fit within storage limits
+    let processedBlob: Blob;
+    try {
+      processedBlob = await prepareImageForUpload(file, {
+        maxDimension: 1024,
+        quality: 0.85,
+        outputFormat: 'image/jpeg',
+      });
+      console.log(`[playersService] Image processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
+    } catch (processingError: any) {
+      console.error('[playersService] Image processing failed:', processingError);
+      throw new Error(`Image processing failed: ${processingError.message}`);
+    }
+    
+    // Create filename with .jpg extension (since we always output JPEG)
+    const fileName = `${playerId}/${Date.now()}.jpg`;
+    
+    // Upload the processed image
     const { data, error } = await supabase.storage
       .from('player_photos')
-      .upload(fileName, file, {
-        cacheControl: '3600', // Cache for 1 hour
-        upsert: true, // Overwrite if file already exists (e.g., re-upload)
+      .upload(fileName, processedBlob, {
+        contentType: 'image/jpeg',
+        cacheControl: '3600',
+        upsert: true,
       });
 
     if (error) {
-      console.error('Error uploading player photo:', error);
-      throw error;
+      console.error('[playersService] Error uploading player photo:', error);
+      // Provide more helpful error message
+      if (error.message?.includes('size') || error.message?.includes('exceeded')) {
+        throw new Error(`Upload failed: Image too large (${formatFileSize(processedBlob.size)}). Please try a smaller image.`);
+      }
+      throw new Error(`Upload failed: ${error.message}`);
     }
 
     // Get public URL
@@ -195,11 +230,11 @@ export const playersService = {
       .getPublicUrl(data.path);
 
     if (!publicUrlData || !publicUrlData.publicUrl) {
-      console.error('Error getting public URL for player photo');
+      console.error('[playersService] Error getting public URL for player photo');
       throw new Error('Could not retrieve public URL for the uploaded photo.');
     }
     
-    console.log('Photo uploaded successfully. Public URL:', publicUrlData.publicUrl);
+    console.log('[playersService] Photo uploaded successfully. Public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   },
 
