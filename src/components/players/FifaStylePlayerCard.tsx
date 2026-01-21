@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { playStylesService, PlayStyle } from '@/types/playStyles';
 import { MobileImageEditor } from '@/components/players/MobileImageEditor';
+import { formatFileSize, isHeicFormat, isSupportedImageFormat } from '@/utils/imageUtils';
 
 interface FifaStylePlayerCardProps {
   player: Player;
@@ -132,6 +133,15 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   // Image editing state
   const [showImageEditor, setShowImageEditor] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+
+  // Cleanup any object URLs we create
+  useEffect(() => {
+    return () => {
+      if (selectedImageUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(selectedImageUrl);
+      }
+    };
+  }, [selectedImageUrl]);
 
   // Updated parsePlayStyles function
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
@@ -352,15 +362,44 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setSelectedImageUrl(e.target?.result as string);
-        setShowImageEditor(true);
-      };
-      reader.readAsDataURL(file);
+      // Always reset input to allow selecting the same file again
+      event.target.value = '';
+
+      // Validate early to avoid silent failures (especially on iOS/large camera images)
+      if (isHeicFormat(file)) {
+        toast({
+          title: 'Unsupported Photo Format',
+          description: 'HEIC/HEIF is not supported. Please choose a JPEG, PNG, or WebP image.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!isSupportedImageFormat(file)) {
+        toast({
+          title: 'Unsupported Photo Format',
+          description: `Unsupported type: ${file.type || 'unknown'}. Please choose JPEG, PNG, or WebP.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Revoke any previous object URL to prevent memory leaks
+      if (selectedImageUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(selectedImageUrl);
+      }
+
+      toast({
+        title: 'Photo Selected',
+        description: `${file.name} (${formatFileSize(file.size)})`,
+      });
+
+      const objectUrl = URL.createObjectURL(file);
+      setSelectedImageUrl(objectUrl);
+      setShowImageEditor(true);
     }
+
     // Reset input to allow same file selection
-    event.target.value = '';
   };
 
   const handleSaveEditedImage = (blob: Blob) => {
@@ -369,6 +408,18 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       onUpdatePhoto(player, file);
     }
     setShowImageEditor(false);
+
+    if (selectedImageUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(selectedImageUrl);
+    }
+    setSelectedImageUrl(null);
+  };
+
+  const handleCancelImageEdit = () => {
+    setShowImageEditor(false);
+    if (selectedImageUrl?.startsWith('blob:')) {
+      URL.revokeObjectURL(selectedImageUrl);
+    }
     setSelectedImageUrl(null);
   };
 
@@ -572,7 +623,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <Camera className="h-4 w-4" />
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
+                      capture="environment"
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
@@ -864,14 +916,11 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       </div>
 
       {/* Image Editor Modal */}
-      {showImageEditor && selectedImageUrl && (
+        {showImageEditor && selectedImageUrl && (
         <MobileImageEditor
           imageUrl={selectedImageUrl}
           onSave={handleSaveEditedImage}
-          onCancel={() => {
-            setShowImageEditor(false);
-            setSelectedImageUrl(null);
-          }}
+            onCancel={handleCancelImageEdit}
         />
       )}
     </div>
