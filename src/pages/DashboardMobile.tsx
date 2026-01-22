@@ -241,8 +241,18 @@ export default function DashboardMobile() {
         .eq('id', player.id);
       if (updateError) throw updateError;
 
+      // IMMEDIATELY update the local state with the new photo URL
+      // This ensures the card re-renders with the new photo without waiting for a full refetch
+      setSelectedPlayerData(prev => prev ? {
+        ...prev,
+        player: {
+          ...prev.player,
+          photoUrl: data.publicUrl
+        }
+      } : null);
+
       toast({ title: 'Photo Updated', description: `Photo updated for ${player.name}` });
-      // Refresh player data
+      // Refresh player data in background for full sync
       handlePlayerClick({ id: player.id });
     } catch (error: any) {
       console.error('[DashboardMobile] Photo upload error:', error);
