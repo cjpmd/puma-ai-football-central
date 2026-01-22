@@ -625,7 +625,6 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
-                      capture="environment"
                       onChange={handlePhotoUpload}
                       className="hidden"
                     />
