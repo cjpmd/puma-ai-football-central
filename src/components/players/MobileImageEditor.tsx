@@ -1,4 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { Loader2 } from 'lucide-react';
 
 interface MobileImageEditorProps {
   imageUrl: string;
@@ -22,6 +24,8 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     translateX: 0,
     translateY: 0,
   });
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -39,13 +43,11 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     e.preventDefault();
     
     if (e.touches.length === 2) {
-      // Pinch zoom start
       const distance = getDistance(e.touches[0], e.touches[1]);
       initialPinchDistanceRef.current = distance;
       initialScaleRef.current = touchState.scale;
       lastTouchRef.current = null;
     } else if (e.touches.length === 1) {
-      // Drag start
       lastTouchRef.current = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY,
@@ -57,7 +59,6 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     e.preventDefault();
 
     if (e.touches.length === 2) {
-      // Pinch zoom
       const distance = getDistance(e.touches[0], e.touches[1]);
       const newScale = initialScaleRef.current * (distance / initialPinchDistanceRef.current);
       
@@ -66,7 +67,6 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
         scale: Math.max(0.5, Math.min(3, newScale)),
       }));
     } else if (e.touches.length === 1 && lastTouchRef.current) {
-      // Drag to reposition
       const deltaX = e.touches[0].clientX - lastTouchRef.current.x;
       const deltaY = e.touches[0].clientY - lastTouchRef.current.y;
 
@@ -90,6 +90,19 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     }
   };
 
+  const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    console.log('[MobileImageEditor] Image loaded successfully:', img.naturalWidth, 'x', img.naturalHeight);
+    setImageLoaded(true);
+    setImageError(false);
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    console.error('[MobileImageEditor] Failed to load image:', imageUrl, e);
+    setImageError(true);
+    setImageLoaded(false);
+  };
+
   const handleSave = async () => {
     if (!imageRef.current || !containerRef.current) return;
 
@@ -99,14 +112,13 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     canvas.height = canvasSize;
     const ctx = canvas.getContext('2d')!;
 
-    const containerSize = 192; // Preview container size
+    const containerSize = 192;
     const scaleFactor = canvasSize / containerSize;
 
     const img = imageRef.current;
     const imgNaturalWidth = img.naturalWidth;
     const imgNaturalHeight = img.naturalHeight;
 
-    // Calculate object-cover base dimensions (how image fills 192px container)
     const containerAspect = 1;
     const imgAspect = imgNaturalWidth / imgNaturalHeight;
     
@@ -114,41 +126,26 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     let baseHeight: number;
     
     if (imgAspect > containerAspect) {
-      // Wider image: height fills container
       baseHeight = containerSize;
       baseWidth = containerSize * imgAspect;
     } else {
-      // Taller image: width fills container
       baseWidth = containerSize;
       baseHeight = containerSize / imgAspect;
     }
 
-    // Object-cover centers the image, so calculate offset
     const baseOffsetX = (containerSize - baseWidth) / 2;
     const baseOffsetY = (containerSize - baseHeight) / 2;
 
-    // Fill with white background to avoid transparency issues
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvasSize, canvasSize);
 
     ctx.save();
-    
-    // Scale everything from preview coords to canvas coords
     ctx.scale(scaleFactor, scaleFactor);
-    
-    // Move to center of container (transform origin)
     ctx.translate(containerSize / 2, containerSize / 2);
-    
-    // Apply user transforms (CSS order: translate then scale, but in canvas we reverse)
     ctx.scale(touchState.scale, touchState.scale);
     ctx.translate(touchState.translateX, touchState.translateY);
-    
-    // Move back from center
     ctx.translate(-containerSize / 2, -containerSize / 2);
-    
-    // Draw image at its object-cover position
     ctx.drawImage(img, baseOffsetX, baseOffsetY, baseWidth, baseHeight);
-    
     ctx.restore();
 
     canvas.toBlob((blob) => {
@@ -158,28 +155,45 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     }, 'image/jpeg', 0.9);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+  const editorContent = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-[320px] mx-auto">
         {/* Interactive image area */}
         <div
           ref={containerRef}
-          className="relative w-48 h-48 mx-auto mb-4 rounded-full overflow-hidden bg-background/50"
+          className="relative w-48 h-48 mx-auto mb-4 rounded-full overflow-hidden bg-muted/50"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
           style={{ touchAction: 'none' }}
         >
+          {/* Loading state */}
+          {!imageLoaded && !imageError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          )}
+
+          {/* Error state */}
+          {imageError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-destructive p-4 text-center">
+              <p className="text-sm font-medium">Failed to load image</p>
+              <p className="text-xs mt-1 opacity-70">Try selecting a different photo</p>
+            </div>
+          )}
+
           <img
             ref={imageRef}
             src={imageUrl}
             alt="Edit"
-            className="absolute inset-0 w-full h-full object-cover"
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
             style={{
               transform: `translate(${touchState.translateX}px, ${touchState.translateY}px) scale(${touchState.scale})`,
               willChange: 'transform',
             }}
             draggable={false}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
           />
         </div>
 
@@ -203,7 +217,8 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors"
+            disabled={!imageLoaded || imageError}
+            className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Save
           </button>
@@ -211,4 +226,7 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
       </div>
     </div>
   );
+
+  // Render as portal to escape any parent stacking contexts (like Radix dialogs)
+  return createPortal(editorContent, document.body);
 };

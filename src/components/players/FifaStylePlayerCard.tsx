@@ -395,6 +395,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       });
 
       const objectUrl = URL.createObjectURL(file);
+      console.log('[FifaStylePlayerCard] Opening editor with blob URL:', objectUrl, 'file:', file.name, file.type, file.size);
       setSelectedImageUrl(objectUrl);
       setShowImageEditor(true);
     }
