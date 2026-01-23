@@ -7,7 +7,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.send-push-notification]
-verify_jwt = false
+verify_jwt = true
 
 [functions.send-availability-notification]
 verify_jwt = true
@@ -22,7 +22,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.google-maps-config]
-verify_jwt = false
+verify_jwt = true
 
 [functions.weather-data]
-verify_jwt = false
+verify_jwt = true
