@@ -64,7 +64,7 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     if (hasStaffRole) {
       views.push('coach');
-      console.log('Added coach view - user has staff role:', teams.map(t => t.userRole));
+      console.log('Added coach view - user has staff role:', teams?.map(t => t.userRole) || []);
     }
     
     // Check for team manager role
@@ -94,9 +94,9 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       primary = 'club_admin';
     } else if (views.includes('team_manager')) {
       primary = 'team_manager';
-    } else if (views.includes('coach') && teams.length > 0) {
+    } else if (views.includes('coach') && teams && teams.length > 0) {
       primary = 'coach';
-    } else if (views.includes('parent') && connectedPlayers.length > 0) {
+    } else if (views.includes('parent') && connectedPlayers && connectedPlayers.length > 0) {
       primary = 'parent';
     }
 
