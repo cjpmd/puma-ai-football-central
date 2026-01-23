@@ -1,214 +1,112 @@
 
-## Plan: Fix Player Card Saves (Design, Stats, Photos)
+## Plan: Fix Infinite Recursion in RLS Policies
 
-### Problem Summary
-When editing a player's FIFA card on `/dashboard`:
-- Card design changes don't persist
-- FIFA stats changes don't persist  
-- Photo uploads may not persist
-- Even successful saves don't update the card UI immediately
-
-### Root Cause
-
-**1. Database RLS Policy Blocking Updates**
-
-The `players` table has an UPDATE policy that only allows users with specific team staff roles:
-```sql
-Team staff can manage their team players (cmd: ALL)
-WHERE ut.role IN ('team_manager', 'team_assistant_manager', 'team_coach')
-```
-
-This policy does NOT allow:
-- `global_admin` users (your current role)
-- Parents/players editing their own card customizations (fun stats, play styles, card design)
-
-The Supabase API returns `204 No Content` even when RLS blocks the update (0 rows affected), so it appears to succeed but nothing is saved.
-
-**2. UI State Not Updating After Save**
-
-The save handlers in `DashboardMobile.tsx` update the database but don't update `selectedPlayerData`:
-```tsx
-const handleSaveFunStats = async (player, stats) => {
-  await supabase.update(...); // Updates DB
-  toast({ title: 'Stats Updated' }); // Shows success
-  // BUT: selectedPlayerData is NOT updated
-};
-```
-
-So even if the save worked, the card shows stale data until closed and reopened.
-
----
+### Problem
+The new RLS policies I added created circular dependencies between tables:
+- `players` policy → queries `profiles` to check global_admin
+- `profiles` policies → query `players` via joins
+- `user_players` policies → query `players` via joins
+- This creates infinite loops when evaluating any of these policies
 
 ### Solution
 
-#### Phase 1: Fix RLS Policy for Players Table
+Replace inline subqueries with **security definer functions** that bypass RLS evaluation, breaking the recursion chain.
 
-Add a new policy (or modify existing) to allow:
-1. **Global admins** can manage all players
-2. **Parents/players** can update specific customization fields on their linked players
+---
+
+### Phase 1: Create Security Definer Helper Functions
+
+Create two helper functions that run with elevated privileges (bypassing RLS):
 
 ```sql
--- Allow global admins to manage all players
-CREATE POLICY "Global admins can manage all players"
-ON players FOR ALL
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND 'global_admin' = ANY(profiles.roles)
+-- Function to check if user is a global admin
+CREATE OR REPLACE FUNCTION public.is_global_admin(user_uuid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = user_uuid
+    AND 'global_admin' = ANY(roles)
   )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND 'global_admin' = ANY(profiles.roles)
-  )
-);
+$$;
 
--- Allow linked users (parents/self) to update card customization
-CREATE POLICY "Linked users can update player card customization"
-ON players FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM user_players
-    WHERE user_players.player_id = players.id
-    AND user_players.user_id = auth.uid()
+-- Function to check if user is linked to a player
+CREATE OR REPLACE FUNCTION public.is_linked_to_player(user_uuid uuid, player_uuid uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_players
+    WHERE user_id = user_uuid
+    AND player_id = player_uuid
   )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM user_players
-    WHERE user_players.player_id = players.id
-    AND user_players.user_id = auth.uid()
-  )
-);
+$$;
 ```
 
-#### Phase 2: Update Local State After Saves
+---
 
-Modify the save handlers in `DashboardMobile.tsx` to update `selectedPlayerData` immediately after successful database updates:
+### Phase 2: Drop the Problematic Policies
 
-```tsx
-const handleSaveFunStats = async (player: any, stats: Record<string, number>) => {
-  try {
-    const { error } = await supabase
-      .from('players')
-      .update({ fun_stats: stats })
-      .eq('id', player.id);
-    if (error) throw error;
-    
-    // UPDATE LOCAL STATE IMMEDIATELY
-    setSelectedPlayerData(prev => prev ? {
-      ...prev,
-      player: { ...prev.player, funStats: stats }
-    } : null);
-    
-    toast({ title: 'Stats Updated' });
-  } catch (error: any) {
-    toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  }
-};
+Remove the two policies that are causing recursion:
 
-const handleSavePlayStyle = async (player: any, playStyles: string[]) => {
-  try {
-    const { error } = await supabase
-      .from('players')
-      .update({ play_style: JSON.stringify(playStyles) })
-      .eq('id', player.id);
-    if (error) throw error;
-    
-    // UPDATE LOCAL STATE IMMEDIATELY
-    setSelectedPlayerData(prev => prev ? {
-      ...prev,
-      player: { ...prev.player, playStyle: playStyles }
-    } : null);
-    
-    toast({ title: 'Play Style Updated' });
-  } catch (error: any) {
-    toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  }
-};
+```sql
+DROP POLICY IF EXISTS "Global admins can manage all players" ON public.players;
+DROP POLICY IF EXISTS "Linked users can update player card customization" ON public.players;
+```
 
-const handleSaveCardDesign = async (player: any, designId: string) => {
-  try {
-    const { error } = await supabase
-      .from('players')
-      .update({ card_design_id: designId })
-      .eq('id', player.id);
-    if (error) throw error;
-    
-    // UPDATE LOCAL STATE IMMEDIATELY
-    setSelectedPlayerData(prev => prev ? {
-      ...prev,
-      player: { ...prev.player, cardDesignId: designId }
-    } : null);
-    
-    toast({ title: 'Card Design Updated' });
-  } catch (error: any) {
-    toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  }
-};
+---
+
+### Phase 3: Recreate Policies Using Security Definer Functions
+
+Recreate the policies using the helper functions instead of inline subqueries:
+
+```sql
+-- Global admins can manage all players (using function)
+CREATE POLICY "Global admins can manage all players"
+ON public.players FOR ALL
+TO authenticated
+USING (public.is_global_admin(auth.uid()))
+WITH CHECK (public.is_global_admin(auth.uid()));
+
+-- Linked users can update their player's card (using function)
+CREATE POLICY "Linked users can update player card customization"
+ON public.players FOR UPDATE
+TO authenticated
+USING (public.is_linked_to_player(auth.uid(), id))
+WITH CHECK (public.is_linked_to_player(auth.uid(), id));
 ```
 
 ---
 
 ### Technical Details
 
-#### Files to Modify:
-
-| File | Change |
+| Step | Action |
 |------|--------|
-| `supabase/migrations/` | Add RLS policies for global_admin and linked users |
-| `src/pages/DashboardMobile.tsx` | Update save handlers to set local state |
+| 1 | Create `is_global_admin(uuid)` security definer function |
+| 2 | Create `is_linked_to_player(uuid, uuid)` security definer function |
+| 3 | Drop "Global admins can manage all players" policy |
+| 4 | Drop "Linked users can update player card customization" policy |
+| 5 | Recreate both policies using the helper functions |
 
-#### Database Migration SQL:
-```sql
--- Add global admin policy for players
-CREATE POLICY "Global admins can manage all players"
-ON public.players FOR ALL
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = auth.uid()
-    AND 'global_admin' = ANY(profiles.roles)
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE profiles.id = auth.uid()
-    AND 'global_admin' = ANY(profiles.roles)
-  )
-);
+### Why This Works
 
--- Add policy for linked users to update their player's card
-CREATE POLICY "Linked users can update player card customization"
-ON public.players FOR UPDATE
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.user_players
-    WHERE user_players.player_id = players.id
-    AND user_players.user_id = auth.uid()
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.user_players
-    WHERE user_players.player_id = players.id
-    AND user_players.user_id = auth.uid()
-  )
-);
-```
+Security definer functions execute with the **privileges of the function owner** (typically the database owner), which bypasses RLS policies. This breaks the circular chain:
 
-### Verification Steps
+- Old: `players` policy → inline query to `profiles` → triggers `profiles` RLS → queries `players` → infinite loop
+- New: `players` policy → calls `is_global_admin()` → function runs with SECURITY DEFINER, no RLS triggered → returns result
 
-1. Apply the database migration
-2. Test saving card design as global_admin - should persist
-3. Test saving fun stats - should persist and update immediately
-4. Test saving play styles - should persist and update immediately
-5. Test photo upload - should persist and show in card immediately
-6. Close and reopen the card - changes should still be there
-7. Refresh the page - changes should persist from database
+### Files Modified
+- New database migration to create functions and fix policies
+
+### Verification
+1. Load `/dashboard` - should not error
+2. Connected players should load successfully
+3. Try editing a player card - should save and persist
+4. Photo upload should work
