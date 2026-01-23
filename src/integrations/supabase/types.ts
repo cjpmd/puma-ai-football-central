@@ -5042,8 +5042,14 @@ export type Database = {
         Args: { club_uuid: string; required_roles?: string[] }
         Returns: boolean
       }
-      is_global_admin: { Args: never; Returns: boolean }
+      is_global_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { user_uuid: string }; Returns: boolean }
       is_global_admin_secure: { Args: never; Returns: boolean }
+      is_linked_to_player: {
+        Args: { player_uuid: string; user_uuid: string }
+        Returns: boolean
+      }
       is_team_member: {
         Args: { required_roles?: string[]; team_uuid: string }
         Returns: boolean
