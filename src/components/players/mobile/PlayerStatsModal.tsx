@@ -26,7 +26,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
   const captainGames = stats.captainGames || 0;
   const potmCount = stats.playerOfTheMatchCount || 0;
   const minutesByPosition = stats.minutesByPosition || {};
-  const recentGames = stats.recentGames || [];
+  const recentGames = Array.isArray(stats.recentGames) ? stats.recentGames : [];
   const performanceCategoryStats = stats.performanceCategoryStats || {};
 
   // Availability state
