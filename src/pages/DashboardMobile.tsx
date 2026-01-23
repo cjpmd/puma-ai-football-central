@@ -166,6 +166,13 @@ export default function DashboardMobile() {
         .update({ fun_stats: stats })
         .eq('id', player.id);
       if (error) throw error;
+      
+      // Update local state immediately so the card reflects the change
+      setSelectedPlayerData(prev => prev ? {
+        ...prev,
+        player: { ...prev.player, funStats: stats }
+      } : null);
+      
       toast({ title: 'Stats Updated', description: `Fun stats updated for ${player.name}` });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to update stats', variant: 'destructive' });
@@ -179,6 +186,13 @@ export default function DashboardMobile() {
         .update({ play_style: JSON.stringify(playStyles) })
         .eq('id', player.id);
       if (error) throw error;
+      
+      // Update local state immediately so the card reflects the change
+      setSelectedPlayerData(prev => prev ? {
+        ...prev,
+        player: { ...prev.player, playStyle: playStyles }
+      } : null);
+      
       toast({ title: 'Play Style Updated', description: `Play style updated for ${player.name}` });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to update play style', variant: 'destructive' });
@@ -192,6 +206,13 @@ export default function DashboardMobile() {
         .update({ card_design_id: designId })
         .eq('id', player.id);
       if (error) throw error;
+      
+      // Update local state immediately so the card reflects the change
+      setSelectedPlayerData(prev => prev ? {
+        ...prev,
+        player: { ...prev.player, cardDesignId: designId }
+      } : null);
+      
       toast({ title: 'Card Design Updated', description: `Card design updated for ${player.name}` });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message || 'Failed to update card design', variant: 'destructive' });
