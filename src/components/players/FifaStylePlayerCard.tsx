@@ -143,7 +143,8 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     };
   }, [selectedImageUrl]);
 
-  // Updated parsePlayStyles function
+  // Updated parsePlayStyles function - returns unique values without filtering by loaded list
+  // Filtering is deferred until render-time to avoid dropping saved styles before list loads
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
     let rawStyles: string[] = [];
     if (!playStyleData) {
@@ -166,10 +167,9 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       }
     }
     
-    // Filter for valid and unique styles from the known list, and limit to 3
-    const validPlayStyleValues = playStyles.map(s => s.value);
-    const uniqueFilteredStyles = [...new Set(rawStyles.filter(style => validPlayStyleValues.includes(style)))];
-    return uniqueFilteredStyles.slice(0, 3);
+    // Return unique values, limit to 3 - do NOT filter by playStyles list here
+    // The list may not be loaded yet, so filtering should happen at display time
+    return [...new Set(rawStyles)].slice(0, 3);
   };
 
   const [selectedDesign, setSelectedDesign] = useState(player.cardDesignId || "goldBallon");
@@ -180,14 +180,21 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
   const [showPlayStylesManager, setShowPlayStylesManager] = useState(false);
 
   // useEffect to synchronize state with player prop changes
+  // Re-runs when playStyles list loads so saved styles are displayed correctly
   useEffect(() => {
     const parsed = parsePlayStyles(player.playStyle);
+    // Only update if actually different to avoid infinite loops
     if (JSON.stringify(parsed) !== JSON.stringify(selectedPlayStyles)) {
       setSelectedPlayStyles(parsed);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [player.playStyle, playStyles]); // Re-sync when playStyles list loads
+  
+  // Separate effect for funStats and design to avoid coupling
+  useEffect(() => {
     setFunStats(player.funStats || {});
     setSelectedDesign(player.cardDesignId || "goldBallon");
-  }, [player.playStyle, player.funStats, player.cardDesignId, selectedPlayStyles, player]);
+  }, [player.funStats, player.cardDesignId]);
 
   // useEffect to determine if the current user can manage this card and if they are staff
   useEffect(() => {

@@ -227,6 +227,16 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     </div>
   );
 
-  // Render as portal to escape any parent stacking contexts (like Radix dialogs)
-  return createPortal(editorContent, document.body);
+  // Render as portal into the Radix portal container (if present) to maintain pointer events
+  // Radix dialogs disable pointer-events on document.body siblings, so we need to portal inside
+  const getPortalContainer = (): HTMLElement => {
+    // Find the outermost Radix portal container
+    const radixPortal = document.querySelector('[data-radix-portal]');
+    if (radixPortal instanceof HTMLElement) {
+      return radixPortal;
+    }
+    return document.body;
+  };
+
+  return createPortal(editorContent, getPortalContainer());
 };
