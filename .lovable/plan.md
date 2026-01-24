@@ -1,25 +1,138 @@
 
-## Plan: Fix Infinite Recursion in RLS Policies
 
-### Problem
-The new RLS policies I added created circular dependencies between tables:
-- `players` policy → queries `profiles` to check global_admin
-- `profiles` policies → query `players` via joins
-- `user_players` policies → query `players` via joins
-- This creates infinite loops when evaluating any of these policies
+## Plan: Fix Player Card Customization (FIFA Stats, Play Styles, Photos)
 
-### Solution
+### Problem Summary
+When editing a player's FIFA card:
+- Card design changes don't persist after refresh
+- FIFA stats changes don't persist
+- Play style changes don't persist
+- Photo uploads may not persist
 
-Replace inline subqueries with **security definer functions** that bypass RLS evaluation, breaking the recursion chain.
+The toast notifications show "success" but the database isn't actually updated.
 
 ---
 
-### Phase 1: Create Security Definer Helper Functions
+### Root Cause Analysis
 
-Create two helper functions that run with elevated privileges (bypassing RLS):
+After thorough investigation, I found multiple overlapping issues:
+
+#### Issue 1: RLS Policy Function Overload Ambiguity
+There are TWO versions of the `is_global_admin` function:
+- `is_global_admin()` - no parameters, uses `auth.uid()` internally
+- `is_global_admin(user_uuid uuid)` - takes a parameter
+
+The RLS policy calls `is_global_admin(auth.uid())` which should resolve to the second version. However, this creates potential ambiguity that should be cleaned up.
+
+#### Issue 2: Silent Update Failures
+The Supabase client returns `{ error: null }` even when RLS blocks an update (0 rows affected). The code doesn't validate that rows were actually updated:
+
+```typescript
+const { error } = await supabase.from('players').update({ ... }).eq('id', player.id);
+if (error) throw error; // error is null, but 0 rows updated!
+toast({ title: 'Success' }); // Shows success incorrectly
+```
+
+#### Issue 3: Missing Row Count Validation
+The save handlers don't verify the update actually affected a row, leading to false success messages.
+
+---
+
+### Solution
+
+#### Phase 1: Clean Up Function Overloads (Database Migration)
+
+Remove the no-argument version of `is_global_admin` to eliminate ambiguity:
 
 ```sql
--- Function to check if user is a global admin
+-- Drop the no-argument version that can cause confusion
+DROP FUNCTION IF EXISTS public.is_global_admin();
+
+-- Keep only the version with the uuid parameter
+-- (already exists: is_global_admin(user_uuid uuid))
+```
+
+#### Phase 2: Add Row Count Validation to Save Handlers
+
+Update all save handlers in `DashboardMobile.tsx` to check if rows were actually updated:
+
+```typescript
+const handleSaveFunStats = async (player: any, stats: Record<string, number>) => {
+  try {
+    const { error, count } = await supabase
+      .from('players')
+      .update({ fun_stats: stats })
+      .eq('id', player.id)
+      .select('id', { count: 'exact', head: true });
+    
+    if (error) throw error;
+    
+    // Check if any rows were updated
+    if (count === 0) {
+      throw new Error('Update blocked by security policy. You may not have permission to edit this player.');
+    }
+    
+    // Update local state
+    setSelectedPlayerData(prev => prev ? {
+      ...prev,
+      player: { ...prev.player, funStats: stats }
+    } : null);
+    
+    toast({ title: 'Stats Updated' });
+  } catch (error: any) {
+    toast({ title: 'Error', description: error.message, variant: 'destructive' });
+  }
+};
+```
+
+Apply the same pattern to:
+- `handleSavePlayStyle`
+- `handleSaveCardDesign`
+- `handleUpdatePhoto` (for the player table update)
+- `handleDeletePhoto`
+
+#### Phase 3: Also Update PlayerManagementMobile.tsx
+
+Apply the same row count validation to the identical handlers in `PlayerManagementMobile.tsx` to ensure consistency.
+
+---
+
+### Technical Details
+
+#### Files to Modify
+
+| File | Changes |
+|------|---------|
+| Database Migration | Drop `is_global_admin()` no-arg function |
+| `src/pages/DashboardMobile.tsx` | Add `.select()` with count validation to all save handlers |
+| `src/pages/PlayerManagementMobile.tsx` | Add `.select()` with count validation to all save handlers |
+
+#### Updated Handler Pattern
+
+Each handler will follow this pattern:
+
+```typescript
+const { data, error, count } = await supabase
+  .from('players')
+  .update({ column_name: value })
+  .eq('id', player.id)
+  .select('id')  // Returns data to confirm update
+  .single();     // Expect exactly one row
+
+if (error) throw error;
+if (!data) {
+  throw new Error('Permission denied: Unable to update this player.');
+}
+```
+
+#### Database Migration SQL
+
+```sql
+-- Clean up function overload ambiguity
+-- Drop the no-argument version
+DROP FUNCTION IF EXISTS public.is_global_admin();
+
+-- Ensure the parameterized version exists and is correct
 CREATE OR REPLACE FUNCTION public.is_global_admin(user_uuid uuid)
 RETURNS boolean
 LANGUAGE sql
@@ -33,80 +146,17 @@ AS $$
     AND 'global_admin' = ANY(roles)
   )
 $$;
-
--- Function to check if user is linked to a player
-CREATE OR REPLACE FUNCTION public.is_linked_to_player(user_uuid uuid, player_uuid uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.user_players
-    WHERE user_id = user_uuid
-    AND player_id = player_uuid
-  )
-$$;
 ```
 
 ---
 
-### Phase 2: Drop the Problematic Policies
+### Verification Steps
 
-Remove the two policies that are causing recursion:
+1. Apply database migration to clean up function overloads
+2. Update save handlers with row count validation
+3. Test saving card design - should either save successfully or show clear error message
+4. Test saving fun stats - should work and reflect immediately in UI
+5. Test saving play styles - should persist after card close/reopen
+6. Test photo upload - should upload and display correctly
+7. Test as a non-admin linked parent - should be able to customize their child's card
 
-```sql
-DROP POLICY IF EXISTS "Global admins can manage all players" ON public.players;
-DROP POLICY IF EXISTS "Linked users can update player card customization" ON public.players;
-```
-
----
-
-### Phase 3: Recreate Policies Using Security Definer Functions
-
-Recreate the policies using the helper functions instead of inline subqueries:
-
-```sql
--- Global admins can manage all players (using function)
-CREATE POLICY "Global admins can manage all players"
-ON public.players FOR ALL
-TO authenticated
-USING (public.is_global_admin(auth.uid()))
-WITH CHECK (public.is_global_admin(auth.uid()));
-
--- Linked users can update their player's card (using function)
-CREATE POLICY "Linked users can update player card customization"
-ON public.players FOR UPDATE
-TO authenticated
-USING (public.is_linked_to_player(auth.uid(), id))
-WITH CHECK (public.is_linked_to_player(auth.uid(), id));
-```
-
----
-
-### Technical Details
-
-| Step | Action |
-|------|--------|
-| 1 | Create `is_global_admin(uuid)` security definer function |
-| 2 | Create `is_linked_to_player(uuid, uuid)` security definer function |
-| 3 | Drop "Global admins can manage all players" policy |
-| 4 | Drop "Linked users can update player card customization" policy |
-| 5 | Recreate both policies using the helper functions |
-
-### Why This Works
-
-Security definer functions execute with the **privileges of the function owner** (typically the database owner), which bypasses RLS policies. This breaks the circular chain:
-
-- Old: `players` policy → inline query to `profiles` → triggers `profiles` RLS → queries `players` → infinite loop
-- New: `players` policy → calls `is_global_admin()` → function runs with SECURITY DEFINER, no RLS triggered → returns result
-
-### Files Modified
-- New database migration to create functions and fix policies
-
-### Verification
-1. Load `/dashboard` - should not error
-2. Connected players should load successfully
-3. Try editing a player card - should save and persist
-4. Photo upload should work
