@@ -1,162 +1,92 @@
 
+## What’s actually happening (root causes)
 
-## Plan: Fix Player Card Customization (FIFA Stats, Play Styles, Photos)
+### 1) Play Styles *are saving* in the database, but the UI hides them on reload
+In `src/components/players/FifaStylePlayerCard.tsx`, `parsePlayStyles()` filters saved play styles against `playStyles` (the list fetched async from the DB). On first render, `playStyles` is still empty, so the filter drops everything and returns `[]`.
 
-### Problem Summary
-When editing a player's FIFA card:
-- Card design changes don't persist after refresh
-- FIFA stats changes don't persist
-- Play style changes don't persist
-- Photo uploads may not persist
+Then, when `playStyles` finishes loading, the “sync” `useEffect` does **not** re-run because it doesn’t depend on `playStyles`. Result: the card shows no selected play styles and looks “not saved”, even though `players.play_style` is persisted.
 
-The toast notifications show "success" but the database isn't actually updated.
+Fix: make the parsing/sync logic react to `playStyles` finishing loading (or stop filtering during parse).
 
----
+### 2) The Mobile Image Editor is “stuck” because it’s portaled to `document.body` while a Radix Dialog/Sheet is open
+Radix Dialog/Sheet modal behavior can disable pointer events outside the dialog “portal” content. Your `MobileImageEditor` uses `createPortal(..., document.body)`, which makes it a sibling to the Radix portal rather than inside it.
 
-### Root Cause Analysis
+Symptoms match exactly:
+- Image loads (you see `[MobileImageEditor] Image loaded successfully...`)
+- But you can’t pinch/drag or click Save/Cancel because pointer/touch events are blocked.
 
-After thorough investigation, I found multiple overlapping issues:
-
-#### Issue 1: RLS Policy Function Overload Ambiguity
-There are TWO versions of the `is_global_admin` function:
-- `is_global_admin()` - no parameters, uses `auth.uid()` internally
-- `is_global_admin(user_uuid uuid)` - takes a parameter
-
-The RLS policy calls `is_global_admin(auth.uid())` which should resolve to the second version. However, this creates potential ambiguity that should be cleaned up.
-
-#### Issue 2: Silent Update Failures
-The Supabase client returns `{ error: null }` even when RLS blocks an update (0 rows affected). The code doesn't validate that rows were actually updated:
-
-```typescript
-const { error } = await supabase.from('players').update({ ... }).eq('id', player.id);
-if (error) throw error; // error is null, but 0 rows updated!
-toast({ title: 'Success' }); // Shows success incorrectly
-```
-
-#### Issue 3: Missing Row Count Validation
-The save handlers don't verify the update actually affected a row, leading to false success messages.
+Fix: portal the editor into the **Radix portal container** (the element Radix creates, usually `[data-radix-portal]`) instead of always `document.body`, or render inline (no portal) with a high z-index.
 
 ---
 
-### Solution
+## Implementation plan (code-only, no DB changes)
 
-#### Phase 1: Clean Up Function Overloads (Database Migration)
+### A) Fix Play Styles persistence display (FifaStylePlayerCard)
 
-Remove the no-argument version of `is_global_admin` to eliminate ambiguity:
+1. Update `parsePlayStyles()` so it does not permanently drop values before the styles list is loaded.
+   - Option 1 (recommended): Parse and return unique values without filtering by `playStyles` list (still slice to max 3).
+   - Option 2: Keep filtering, but only filter once `playStyles.length > 0`.
 
-```sql
--- Drop the no-argument version that can cause confusion
-DROP FUNCTION IF EXISTS public.is_global_admin();
+2. Update the “sync player prop -> internal state” `useEffect` dependencies:
+   - Add `playStyles` to dependencies so when the list loads, we re-parse saved play styles and update `selectedPlayStyles`.
 
--- Keep only the version with the uuid parameter
--- (already exists: is_global_admin(user_uuid uuid))
-```
+3. Avoid dependency loops:
+   - Remove `selectedPlayStyles` and `player` object reference from the dependency list (using the whole `player` object can cause re-renders and unnecessary resyncs).
+   - Depend on specific primitives: `player.playStyle`, `player.funStats`, `player.cardDesignId`, and `playStyles`.
 
-#### Phase 2: Add Row Count Validation to Save Handlers
+Result: reopening the card (or refreshing) will correctly show the saved play styles.
 
-Update all save handlers in `DashboardMobile.tsx` to check if rows were actually updated:
-
-```typescript
-const handleSaveFunStats = async (player: any, stats: Record<string, number>) => {
-  try {
-    const { error, count } = await supabase
-      .from('players')
-      .update({ fun_stats: stats })
-      .eq('id', player.id)
-      .select('id', { count: 'exact', head: true });
-    
-    if (error) throw error;
-    
-    // Check if any rows were updated
-    if (count === 0) {
-      throw new Error('Update blocked by security policy. You may not have permission to edit this player.');
-    }
-    
-    // Update local state
-    setSelectedPlayerData(prev => prev ? {
-      ...prev,
-      player: { ...prev.player, funStats: stats }
-    } : null);
-    
-    toast({ title: 'Stats Updated' });
-  } catch (error: any) {
-    toast({ title: 'Error', description: error.message, variant: 'destructive' });
-  }
-};
-```
-
-Apply the same pattern to:
-- `handleSavePlayStyle`
-- `handleSaveCardDesign`
-- `handleUpdatePhoto` (for the player table update)
-- `handleDeletePhoto`
-
-#### Phase 3: Also Update PlayerManagementMobile.tsx
-
-Apply the same row count validation to the identical handlers in `PlayerManagementMobile.tsx` to ensure consistency.
+Files:
+- `src/components/players/FifaStylePlayerCard.tsx`
 
 ---
 
-### Technical Details
+### B) Fix MobileImageEditor interaction (pinch/drag + Save/Cancel buttons)
 
-#### Files to Modify
+1. Modify `MobileImageEditor` to portal into a safer container:
+   - Determine the portal root at runtime:
+     - Prefer `document.querySelector('[data-radix-portal]')` if present (means a Radix modal is open).
+     - Fallback to `document.body`.
 
-| File | Changes |
-|------|---------|
-| Database Migration | Drop `is_global_admin()` no-arg function |
-| `src/pages/DashboardMobile.tsx` | Add `.select()` with count validation to all save handlers |
-| `src/pages/PlayerManagementMobile.tsx` | Add `.select()` with count validation to all save handlers |
+2. Keep the portal behavior (so it still overlays everything), but ensure it lives inside Radix’s pointer-events-safe area.
 
-#### Updated Handler Pattern
+3. Add small safety improvements:
+   - Add `onPointerDown`/`onPointerMove` handling as a fallback (optional but helpful across devices).
+   - Or at minimum ensure taps on buttons are not interfered with by the image-area touch handlers (currently OK because those handlers are only on the image container).
 
-Each handler will follow this pattern:
+Result: the editor becomes interactive again while opened from within the FIFA card dialog/sheet.
 
-```typescript
-const { data, error, count } = await supabase
-  .from('players')
-  .update({ column_name: value })
-  .eq('id', player.id)
-  .select('id')  // Returns data to confirm update
-  .single();     // Expect exactly one row
-
-if (error) throw error;
-if (!data) {
-  throw new Error('Permission denied: Unable to update this player.');
-}
-```
-
-#### Database Migration SQL
-
-```sql
--- Clean up function overload ambiguity
--- Drop the no-argument version
-DROP FUNCTION IF EXISTS public.is_global_admin();
-
--- Ensure the parameterized version exists and is correct
-CREATE OR REPLACE FUNCTION public.is_global_admin(user_uuid uuid)
-RETURNS boolean
-LANGUAGE sql
-STABLE
-SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.profiles
-    WHERE id = user_uuid
-    AND 'global_admin' = ANY(roles)
-  )
-$$;
-```
+Files:
+- `src/components/players/MobileImageEditor.tsx`
 
 ---
 
-### Verification Steps
+## Verification checklist (what you’ll test after implementation)
 
-1. Apply database migration to clean up function overloads
-2. Update save handlers with row count validation
-3. Test saving card design - should either save successfully or show clear error message
-4. Test saving fun stats - should work and reflect immediately in UI
-5. Test saving play styles - should persist after card close/reopen
-6. Test photo upload - should upload and display correctly
-7. Test as a non-admin linked parent - should be able to customize their child's card
+### Play styles
+1. Open a player card that already has a saved play style (e.g. “finisher”).
+2. Confirm the badge(s) show immediately after the styles list loads (within a second).
+3. Toggle a new play style, close card, reopen:
+   - Selection should still be there.
+4. Hard refresh the page and repeat:
+   - Still persists.
 
+### Image editor
+1. Open player card → choose photo.
+2. Editor appears:
+   - Pinch zoom works
+   - Drag works
+   - Save and Cancel buttons respond instantly
+3. Tap Save:
+   - Upload runs
+   - Card shows updated image immediately
+4. Close/reopen card:
+   - Image persists.
+
+---
+
+## If anything still fails after these fixes
+We’ll capture:
+- One screenshot of the stuck editor state (if it ever happens again)
+- The network request list filtered by `players?` and `storage` during a save attempt
+…and we’ll trace which exact modal (Dialog vs Sheet) is hosting the card and ensure the portal target matches that container.
