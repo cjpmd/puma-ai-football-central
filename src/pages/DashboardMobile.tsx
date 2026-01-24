@@ -161,11 +161,15 @@ export default function DashboardMobile() {
   // Handlers for saving FIFA card data from dashboard
   const handleSaveFunStats = async (player: any, stats: Record<string, number>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ fun_stats: stats })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
+      
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
       
       // Update local state immediately so the card reflects the change
       setSelectedPlayerData(prev => prev ? {
@@ -181,11 +185,15 @@ export default function DashboardMobile() {
 
   const handleSavePlayStyle = async (player: any, playStyles: string[]) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ play_style: JSON.stringify(playStyles) })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
+      
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
       
       // Update local state immediately so the card reflects the change
       setSelectedPlayerData(prev => prev ? {
@@ -201,11 +209,15 @@ export default function DashboardMobile() {
 
   const handleSaveCardDesign = async (player: any, designId: string) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ card_design_id: designId })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
+      
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
       
       // Update local state immediately so the card reflects the change
       setSelectedPlayerData(prev => prev ? {
@@ -256,11 +268,15 @@ export default function DashboardMobile() {
 
       const { data } = supabase.storage.from('player_photos').getPublicUrl(fileName);
       
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('players')
         .update({ photo_url: data.publicUrl })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
+      
       if (updateError) throw updateError;
+      if (!updateData) throw new Error('Permission denied: Unable to update this player.');
 
       // IMMEDIATELY update the local state with the new photo URL
       // This ensures the card re-renders with the new photo without waiting for a full refetch
@@ -289,11 +305,15 @@ export default function DashboardMobile() {
     if (!player.photoUrl) return;
     if (!confirm(`Delete photo for ${player.name}?`)) return;
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ photo_url: null })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
+      
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
       toast({ title: 'Photo Deleted', description: `Photo deleted for ${player.name}` });
       handlePlayerClick({ id: player.id });
     } catch (error: any) {

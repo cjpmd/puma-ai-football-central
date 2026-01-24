@@ -310,12 +310,15 @@ export default function PlayerManagementMobile() {
         .getPublicUrl(fileName);
 
       // Update player with photo URL
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('players')
         .update({ photo_url: data.publicUrl })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
 
       if (updateError) throw updateError;
+      if (!updateData) throw new Error('Permission denied: Unable to update this player.');
 
       toast({
         title: 'Photo Updated',
@@ -344,12 +347,15 @@ export default function PlayerManagementMobile() {
     }
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ photo_url: null })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
 
       toast({
         title: 'Photo Deleted',
@@ -368,12 +374,15 @@ export default function PlayerManagementMobile() {
 
   const handleSaveFunStats = async (player: Player, stats: Record<string, number>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ fun_stats: stats })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
 
       toast({
         title: 'Stats Updated',
@@ -392,12 +401,15 @@ export default function PlayerManagementMobile() {
 
   const handleSavePlayStyle = async (player: Player, playStyles: string[]) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ play_style: JSON.stringify(playStyles) })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
 
       toast({
         title: 'Play Style Updated',
@@ -416,12 +428,15 @@ export default function PlayerManagementMobile() {
 
   const handleSaveCardDesign = async (player: Player, designId: string) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('players')
         .update({ card_design_id: designId })
-        .eq('id', player.id);
+        .eq('id', player.id)
+        .select('id')
+        .single();
 
       if (error) throw error;
+      if (!data) throw new Error('Permission denied: Unable to update this player.');
 
       toast({
         title: 'Card Design Updated',
