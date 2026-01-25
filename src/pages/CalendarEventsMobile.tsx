@@ -1127,8 +1127,8 @@ export default function CalendarEventsMobile() {
                 </div>
                 <MobileTeamSelectionView
                   event={selectedEvent}
-                  teamId={teams?.[0]?.id || ''}
-                  teamName={teams?.[0]?.name}
+                  teamId={selectedEvent.team_id}
+                  teamName={(allTeams || authTeams || []).find(t => t.id === selectedEvent.team_id)?.name || teams?.[0]?.name}
                   onOpenFullManager={() => {
                     setShowEventDetails(false);
                     setShowTeamSelection(true);
@@ -1146,7 +1146,7 @@ export default function CalendarEventsMobile() {
               {/* Availability Section */}
               <EventAvailabilitySection
                 eventId={selectedEvent.id}
-                teamId={teams?.[0]?.id || ''}
+                teamId={selectedEvent.team_id}
                 canEdit={canEditEvents()}
               />
               

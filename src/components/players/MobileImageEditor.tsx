@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Loader2 } from 'lucide-react';
 
@@ -26,12 +26,26 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
   });
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
 
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
   const initialPinchDistanceRef = useRef<number>(0);
   const initialScaleRef = useRef<number>(1);
+  // For pointer events drag fallback
+  const isDraggingRef = useRef(false);
+
+  // Determine the portal container on mount - prefer LAST Radix portal (active layer)
+  useEffect(() => {
+    const radixPortals = document.querySelectorAll('[data-radix-portal]');
+    if (radixPortals.length > 0) {
+      // Use the last (most recently created) portal
+      setPortalContainer(radixPortals[radixPortals.length - 1] as HTMLElement);
+    } else {
+      setPortalContainer(document.body);
+    }
+  }, []);
 
   const getDistance = (touch1: React.Touch, touch2: React.Touch) => {
     const dx = touch1.clientX - touch2.clientX;
@@ -41,6 +55,7 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     
     if (e.touches.length === 2) {
       const distance = getDistance(e.touches[0], e.touches[1]);
@@ -57,6 +72,7 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
 
     if (e.touches.length === 2) {
       const distance = getDistance(e.touches[0], e.touches[1]);
@@ -85,9 +101,44 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
 
   const handleTouchEnd = (e: React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     if (e.touches.length === 0) {
       lastTouchRef.current = null;
     }
+  };
+
+  // Pointer events fallback for drag (single-finger/mouse)
+  const handlePointerDown = (e: React.PointerEvent) => {
+    // Only handle primary pointer for drag
+    if (!e.isPrimary) return;
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingRef.current = true;
+    lastTouchRef.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current || !lastTouchRef.current) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    const deltaX = e.clientX - lastTouchRef.current.x;
+    const deltaY = e.clientY - lastTouchRef.current.y;
+
+    setTouchState(prev => ({
+      ...prev,
+      translateX: prev.translateX + deltaX,
+      translateY: prev.translateY + deltaY,
+    }));
+
+    lastTouchRef.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    isDraggingRef.current = false;
+    lastTouchRef.current = null;
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
   };
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -155,9 +206,18 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     }, 'image/jpeg', 0.9);
   };
 
+  // Don't render until we have a portal container
+  if (!portalContainer) {
+    return null;
+  }
+
   const editorContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="relative w-full max-w-[320px] mx-auto">
+    <div 
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      style={{ pointerEvents: 'auto' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="relative w-full max-w-[320px] mx-auto" style={{ pointerEvents: 'auto' }}>
         {/* Interactive image area */}
         <div
           ref={containerRef}
@@ -165,7 +225,11 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
-          style={{ touchAction: 'none' }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          style={{ touchAction: 'none', pointerEvents: 'auto' }}
         >
           {/* Loading state */}
           {!imageLoaded && !imageError && (
@@ -190,6 +254,7 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
             style={{
               transform: `translate(${touchState.translateX}px, ${touchState.translateY}px) scale(${touchState.scale})`,
               willChange: 'transform',
+              pointerEvents: 'none', // Let container handle interactions
             }}
             draggable={false}
             onLoad={handleImageLoad}
@@ -208,17 +273,21 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
         </div>
 
         {/* Controls */}
-        <div className="flex gap-3 justify-center px-4">
+        <div className="flex gap-3 justify-center px-4" style={{ pointerEvents: 'auto' }}>
           <button
-            onClick={onCancel}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onCancel(); }}
             className="px-6 py-2 bg-background/90 hover:bg-background text-foreground rounded-lg font-medium transition-colors"
+            style={{ pointerEvents: 'auto' }}
           >
             Cancel
           </button>
           <button
-            onClick={handleSave}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleSave(); }}
             disabled={!imageLoaded || imageError}
             className="px-6 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ pointerEvents: 'auto' }}
           >
             Save
           </button>
@@ -227,16 +296,5 @@ export const MobileImageEditor: React.FC<MobileImageEditorProps> = ({
     </div>
   );
 
-  // Render as portal into the Radix portal container (if present) to maintain pointer events
-  // Radix dialogs disable pointer-events on document.body siblings, so we need to portal inside
-  const getPortalContainer = (): HTMLElement => {
-    // Find the outermost Radix portal container
-    const radixPortal = document.querySelector('[data-radix-portal]');
-    if (radixPortal instanceof HTMLElement) {
-      return radixPortal;
-    }
-    return document.body;
-  };
-
-  return createPortal(editorContent, getPortalContainer());
+  return createPortal(editorContent, portalContainer);
 };

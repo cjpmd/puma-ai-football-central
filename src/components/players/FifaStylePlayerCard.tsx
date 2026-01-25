@@ -143,32 +143,49 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     };
   }, [selectedImageUrl]);
 
-  // Updated parsePlayStyles function - returns unique values without filtering by loaded list
-  // Filtering is deferred until render-time to avoid dropping saved styles before list loads
+  // Updated parsePlayStyles function - robust to multiple input formats
+  // Supports: JSON string array, plain array, comma-separated string, single string
   const parsePlayStyles = (playStyleData: string | string[] | undefined): string[] => {
     let rawStyles: string[] = [];
     if (!playStyleData) {
       // No data, empty styles
-    } else if (Array.isArray(playStyleData)) {
-      rawStyles = playStyleData.map(s => String(s)); // Ensure all elements are strings
+      return [];
+    }
+    
+    if (Array.isArray(playStyleData)) {
+      // Plain array (already parsed or passed directly)
+      rawStyles = playStyleData.map(s => String(s).trim()).filter(Boolean);
     } else if (typeof playStyleData === 'string') {
-      try {
-        const parsed = JSON.parse(playStyleData);
-        if (Array.isArray(parsed)) {
-          rawStyles = parsed.map(s => String(s)); // Ensure all elements are strings
-        } else if (typeof parsed === 'string') {
-          rawStyles = [parsed];
-        } // else, parsed is not an array or string, ignore
-      } catch {
-        // If JSON parsing fails, treat as a single play style string, if not empty
-        if (playStyleData.trim().length > 0) {
-          rawStyles = [playStyleData.trim()];
+      const trimmed = playStyleData.trim();
+      if (!trimmed) return [];
+      
+      // Try JSON parsing first
+      if (trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(trimmed);
+          if (Array.isArray(parsed)) {
+            rawStyles = parsed.map(s => String(s).trim()).filter(Boolean);
+          } else if (typeof parsed === 'string' && parsed.trim()) {
+            rawStyles = [parsed.trim()];
+          }
+        } catch {
+          // JSON parse failed, try comma-separated fallback
+          if (trimmed.includes(',')) {
+            rawStyles = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+          } else {
+            rawStyles = [trimmed];
+          }
         }
+      } else if (trimmed.includes(',')) {
+        // Comma-separated string
+        rawStyles = trimmed.split(',').map(s => s.trim()).filter(Boolean);
+      } else {
+        // Single value string
+        rawStyles = [trimmed];
       }
     }
     
-    // Return unique values, limit to 3 - do NOT filter by playStyles list here
-    // The list may not be loaded yet, so filtering should happen at display time
+    // Return unique values, limit to 3
     return [...new Set(rawStyles)].slice(0, 3);
   };
 
