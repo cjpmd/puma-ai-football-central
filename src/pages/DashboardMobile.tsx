@@ -185,20 +185,22 @@ export default function DashboardMobile() {
 
   const handleSavePlayStyle = async (player: any, playStyles: string[]) => {
     try {
+      const playStyleJson = JSON.stringify(playStyles);
       const { data, error } = await supabase
         .from('players')
-        .update({ play_style: JSON.stringify(playStyles) })
+        .update({ play_style: playStyleJson })
         .eq('id', player.id)
-        .select('id')
+        .select('id, play_style')
         .single();
       
       if (error) throw error;
       if (!data) throw new Error('Permission denied: Unable to update this player.');
       
-      // Update local state immediately so the card reflects the change
+      // Update local state with the SAME format returned from DB (string)
+      // This ensures consistency when parsing on re-open
       setSelectedPlayerData(prev => prev ? {
         ...prev,
-        player: { ...prev.player, playStyle: playStyles }
+        player: { ...prev.player, playStyle: data.play_style }
       } : null);
       
       toast({ title: 'Play Style Updated', description: `Play style updated for ${player.name}` });

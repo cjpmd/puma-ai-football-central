@@ -199,10 +199,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('profiles')
         .select('*')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         throw profileError;
+      }
+
+      if (!profileData) {
+        console.warn('No profile found for user:', userId);
+        return;
       }
 
       // Fetch managed player IDs from user_players table
@@ -233,10 +238,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Profile loaded successfully');
     } catch (error: any) {
       console.error('Error fetching profile:', error.message);
+      // Check for timeout specifically
+      const isTimeout = error.message?.includes('statement timeout') || error.message?.includes('timeout');
       toast({
-        title: 'Profile fetch failed',
-        description: error.message,
-        variant: 'destructive',
+        title: isTimeout ? 'Connection slow' : 'Profile fetch failed',
+        description: isTimeout ? 'Loading your profile is taking longer than expected...' : error.message,
+        variant: isTimeout ? 'default' : 'destructive',
       });
     }
   };
@@ -461,6 +468,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const fetchConnectedPlayers = async (userId: string) => {
     try {
       console.log('Fetching connected players for user:', userId);
+      // Optimized query: only select needed team columns to reduce payload and avoid timeouts
       const { data: playerConnections, error: connectionsError } = await supabase
         .from('user_players')
         .select(`
@@ -473,7 +481,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             date_of_birth,
             photo_url,
             team_id,
-            teams!inner(*)
+            teams!inner(
+              id, name, age_group, season_start, season_end, club_id, 
+              year_group_id, game_format, subscription_type, 
+              kit_icons, logo_url, game_duration,
+              header_display_type, header_image_url, created_at, updated_at
+            )
           )
         `)
         .eq('user_id', userId);
@@ -510,11 +523,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             gameDuration: team.game_duration || 90,
             kitIcons: (team.kit_icons as any) || { home: '', away: '', training: '', goalkeeper: '' },
             logoUrl: team.logo_url,
-            kitDesigns: team.kit_designs,
-            performanceCategories: team.performance_categories || [],
-            managerName: team.manager_name,
-            managerEmail: team.manager_email,
-            managerPhone: team.manager_phone,
+            performanceCategories: [],
             headerDisplayType: team.header_display_type,
             headerImageUrl: team.header_image_url,
             createdAt: team.created_at,
@@ -534,10 +543,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     } catch (error: any) {
       console.error('Error fetching connected players:', error.message);
+      // Check for timeout specifically
+      const isTimeout = error.message?.includes('statement timeout') || error.message?.includes('timeout');
       toast({
-        title: 'Connected players fetch failed',
-        description: error.message,
-        variant: 'destructive',
+        title: isTimeout ? 'Connection slow' : 'Connected players fetch failed',
+        description: isTimeout ? 'Loading your account is taking longer than expected. Please wait...' : error.message,
+        variant: isTimeout ? 'default' : 'destructive',
       });
       setConnectedPlayers([]);
     }

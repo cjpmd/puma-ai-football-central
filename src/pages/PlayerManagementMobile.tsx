@@ -401,22 +401,26 @@ export default function PlayerManagementMobile() {
 
   const handleSavePlayStyle = async (player: Player, playStyles: string[]) => {
     try {
+      const playStyleJson = JSON.stringify(playStyles);
       const { data, error } = await supabase
         .from('players')
-        .update({ play_style: JSON.stringify(playStyles) })
+        .update({ play_style: playStyleJson })
         .eq('id', player.id)
-        .select('id')
+        .select('id, play_style')
         .single();
 
       if (error) throw error;
       if (!data) throw new Error('Permission denied: Unable to update this player.');
 
+      // Update local player state with DB-returned value for consistency
+      setPlayers(prev => prev.map(p => 
+        p.id === player.id ? { ...p, playStyle: data.play_style } : p
+      ));
+
       toast({
         title: 'Play Style Updated',
         description: `Play style updated for ${player.name}`,
       });
-      
-      loadPlayers();
     } catch (error: any) {
       toast({
         title: 'Error',
