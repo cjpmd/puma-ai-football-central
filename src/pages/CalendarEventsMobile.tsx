@@ -346,15 +346,39 @@ export default function CalendarEventsMobile() {
     if (!user?.id || events.length === 0) return;
 
     try {
-      const invitedIds = new Set<string>();
-      
-      // Check each event to see if user is invited
-      for (const event of events) {
-        const isInvited = await multiRoleAvailabilityService.isUserInvitedToEvent(event.id, user.id);
-        if (isInvited) {
-          invitedIds.add(event.id);
-        }
+      // Batch query: get user's linked players and staff once
+      const [{ data: userPlayers }, { data: userStaff }] = await Promise.all([
+        supabase.from('user_players').select('player_id').eq('user_id', user.id),
+        supabase.from('user_staff').select('staff_id').eq('user_id', user.id)
+      ]);
+
+      const linkedPlayerIds = (userPlayers || []).map(r => r.player_id);
+      const linkedStaffIds = (userStaff || []).map(r => r.staff_id);
+
+      // No linked accounts = no invitations to check
+      if (linkedPlayerIds.length === 0 && linkedStaffIds.length === 0) {
+        setInvitedEventIds(new Set());
+        return;
       }
+
+      // Batch query: get all invitations for these events in one query
+      const eventIds = events.map(e => e.id);
+      const { data: invitations } = await supabase
+        .from('event_invitations')
+        .select('event_id, player_id, staff_id, user_id, invitee_type')
+        .in('event_id', eventIds);
+
+      // Filter locally to find which events the user is invited to
+      const invitedIds = new Set<string>();
+      (invitations || []).forEach(inv => {
+        const isPlayerInvited = inv.player_id && linkedPlayerIds.includes(inv.player_id);
+        const isStaffInvited = inv.staff_id && linkedStaffIds.includes(inv.staff_id);
+        const isDirectUserInvited = inv.user_id === user.id && inv.invitee_type === 'staff';
+        
+        if (isPlayerInvited || isStaffInvited || isDirectUserInvited) {
+          invitedIds.add(inv.event_id);
+        }
+      });
       
       setInvitedEventIds(invitedIds);
     } catch (error) {
@@ -368,9 +392,16 @@ export default function CalendarEventsMobile() {
     try {
       const contexts: {[eventId: string]: UserTeamContext} = {};
       
-      for (const event of events) {
-        const context = await getUserContextForEvent(event, user.id);
-        contexts[event.id] = context;
+      // Process events in parallel batches of 10 to avoid overwhelming the DB
+      const batchSize = 10;
+      for (let i = 0; i < events.length; i += batchSize) {
+        const batch = events.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(event => getUserContextForEvent(event, user.id).then(ctx => ({ id: event.id, ctx })))
+        );
+        batchResults.forEach(({ id, ctx }) => {
+          contexts[id] = ctx;
+        });
       }
       
       setEventTimeContexts(contexts);
@@ -672,9 +703,11 @@ export default function CalendarEventsMobile() {
     }
   };
 
-  // Get kit design from team based on selection
+  // Get kit design from team based on selection - uses the EVENT's team, not the first team in context
   const getKitDesign = (selection: 'home' | 'away' | 'training' | undefined): KitDesign | undefined => {
-    const team = teams?.[0];
+    // Look up the event's actual team from allTeams or authTeams
+    const eventTeamId = selectedEvent?.team_id;
+    const team = (allTeams || authTeams || teams || []).find(t => t.id === eventTeamId) || teams?.[0];
     if (!team?.kitDesigns) return undefined;
     const kitDesigns = team.kitDesigns as Record<string, KitDesign>;
     return kitDesigns[selection || 'home'] || kitDesigns.home;
@@ -753,13 +786,15 @@ export default function CalendarEventsMobile() {
   const groupedEvents = groupEventsByPeriod(paginatedEvents);
 
   if (showExpandedTeamSelection && selectedEvent) {
+    // Get the event's actual team for proper context
+    const eventTeam = (allTeams || authTeams || teams || []).find(t => t.id === selectedEvent.team_id);
     return (
       <MobileLayout>
         <div className="p-4">
           <MobileTeamSelectionView
             event={selectedEvent}
-            teamId={teams?.[0]?.id || ''}
-            teamName={teams?.[0]?.name}
+            teamId={selectedEvent.team_id}
+            teamName={eventTeam?.name || teams?.[0]?.name}
             onOpenFullManager={() => {
               setShowExpandedTeamSelection(false);
               setShowTeamSelection(true);
