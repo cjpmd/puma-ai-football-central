@@ -1,206 +1,140 @@
 
-Goal: Resolve three user-facing issues that are likely connected:
-1) The mobile image editor overlay becomes non-interactive (no pinch/drag, Save/Cancel don’t respond).
-2) Play styles appear to “save” (toast) but aren’t persistent/visible after close or refresh.
-3) Calendar Event Details shows “No Team Selection” + wrong kit even when selections exist, and user sees “Profile fetch failed: canceling statement due to statement timeout”.
+
+## Plan: Fix Calendar Timeout Errors and Kit Display
+
+### Problem Summary
+1. **"canceling statement due to statement timeout"** error appearing on mobile
+2. **Wrong kit showing** in event details (e.g., "Away Kit" when it should show the correct kit for the event's team)
 
 ---
 
-## What I found (from code + your screenshots)
+### Root Cause Analysis
 
-### A) Image editor “freezes” because the overlay is not receiving pointer/touch events
-Even after the recent portal change, the editor still portals to:
-```ts
-document.querySelector('[data-radix-portal]')
+#### Issue 1: Kit Display Using Wrong Team
+In `CalendarEventsMobile.tsx`, the `getKitDesign()` function pulls from `teams?.[0]` (the first team in the club context) instead of looking up the kit from the **event's actual team**:
+
+```typescript
+// Current (WRONG):
+const getKitDesign = (selection) => {
+  const team = teams?.[0]; // <-- Uses first team from club filter
+  if (!team?.kitDesigns) return undefined;
+  ...
+};
 ```
-…but `querySelector` returns the FIRST matching portal, and Radix can create multiple portals. If we portal into the wrong one (or an older one), we can still end up outside the “interactive” layer (Radix disables pointer events outside the active modal layer). This matches your screenshot: the editor renders visually, but nothing responds.
 
-### B) Play styles: saving may work, but they can still appear “not persistent” due to state/serialization mismatch or stale data flow
-- DB stores `players.play_style` as a **string** that looks like JSON (e.g. `["finisher","speedster"]`).
-- We saw play_style values in the DB already in that format.
-- The UI saves via DashboardMobile/PlayerManagementMobile using `JSON.stringify(playStyles)` which is correct.
-- However, the card’s internal state uses arrays sometimes, while the player prop coming from DB is a string. If any part of the code ends up saving a non-JSON string (or the UI rehydrates from a stale player object after refresh), it will look like it didn’t persist.
+When viewing "All Teams", `teams?.[0]` might be a completely different team than the event belongs to, resulting in the wrong kit being displayed.
 
-The fastest way to make this bulletproof is:
-1) Ensure we ALWAYS write JSON string to DB.
-2) Make parsing robust to multiple formats (JSON string, string array, comma-separated string).
-3) Make the post-save “refresh source of truth” consistent (either re-fetch the player row, or update the same canonical field type across the app).
-
-### C) “No Team Selection” + wrong kit on /calendar is very likely a bug in the teamId being passed
-In `CalendarEventsMobile.tsx`, `MobileTeamSelectionView` is invoked with:
-```tsx
+#### Issue 2: Expanded Team Selection View Uses Wrong teamId
+At line 759-761, the expanded `MobileTeamSelectionView` receives:
+```typescript
 teamId={teams?.[0]?.id || ''}
 ```
-…but:
-- `teams` here comes from `useClubContext()` (filteredTeams), not necessarily the currently selected team.
-- The page already has `currentTeam` from `useTeamContext()` but doesn’t use it here.
-- If `teamId` doesn’t match the event’s real team context, the Team Selection loader will query the wrong team and show “No Team Selection” (and can show the wrong kit).
+This should use `selectedEvent.team_id` like the inline version does.
 
-This aligns perfectly with your report: “even when a squad has been selected, it shows no team selection and shows the wrong kit”.
-
-### D) “Profile fetch failed: canceling statement due to statement timeout”
-This toast is emitted by `AuthContext.fetchProfile()`.
-
-Although the toast text says “Profile fetch failed”, the timeout can be caused by ANY of the parallel auth boot queries (profile, teams, clubs, connected players) creating load and/or doing heavy joins. In `fetchConnectedPlayers`, the query currently pulls `teams!inner(*)` (all team columns), which can be large and slow (kit designs, JSON fields, etc.). On mobile networks, this is a prime candidate for statement timeouts.
-
-We should:
-- Reduce columns in the heaviest embedded queries
-- Add missing indexes on linking tables (user_players.user_id, user_teams.user_id, user_clubs.user_id, etc.)
-- Improve error handling so a single slow query doesn’t spam the user or break context.
+#### Issue 3: Excessive Database Queries Causing Timeouts
+The functions `loadInvitedEvents()` and `loadEventTimeContexts()` loop through **every event** and make individual database calls. For users with many events, this causes statement timeouts and performance issues.
 
 ---
 
-## Implementation approach (what I will change)
+### Solution
 
-### 1) Fix the mobile image editor interaction (most urgent UX blocker)
+#### Part 1: Fix Kit Design Lookup to Use Event's Team
 
-#### 1.1 Portal into the correct Radix portal (pick the active/latest one, not the first)
-Update `MobileImageEditor.tsx`:
-- Use `document.querySelectorAll('[data-radix-portal]')` and choose the **last** element (most recently created portal, most likely the active dialog).
-- Fallback to `document.body` if none found.
+Update `getKitDesign()` to find the correct team from `allTeams` or `authTeams` based on the selected event:
 
-#### 1.2 Ensure the overlay explicitly allows pointer events
-Add `pointer-events-auto` (or inline `style={{ pointerEvents: 'auto' }}`) on the editor root container.
-This protects against inherited `pointer-events: none` from modal layering edge cases.
+```typescript
+const getKitDesign = (selection: 'home' | 'away' | 'training' | undefined): KitDesign | undefined => {
+  // Use the event's team, not the first team in club context
+  const eventTeamId = selectedEvent?.team_id;
+  const team = (allTeams || authTeams || teams || []).find(t => t.id === eventTeamId) || teams?.[0];
+  
+  if (!team?.kitDesigns) return undefined;
+  const kitDesigns = team.kitDesigns as Record<string, KitDesign>;
+  return kitDesigns[selection || 'home'] || kitDesigns.home;
+};
+```
 
-#### 1.3 Add Pointer Events fallback in addition to Touch Events (cross-device reliability)
-Some environments behave differently with `touchstart/touchmove` + `preventDefault()`. We will:
-- Keep the current touch handlers
-- Add `onPointerDown/onPointerMove/onPointerUp` equivalents and a small state machine for drag
-- For pinch: keep touch-only (pointer events don’t carry multi-touch in the same way), but ensure drag works universally
+**Files:** `src/pages/CalendarEventsMobile.tsx`
 
-Verification:
-- Can pinch/zoom on iOS and Android
-- Can drag
-- Can tap Save/Cancel immediately
+#### Part 2: Fix Expanded Team Selection View teamId
 
-Files:
-- `src/components/players/MobileImageEditor.tsx`
+Change line 761 from:
+```typescript
+teamId={teams?.[0]?.id || ''}
+```
+To:
+```typescript
+teamId={selectedEvent.team_id}
+```
 
----
+**Files:** `src/pages/CalendarEventsMobile.tsx`
 
-### 2) Make play styles truly persistent + robust across reloads
+#### Part 3: Optimize Event Loading to Reduce Database Queries
 
-Even though we previously adjusted parsing in the card, the persistence issue can still happen if:
-- Any save path writes a non-JSON string
-- The UI rehydrates from stale player data
-- Parsing fails for a format that slipped in historically
+Batch the invitation and time context checks instead of making individual calls per event:
 
-#### 2.1 Harden parsing in `FifaStylePlayerCard`
-Update `parsePlayStyles` to support:
-- JSON string array: `["finisher","speedster"]`
-- Plain array (already supported): `["finisher","speedster"]`
-- Comma-separated fallback: `"finisher,speedster"`
+1. **For `loadInvitedEvents()`**: Fetch all user's linked players/staff once, then filter locally
+2. **For `loadEventTimeContexts()`**: Process in parallel batches of 5-10 instead of sequentially
 
-This ensures that even “bad legacy values” still display, and users can re-save to normalize.
+Current pattern (causes N+1 queries):
+```typescript
+for (const event of events) {
+  const isInvited = await multiRoleAvailabilityService.isUserInvitedToEvent(event.id, user.id);
+  ...
+}
+```
 
-#### 2.2 Normalize what we store and what we keep in local state
-In both `DashboardMobile.tsx` and `PlayerManagementMobile.tsx`:
-- Continue to store `play_style: JSON.stringify(playStyles)`
-- But also update local state so `player.playStyle` becomes the SAME format the DB returns (string), to avoid mixed typing and hydration weirdness:
-  - set local `playStyle` to the JSON string, not an array
-  - `parsePlayStyles` already handles string
+Optimized pattern:
+```typescript
+// Fetch user's links once
+const [playerLinks, staffLinks] = await Promise.all([
+  supabase.from('user_players').select('player_id').eq('user_id', user.id),
+  supabase.from('user_staff').select('staff_id').eq('user_id', user.id)
+]);
 
-This avoids “looks saved until reopen/refresh, then disappears” type issues.
+// Fetch all invitations for these events in one query
+const eventIds = events.map(e => e.id);
+const { data: invitations } = await supabase
+  .from('event_invitations')
+  .select('event_id, player_id, staff_id')
+  .in('event_id', eventIds);
 
-#### 2.3 Optional (recommended): re-fetch the updated player row after save
-Instead of trusting local state, after saving play styles:
-- perform a follow-up `select('play_style')` for that player id
-- set local state from the returned value
-This removes any ambiguity about what actually persisted.
+// Filter locally
+const invitedIds = new Set<string>();
+invitations?.forEach(inv => {
+  if (linkedPlayerIds.includes(inv.player_id) || linkedStaffIds.includes(inv.staff_id)) {
+    invitedIds.add(inv.event_id);
+  }
+});
+```
 
-Files:
-- `src/components/players/FifaStylePlayerCard.tsx`
-- `src/pages/DashboardMobile.tsx`
-- `src/pages/PlayerManagementMobile.tsx`
-
-Verification:
-- Pick 1–3 play styles → close card → reopen: still there
-- Hard refresh → still there
-
----
-
-### 3) Fix “No Team Selection” + wrong kit on Calendar Event Details
-
-#### 3.1 Pass the correct teamId into `MobileTeamSelectionView`
-Change in `CalendarEventsMobile.tsx`:
-- Replace `teamId={teams?.[0]?.id || ''}` with:
-  - Prefer `selectedEvent.team_id` (the event’s canonical team)
-  - If the app supports multi-team events, use the event’s `team_id` for selection fetching, and use `currentTeam` only for display filtering
-- Use the same correction for both places where `MobileTeamSelectionView` is rendered (expanded and inline event details).
-
-This should immediately fix:
-- “No Team Selection” when selections exist
-- Wrong kit rendering (because kit should be derived from the event’s team)
-
-Files:
-- `src/pages/CalendarEventsMobile.tsx`
-
-Verification:
-- Open an event you know has a squad selection → it should show the selection immediately
-- Kit shown matches that team
+**Files:** `src/pages/CalendarEventsMobile.tsx`
 
 ---
 
-### 4) Reduce / eliminate the “Profile fetch failed: statement timeout” errors
+### Technical Changes Summary
 
-This likely stems from heavy parallel auth boot queries (especially embedded joins). We’ll address in two layers:
-
-#### 4.1 Reduce columns in the most expensive auth queries
-In `AuthContext.tsx`:
-- `fetchConnectedPlayers` currently selects `teams!inner(*)` which is very heavy.
-- Replace with a minimal subset of team columns actually needed for UI context (id, name, club_id, kit_icons, logo_url, game_format, subscription_type, header display fields).
-- Keep player columns minimal too.
-
-This reduces payload size and query planning complexity.
-
-#### 4.2 Add missing indexes on linking tables (DB migration)
-Add indexes (concurrently if allowed, otherwise normal) on:
-- `user_players(user_id)`
-- `user_players(player_id)`
-- `user_teams(user_id)`
-- `user_teams(team_id)`
-- `user_clubs(user_id)`
-- `club_teams(club_id)`
-- `event_selections(event_id, team_id)` (and optionally `(event_id, team_id, team_number, period_number)` if that’s the common filter)
-
-These indexes commonly eliminate statement timeouts in “lookup by foreign key” workloads.
-
-#### 4.3 Improve error messaging so we don’t mislabel timeouts as “profile fetch failed”
-In `fetchProfile`:
-- If the error message includes `statement timeout`, show a more accurate toast like:
-  - “Connection is slow, loading your account is taking longer than expected. Retrying…”
-- Optionally retry once with a short delay.
-
-Files:
-- `src/contexts/AuthContext.tsx`
-- DB migration under `supabase/migrations/*`
-
-Verification:
-- Navigate around calendar/event details without seeing the timeout toast
-- AuthContext loads profile/teams/connected players consistently on mobile networks
+| File | Change |
+|------|--------|
+| `src/pages/CalendarEventsMobile.tsx` | Update `getKitDesign()` to use `selectedEvent.team_id` and look up from `allTeams`/`authTeams` |
+| `src/pages/CalendarEventsMobile.tsx` | Fix expanded MobileTeamSelectionView to use `selectedEvent.team_id` |
+| `src/pages/CalendarEventsMobile.tsx` | Optimize `loadInvitedEvents()` to batch queries |
+| `src/pages/CalendarEventsMobile.tsx` | Optimize `loadEventTimeContexts()` to process in parallel batches |
 
 ---
 
-## Rollout / validation sequence
-1) Fix CalendarEventsMobile teamId wiring (fast win for wrong kit + “No Team Selection”).
-2) Fix MobileImageEditor portal selection (choose last portal) + pointer-events auto + pointer fallback.
-3) Harden play styles storage/local state normalization.
-4) Reduce AuthContext query weight + add DB indexes to stop statement timeouts.
+### Expected Results After Fix
+
+1. **Kit Display**: When opening any event, the kit shown will match that specific event's team (not the first team in your club filter)
+2. **No More Timeout Errors**: Reducing from N queries per event to a single batched query should eliminate statement timeouts
+3. **Faster Page Load**: Calendar will load noticeably faster, especially with many events
 
 ---
 
-## What I will need from you (non-technical)
-Nothing required to start implementing, but after changes:
-- Please retest:
-  1) Open FIFA card → upload photo → pinch/drag → Save/Cancel
-  2) Select play styles → close/reopen card → refresh page
-  3) Open the same event on Calendar that already has a selection → confirm selection + kit
+### Verification Steps
 
----
-
-## Technical notes (for maintainability)
-- We will not store images in the database; only store `photo_url` pointing to Supabase Storage.
-- Index changes are safe and non-destructive; they only speed up reads.
-- The portal “last radix portal” approach is a standard fix when multiple Radix portals exist (toaster, dialogs, nested dialogs).
+1. Open Calendar in "All Teams" mode
+2. Click on an event from Team A - verify kit shown matches Team A's kit settings
+3. Click on an event from Team B - verify kit shown matches Team B's kit settings
+4. Navigate around the calendar without seeing the timeout error toast
 
