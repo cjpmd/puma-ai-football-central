@@ -45,6 +45,33 @@ export interface ChildProgressData {
   attributes?: any;
 }
 
+// Helper to safely parse JSON that might be a string or object
+const safeParseJson = (value: any, fallback: any = {}): any => {
+  if (!value) return fallback;
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return fallback;
+    }
+  }
+  return typeof value === 'object' ? value : fallback;
+};
+
+// Helper to safely get an array from potentially malformed data
+const safeGetArray = (value: any): any[] => {
+  if (!value) return [];
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+  return Array.isArray(value) ? value : [];
+};
+
 export const childProgressService = {
   async getChildrenForParent(userId: string): Promise<ChildProgressData[]> {
     try {
@@ -78,31 +105,32 @@ export const childProgressService = {
       const childrenData: ChildProgressData[] = [];
 
       for (const userPlayer of userPlayers || []) {
-        const player = userPlayer.players;
-        
-        // Calculate age
-        const age = new Date().getFullYear() - new Date(player.date_of_birth).getFullYear();
-        
-        // Get club name separately to avoid complex join
-        let clubName = null;
-        if (player.teams.club_id) {
-          const { data: clubData } = await supabase
-            .from('clubs')
-            .select('name')
-            .eq('id', player.teams.club_id)
-            .single();
-          clubName = clubData?.name;
-        }
-        
-        // Get performance trend
-        const performanceTrend = await calculatePerformanceTrend(player.id);
-        
-        // Extract match_stats
-        const matchStats = (typeof player.match_stats === 'object' && player.match_stats !== null) ? player.match_stats as any : {};
-        
-        // Get match history from match_stats.recentGames (already populated)
-        const recentGames = matchStats.recentGames || [];
-        const matchHistory = recentGames.map((game: any) => ({
+        try {
+          const player = userPlayer.players;
+          
+          // Calculate age
+          const age = new Date().getFullYear() - new Date(player.date_of_birth).getFullYear();
+          
+          // Get club name separately to avoid complex join
+          let clubName = null;
+          if (player.teams.club_id) {
+            const { data: clubData } = await supabase
+              .from('clubs')
+              .select('name')
+              .eq('id', player.teams.club_id)
+              .single();
+            clubName = clubData?.name;
+          }
+          
+          // Get performance trend
+          const performanceTrend = await calculatePerformanceTrend(player.id);
+          
+          // Safely extract match_stats with defensive parsing
+          const matchStats = safeParseJson(player.match_stats, {});
+          
+          // Safely get recentGames as an array
+          const recentGames = safeGetArray(matchStats.recentGames);
+          const matchHistory = recentGames.map((game: any) => ({
           eventId: game.eventId,
           opponent: game.opponent || 'Unknown',
           date: game.date,
@@ -224,6 +252,10 @@ export const childProgressService = {
         };
 
         childrenData.push(childData);
+        } catch (playerError) {
+          console.error(`Error processing player ${userPlayer.player_id}:`, playerError);
+          // Continue processing other players
+        }
       }
 
       return childrenData;
