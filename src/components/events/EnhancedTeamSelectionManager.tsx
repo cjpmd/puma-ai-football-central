@@ -72,6 +72,9 @@ export const EnhancedTeamSelectionManager: React.FC<EnhancedTeamSelectionManager
   const { isRestrictedParent, isRestrictedPlayer } = useEffectiveRole();
   const teamId = propTeamId || event.team_id;
   const { settings: privacySettings } = useTeamPrivacy(teamId);
+  
+  // Formation tab is read-only for restricted parents/players (no staff access)
+  const isFormationReadOnly = isRestrictedParent || isRestrictedPlayer;
   const [teamSelections, setTeamSelections] = useState<TeamSelection[]>([]);
   const [currentTeamIndex, setCurrentTeamIndex] = useState(0);
   const [saving, setSaving] = useState(false);
@@ -974,9 +977,10 @@ return (
               </Button>
             </div>
 
-            {/* Row 2: AI, Lock, Category, Save */}
+            {/* Row 2: AI, Lock, Category, Save - Hidden when read-only for restricted parents/players */}
             <div className="flex items-center gap-2">
-              {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && (
+              {/* AI Builder - hidden for read-only */}
+              {activeTab === 'formation' && !isTrainingEvent && currentTeam && currentTeam.squadPlayers.length > 0 && !isFormationReadOnly && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -988,7 +992,8 @@ return (
                 </Button>
               )}
 
-              {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && (
+              {/* Lock/Unlock - hidden for read-only */}
+              {activeTab === 'formation' && currentTeam && currentTeam.squadPlayers.length > 0 && !isFormationReadOnly && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1006,8 +1011,8 @@ return (
                 </Button>
               )}
 
-              {/* Category Selector */}
-              {performanceCategories.length > 0 && currentTeam && (
+              {/* Category Selector - hidden for read-only */}
+              {performanceCategories.length > 0 && currentTeam && !isFormationReadOnly && (
                 <Select 
                   value={currentTeam.performanceCategory || 'none'} 
                   onValueChange={handlePerformanceCategoryChange}
@@ -1031,7 +1036,7 @@ return (
 
               {/* Action Buttons */}
               <div className="flex items-center gap-1.5">
-                {!isMobile && (
+                {!isMobile && !isFormationReadOnly && (
                   <>
                     <Button onClick={handleCopyTeams} variant="outline" size="sm" className="h-7 px-2">
                       <Clipboard className="h-3 w-3" />
@@ -1042,10 +1047,13 @@ return (
                   </>
                 )}
                 
-                <Button onClick={saveSelections} disabled={saving} size="sm" className={`${isMobile ? 'h-9 px-4' : 'h-7 px-3'}`}>
-                  {saving ? <Loader2 className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'} animate-spin`} /> : <Save className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />}
-                  <span className={`ml-1 ${isMobile ? 'text-sm' : 'text-xs'}`}>Save</span>
-                </Button>
+                {/* Save button - hidden for read-only */}
+                {!isFormationReadOnly && (
+                  <Button onClick={saveSelections} disabled={saving} size="sm" className={`${isMobile ? 'h-9 px-4' : 'h-7 px-3'}`}>
+                    {saving ? <Loader2 className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'} animate-spin`} /> : <Save className={`${isMobile ? 'h-4 w-4' : 'h-3 w-3'}`} />}
+                    <span className={`ml-1 ${isMobile ? 'text-sm' : 'text-xs'}`}>Save</span>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -1153,6 +1161,7 @@ return (
                       eventType={event.event_type}
                       kitDesign={getEventKitDesign()}
                       goalkeeperKitDesign={getGoalkeeperKitDesign()}
+                      readOnly={isFormationReadOnly}
                     />
                   )}
                 </TabsContent>

@@ -46,6 +46,7 @@ interface GameDayStyleFormationEditorProps {
   isPositionsLocked?: boolean;
   kitDesign?: KitDesign;
   goalkeeperKitDesign?: KitDesign;
+  readOnly?: boolean;
 }
 
 export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorProps> = ({
@@ -60,7 +61,10 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
   isPositionsLocked = false,
   kitDesign,
   goalkeeperKitDesign,
+  readOnly = false,
 }) => {
+  // Combine lock state with read-only mode - when read-only, treat as locked
+  const effectivelyLocked = isPositionsLocked || readOnly;
   const [draggedPlayer, setDraggedPlayer] = useState<SquadPlayer | null>(null);
   const [activePeriodIndex, setActivePeriodIndex] = useState(0);
   const [editingPeriodId, setEditingPeriodId] = useState<string | null>(null);
@@ -351,7 +355,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
   }, [activePeriodIndex, periods.length]);
 
   const handleDragStart = (event: DragStartEvent) => {
-    if (isPositionsLocked) {
+    if (effectivelyLocked) {
       setDraggedPlayer(null);
       return;
     }
@@ -374,7 +378,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
-    if (isPositionsLocked) {
+    if (effectivelyLocked) {
       setDraggedPlayer(null);
       return;
     }
@@ -608,7 +612,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
                         player={player}
                         position={position}
                         isCaptain={isCaptain}
-                        isPositionsLocked={isPositionsLocked}
+                        isPositionsLocked={effectivelyLocked}
                         periodId={currentPeriod.id}
                         positionIndex={index}
                         kitDesign={kitDesign}
@@ -639,53 +643,65 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
             {/* Period Buttons */}
             <div className="flex-1 flex gap-0.5 overflow-x-auto scrollbar-hide">
               {periods.map((period, index) => (
-                <Popover 
-                  key={period.id} 
-                  open={editingPeriodId === period.id}
-                  onOpenChange={(open) => setEditingPeriodId(open ? period.id : null)}
-                >
-                  <PopoverTrigger asChild>
-                    <button
-                      className={`period-time-button flex-1 min-w-[40px] ${isMobile ? 'text-[10px] py-0.5' : 'text-xs py-1'} ${index === activePeriodIndex ? 'active' : ''}`}
-                      onClick={() => setActivePeriodIndex(index)}
-                    >
-                      {calculateTimeRange(index)}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-48 p-3" align="center">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-medium">Duration</span>
+                readOnly ? (
+                  // Read-only: Simple button without popover
+                  <button
+                    key={period.id}
+                    className={`period-time-button flex-1 min-w-[40px] ${isMobile ? 'text-[10px] py-0.5' : 'text-xs py-1'} ${index === activePeriodIndex ? 'active' : ''}`}
+                    onClick={() => setActivePeriodIndex(index)}
+                  >
+                    {calculateTimeRange(index)}
+                  </button>
+                ) : (
+                  // Editable: Popover with duration/delete controls
+                  <Popover 
+                    key={period.id} 
+                    open={editingPeriodId === period.id}
+                    onOpenChange={(open) => setEditingPeriodId(open ? period.id : null)}
+                  >
+                    <PopoverTrigger asChild>
+                      <button
+                        className={`period-time-button flex-1 min-w-[40px] ${isMobile ? 'text-[10px] py-0.5' : 'text-xs py-1'} ${index === activePeriodIndex ? 'active' : ''}`}
+                        onClick={() => setActivePeriodIndex(index)}
+                      >
+                        {calculateTimeRange(index)}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-48 p-3" align="center">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">Duration</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="number"
+                            value={period.duration}
+                            onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 1)}
+                            className="h-8 w-20 text-center"
+                            min={1}
+                            max={45}
+                          />
+                          <span className="text-sm text-muted-foreground">mins</span>
+                        </div>
+                        {periods.length > 1 && (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              deletePeriod(period.id);
+                              setEditingPeriodId(null);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3 mr-1" />
+                            Delete Period
+                          </Button>
+                        )}
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          value={period.duration}
-                          onChange={(e) => updatePeriodDuration(period.id, parseInt(e.target.value) || 1)}
-                          className="h-8 w-20 text-center"
-                          min={1}
-                          max={45}
-                        />
-                        <span className="text-sm text-muted-foreground">mins</span>
-                      </div>
-                      {periods.length > 1 && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => {
-                            deletePeriod(period.id);
-                            setEditingPeriodId(null);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Delete Period
-                        </Button>
-                      )}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverContent>
+                  </Popover>
+                )
               ))}
             </div>
 
@@ -700,15 +716,17 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
               <ChevronRight className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
             </Button>
 
-            {/* Add Period Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
-              onClick={addPeriod}
-            >
-              <Plus className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
-            </Button>
+            {/* Add Period Button - hidden for read-only */}
+            {!readOnly && (
+              <Button
+                variant="outline"
+                size="sm"
+                className={`${isMobile ? 'h-5 w-5' : 'h-7 w-7'} p-0 shrink-0`}
+                onClick={addPeriod}
+              >
+                <Plus className={isMobile ? 'h-2.5 w-2.5' : 'h-3 w-3'} />
+              </Button>
+            )}
           </div>
         </div>
 
