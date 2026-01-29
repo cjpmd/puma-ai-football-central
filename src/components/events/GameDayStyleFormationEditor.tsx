@@ -547,7 +547,7 @@ export const GameDayStyleFormationEditor: React.FC<GameDayStyleFormationEditorPr
           <Select
             value={currentPeriod.formation}
             onValueChange={(value) => updatePeriodFormation(currentPeriod.id, value)}
-            disabled={isPositionsLocked}
+            disabled={effectivelyLocked}
           >
             <SelectTrigger className={`${isMobile ? 'w-20 h-5 text-[9px]' : 'w-28 h-6 text-xs'}`}>
               <SelectValue placeholder="Formation" />
