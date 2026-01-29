@@ -1,57 +1,67 @@
 
-## Plan: Make Formation Tab Read-Only for Parent and Player Profiles
 
-### Status: ✅ IMPLEMENTED
+## Plan: Disable Formation Selector for Read-Only Parent/Player Profiles
 
 ### Overview
-When privacy settings allow parents or players (who don't have staff access) to view the Formation tab, they see a **read-only view**. This means they can see the formation, periods, and player placements but cannot modify anything.
+The Formation tab's read-only mode for restricted parents/players is missing one restriction: the formation selector dropdown (e.g., "1-2-3-1", "4-3-3") can still be changed. This needs to be disabled.
 
 ---
 
-### What Is Locked for Restricted Parents/Players
+### Current Issue
 
-| Element | Location | Read-Only Behavior |
-|---------|-----------------|-------------------|
-| AI Builder button | EnhancedTeamSelectionManager | ✅ Hidden |
-| Lock/Unlock button | EnhancedTeamSelectionManager | ✅ Hidden |
-| Performance Category selector | EnhancedTeamSelectionManager | ✅ Hidden |
-| Save button | EnhancedTeamSelectionManager | ✅ Hidden |
-| Copy/Match Day Pack buttons | EnhancedTeamSelectionManager | ✅ Hidden |
-| Add Period (+) button | GameDayStyleFormationEditor | ✅ Hidden |
-| Delete Period option | GameDayStyleFormationEditor | ✅ Hidden (popover disabled) |
-| Edit Period duration | GameDayStyleFormationEditor | ✅ Disabled (no popover) |
-| Drag and drop of players | DraggablePitchPlayer + DndContext | ✅ Disabled |
+In `GameDayStyleFormationEditor.tsx` at line 550, the formation selector uses:
 
----
+```typescript
+disabled={isPositionsLocked}
+```
 
-### Implementation Details
+However, the component already has `effectivelyLocked` defined at line 67:
 
-#### EnhancedTeamSelectionManager.tsx
-- Added `isFormationReadOnly = isRestrictedParent || isRestrictedPlayer`
-- AI Builder, Lock/Unlock, Category selector, Copy, Match Day Pack, and Save buttons are hidden when `isFormationReadOnly` is true
-- Passes `readOnly={isFormationReadOnly}` to GameDayStyleFormationEditor
+```typescript
+const effectivelyLocked = isPositionsLocked || readOnly;
+```
 
-#### GameDayStyleFormationEditor.tsx
-- Added `readOnly?: boolean` prop
-- Created `effectivelyLocked = isPositionsLocked || readOnly`
-- Drag handlers check `effectivelyLocked` instead of just `isPositionsLocked`
-- Period buttons show simple non-interactive buttons (no popover) when `readOnly` is true
-- Add Period button is hidden when `readOnly` is true
-- DraggablePitchPlayer receives `effectivelyLocked` as its `isPositionsLocked` prop
+The `effectivelyLocked` variable is correctly used for drag-and-drop restrictions, but the formation selector was missed.
 
 ---
 
-### User Experience
+### Solution
 
-**For coaches/managers (staff access):**
-- No change - full editing capability as before
+Update line 550 to use `effectivelyLocked` instead of `isPositionsLocked`:
 
-**For parents/players WITH staff access:**
-- No change - full editing capability (their staff role gives them permissions)
+```typescript
+// Before:
+disabled={isPositionsLocked}
 
-**For parents/players WITHOUT staff access (when Formation tab is visible via privacy settings):**
-- ✅ Can view the formation layout and player positions
-- ✅ Can navigate between periods using left/right arrows
-- ✅ Can view the substitute bench
-- ✅ Can view playing time summary
-- ❌ Cannot: Use AI Builder, lock/unlock, change categories, add/edit/delete periods, drag players, save changes
+// After:
+disabled={effectivelyLocked}
+```
+
+This ensures the formation selector dropdown is disabled when:
+1. Positions are manually locked by a coach (existing behavior)
+2. The view is in read-only mode for restricted parents/players (new behavior)
+
+---
+
+### File to Modify
+
+| File | Change |
+|------|--------|
+| `src/components/events/GameDayStyleFormationEditor.tsx` | Line 550: Change `disabled={isPositionsLocked}` to `disabled={effectivelyLocked}` |
+
+---
+
+### Expected Result
+
+When a restricted parent or player views the Formation tab (if privacy settings allow it):
+- Formation selector dropdown is disabled (grayed out, cannot be changed)
+- All other existing read-only restrictions remain in place (no drag-drop, no period edit, no AI builder, etc.)
+
+---
+
+### Verification Steps
+
+1. Log in as a pure parent (no staff roles) for a team where "Show Formation to Parents" is enabled
+2. Open an event's Team Selection > Formation tab
+3. Verify the formation selector dropdown (e.g., "1-2-3-1") is grayed out and cannot be clicked
+
