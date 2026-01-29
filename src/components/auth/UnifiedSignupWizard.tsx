@@ -247,13 +247,15 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       const associationErrors: string[] = [];
 
       if (selectedRole === "player" && matchedPlayer) {
-        // Link user to existing player
+        // Link user to existing player with audit info
         const { error: linkError } = await supabase
           .from("user_players")
           .insert({
             user_id: userId,
             player_id: matchedPlayer.id,
-            relationship: "self"
+            relationship: "self",
+            created_by: userId,
+            creation_method: "signup_code"
           });
 
         if (linkError) {
@@ -280,13 +282,23 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           .eq("id", userId);
 
       } else if (selectedRole === "parent" && matchedPlayer) {
-        // Link user to player as parent
+        // Validate team consistency - the matched player should be on the same team
+        if (teamInfo && matchedPlayer.team_id !== teamInfo.id) {
+          console.warn("Player team doesn't match selected team - potential code mismatch", {
+            playerTeamId: matchedPlayer.team_id,
+            selectedTeamId: teamInfo.id
+          });
+        }
+        
+        // Link user to player as parent with audit info
         const { error: linkError } = await supabase
           .from("user_players")
           .insert({
             user_id: userId,
             player_id: matchedPlayer.id,
-            relationship: "parent"
+            relationship: "parent",
+            created_by: userId,
+            creation_method: "signup_code"
           });
 
         if (linkError) {

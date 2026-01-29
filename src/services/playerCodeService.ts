@@ -142,19 +142,52 @@ export const playerCodeService = {
       .eq('player_id', player.id)
       .eq('user_id', user.id)
       .eq('relationship', 'parent')
-      .single();
+      .maybeSingle();
     
     if (existingLink) {
       throw new Error('You are already linked as a parent to this player');
     }
     
-    // Create parent link
+    // Check for cross-team parent links to prevent accidental linking to wrong team
+    const { data: existingParentLinks } = await supabase
+      .from('user_players')
+      .select('id, player_id')
+      .eq('user_id', user.id)
+      .eq('relationship', 'parent');
+    
+    if (existingParentLinks && existingParentLinks.length > 0) {
+      // Get team IDs for existing linked players
+      const playerIds = existingParentLinks.map(l => l.player_id);
+      const { data: linkedPlayers } = await supabase
+        .from('players')
+        .select('id, team_id, teams(name)')
+        .in('id', playerIds);
+      
+      if (linkedPlayers && linkedPlayers.length > 0) {
+        const otherTeamLinks = linkedPlayers.filter(p => p.team_id !== player.team_id);
+        
+        if (otherTeamLinks.length > 0) {
+          const teamNames = otherTeamLinks
+            .map(l => (l.teams as any)?.name)
+            .filter(Boolean)
+            .join(', ');
+          throw new Error(
+            `You are already linked as a parent to players on other teams (${teamNames}). ` +
+            `Please contact the team manager if you need to link to players on multiple teams.`
+          );
+        }
+      }
+    }
+    
+    // Create parent link with audit info
     const { error: linkError } = await supabase
       .from('user_players')
       .insert({
         player_id: player.id,
         user_id: user.id,
-        relationship: 'parent'
+        relationship: 'parent',
+        created_by: user.id,
+        creation_method: 'code_link'
       });
     
     if (linkError) throw linkError;

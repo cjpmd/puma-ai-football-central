@@ -4304,6 +4304,8 @@ export type Database = {
       user_players: {
         Row: {
           created_at: string
+          created_by: string | null
+          creation_method: string | null
           id: string
           player_id: string
           relationship: string
@@ -4312,6 +4314,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
+          creation_method?: string | null
           id?: string
           player_id: string
           relationship: string
@@ -4320,6 +4324,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
+          creation_method?: string | null
           id?: string
           player_id?: string
           relationship?: string
@@ -4330,6 +4336,13 @@ export type Database = {
           {
             foreignKeyName: "fk_user_players_user_id"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "all_user_roles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_players_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "all_user_roles"
             referencedColumns: ["user_id"]

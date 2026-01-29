@@ -125,6 +125,13 @@ export function PlayerParentLinkManager({
 
     setIsInviting(true);
     try {
+      // Get current player's team_id
+      const { data: currentPlayer } = await supabase
+        .from('players')
+        .select('team_id')
+        .eq('id', playerId)
+        .single();
+
       // Check if user exists
       const { data: existingProfile } = await supabase
         .from('profiles')
@@ -133,13 +140,53 @@ export function PlayerParentLinkManager({
         .maybeSingle();
 
       if (existingProfile) {
-        // Link existing user
+        // Check for cross-team parent links before linking
+        if (currentPlayer) {
+          const { data: existingParentLinks } = await supabase
+            .from('user_players')
+            .select('id, player_id')
+            .eq('user_id', existingProfile.id)
+            .eq('relationship', 'parent');
+          
+          if (existingParentLinks && existingParentLinks.length > 0) {
+            const playerIds = existingParentLinks.map(l => l.player_id);
+            const { data: linkedPlayers } = await supabase
+              .from('players')
+              .select('id, team_id, teams(name)')
+              .in('id', playerIds);
+            
+            if (linkedPlayers && linkedPlayers.length > 0) {
+              const otherTeamLinks = linkedPlayers.filter(p => p.team_id !== currentPlayer.team_id);
+              
+              if (otherTeamLinks.length > 0) {
+                const teamNames = otherTeamLinks
+                  .map(l => (l.teams as any)?.name)
+                  .filter(Boolean)
+                  .join(', ');
+                
+                toast({
+                  title: 'Cross-Team Warning',
+                  description: `This user is already a parent on: ${teamNames}. Linking to multiple teams is unusual - please verify this is correct.`,
+                  variant: 'destructive'
+                });
+                return;
+              }
+            }
+          }
+        }
+
+        // Get current user for audit trail
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        // Link existing user with audit info
         const { error } = await supabase
           .from('user_players')
           .insert({
             user_id: existingProfile.id,
             player_id: playerId,
-            relationship: 'parent'
+            relationship: 'parent',
+            created_by: user?.id,
+            creation_method: 'manager_direct'
           });
 
         if (error) {
