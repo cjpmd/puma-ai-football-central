@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -66,7 +67,7 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
 
       setEquipment(equipmentData);
     } catch (error: any) {
-      console.error('Error loading equipment:', error);
+      logger.error('Error loading equipment:', error);
       toast.error('Failed to load equipment');
     } finally {
       setLoading(false);
@@ -110,7 +111,7 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
       setFormData({ name: '', description: '', quantity: 1, condition: 'excellent' });
       loadEquipment();
     } catch (error: any) {
-      console.error('Error saving equipment:', error);
+      logger.error('Error saving equipment:', error);
       toast.error('Failed to save equipment');
     }
   };
@@ -140,7 +141,7 @@ export const TeamEquipmentSettings: React.FC<TeamEquipmentSettingsProps> = ({ te
       toast.success('Equipment deleted successfully');
       loadEquipment();
     } catch (error: any) {
-      console.error('Error deleting equipment:', error);
+      logger.error('Error deleting equipment:', error);
       toast.error('Failed to delete equipment');
     }
   };

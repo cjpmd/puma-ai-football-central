@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -58,7 +59,7 @@ export const LinkedClubCard: React.FC<LinkedClubCardProps> = ({ club }) => {
 
       setOfficials(officials);
     } catch (error) {
-      console.error('Error loading club officials:', error);
+      logger.error('Error loading club officials:', error);
     } finally {
       setLoading(false);
     }

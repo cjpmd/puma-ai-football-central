@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +51,7 @@ export const NotificationPermissionManager: React.FC = () => {
         setPreferences({ ...preferences, ...(data.notification_preferences as Partial<NotificationPreferences>) });
       }
     } catch (error) {
-      console.error('Error loading notification preferences:', error);
+      logger.error('Error loading notification preferences:', error);
     } finally {
       setPreferencesLoading(false);
     }
@@ -73,7 +74,7 @@ export const NotificationPermissionManager: React.FC = () => {
       setPreferences(updatedPreferences);
       toast.success('Notification preferences updated');
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      logger.error('Error updating preferences:', error);
       toast.error('Failed to update preferences');
     }
   };
@@ -88,7 +89,7 @@ export const NotificationPermissionManager: React.FC = () => {
         toast.error('Push notification permission denied. You can enable it in your device settings.');
       }
     } catch (error) {
-      console.error('Error requesting push permissions:', error);
+      logger.error('Error requesting push permissions:', error);
       toast.error('Failed to setup push notifications');
     } finally {
       setIsRequesting(false);
@@ -292,7 +293,7 @@ const sendTestNotification = async () => {
     if (error) throw error;
     toast.success('Test notification sent!');
   } catch (error) {
-    console.error('Error sending test notification:', error);
+    logger.error('Error sending test notification:', error);
     toast.error('Failed to send test notification');
   }
 };

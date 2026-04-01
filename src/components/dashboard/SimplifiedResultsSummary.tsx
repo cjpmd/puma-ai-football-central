@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -82,7 +83,7 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
         .in('event_id', eventIds);
 
       if (selectionsError) {
-        console.error('Error loading performance categories:', selectionsError);
+        logger.error('Error loading performance categories:', selectionsError);
       }
 
       // Create category map
@@ -162,7 +163,7 @@ export const SimplifiedResultsSummary: React.FC<SimplifiedResultsSummaryProps> =
 
       setResults(processedResults);
     } catch (error) {
-      console.error('Error loading results:', error);
+      logger.error('Error loading results:', error);
     } finally {
       setLoading(false);
     }

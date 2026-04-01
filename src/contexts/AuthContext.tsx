@@ -1,6 +1,8 @@
+import { logger } from '@/lib/logger';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 import { Team, Club, Profile, GameFormat, SubscriptionType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { securityService } from '@/services/securityService';
@@ -16,8 +18,8 @@ interface ConnectedPlayer {
 }
 
 interface AuthContextType {
-  user: any;
-  session: any;
+  user: User | null;
+  session: Session | null;
   profile: Profile | null;
   teams: Team[];
   clubs: Club[];
@@ -27,8 +29,8 @@ interface AuthContextType {
   loading: boolean;
   login: () => Promise<void>;
   logout: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ data: any; error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: unknown }>;
+  signUp: (email: string, password: string, name: string) => Promise<{ data: unknown; error: unknown }>;
   signOut: () => Promise<void>;
   refreshUserData: () => Promise<void>;
 }
@@ -36,8 +38,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [session, setSession] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
@@ -54,17 +56,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const initializeAuth = async () => {
       try {
-        console.log('Starting auth initialization...');
+        logger.log('Starting auth initialization...');
         
         // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log('Auth state changed:', event, session?.user?.id);
+          logger.log('Auth state changed:', event, session?.user?.id);
           
           if (!mounted) return;
           
           try {
             if (session?.user) {
-              console.log('User session found, setting user data...');
+              logger.log('User session found, setting user data...');
               setUser(session.user);
               setSession(session);
               
@@ -72,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setTimeout(() => {
                 if (mounted) {
                   securityService.trackSession().catch(error => {
-                    console.error('Session tracking error:', error);
+                    logger.error('Session tracking error:', error);
                   });
                 }
               }, 100);
@@ -86,12 +88,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     fetchClubs(session.user.id),
                     fetchConnectedPlayers(session.user.id)
                   ]).catch(error => {
-                    console.error('Error loading user data after auth change:', error);
+                    logger.error('Error loading user data after auth change:', error);
                   });
                 }
               }, 0);
             } else {
-              console.log('No user session, clearing data...');
+              logger.log('No user session, clearing data...');
               setUser(null);
               setSession(null);
               setTeams([]);
@@ -102,7 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           } finally {
             if (mounted && !initialized) {
-              console.log('Auth state processed, setting loading to false');
+              logger.log('Auth state processed, setting loading to false');
               setLoading(false);
               setInitialized(true);
             }
@@ -110,18 +112,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         // Then check for existing session
-        console.log('Checking for existing session...');
+        logger.log('Checking for existing session...');
         const { data: { session: existingSession }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('Session error:', error);
+          logger.error('Session error:', error);
           throw error;
         }
 
         if (!mounted) return;
 
         if (existingSession?.user) {
-          console.log('Existing session found, setting initial state...');
+          logger.log('Existing session found, setting initial state...');
           setUser(existingSession.user);
           setSession(existingSession);
           
@@ -134,10 +136,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 fetchClubs(existingSession.user.id),
                 fetchConnectedPlayers(existingSession.user.id)
               ]).catch(error => {
-                console.error('Error loading initial user data:', error);
+                logger.error('Error loading initial user data:', error);
               }).finally(() => {
                 if (mounted && !initialized) {
-                  console.log('Initial data load complete');
+                  logger.log('Initial data load complete');
                   setLoading(false);
                   setInitialized(true);
                 }
@@ -145,7 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }, 0);
         } else {
-          console.log('No existing session found');
+          logger.log('No existing session found');
           if (mounted && !initialized) {
             setLoading(false);
             setInitialized(true);
@@ -157,7 +159,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           subscription.unsubscribe();
         };
       } catch (error: any) {
-        console.error('Error during auth initialization:', error);
+        logger.error('Error during auth initialization:', error);
         if (mounted) {
           toast({
             title: 'Authentication Error',
@@ -175,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set a fallback timeout
     initializationTimeout = setTimeout(() => {
       if (mounted && !initialized) {
-        console.warn('Auth initialization timeout, forcing loading to false');
+        logger.warn('Auth initialization timeout, forcing loading to false');
         setLoading(false);
         setInitialized(true);
       }
@@ -194,7 +196,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user:', userId);
+      logger.log('Fetching profile for user:', userId);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -206,7 +208,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!profileData) {
-        console.warn('No profile found for user:', userId);
+        logger.warn('No profile found for user:', userId);
         return;
       }
 
@@ -217,7 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId);
 
       const managedPlayerIds = playerLinks?.map(link => link.player_id) || [];
-      console.log('Managed player IDs loaded:', managedPlayerIds);
+      logger.log('Managed player IDs loaded:', managedPlayerIds);
 
       const transformedProfile: Profile = {
         id: profileData.id,
@@ -235,9 +237,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       };
 
       setProfile(transformedProfile);
-      console.log('Profile loaded successfully');
+      logger.log('Profile loaded successfully');
     } catch (error: any) {
-      console.error('Error fetching profile:', error.message);
+      logger.error('Error fetching profile:', error.message);
       // Check for timeout specifically
       const isTimeout = error.message?.includes('statement timeout') || error.message?.includes('timeout');
       toast({
@@ -250,7 +252,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchTeams = async (userId: string) => {
     try {
-      console.log('Fetching teams for user:', userId);
+      logger.log('Fetching teams for user:', userId);
       
       // First, get teams from user_teams (direct team roles)
       const { data, error } = await supabase
@@ -268,11 +270,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching teams:', error);
+        logger.error('Error fetching teams:', error);
         throw error;
       }
 
-      console.log('Raw team data:', data);
+      logger.log('Raw team data:', data);
 
       // Deduplicate teams by team ID and aggregate roles
       const teamMap = new Map<string, Team>();
@@ -325,7 +327,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (userClubsData && userClubsData.length > 0) {
         const clubIds = userClubsData.map(uc => uc.club_id);
-        console.log('User belongs to clubs:', clubIds);
+        logger.log('User belongs to clubs:', clubIds);
         
         // Fetch teams linked to these clubs
         const { data: clubTeamsData } = await supabase
@@ -375,16 +377,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
             
             teamMap.set(teamId, teamData);
-            console.log('Added club team:', teamData.name);
+            logger.log('Added club team:', teamData.name);
           }
         });
       }
 
       const deduplicatedTeams = Array.from(teamMap.values());
-      console.log('All teams (including club teams):', deduplicatedTeams.length);
+      logger.log('All teams (including club teams):', deduplicatedTeams.length);
       
       if (deduplicatedTeams.length === 0) {
-        console.log('No teams found for user');
+        logger.log('No teams found for user');
       }
       
       setTeams(deduplicatedTeams);
@@ -393,7 +395,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       updateAllTeams(deduplicatedTeams);
 
     } catch (error: any) {
-      console.error('Error in fetchTeams:', error);
+      logger.error('Error in fetchTeams:', error);
       toast({
         title: 'Teams fetch failed',
         description: error.message,
@@ -405,7 +407,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchClubs = async (userId: string) => {
     try {
-      console.log('Fetching clubs for user:', userId);
+      logger.log('Fetching clubs for user:', userId);
       const { data: clubsData, error: clubsError } = await supabase
         .from('user_clubs')
         .select('club_id')
@@ -416,7 +418,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!clubsData || clubsData.length === 0) {
-        console.log('No clubs found for user');
+        logger.log('No clubs found for user');
         setClubs([]);
         return;
       }
@@ -430,7 +432,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             .single();
 
           if (clubError) {
-            console.error(`Error fetching club ${userClub.club_id}:`, clubError);
+            logger.error(`Error fetching club ${userClub.club_id}:`, clubError);
             return null;
           }
           
@@ -452,10 +454,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const validClubs = clubDetails.filter(club => club !== null);
       setClubs(validClubs as Club[]);
-      console.log('Clubs loaded successfully:', validClubs.length);
+      logger.log('Clubs loaded successfully:', validClubs.length);
 
     } catch (error: any) {
-      console.error('Error fetching clubs:', error.message);
+      logger.error('Error fetching clubs:', error.message);
       toast({
         title: 'Clubs fetch failed',
         description: error.message,
@@ -467,7 +469,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchConnectedPlayers = async (userId: string) => {
     try {
-      console.log('Fetching connected players for user:', userId);
+      logger.log('Fetching connected players for user:', userId);
       // Optimized query: only select needed team columns to reduce payload and avoid timeouts
       const { data: playerConnections, error: connectionsError } = await supabase
         .from('user_players')
@@ -496,7 +498,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       if (!playerConnections || playerConnections.length === 0) {
-        console.log('No connected players found for user');
+        logger.log('No connected players found for user');
         setConnectedPlayers([]);
         return;
       }
@@ -536,13 +538,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       setConnectedPlayers(connectedPlayersData);
-      console.log('Connected players loaded successfully:', connectedPlayersData.length);
+      logger.log('Connected players loaded successfully:', connectedPlayersData.length);
       
       // Update allTeams with connected player teams
       updateAllTeams(teams, connectedPlayersData.map(cp => cp.team));
 
     } catch (error: any) {
-      console.error('Error fetching connected players:', error.message);
+      logger.error('Error fetching connected players:', error.message);
       // Check for timeout specifically
       const isTimeout = error.message?.includes('statement timeout') || error.message?.includes('timeout');
       toast({
@@ -572,7 +574,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     const combinedTeams = Array.from(allTeamsMap.values());
     setAllTeams(combinedTeams);
-    console.log('All teams updated:', combinedTeams.length);
+    logger.log('All teams updated:', combinedTeams.length);
   };
 
   const signIn = async (email: string, password: string) => {
@@ -597,7 +599,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signOut = async () => {
-    console.log('Starting signOut process...');
+    logger.log('Starting signOut process...');
     setLoading(true);
     
     try {
@@ -614,20 +616,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        console.error('Supabase signOut error:', error);
+        logger.error('Supabase signOut error:', error);
         toast({
           title: 'Sign out warning',
           description: 'Local session cleared, but there may have been an issue with the server.',
           variant: 'destructive',
         });
       } else {
-        console.log('Sign out successful');
+        logger.log('Sign out successful');
       }
       
       // Navigate to auth page instead of home
       navigate('/auth');
     } catch (error: any) {
-      console.error('Error during sign out:', error);
+      logger.error('Error during sign out:', error);
       toast({
         title: 'Sign out completed',
         description: 'You have been signed out locally.',
@@ -647,7 +649,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         provider: 'google',
       });
     } catch (error: any) {
-      console.error('Error during login:', error.message);
+      logger.error('Error during login:', error.message);
       toast({
         title: 'Login failed',
         description: error.message,
@@ -673,7 +675,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fetchConnectedPlayers(user.id)
         ]);
       } catch (error: any) {
-        console.error('Error refreshing user data:', error.message);
+        logger.error('Error refreshing user data:', error.message);
         toast({
           title: 'Refresh failed',
           description: error.message,

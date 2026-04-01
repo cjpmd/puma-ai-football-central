@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -93,7 +94,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       });
       setStep("role");
     } catch (error) {
-      console.error("Error verifying code:", error);
+      logger.error("Error verifying code:", error);
       toast.error("Failed to verify code");
     } finally {
       setIsLoading(false);
@@ -160,7 +161,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         setStep("account");
       }
     } catch (error) {
-      console.error("Error verifying player code:", error);
+      logger.error("Error verifying player code:", error);
       setPlayerCodeError("Failed to verify code. Please try again.");
     } finally {
       setIsLoading(false);
@@ -239,7 +240,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       });
 
       if (signInError) {
-        console.warn("Auto sign-in after signup failed:", signInError);
+        logger.warn("Auto sign-in after signup failed:", signInError);
         // Continue anyway - associations may still work or user can reset password
       }
 
@@ -259,7 +260,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           });
 
         if (linkError) {
-          console.error("Error linking user to player:", linkError);
+          logger.error("Error linking user to player:", linkError);
           associationErrors.push("player link");
         }
 
@@ -271,7 +272,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         });
 
         if (teamError) {
-          console.error("Error adding to team:", teamError);
+          logger.error("Error adding to team:", teamError);
           associationErrors.push("team membership");
         }
           
@@ -284,7 +285,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
       } else if (selectedRole === "parent" && matchedPlayer) {
         // Validate team consistency - the matched player should be on the same team
         if (teamInfo && matchedPlayer.team_id !== teamInfo.id) {
-          console.warn("Player team doesn't match selected team - potential code mismatch", {
+          logger.warn("Player team doesn't match selected team - potential code mismatch", {
             playerTeamId: matchedPlayer.team_id,
             selectedTeamId: teamInfo.id
           });
@@ -302,7 +303,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           });
 
         if (linkError) {
-          console.error("Error linking parent to player:", linkError);
+          logger.error("Error linking parent to player:", linkError);
           associationErrors.push("parent link");
         }
 
@@ -314,7 +315,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         });
 
         if (teamError) {
-          console.error("Error adding to team:", teamError);
+          logger.error("Error adding to team:", teamError);
           associationErrors.push("team membership");
         }
 
@@ -351,7 +352,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           });
 
           if (teamError) {
-            console.error("Error adding staff to team:", teamError);
+            logger.error("Error adding staff to team:", teamError);
             associationErrors.push("team membership");
           }
 
@@ -371,7 +372,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           });
 
           if (requestError) {
-            console.error("Error creating staff request:", requestError);
+            logger.error("Error creating staff request:", requestError);
             associationErrors.push("staff request");
           }
 
@@ -392,12 +393,12 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
           selectedRole!
         );
       } catch (trackError) {
-        console.error("Error tracking code usage:", trackError);
+        logger.error("Error tracking code usage:", trackError);
       }
 
       // Show appropriate message based on association results
       if (associationErrors.length > 0) {
-        console.warn("Some associations failed:", associationErrors);
+        logger.warn("Some associations failed:", associationErrors);
         toast.warning("Account created with minor issues", {
           description: "Your account is ready. Contact your team manager if you have issues accessing the team."
         });
@@ -411,7 +412,7 @@ export function UnifiedSignupWizard({ isOpen, onClose, onSuccess, onSwitchToLogi
         onSuccess();
       }, 1500);
     } catch (error) {
-      console.error("Signup error:", error);
+      logger.error("Signup error:", error);
       
       // Only show error if account wasn't created
       if (!accountCreated) {

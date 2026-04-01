@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -141,7 +142,7 @@ export function TeamSetupWizard({ isOpen, onClose, onSuccess }: TeamSetupWizardP
         .single();
 
       if (teamError) {
-        console.error("Error creating team:", teamError);
+        logger.error("Error creating team:", teamError);
         toast.error("Failed to create team", {
           description: teamError.message
         });
@@ -158,7 +159,7 @@ export function TeamSetupWizard({ isOpen, onClose, onSuccess }: TeamSetupWizardP
         });
 
       if (linkError) {
-        console.error("Error linking user to team:", linkError);
+        logger.error("Error linking user to team:", linkError);
       }
 
       // Update profile with team_manager role
@@ -174,7 +175,7 @@ export function TeamSetupWizard({ isOpen, onClose, onSuccess }: TeamSetupWizardP
         onSuccess();
       }, 1500);
     } catch (error) {
-      console.error("Setup error:", error);
+      logger.error("Setup error:", error);
       toast.error("Something went wrong", {
         description: "Please try again later"
       });

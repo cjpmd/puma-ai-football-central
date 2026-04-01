@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -149,7 +150,7 @@ export default function DashboardMobile() {
       setSelectedPlayerData({ player: fullPlayer, team: playerTeam });
       setShowPlayerCard(true);
     } catch (error) {
-      console.error('Error loading player data:', error);
+      logger.error('Error loading player data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load player details',
@@ -255,7 +256,7 @@ export default function DashboardMobile() {
         outputFormat: 'image/jpeg',
       });
       
-      console.log(`[DashboardMobile] Photo processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
+      logger.log(`[DashboardMobile] Photo processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
       
       const fileName = `${player.id}/${Date.now()}.jpg`;
       
@@ -294,7 +295,7 @@ export default function DashboardMobile() {
       // Refresh player data in background for full sync
       handlePlayerClick({ id: player.id });
     } catch (error: any) {
-      console.error('[DashboardMobile] Photo upload error:', error);
+      logger.error('[DashboardMobile] Photo upload error:', error);
       toast({ 
         title: 'Upload Failed', 
         description: error.message || 'Failed to update photo. Please try again.', 

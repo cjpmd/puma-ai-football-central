@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Clock, XCircle, Check, X } from 'lucide-react';
@@ -47,7 +48,7 @@ export const AvailabilityStatusBadge: React.FC<AvailabilityStatusBadgeProps> = (
       onStatusChange?.(newStatus);
       toast.success(`Availability set to ${newStatus}`);
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       toast.error('Failed to update availability');
     } finally {
       setIsUpdating(false);

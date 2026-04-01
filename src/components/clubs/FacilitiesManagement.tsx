@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +57,7 @@ export const FacilitiesManagement = ({ clubId, onRefreshClub }: FacilitiesManage
       
       setFacilities(transformedFacilities);
     } catch (error) {
-      console.error('Error loading facilities:', error);
+      logger.error('Error loading facilities:', error);
       toast({
         title: 'Error',
         description: 'Failed to load facilities',
@@ -95,7 +96,7 @@ export const FacilitiesManagement = ({ clubId, onRefreshClub }: FacilitiesManage
       loadFacilities();
       if (onRefreshClub) onRefreshClub();
     } catch (error) {
-      console.error('Error deleting facility:', error);
+      logger.error('Error deleting facility:', error);
       toast({
         title: 'Error',
         description: 'Failed to delete facility',

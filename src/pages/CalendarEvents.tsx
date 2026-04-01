@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -81,7 +82,7 @@ export default function CalendarEvents() {
       
       if (teamIds.length === 0) return;
 
-      console.log('Loading events for teams:', teamIds);
+      logger.log('Loading events for teams:', teamIds);
 
       const { data, error } = await supabase
         .from('events')
@@ -92,10 +93,10 @@ export default function CalendarEvents() {
       if (error) throw error;
       
       const eventData = (data || []) as DatabaseEvent[];
-      console.log('Loaded events:', eventData.length);
+      logger.log('Loaded events:', eventData.length);
       setEvents(eventData);
     } catch (error: any) {
-      console.error('Error loading events:', error);
+      logger.error('Error loading events:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load events',
@@ -123,10 +124,10 @@ export default function CalendarEvents() {
         endDate.toISOString().split('T')[0]
       );
 
-      console.log('Loaded individual training sessions:', sessions.length);
+      logger.log('Loaded individual training sessions:', sessions.length);
       setIndividualTrainingSessions(sessions);
     } catch (error: any) {
-      console.error('Error loading individual training sessions:', error);
+      logger.error('Error loading individual training sessions:', error);
     }
   };
 
@@ -245,7 +246,7 @@ export default function CalendarEvents() {
       setSelectedEvent(null);
       loadEvents();
     } catch (error: any) {
-      console.error('Error submitting event:', error);
+      logger.error('Error submitting event:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save event',

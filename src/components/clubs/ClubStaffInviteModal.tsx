@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -115,7 +116,7 @@ export function ClubStaffInviteModal({
       onInviteSent();
       onClose();
     } catch (error: any) {
-      console.error('Error inviting staff:', error);
+      logger.error('Error inviting staff:', error);
       toast({ title: 'Error', description: error.message || 'Failed to send invitation', variant: 'destructive' });
     } finally {
       setIsLoading(false);

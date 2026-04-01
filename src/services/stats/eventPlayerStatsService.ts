@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export const eventPlayerStatsService = {
@@ -6,31 +7,31 @@ export const eventPlayerStatsService = {
    * Clear all existing event_player_stats
    */
   async clearAllEventPlayerStats(): Promise<void> {
-    console.log('Step 1: Clearing existing event_player_stats...');
+    logger.log('Step 1: Clearing existing event_player_stats...');
     const { error: clearError } = await supabase
       .from('event_player_stats')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000');
 
     if (clearError) {
-      console.error('Error clearing event_player_stats:', clearError);
+      logger.error('Error clearing event_player_stats:', clearError);
       throw clearError;
     }
-    console.log('✅ Cleared all existing event_player_stats');
+    logger.log('✅ Cleared all existing event_player_stats');
   },
 
   /**
    * Create event_player_stats from event_selections using the FIXED database function
    */
   async regenerateFromSelections(): Promise<void> {
-    console.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS WITH FIXED FUNCTION ===');
+    logger.log('=== REGENERATING EVENT_PLAYER_STATS FROM SELECTIONS WITH FIXED FUNCTION ===');
     
     try {
       // Use the FIXED database function
       const { error } = await supabase.rpc('regenerate_all_event_player_stats');
       
       if (error) {
-        console.error('Error in FIXED regeneration function:', error);
+        logger.error('Error in FIXED regeneration function:', error);
         throw error;
       }
       
@@ -40,14 +41,14 @@ export const eventPlayerStatsService = {
         .select('id', { count: 'exact' });
         
       if (verifyError) {
-        console.error('Error verifying regenerated data:', verifyError);
+        logger.error('Error verifying regenerated data:', verifyError);
       } else {
-        console.log(`📊 REGENERATION SUMMARY: ${statsCount?.length || 0} records created with FIXED functions`);
+        logger.log(`📊 REGENERATION SUMMARY: ${statsCount?.length || 0} records created with FIXED functions`);
       }
       
-      console.log('🎉 SUCCESSFULLY REGENERATED EVENT_PLAYER_STATS WITH FIXED DATABASE FUNCTION');
+      logger.log('🎉 SUCCESSFULLY REGENERATED EVENT_PLAYER_STATS WITH FIXED DATABASE FUNCTION');
     } catch (error) {
-      console.error('Error in regeneration:', error);
+      logger.error('Error in regeneration:', error);
       throw error;
     }
   },
@@ -83,10 +84,10 @@ export const eventPlayerStatsService = {
       });
       
       if (error) {
-        console.error('Error running debug function:', error);
+        logger.error('Error running debug function:', error);
       }
     } catch (error) {
-      console.error('Error debugging player positions:', error);
+      logger.error('Error debugging player positions:', error);
     }
   }
 };

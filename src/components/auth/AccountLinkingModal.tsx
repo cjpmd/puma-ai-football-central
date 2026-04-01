@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,7 @@ export const AccountLinkingModal: React.FC<AccountLinkingModalProps> = ({
       toast.success('Account linked successfully!');
       handleComplete();
     } catch (error) {
-      console.error('Error linking account:', error);
+      logger.error('Error linking account:', error);
       toast.error('Invalid linking code or account already linked');
     } finally {
       setIsLoading(false);

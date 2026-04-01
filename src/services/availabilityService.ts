@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface EventAvailability {
@@ -29,7 +30,7 @@ export interface NotificationLog {
 
 export const availabilityService = {
   async getEventAvailability(eventId: string): Promise<EventAvailability[]> {
-    console.log('Getting event availability for event:', eventId);
+    logger.log('Getting event availability for event:', eventId);
     
     const { data, error } = await supabase
       .from('event_availability')
@@ -41,16 +42,16 @@ export const availabilityService = {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching event availability:', error);
+      logger.error('Error fetching event availability:', error);
       throw error;
     }
     
-    console.log('Found availability records:', data?.length || 0);
+    logger.log('Found availability records:', data?.length || 0);
     return (data || []) as EventAvailability[];
   },
 
   async getPlayerAvailabilityFromParents(eventId: string, teamId: string): Promise<any[]> {
-    console.log('Getting player availability from parent responses for event:', eventId, 'team:', teamId);
+    logger.log('Getting player availability from parent responses for event:', eventId, 'team:', teamId);
     
     // Get all players in the team
     const { data: players, error: playersError } = await supabase
@@ -59,12 +60,12 @@ export const availabilityService = {
       .eq('team_id', teamId);
 
     if (playersError) {
-      console.error('Error fetching players:', playersError);
+      logger.error('Error fetching players:', playersError);
       throw playersError;
     }
 
     if (!players || players.length === 0) {
-      console.log('No players found for team:', teamId);
+      logger.log('No players found for team:', teamId);
       return [];
     }
 
@@ -77,12 +78,12 @@ export const availabilityService = {
       .in('player_id', playerIds);
 
     if (userPlayersError) {
-      console.error('Error fetching user-player relationships:', userPlayersError);
+      logger.error('Error fetching user-player relationships:', userPlayersError);
       throw userPlayersError;
     }
 
     if (!userPlayers || userPlayers.length === 0) {
-      console.log('No user-player relationships found');
+      logger.log('No user-player relationships found');
       return [];
     }
 
@@ -95,7 +96,7 @@ export const availabilityService = {
       .in('user_id', userIds);
 
     if (availabilityError) {
-      console.error('Error fetching availability:', availabilityError);
+      logger.error('Error fetching availability:', availabilityError);
       throw availabilityError;
     }
 
@@ -130,7 +131,7 @@ export const availabilityService = {
       };
     });
 
-    console.log('Players with availability:', playersWithAvailability);
+    logger.log('Players with availability:', playersWithAvailability);
     return playersWithAvailability;
   },
 
@@ -140,7 +141,7 @@ export const availabilityService = {
     role: string,
     status: 'available' | 'unavailable'
   ): Promise<void> {
-    console.log('Updating availability status:', { eventId, userId, role, status });
+    logger.log('Updating availability status:', { eventId, userId, role, status });
     
     const { error } = await supabase.rpc('update_availability_status', {
       p_event_id: eventId,
@@ -150,15 +151,15 @@ export const availabilityService = {
     });
 
     if (error) {
-      console.error('Error updating availability status:', error);
+      logger.error('Error updating availability status:', error);
       throw error;
     }
     
-    console.log('Availability status updated successfully');
+    logger.log('Availability status updated successfully');
   },
 
   async sendAvailabilityNotifications(eventId: string): Promise<void> {
-    console.log('Sending availability notifications for event:', eventId);
+    logger.log('Sending availability notifications for event:', eventId);
     
     try {
       const { error } = await supabase.rpc('send_availability_notifications', {
@@ -166,11 +167,11 @@ export const availabilityService = {
       });
 
       if (error) {
-        console.error('Error from send_availability_notifications RPC:', error);
+        logger.error('Error from send_availability_notifications RPC:', error);
         throw error;
       }
       
-      console.log('Availability notifications sent successfully');
+      logger.log('Availability notifications sent successfully');
       
       // Let's also check what was created
       const { data: createdRecords } = await supabase
@@ -178,10 +179,10 @@ export const availabilityService = {
         .select('*')
         .eq('event_id', eventId);
         
-      console.log('Created availability records:', createdRecords?.length || 0, createdRecords);
+      logger.log('Created availability records:', createdRecords?.length || 0, createdRecords);
       
     } catch (error) {
-      console.error('Error in sendAvailabilityNotifications:', error);
+      logger.error('Error in sendAvailabilityNotifications:', error);
       throw error;
     }
   },
@@ -210,7 +211,7 @@ export const availabilityService = {
   },
 
   async createTestAvailabilityRecord(eventId: string, userId: string, role: string, status: string): Promise<void> {
-    console.log('Creating test availability record:', { eventId, userId, role, status });
+    logger.log('Creating test availability record:', { eventId, userId, role, status });
     
     const { data, error } = await supabase
       .from('event_availability')
@@ -224,15 +225,15 @@ export const availabilityService = {
       .select();
 
     if (error) {
-      console.error('Error creating test availability record:', error);
+      logger.error('Error creating test availability record:', error);
       throw error;
     }
     
-    console.log('Test availability record created:', data);
+    logger.log('Test availability record created:', data);
   },
 
   async getPlayerAvailabilityHistory(playerId: string): Promise<any[]> {
-    console.log('Getting availability history for player:', playerId);
+    logger.log('Getting availability history for player:', playerId);
     
     // Get user links for this player
     const { data: userPlayers, error: userPlayersError } = await supabase
@@ -241,12 +242,12 @@ export const availabilityService = {
       .eq('player_id', playerId);
 
     if (userPlayersError) {
-      console.error('Error fetching user-player relationships:', userPlayersError);
+      logger.error('Error fetching user-player relationships:', userPlayersError);
       return [];
     }
 
     if (!userPlayers || userPlayers.length === 0) {
-      console.log('No user-player relationships found for player:', playerId);
+      logger.log('No user-player relationships found for player:', playerId);
       return [];
     }
 
@@ -263,7 +264,7 @@ export const availabilityService = {
       .order('created_at', { ascending: false });
 
     if (availabilityError) {
-      console.error('Error fetching availability history:', availabilityError);
+      logger.error('Error fetching availability history:', availabilityError);
       return [];
     }
 
@@ -281,7 +282,7 @@ export const availabilityService = {
       relationship: userPlayers.find(up => up.user_id === item.user_id)?.relationship
     }));
 
-    console.log('Found availability history:', processedAvailability.length, 'records');
+    logger.log('Found availability history:', processedAvailability.length, 'records');
     return processedAvailability;
   }
 };

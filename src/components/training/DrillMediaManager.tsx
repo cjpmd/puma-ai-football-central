@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -164,7 +165,7 @@ export function DrillMediaManager({
 
       toast.success('File uploaded successfully');
     } catch (error) {
-      console.error('Error uploading file:', error);
+      logger.error('Error uploading file:', error);
       toast.error('Failed to upload file');
     } finally {
       setUploading(false);
@@ -205,7 +206,7 @@ export function DrillMediaManager({
 
       toast.success('File removed successfully');
     } catch (error) {
-      console.error('Error removing file:', error);
+      logger.error('Error removing file:', error);
       toast.error('Failed to remove file');
     }
   };

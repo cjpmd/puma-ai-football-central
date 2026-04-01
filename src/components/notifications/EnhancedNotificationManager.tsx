@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -60,7 +61,7 @@ export const EnhancedNotificationManager: React.FC<EnhancedNotificationManagerPr
       const prefs = await enhancedNotificationService.getNotificationPreferences();
       setPreferences(prefs);
     } catch (error) {
-      console.error('Error loading preferences:', error);
+      logger.error('Error loading preferences:', error);
     }
   };
 
@@ -78,7 +79,7 @@ export const EnhancedNotificationManager: React.FC<EnhancedNotificationManagerPr
         permissionGranted: true // Would check actual permissions
       }));
     } catch (error) {
-      console.error('Error checking notification status:', error);
+      logger.error('Error checking notification status:', error);
     }
   };
 
@@ -106,7 +107,7 @@ export const EnhancedNotificationManager: React.FC<EnhancedNotificationManagerPr
         });
       }
     } catch (error) {
-      console.error('Error initializing notifications:', error);
+      logger.error('Error initializing notifications:', error);
       toast({
         title: "Initialization Failed",
         description: "Failed to initialize enhanced notifications",
@@ -134,7 +135,7 @@ export const EnhancedNotificationManager: React.FC<EnhancedNotificationManagerPr
         description: "Your notification preferences have been saved",
       });
     } catch (error) {
-      console.error('Error updating preferences:', error);
+      logger.error('Error updating preferences:', error);
       toast({
         title: "Update Failed",
         description: "Failed to update notification preferences",
@@ -160,7 +161,7 @@ export const EnhancedNotificationManager: React.FC<EnhancedNotificationManagerPr
         description: "A test notification has been sent to your device",
       });
     } catch (error) {
-      console.error('Error sending test notification:', error);
+      logger.error('Error sending test notification:', error);
       toast({
         title: "Test Failed",
         description: "Failed to send test notification",
@@ -177,7 +178,7 @@ export const EnhancedNotificationManager: React.FC<EnhancedNotificationManagerPr
         description: "Notification badges have been cleared",
       });
     } catch (error) {
-      console.error('Error clearing badges:', error);
+      logger.error('Error clearing badges:', error);
     }
   };
 

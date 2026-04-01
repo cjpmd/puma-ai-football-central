@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,12 +17,12 @@ export const SimpleStatsRebuilder: React.FC = () => {
     setRebuildStatus('idle');
     
     try {
-      console.log('🚀 Starting SIMPLE stats rebuild...');
+      logger.log('🚀 Starting SIMPLE stats rebuild...');
       toast.info('Starting simple rebuild - direct copy from team selections...');
       
       await simpleStatsRebuilder.rebuildAllStats();
       
-      console.log('✅ Simple rebuild completed successfully');
+      logger.log('✅ Simple rebuild completed successfully');
       setRebuildStatus('success');
       toast.success('Successfully rebuilt all statistics with simple approach!');
       
@@ -31,7 +32,7 @@ export const SimpleStatsRebuilder: React.FC = () => {
       }, 2000);
       
     } catch (error) {
-      console.error('Error in simple rebuild:', error);
+      logger.error('Error in simple rebuild:', error);
       setRebuildStatus('error');
       toast.error('Failed to rebuild statistics. Check console for details.');
     } finally {

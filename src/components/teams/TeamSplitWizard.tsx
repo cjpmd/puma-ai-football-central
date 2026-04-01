@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -91,7 +92,7 @@ export const TeamSplitWizard: React.FC<TeamSplitWizardProps> = ({
       
       setPlayers(mappedPlayers);
     } catch (error) {
-      console.error('Error loading players:', error);
+      logger.error('Error loading players:', error);
       toast({
         title: "Error",
         description: "Failed to load players",
@@ -203,7 +204,7 @@ export const TeamSplitWizard: React.FC<TeamSplitWizardProps> = ({
               team_id: createdTeam.id,
             });
 
-          if (linkError) console.error('Error linking team to club:', linkError);
+          if (linkError) logger.error('Error linking team to club:', linkError);
         }
 
         // Assign players to this team
@@ -225,7 +226,7 @@ export const TeamSplitWizard: React.FC<TeamSplitWizardProps> = ({
 
       onComplete();
     } catch (error) {
-      console.error('Error splitting team:', error);
+      logger.error('Error splitting team:', error);
       toast({
         title: "Error",
         description: "Failed to split team. Please try again.",

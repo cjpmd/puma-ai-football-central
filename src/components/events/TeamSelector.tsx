@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -18,32 +19,32 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
   primaryTeamId,
   maxTeams
 }) => {
-  console.log('TeamSelector - selectedTeams:', selectedTeams);
-  console.log('TeamSelector - primaryTeamId:', primaryTeamId);
+  logger.log('TeamSelector - selectedTeams:', selectedTeams);
+  logger.log('TeamSelector - primaryTeamId:', primaryTeamId);
 
   const handleAddTeam = () => {
-    console.log('Adding new team');
+    logger.log('Adding new team');
     // Only check maxTeams if it's provided
     if (maxTeams && selectedTeams.length >= maxTeams) {
-      console.log('Maximum teams reached');
+      logger.log('Maximum teams reached');
       return;
     }
     
     // Add a new team slot (using the primary team ID as the base, but it will be managed separately)
     const newTeams = [...selectedTeams, `${primaryTeamId}-team-${selectedTeams.length + 1}`];
-    console.log('New teams list:', newTeams);
+    logger.log('New teams list:', newTeams);
     onTeamsChange(newTeams);
   };
 
   const handleRemoveTeam = (index: number) => {
     // Don't allow removing the first team (primary team)
     if (index === 0) {
-      console.log('Cannot remove primary team');
+      logger.log('Cannot remove primary team');
       return;
     }
     
     const newTeams = selectedTeams.filter((_, i) => i !== index);
-    console.log('Removing team at index', index, 'new list:', newTeams);
+    logger.log('Removing team at index', index, 'new list:', newTeams);
     onTeamsChange(newTeams);
   };
 
@@ -53,7 +54,7 @@ export const TeamSelector: React.FC<TeamSelectorProps> = ({
 
   const canAddMoreTeams = !maxTeams || selectedTeams.length < maxTeams;
 
-  console.log('Render state:', {
+  logger.log('Render state:', {
     canAddMoreTeams,
     selectedTeamsCount: selectedTeams.length,
     maxTeams

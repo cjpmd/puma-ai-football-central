@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -42,7 +43,7 @@ export function PlayerList() {
         .limit(10);
 
       if (error) {
-        console.error('Error loading players:', error);
+        logger.error('Error loading players:', error);
         setPlayers([]);
         return;
       }
@@ -57,7 +58,7 @@ export function PlayerList() {
 
       setPlayers(playersWithTeams);
     } catch (error) {
-      console.error('Error in loadPlayers:', error);
+      logger.error('Error in loadPlayers:', error);
       setPlayers([]);
     } finally {
       setLoading(false);

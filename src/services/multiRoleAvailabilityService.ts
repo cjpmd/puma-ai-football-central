@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface UserRole {
@@ -340,7 +341,7 @@ export const multiRoleAvailabilityService = {
 
       return invited;
     } catch (error) {
-      console.error('Error checking event invitation:', error);
+      logger.error('Error checking event invitation:', error);
       return false;
     }
   },
@@ -377,7 +378,7 @@ export const multiRoleAvailabilityService = {
       if (invitedStaff) roles.push('staff');
       return roles;
     } catch (error) {
-      console.error('Error getting invited roles for user:', error);
+      logger.error('Error getting invited roles for user:', error);
       return [];
     }
   }

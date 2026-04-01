@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { DatabaseEvent } from '@/types/event';
 
@@ -37,7 +38,7 @@ export const getEventTeamTimes = async (eventId: string): Promise<TeamTimeInfo[]
       meetingTime: team.meeting_time
     })) || [];
   } catch (error) {
-    console.error('Error loading event team times:', error);
+    logger.error('Error loading event team times:', error);
     return [];
   }
 };
@@ -81,7 +82,7 @@ export const getUserTeamConnections = async (userId: string, eventId: string): P
 
     return Array.from(connections);
   } catch (error) {
-    console.error('Error getting user team connections:', error);
+    logger.error('Error getting user team connections:', error);
     return [];
   }
 };
@@ -145,7 +146,7 @@ export const getUserContextForEvent = async (
       };
     }
   } catch (error) {
-    console.error('Error getting user context for event:', error);
+    logger.error('Error getting user context for event:', error);
     return {
       userTeamConnections: [],
       isMultipleTeams: false,

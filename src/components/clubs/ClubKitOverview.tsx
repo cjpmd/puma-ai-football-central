@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +50,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
   const loadClubKitData = async () => {
     try {
       setLoading(true);
-      console.log('Loading kit data for club:', clubId);
+      logger.log('Loading kit data for club:', clubId);
 
       // First get teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -61,7 +62,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
         .eq('club_id', clubId);
 
       if (clubTeamsError) {
-        console.error('Error fetching club teams:', clubTeamsError);
+        logger.error('Error fetching club teams:', clubTeamsError);
         throw clubTeamsError;
       }
 
@@ -87,7 +88,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
         .order('date_issued', { ascending: false });
 
       if (kitIssuesError) {
-        console.error('Error fetching kit issues:', kitIssuesError);
+        logger.error('Error fetching kit issues:', kitIssuesError);
         throw kitIssuesError;
       }
 
@@ -109,7 +110,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
         .in('id', allPlayerIds);
 
       if (playersError) {
-        console.error('Error fetching players data:', playersError);
+        logger.error('Error fetching players data:', playersError);
         throw playersError;
       }
 
@@ -141,7 +142,7 @@ export const ClubKitOverview: React.FC<ClubKitOverviewProps> = ({
         setKitIssues([]);
       }
     } catch (error: any) {
-      console.error('Error loading club kit data:', error);
+      logger.error('Error loading club kit data:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club kit data',

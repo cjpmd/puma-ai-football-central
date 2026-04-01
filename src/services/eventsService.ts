@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { Event } from '@/types';
 import { addWeeks, addMonths, format } from 'date-fns';
@@ -52,7 +53,7 @@ export const eventsService = {
     selectedStaffIds?: string[]
   }) {
     try {
-      console.log('Creating event with data:', eventData);
+      logger.log('Creating event with data:', eventData);
       
       // Check if this is a recurring event
       if (eventData.isRecurring && eventData.recurrencePattern && eventData.recurrenceDayOfWeek !== undefined) {
@@ -90,11 +91,11 @@ export const eventsService = {
         
       if (error) throw error;
       
-      console.log('Event created successfully:', data);
+      logger.log('Event created successfully:', data);
       
       // Auto-create event teams based on the teams array
       if (eventData.teams && Array.isArray(eventData.teams) && eventData.teams.length > 0) {
-        console.log('Creating event teams for:', eventData.teams);
+        logger.log('Creating event teams for:', eventData.teams);
         
         const eventTeams = eventData.teams.map((team: any, index: number) => ({
           event_id: data.id,
@@ -109,10 +110,10 @@ export const eventsService = {
           .insert(eventTeams);
           
         if (eventTeamsError) {
-          console.error('Error creating event teams:', eventTeamsError);
+          logger.error('Error creating event teams:', eventTeamsError);
           // Don't throw here as the event was created successfully
         } else {
-          console.log('Event teams created successfully');
+          logger.log('Event teams created successfully');
         }
       } else if (eventData.teamId) {
         // Fallback: create a single event team entry
@@ -127,23 +128,23 @@ export const eventsService = {
           });
           
         if (eventTeamError) {
-          console.error('Error creating default event team:', eventTeamError);
+          logger.error('Error creating default event team:', eventTeamError);
         } else {
-          console.log('Default event team created successfully');
+          logger.log('Default event team created successfully');
         }
       }
       
       // Create invitations if specified
       if (invitations) {
-        console.log('Creating invitations for event:', data.id, 'with data:', invitations);
+        logger.log('Creating invitations for event:', data.id, 'with data:', invitations);
         await this.createEventInvitations(data.id, eventData.teamId!, invitations);
       } else {
-        console.log('No invitations data provided');
+        logger.log('No invitations data provided');
       }
       
       return data;
     } catch (error) {
-      console.error('Error creating event:', error);
+      logger.error('Error creating event:', error);
       throw error;
     }
   },
@@ -166,7 +167,7 @@ export const eventsService = {
       endCondition
     );
     
-    console.log(`Creating ${dates.length} recurring events`);
+    logger.log(`Creating ${dates.length} recurring events`);
     
     const eventsToInsert = dates.map(date => ({
       team_id: eventData.teamId,
@@ -230,7 +231,7 @@ export const eventsService = {
     }
   ) {
     try {
-      console.log('Creating event invitations:', invitations);
+      logger.log('Creating event invitations:', invitations);
       
       const invitationRecords: any[] = [];
       
@@ -432,11 +433,11 @@ export const eventsService = {
           .insert(invitationRecords);
           
         if (insertError) {
-          console.error('Error inserting invitations:', insertError);
+          logger.error('Error inserting invitations:', insertError);
           throw insertError;
         }
         
-        console.log(`Created ${invitationRecords.length} invitations for event ${eventId}`);
+        logger.log(`Created ${invitationRecords.length} invitations for event ${eventId}`);
 
         // Create event_availability records for users with linked accounts
         const availabilityRecords = invitationRecords
@@ -456,9 +457,9 @@ export const eventsService = {
               onConflict: 'event_id,user_id,role'
             });
           if (availabilityError) {
-            console.error('Error creating availability records:', availabilityError);
+            logger.error('Error creating availability records:', availabilityError);
           } else {
-            console.log(`Created ${availabilityRecords.length} availability records for event ${eventId}`);
+            logger.log(`Created ${availabilityRecords.length} availability records for event ${eventId}`);
           }
 
           // Send push notifications to users with linked accounts
@@ -467,7 +468,7 @@ export const eventsService = {
         }
       }
     } catch (error) {
-      console.error('Error creating event invitations:', error);
+      logger.error('Error creating event invitations:', error);
       throw error;
     }
   },
@@ -481,7 +482,7 @@ export const eventsService = {
     }
   ) {
     try {
-      console.log('Updating event with data:', eventData);
+      logger.log('Updating event with data:', eventData);
       
       const formattedData = {
         team_id: eventData.teamId,
@@ -515,11 +516,11 @@ export const eventsService = {
         
       if (error) throw error;
       
-      console.log('Event updated successfully:', data);
+      logger.log('Event updated successfully:', data);
 
       // Handle invitations update if provided
       if (invitations) {
-        console.log('Updating invitations for event:', eventData.id, invitations);
+        logger.log('Updating invitations for event:', eventData.id, invitations);
         // Delete existing invitations
         await supabase
           .from('event_invitations')
@@ -618,14 +619,14 @@ export const eventsService = {
                 onConflict: 'event_id,user_id,role'
               });
             if (availabilityError) {
-              console.error('Error creating availability records:', availabilityError);
+              logger.error('Error creating availability records:', availabilityError);
             }
           }
         }
       }
       return data;
     } catch (error) {
-      console.error('Error updating event:', error);
+      logger.error('Error updating event:', error);
       throw error;
     }
   },
@@ -642,7 +643,7 @@ export const eventsService = {
       
       return data;
     } catch (error) {
-      console.error('Error fetching event:', error);
+      logger.error('Error fetching event:', error);
       throw error;
     }
   },
@@ -656,7 +657,7 @@ export const eventsService = {
 
       if (error) throw error;
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logger.error('Error deleting event:', error);
       throw error;
     }
   },
@@ -671,7 +672,7 @@ export const eventsService = {
         .single();
 
       if (eventError) {
-        console.error('Error fetching event for notification:', eventError);
+        logger.error('Error fetching event for notification:', eventError);
         return;
       }
 
@@ -695,7 +696,7 @@ export const eventsService = {
         body = `${event.title} on ${eventDate} - Please confirm your availability`;
       }
 
-      console.log('Sending push notifications for event:', eventId, 'to users:', userIds.length);
+      logger.log('Sending push notifications for event:', eventId, 'to users:', userIds.length);
 
       // Call the edge function to send push notifications
       const { error } = await supabase.functions.invoke('send-push-notification', {
@@ -708,12 +709,12 @@ export const eventsService = {
       });
 
       if (error) {
-        console.error('Error sending push notifications:', error);
+        logger.error('Error sending push notifications:', error);
       } else {
-        console.log('Push notifications sent successfully for event:', eventId);
+        logger.log('Push notifications sent successfully for event:', eventId);
       }
     } catch (error) {
-      console.error('Error in sendEventNotifications:', error);
+      logger.error('Error in sendEventNotifications:', error);
       // Don't throw - notifications failing shouldn't break event creation
     }
   }

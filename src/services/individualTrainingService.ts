@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import type { 
@@ -119,7 +120,7 @@ export class IndividualTrainingService {
         .single();
 
       if (playerError) {
-        console.warn('Could not fetch player objectives:', playerError);
+        logger.warn('Could not fetch player objectives:', playerError);
         return;
       }
 
@@ -153,10 +154,10 @@ export class IndividualTrainingService {
         .eq('id', playerId);
 
       if (updateError) {
-        console.warn('Could not create objective for training plan:', updateError);
+        logger.warn('Could not create objective for training plan:', updateError);
       }
     } catch (err) {
-      console.warn('Failed to create objective for training plan:', err);
+      logger.warn('Failed to create objective for training plan:', err);
     }
   }
 

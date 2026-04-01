@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -114,7 +115,7 @@ export const TeamKitManagementSettings: React.FC<TeamKitManagementSettingsProps>
       setKitItems(transformedItems);
       setClothingSizes(sizesData || []);
     } catch (error: any) {
-      console.error('Error loading kit configuration:', error);
+      logger.error('Error loading kit configuration:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load kit configuration',

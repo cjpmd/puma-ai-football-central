@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -51,7 +52,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     quickActions = smartNav.quickActions;
   } catch (error) {
     // Context not available, use fallback navigation
-    console.log('Context not available, using fallback navigation');
+    logger.log('Context not available, using fallback navigation');
     navigation = [
       { name: 'Dashboard', href: '/dashboard', icon: Menu, priority: 1 },
       { name: 'Players', href: '/players', icon: Menu, priority: 2 },

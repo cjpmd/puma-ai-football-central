@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,7 +49,7 @@ export const TeamSettingsModal: React.FC<TeamSettingsModalProps> = ({
       // Save logic would go here - for now just close modal
       onClose();
     } catch (error) {
-      console.error('Error saving team settings:', error);
+      logger.error('Error saving team settings:', error);
     } finally {
       setIsSaving(false);
     }

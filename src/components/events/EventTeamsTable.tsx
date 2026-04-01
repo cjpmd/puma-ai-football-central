@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,7 +59,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
       if (error) throw error;
       setEventData(event);
     } catch (error) {
-      console.error('Error loading event:', error);
+      logger.error('Error loading event:', error);
       toast.error('Failed to load event data');
     } finally {
       setLoading(false);
@@ -70,7 +71,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
       const availability = await availabilityService.getEventAvailability(eventId);
       setAvailabilityCount(availability.length);
     } catch (error) {
-      console.error('Error loading availability count:', error);
+      logger.error('Error loading availability count:', error);
     }
   };
 
@@ -81,13 +82,13 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
       setIsNotificationModalOpen(false);
       loadAvailabilityCount();
     } catch (error: any) {
-      console.error('Error sending notifications:', error);
+      logger.error('Error sending notifications:', error);
       toast.error(error.message || 'Failed to send notifications');
     }
   };
 
   const handleSquadChange = (newSquadPlayers: any[]) => {
-    console.log('Squad changed:', newSquadPlayers);
+    logger.log('Squad changed:', newSquadPlayers);
     setSquadPlayers(newSquadPlayers);
     
     // Update selected players for formation view
@@ -108,7 +109,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
   };
 
   const handlePositionChange = (position: string, playerId: string | null) => {
-    console.log('Position change:', position, playerId);
+    logger.log('Position change:', position, playerId);
   };
 
   const handlePlayerRemove = (playerId: string) => {
@@ -214,7 +215,7 @@ export const EventTeamsTable: React.FC<EventTeamsTableProps> = ({
               <FormationSelector
                 gameFormat={gameFormat as GameFormat}
                 selectedFormation="4-3-3"
-                onFormationChange={(formation) => console.log('Formation changed:', formation)}
+                onFormationChange={(formation) => logger.log('Formation changed:', formation)}
               />
               <EnhancedFormationView
                 formation="4-3-3"

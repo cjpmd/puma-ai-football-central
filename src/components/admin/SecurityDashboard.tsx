@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,7 @@ export function SecurityDashboard() {
       setSessionSecurity(sessionValidation);
       setRateLimitStatus(rateLimitCheck);
     } catch (error) {
-      console.error('Error loading security data:', error);
+      logger.error('Error loading security data:', error);
       toast.error('Failed to load security data');
     } finally {
       setLoading(false);

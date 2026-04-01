@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -69,12 +70,12 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
   // Create drill mutation
   const createDrillMutation = useMutation({
     mutationFn: async (drillData: typeof formData & { selectedTags: string[]; mediaFiles: DrillMedia[] }) => {
-      console.log('Creating drill with data:', drillData);
+      logger.log('Creating drill with data:', drillData);
       const { selectedTags: tagIds, mediaFiles: media, ...drill } = drillData;
       
-      console.log('Getting current user...');
+      logger.log('Getting current user...');
       const userResult = await supabase.auth.getUser();
-      console.log('Current user:', userResult.data.user?.id);
+      logger.log('Current user:', userResult.data.user?.id);
       
       // Create the drill
       const drillToInsert = {
@@ -83,7 +84,7 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
         created_by: userResult.data.user?.id,
       };
       
-      console.log('Inserting drill:', drillToInsert);
+      logger.log('Inserting drill:', drillToInsert);
       
       const { data: newDrill, error: drillError } = await supabase
         .from('drills')
@@ -91,18 +92,18 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
         .select()
         .single();
 
-      console.log('Drill creation result:', { newDrill, drillError });
+      logger.log('Drill creation result:', { newDrill, drillError });
 
       if (drillError) {
-        console.error('Drill creation failed:', drillError);
+        logger.error('Drill creation failed:', drillError);
         throw drillError;
       }
 
-      console.log('Successfully created drill:', newDrill);
+      logger.log('Successfully created drill:', newDrill);
 
       // Create tag assignments
       if (tagIds.length > 0) {
-        console.log('Creating tag assignments for tags:', tagIds);
+        logger.log('Creating tag assignments for tags:', tagIds);
         const tagAssignments = tagIds.map(tagId => ({
           drill_id: newDrill.id,
           tag_id: tagId,
@@ -113,15 +114,15 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
           .insert(tagAssignments);
 
         if (tagError) {
-          console.error('Tag assignment failed:', tagError);
+          logger.error('Tag assignment failed:', tagError);
           throw tagError;
         }
-        console.log('Tag assignments created successfully');
+        logger.log('Tag assignments created successfully');
       }
 
       // Create media records
       if (media.length > 0) {
-        console.log('Creating media records:', media);
+        logger.log('Creating media records:', media);
         const mediaRecords = media.map(mediaItem => ({
           drill_id: newDrill.id,
           file_name: mediaItem.file_name,
@@ -135,23 +136,23 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
           .insert(mediaRecords);
 
         if (mediaError) {
-          console.error('Media creation failed:', mediaError);
+          logger.error('Media creation failed:', mediaError);
           throw mediaError;
         }
-        console.log('Media records created successfully');
+        logger.log('Media records created successfully');
       }
 
       return newDrill;
     },
     onSuccess: (newDrill) => {
-      console.log('Drill creation mutation succeeded:', newDrill);
+      logger.log('Drill creation mutation succeeded:', newDrill);
       toast.success('Drill created successfully');
       queryClient.invalidateQueries({ queryKey: ['drills'] });
       onOpenChange(false);
       resetForm();
     },
     onError: (error) => {
-      console.error('Drill creation mutation failed:', error);
+      logger.error('Drill creation mutation failed:', error);
       toast.error('Failed to create drill: ' + (error.message || 'Unknown error'));
       setIsSubmitting(false);
     },
@@ -174,7 +175,7 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
     e.preventDefault();
     setIsSubmitting(true);
 
-    console.log('Starting drill creation with data:', formData);
+    logger.log('Starting drill creation with data:', formData);
 
     if (!formData.name.trim()) {
       toast.error('Drill name is required');
@@ -182,7 +183,7 @@ export function DrillCreator({ open, onOpenChange }: DrillCreatorProps) {
       return;
     }
 
-    console.log('Calling createDrillMutation with:', {
+    logger.log('Calling createDrillMutation with:', {
       ...formData,
       selectedTags,
       mediaFiles,

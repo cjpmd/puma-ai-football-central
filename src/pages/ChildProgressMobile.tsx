@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { childProgressService, type ChildProgressData } from '@/services/childProgressService';
@@ -41,7 +42,7 @@ const ChildProgressMobile = () => {
         setSelectedChild(childrenData[0]);
       }
     } catch (error) {
-      console.error('Error loading children data:', error);
+      logger.error('Error loading children data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load child progress data',

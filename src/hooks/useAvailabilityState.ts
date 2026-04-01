@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -55,12 +56,12 @@ export const useAvailabilityState = (eventId?: string) => {
 
   const loadAvailabilityForEvent = useCallback(async (eventId: string, userId: string) => {
     try {
-      console.log('=== LOADING PLAYER-BASED AVAILABILITY ===');
-      console.log('User ID:', userId, 'Event ID:', eventId);
+      logger.log('=== LOADING PLAYER-BASED AVAILABILITY ===');
+      logger.log('User ID:', userId, 'Event ID:', eventId);
 
       // Get linked player ID for this user
       const playerId = await getLinkedPlayerId(userId);
-      console.log('Linked player ID:', playerId);
+      logger.log('Linked player ID:', playerId);
 
       // For player availability, fetch by player_id (shared across all linked users)
       if (playerId) {
@@ -73,7 +74,7 @@ export const useAvailabilityState = (eventId?: string) => {
           .maybeSingle();
 
         if (playerError) {
-          console.error('Error fetching player availability:', playerError);
+          logger.error('Error fetching player availability:', playerError);
         } else if (playerAvailability) {
           const key = getAvailabilityKey(eventId, 'player', playerId);
           globalAvailabilityState.set(key, {
@@ -83,7 +84,7 @@ export const useAvailabilityState = (eventId?: string) => {
             playerId,
             userId: playerAvailability.user_id
           });
-          console.log('Set player availability:', key, playerAvailability.status);
+          logger.log('Set player availability:', key, playerAvailability.status);
         }
       }
 
@@ -97,7 +98,7 @@ export const useAvailabilityState = (eventId?: string) => {
         .maybeSingle();
 
       if (staffError) {
-        console.error('Error fetching staff availability:', staffError);
+        logger.error('Error fetching staff availability:', staffError);
       } else if (staffAvailability) {
         const key = getAvailabilityKey(eventId, 'staff');
         globalAvailabilityState.set(key, {
@@ -106,13 +107,13 @@ export const useAvailabilityState = (eventId?: string) => {
           status: staffAvailability.status as 'pending' | 'available' | 'unavailable',
           userId
         });
-        console.log('Set staff availability:', key, staffAvailability.status);
+        logger.log('Set staff availability:', key, staffAvailability.status);
       }
 
       notifySubscribers();
-      console.log('=== AVAILABILITY LOADED ===');
+      logger.log('=== AVAILABILITY LOADED ===');
     } catch (error) {
-      console.error('Error loading availability for event:', error);
+      logger.error('Error loading availability for event:', error);
     }
   }, [getLinkedPlayerId]);
 
@@ -123,8 +124,8 @@ export const useAvailabilityState = (eventId?: string) => {
     status: 'available' | 'unavailable'
   ) => {
     try {
-      console.log('=== UPDATING AVAILABILITY ===');
-      console.log('Event:', eventId, 'User:', userId, 'Role:', role, 'Status:', status);
+      logger.log('=== UPDATING AVAILABILITY ===');
+      logger.log('Event:', eventId, 'User:', userId, 'Role:', role, 'Status:', status);
 
       if (role === 'player') {
         // Get the linked player ID
@@ -168,7 +169,7 @@ export const useAvailabilityState = (eventId?: string) => {
             .eq('id', existing.id);
 
           if (error) throw error;
-          console.log('Updated existing player availability record');
+          logger.log('Updated existing player availability record');
         } else {
           // Create new player-based record
           const { error } = await supabase
@@ -185,7 +186,7 @@ export const useAvailabilityState = (eventId?: string) => {
             });
 
           if (error) throw error;
-          console.log('Created new player availability record');
+          logger.log('Created new player availability record');
         }
 
         // If marking as unavailable, remove from squad and formation
@@ -198,12 +199,12 @@ export const useAvailabilityState = (eventId?: string) => {
             });
 
             if (rpcError) {
-              console.error('Error removing unavailable player:', rpcError);
+              logger.error('Error removing unavailable player:', rpcError);
             } else {
-              console.log('Player removed from squad and formation:', result);
+              logger.log('Player removed from squad and formation:', result);
             }
           } catch (cleanupError) {
-            console.error('Error in unavailable player cleanup:', cleanupError);
+            logger.error('Error in unavailable player cleanup:', cleanupError);
           }
         }
       } else {
@@ -234,12 +235,12 @@ export const useAvailabilityState = (eventId?: string) => {
           });
 
         if (error) throw error;
-        console.log('Updated staff availability');
+        logger.log('Updated staff availability');
       }
 
-      console.log('=== AVAILABILITY UPDATED SUCCESSFULLY ===');
+      logger.log('=== AVAILABILITY UPDATED SUCCESSFULLY ===');
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       throw error;
     }
   }, [getLinkedPlayerId]);
@@ -308,7 +309,7 @@ export const useAvailabilityState = (eventId?: string) => {
               filter: `event_id=eq.${eventId}`
             },
             (payload) => {
-              console.log('Real-time availability update:', payload);
+              logger.log('Real-time availability update:', payload);
               // Reload availability when any change happens
               loadAvailabilityForEvent(eventId, user.id);
             }

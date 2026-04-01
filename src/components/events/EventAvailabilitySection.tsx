@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -117,7 +118,7 @@ export const EventAvailabilitySection: React.FC<EventAvailabilitySectionProps> =
           pendingCount: availability.filter(a => a.status === 'pending').length
         });
       } catch (error) {
-        console.error('Error loading availability data:', error);
+        logger.error('Error loading availability data:', error);
       }
     };
 
@@ -179,7 +180,7 @@ export const EventAvailabilitySection: React.FC<EventAvailabilitySectionProps> =
       setHasChanges(false);
       setOriginalInviteType(inviteType);
     } catch (error: any) {
-      console.error('Error updating invitations:', error);
+      logger.error('Error updating invitations:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update invitations',

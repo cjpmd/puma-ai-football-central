@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,7 +45,7 @@ export const ProgressMilestonesTracker: React.FC<ProgressMilestonesTrackerProps>
       const data = await IndividualTrainingService.getPlanMilestones(plan.id);
       setMilestones(data);
     } catch (error) {
-      console.error('Error loading milestones:', error);
+      logger.error('Error loading milestones:', error);
       toast.error('Failed to load progress milestones');
     } finally {
       setLoading(false);
@@ -71,7 +72,7 @@ export const ProgressMilestonesTracker: React.FC<ProgressMilestonesTrackerProps>
       resetForm();
       onMilestoneUpdate?.();
     } catch (error) {
-      console.error('Error creating milestone:', error);
+      logger.error('Error creating milestone:', error);
       toast.error('Failed to create milestone');
     }
   };
@@ -97,7 +98,7 @@ export const ProgressMilestonesTracker: React.FC<ProgressMilestonesTrackerProps>
       setProgressNotes('');
       onMilestoneUpdate?.();
     } catch (error) {
-      console.error('Error updating progress:', error);
+      logger.error('Error updating progress:', error);
       toast.error('Failed to update progress');
     }
   };

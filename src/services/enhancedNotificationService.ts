@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
@@ -23,11 +24,11 @@ export const enhancedNotificationService = {
   async initializeEnhancedNotifications(): Promise<boolean> {
     try {
       if (!Capacitor.isNativePlatform()) {
-        console.log('Enhanced notifications only available on native platforms');
+        logger.log('Enhanced notifications only available on native platforms');
         return false;
       }
 
-      console.log('Initializing enhanced notifications on platform:', Capacitor.getPlatform());
+      logger.log('Initializing enhanced notifications on platform:', Capacitor.getPlatform());
       
       // Request permissions
       const permissionStatus = await PushNotifications.requestPermissions();
@@ -48,34 +49,34 @@ export const enhancedNotificationService = {
         
         // Listen for registration success
         PushNotifications.addListener('registration', async (token) => {
-          console.log('Enhanced push registration success, token: ' + token.value);
+          logger.log('Enhanced push registration success, token: ' + token.value);
           await this.updateUserPushToken(token.value);
         });
 
         // Listen for registration error
         PushNotifications.addListener('registrationError', (error) => {
-          console.error('Enhanced registration error: ' + JSON.stringify(error));
+          logger.error('Enhanced registration error: ' + JSON.stringify(error));
         });
 
         // Enhanced notification received listener
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          console.log('Enhanced notification received: ', notification);
+          logger.log('Enhanced notification received: ', notification);
           this.handleNotificationReceived(notification);
         });
 
         // Enhanced notification action listener
         PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          console.log('Enhanced notification action performed', notification);
+          logger.log('Enhanced notification action performed', notification);
           this.handleNotificationAction(notification);
         });
 
         return true;
       } else {
-        console.log('Enhanced push notification permission denied');
+        logger.log('Enhanced push notification permission denied');
         return false;
       }
     } catch (error) {
-      console.error('Error initializing enhanced notifications:', error);
+      logger.error('Error initializing enhanced notifications:', error);
       return false;
     }
   },
@@ -127,9 +128,9 @@ export const enhancedNotificationService = {
       ];
 
       // Note: Categories would be set via native iOS code in actual implementation
-      console.log('iOS notification categories configured:', categories);
+      logger.log('iOS notification categories configured:', categories);
     } catch (error) {
-      console.error('Error setting up iOS categories:', error);
+      logger.error('Error setting up iOS categories:', error);
     }
   },
 
@@ -165,9 +166,9 @@ export const enhancedNotificationService = {
       ];
 
       // Note: Channels would be created via native Android code in actual implementation
-      console.log('Android notification channels configured:', channels);
+      logger.log('Android notification channels configured:', channels);
     } catch (error) {
-      console.error('Error setting up Android channels:', error);
+      logger.error('Error setting up Android channels:', error);
     }
   },
 
@@ -184,13 +185,13 @@ export const enhancedNotificationService = {
           .eq('id', user.user.id);
 
         if (error) {
-          console.error('Error updating enhanced push token:', error);
+          logger.error('Error updating enhanced push token:', error);
         } else {
-          console.log('Enhanced push token updated successfully');
+          logger.log('Enhanced push token updated successfully');
         }
       }
     } catch (error) {
-      console.error('Error in updateUserPushToken:', error);
+      logger.error('Error in updateUserPushToken:', error);
     }
   },
 
@@ -204,13 +205,13 @@ export const enhancedNotificationService = {
       });
 
       if (error) {
-        console.error('Error sending manual reminder:', error);
+        logger.error('Error sending manual reminder:', error);
         throw error;
       }
 
-      console.log('Manual reminder sent successfully');
+      logger.log('Manual reminder sent successfully');
     } catch (error) {
-      console.error('Error in sendManualReminder:', error);
+      logger.error('Error in sendManualReminder:', error);
       throw error;
     }
   },
@@ -231,13 +232,13 @@ export const enhancedNotificationService = {
         .eq('id', user.user.id);
 
       if (error) {
-        console.error('Error updating notification preferences:', error);
+        logger.error('Error updating notification preferences:', error);
         throw error;
       }
 
-      console.log('Notification preferences updated successfully');
+      logger.log('Notification preferences updated successfully');
     } catch (error) {
-      console.error('Error in updateNotificationPreferences:', error);
+      logger.error('Error in updateNotificationPreferences:', error);
       throw error;
     }
   },
@@ -256,7 +257,7 @@ export const enhancedNotificationService = {
         .single();
 
       if (error) {
-        console.error('Error getting notification preferences:', error);
+        logger.error('Error getting notification preferences:', error);
         throw error;
       }
 
@@ -273,13 +274,13 @@ export const enhancedNotificationService = {
 
       return { ...defaultPrefs, ...(profile.notification_preferences as any || {}) };
     } catch (error) {
-      console.error('Error in getNotificationPreferences:', error);
+      logger.error('Error in getNotificationPreferences:', error);
       throw error;
     }
   },
 
   handleNotificationReceived(notification: any): void {
-    console.log('Enhanced notification received:', notification);
+    logger.log('Enhanced notification received:', notification);
     
     // Update badge count if enabled
     this.updateBadgeCount();
@@ -302,7 +303,7 @@ export const enhancedNotificationService = {
   },
 
   handleNotificationAction(notification: any): void {
-    console.log('Enhanced notification action performed:', notification);
+    logger.log('Enhanced notification action performed:', notification);
     
     const action = notification.actionId;
     const eventId = notification.notification.data?.eventId;
@@ -318,7 +319,7 @@ export const enhancedNotificationService = {
   },
 
   handleDeepLink(deepLink: string): void {
-    console.log('Handling deep link:', deepLink);
+    logger.log('Handling deep link:', deepLink);
     
     try {
       const url = new URL(deepLink);
@@ -339,7 +340,7 @@ export const enhancedNotificationService = {
         this.handleRSVPResponse(response, token);
       }
     } catch (error) {
-      console.error('Error handling deep link:', error);
+      logger.error('Error handling deep link:', error);
     }
   },
 
@@ -361,7 +362,7 @@ export const enhancedNotificationService = {
           window.location.href = `/calendar?eventId=${eventId}`;
           return;
         default:
-          console.log('Unknown action:', actionId);
+          logger.log('Unknown action:', actionId);
           return;
       }
       
@@ -369,13 +370,13 @@ export const enhancedNotificationService = {
       await this.submitRSVPResponse(eventId, response);
       
     } catch (error) {
-      console.error('Error handling quick action:', error);
+      logger.error('Error handling quick action:', error);
     }
   },
 
   async handleRSVPResponse(response: string, token: string | null): Promise<void> {
     if (!token) {
-      console.error('No token provided for RSVP response');
+      logger.error('No token provided for RSVP response');
       return;
     }
 
@@ -387,24 +388,24 @@ export const enhancedNotificationService = {
 
       // Extract event ID from current context or token
       // This would need to be implemented based on your token structure
-      console.log('Handling RSVP response:', response, 'with token:', token);
+      logger.log('Handling RSVP response:', response, 'with token:', token);
       
       // For now, just log the action
       // In a real implementation, you'd call the RSVP handler
     } catch (error) {
-      console.error('Error handling RSVP response:', error);
+      logger.error('Error handling RSVP response:', error);
     }
   },
 
   async submitRSVPResponse(eventId: string, response: string): Promise<void> {
     try {
       // This would integrate with your existing availability service
-      console.log('Submitting RSVP response:', response, 'for event:', eventId);
+      logger.log('Submitting RSVP response:', response, 'for event:', eventId);
       
       // Implementation would depend on your existing RSVP logic
       // For now, just log the action
     } catch (error) {
-      console.error('Error submitting RSVP response:', error);
+      logger.error('Error submitting RSVP response:', error);
     }
   },
 
@@ -419,10 +420,10 @@ export const enhancedNotificationService = {
           .is('read_at', null);
 
         // Update badge count (would be implemented in native code)
-        console.log('Updating badge count to:', unreadCount);
+        logger.log('Updating badge count to:', unreadCount);
       }
     } catch (error) {
-      console.error('Error updating badge count:', error);
+      logger.error('Error updating badge count:', error);
     }
   },
 
@@ -430,16 +431,16 @@ export const enhancedNotificationService = {
     try {
       if (Capacitor.isNativePlatform()) {
         // Clear badge count (would be implemented in native code)
-        console.log('Clearing badge count');
+        logger.log('Clearing badge count');
         
         // Mark notifications as read (would be handled in the actual implementation)
         const { data: user } = await supabase.auth.getUser();
         if (user.user) {
-          console.log('Would mark notifications as read for user:', user.user.id);
+          logger.log('Would mark notifications as read for user:', user.user.id);
         }
       }
     } catch (error) {
-      console.error('Error clearing badge count:', error);
+      logger.error('Error clearing badge count:', error);
     }
   }
 };

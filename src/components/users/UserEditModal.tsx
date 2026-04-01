@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,19 +100,19 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
 
     setIsSaving(true);
     try {
-      console.log('Updating user:', user.id, 'with data:', formData);
+      logger.log('Updating user:', user.id, 'with data:', formData);
       
       // Force refresh user data to get latest team associations
-      console.log('Refreshing user team data before making changes...');
+      logger.log('Refreshing user team data before making changes...');
       const { data: currentUserTeams, error: teamQueryError } = await supabase
         .from('user_teams')
         .select('*')
         .eq('user_id', user.id);
         
       if (teamQueryError) {
-        console.error('Error fetching current user teams:', teamQueryError);
+        logger.error('Error fetching current user teams:', teamQueryError);
       } else {
-        console.log('Current user teams before update:', currentUserTeams);
+        logger.log('Current user teams before update:', currentUserTeams);
       }
 
       // Handle manager role changes properly (backward compatible)
@@ -120,7 +121,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
       
       if (currentHasManager && !newHasManager) {
         // Removing manager role - delete all manager entries (including legacy team_manager)
-        console.log('Removing ALL manager roles for user:', user.id);
+        logger.log('Removing ALL manager roles for user:', user.id);
         const { error: deleteManagerError } = await supabase
           .from('user_teams')
           .delete()
@@ -128,10 +129,10 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
           .in('role', ['manager', 'team_manager']);
 
         if (deleteManagerError) {
-          console.error('Error removing manager roles:', deleteManagerError);
+          logger.error('Error removing manager roles:', deleteManagerError);
           throw deleteManagerError;
         } else {
-          console.log('Successfully removed ALL manager roles for user:', user.id);
+          logger.log('Successfully removed ALL manager roles for user:', user.id);
         }
       }
 
@@ -148,7 +149,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
         .eq('id', user.id);
 
       if (profileError) {
-        console.error('Error updating profile:', profileError);
+        logger.error('Error updating profile:', profileError);
         throw profileError;
       }
 
@@ -156,7 +157,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
       if (!currentHasManager && newHasManager) {
         // Adding manager role back - restore previous team associations
         const userTeams = user.teams.filter(team => team.role === 'manager' || team.role === 'team_manager');
-        console.log('Re-adding manager roles for teams:', userTeams);
+        logger.log('Re-adding manager roles for teams:', userTeams);
         
         for (const team of userTeams) {
           const { error: teamRoleError } = await supabase
@@ -168,7 +169,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
             });
 
           if (teamRoleError) {
-            console.error('Error re-adding team manager role:', teamRoleError);
+            logger.error('Error re-adding team manager role:', teamRoleError);
           }
         }
       }
@@ -181,7 +182,7 @@ export const UserEditModal: React.FC<UserEditModalProps> = ({
       onUserUpdated();
       onClose();
     } catch (error: any) {
-      console.error('Error updating user:', error);
+      logger.error('Error updating user:', error);
       toast({
         title: 'Update Error',
         description: error.message || 'Failed to update user',

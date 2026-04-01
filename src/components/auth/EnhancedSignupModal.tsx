@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -64,7 +65,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
           setEmail(invitation.email || '');
           setTeamName(teamNameFromDb);
         } catch (error) {
-          console.error('Error fetching invitation details:', error);
+          logger.error('Error fetching invitation details:', error);
         }
       } else {
         setInvitationDetails(null);
@@ -112,7 +113,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
     setIsLoading(true);
 
     try {
-      console.log('Starting signup process for:', email);
+      logger.log('Starting signup process for:', email);
       
       // Log security event
       await securityService.logSecurityEvent({
@@ -134,15 +135,15 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
       if (authError) throw authError;
 
       if (authData.user) {
-        console.log('Auth user created:', authData.user.id);
+        logger.log('Auth user created:', authData.user.id);
         
         // Accept the invitation (marks it as accepted)
         await userInvitationService.acceptInvitation(invitationCode, authData.user.id);
-        console.log('Invitation accepted');
+        logger.log('Invitation accepted');
         
         // Process the invitation to create profile and associations
         const result = await userInvitationService.processUserInvitation(email);
-        console.log('Invitation processing result:', result);
+        logger.log('Invitation processing result:', result);
         
         toast({
           title: 'Welcome!',
@@ -157,7 +158,7 @@ export const EnhancedSignupModal: React.FC<EnhancedSignupModalProps> = ({
         }, 500);
       }
     } catch (error: any) {
-      console.error('Signup error:', error);
+      logger.error('Signup error:', error);
       toast({
         title: 'Signup Failed',
         description: error.message || 'Failed to create account',

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -92,7 +93,7 @@ const ResetPassword = () => {
         navigate('/auth');
       }, 3000);
     } catch (error: any) {
-      console.error('Password reset error:', error);
+      logger.error('Password reset error:', error);
       toast({
         title: 'Reset failed',
         description: error.message || 'Failed to reset password. Please try again.',

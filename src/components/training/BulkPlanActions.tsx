@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -168,7 +169,7 @@ export const BulkPlanActions: React.FC<BulkPlanActionsProps> = ({
       setSelectedTemplate('');
       
     } catch (error) {
-      console.error('Error creating template plans:', error);
+      logger.error('Error creating template plans:', error);
       toast.error('Failed to create training plans from template');
     } finally {
       setLoading(false);
@@ -217,7 +218,7 @@ export const BulkPlanActions: React.FC<BulkPlanActionsProps> = ({
       });
       
     } catch (error) {
-      console.error('Error creating custom plans:', error);
+      logger.error('Error creating custom plans:', error);
       toast.error('Failed to create custom training plans');
     } finally {
       setLoading(false);
@@ -239,7 +240,7 @@ export const BulkPlanActions: React.FC<BulkPlanActionsProps> = ({
       refetchTemplates();
       setShowCreateTemplate(false);
     } catch (error) {
-      console.error('Error creating template:', error);
+      logger.error('Error creating template:', error);
       toast.error('Failed to create template');
     }
   };
@@ -256,7 +257,7 @@ export const BulkPlanActions: React.FC<BulkPlanActionsProps> = ({
       toast.success('Template deleted successfully');
       refetchTemplates();
     } catch (error) {
-      console.error('Error deleting template:', error);
+      logger.error('Error deleting template:', error);
       toast.error('Failed to delete template');
     }
   };

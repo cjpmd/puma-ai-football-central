@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -101,7 +102,7 @@ export const PlayerHistoryModal: React.FC<PlayerHistoryModalProps> = ({
           setTeamNames(nameMap);
         }
       } catch (error) {
-        console.error('Error loading team names:', error);
+        logger.error('Error loading team names:', error);
       }
     };
     

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useEffect, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -40,11 +41,11 @@ export const LocationInput: React.FC<LocationInputProps> = ({
 
   useEffect(() => {
     const loadGoogleMaps = async () => {
-      console.log('[LocationInput] Starting Google Maps initialization...');
+      logger.log('[LocationInput] Starting Google Maps initialization...');
       
       // Check if already loaded
       if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.places) {
-        console.log('[LocationInput] Google Maps already loaded');
+        logger.log('[LocationInput] Google Maps already loaded');
         setIsLoaded(true);
         return;
       }
@@ -53,45 +54,45 @@ export const LocationInput: React.FC<LocationInputProps> = ({
       setError(null);
 
       try {
-        console.log('[LocationInput] Fetching Google Maps config...');
+        logger.log('[LocationInput] Fetching Google Maps config...');
         const { data, error } = await supabase.functions.invoke('google-maps-config');
         
         if (error) {
-          console.error('[LocationInput] Error getting Google Maps config:', error);
+          logger.error('[LocationInput] Error getting Google Maps config:', error);
           setError('Failed to load Google Maps configuration');
           setIsLoading(false);
           return;
         }
 
         if (!data?.scriptUrl) {
-          console.error('[LocationInput] No script URL received');
+          logger.error('[LocationInput] No script URL received');
           setError('No Google Maps script URL received');
           setIsLoading(false);
           return;
         }
 
-        console.log('[LocationInput] Loading Google Maps script...');
+        logger.log('[LocationInput] Loading Google Maps script...');
         const script = document.createElement('script');
         script.src = data.scriptUrl;
         script.async = true;
         script.defer = true;
         
         script.onload = () => {
-          console.log('[LocationInput] Google Maps script loaded successfully');
+          logger.log('[LocationInput] Google Maps script loaded successfully');
           setIsLoaded(true);
           setIsLoading(false);
           setError(null);
         };
         
         script.onerror = (event) => {
-          console.error('[LocationInput] Failed to load Google Maps script:', event);
+          logger.error('[LocationInput] Failed to load Google Maps script:', event);
           setError('Failed to load Google Maps script');
           setIsLoading(false);
         };
         
         document.head.appendChild(script);
       } catch (error) {
-        console.error('[LocationInput] Error loading Google Maps:', error);
+        logger.error('[LocationInput] Error loading Google Maps:', error);
         setError(`Error loading Google Maps: ${error instanceof Error ? error.message : 'Unknown error'}`);
         setIsLoading(false);
       }
@@ -103,7 +104,7 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   useEffect(() => {
     if (isLoaded && inputRef.current && !autocompleteRef.current && window.google && window.google.maps && window.google.maps.places) {
       try {
-        console.log('[LocationInput] Initializing Google Places Autocomplete...');
+        logger.log('[LocationInput] Initializing Google Places Autocomplete...');
         
         autocompleteRef.current = new window.google.maps.places.Autocomplete(inputRef.current, {
           types: ['address'],
@@ -114,14 +115,14 @@ export const LocationInput: React.FC<LocationInputProps> = ({
 
         // Add place_changed listener with enhanced handling
         const handlePlaceChanged = () => {
-          console.log('[LocationInput] Place changed event triggered');
+          logger.log('[LocationInput] Place changed event triggered');
           
           const place = autocomplete.getPlace();
-          console.log('[LocationInput] Selected place:', place);
+          logger.log('[LocationInput] Selected place:', place);
           
           if (place && place.formatted_address) {
             const address = place.formatted_address;
-            console.log('[LocationInput] Setting address:', address);
+            logger.log('[LocationInput] Setting address:', address);
             
             // Update the state immediately without clearing first
             onChange(address);
@@ -130,21 +131,21 @@ export const LocationInput: React.FC<LocationInputProps> = ({
             if (place.geometry && place.geometry.location && onLocationSelect) {
               const lat = place.geometry.location.lat();
               const lng = place.geometry.location.lng();
-              console.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
+              logger.log('[LocationInput] Location selected with geometry:', { lat, lng, address });
               onLocationSelect({ lat, lng, address });
             } else {
-              console.warn('[LocationInput] Place selected but no geometry available');
+              logger.warn('[LocationInput] Place selected but no geometry available');
             }
           } else {
-            console.warn('[LocationInput] Place selected but no formatted_address available:', place);
+            logger.warn('[LocationInput] Place selected but no formatted_address available:', place);
           }
         };
 
         autocomplete.addListener('place_changed', handlePlaceChanged);
         
-        console.log('[LocationInput] Autocomplete initialized successfully');
+        logger.log('[LocationInput] Autocomplete initialized successfully');
       } catch (error) {
-        console.error('[LocationInput] Error initializing Google Places Autocomplete:', error);
+        logger.error('[LocationInput] Error initializing Google Places Autocomplete:', error);
         setError(`Error initializing autocomplete: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
@@ -170,13 +171,13 @@ export const LocationInput: React.FC<LocationInputProps> = ({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     // Let Google handle all key events for proper autocomplete behavior
     // Don't interfere with their selection process
-    console.log('[LocationInput] Key pressed:', e.key);
+    logger.log('[LocationInput] Key pressed:', e.key);
   };
 
   const handleInputFocus = () => {
     // Ensure autocomplete is ready when input is focused
     if (autocompleteRef.current && inputRef.current) {
-      console.log('[LocationInput] Input focused, autocomplete ready');
+      logger.log('[LocationInput] Input focused, autocomplete ready');
     }
   };
 

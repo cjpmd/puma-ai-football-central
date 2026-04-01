@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -35,7 +36,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
       // Get yearGroupId from team object - check both camelCase and snake_case
       const yearGroupId = team.yearGroupId || (team as any).year_group_id;
       
-      console.log('TeamBasicSettings: Checking club membership', { 
+      logger.log('TeamBasicSettings: Checking club membership', { 
         clubId: team.clubId, 
         yearGroupId,
         teamData: team 
@@ -47,7 +48,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         // Load year group if team has one
         if (yearGroupId) {
           try {
-            console.log('Loading year group:', yearGroupId);
+            logger.log('Loading year group:', yearGroupId);
             const { data, error } = await supabase
               .from('year_groups')
               .select('*')
@@ -55,7 +56,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
               .single();
 
             if (!error && data) {
-              console.log('Year group loaded:', data);
+              logger.log('Year group loaded:', data);
               // Transform database response to match YearGroup interface
               const transformedYearGroup = {
                 id: data.id,
@@ -70,13 +71,13 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
               };
               setYearGroup(transformedYearGroup);
             } else if (error) {
-              console.error('Error loading year group:', error);
+              logger.error('Error loading year group:', error);
             }
           } catch (error) {
-            console.error('Error loading year group:', error);
+            logger.error('Error loading year group:', error);
           }
         } else {
-          console.log('No year group ID found for team');
+          logger.log('No year group ID found for team');
           setYearGroup(null);
         }
       } else {
@@ -104,18 +105,18 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   const handleInputChange = (field: string, value: any) => {
     try {
-      console.log('TeamBasicSettings: Changing field', field, 'to', value);
+      logger.log('TeamBasicSettings: Changing field', field, 'to', value);
       const updatedData = { ...formData, [field]: value };
       setFormData(updatedData);
       // Don't call onUpdate here - only when saving
     } catch (error) {
-      console.error('Error in handleInputChange:', error);
+      logger.error('Error in handleInputChange:', error);
       toast.error('Failed to update field');
     }
   };
 
   const handleHomeLocationSelect = (location: { lat: number; lng: number; address: string }) => {
-    console.log('Location selected:', location);
+    logger.log('Location selected:', location);
     const updatedData = {
       ...formData,
       homeLocation: location.address,
@@ -128,7 +129,7 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
 
   const handleSave = async () => {
     try {
-      console.log('Saving team data:', formData);
+      logger.log('Saving team data:', formData);
       
       // Call parent's onUpdate with form data first
       onUpdate(formData);
@@ -153,16 +154,16 @@ export const TeamBasicSettings: React.FC<TeamBasicSettingsProps> = ({
         .eq('id', team.id);
 
       if (error) {
-        console.error('Error saving team:', error);
+        logger.error('Error saving team:', error);
         toast.error('Failed to save team settings');
         return;
       }
 
-      console.log('Team saved successfully');
+      logger.log('Team saved successfully');
       toast.success('Team settings saved successfully');
       // Don't call onSave() which would close the modal
     } catch (error) {
-      console.error('Error saving team:', error);
+      logger.error('Error saving team:', error);
       toast.error('Failed to save team settings');
     }
   };

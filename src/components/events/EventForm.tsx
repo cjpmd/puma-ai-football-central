@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,7 +124,7 @@ export const EventForm: React.FC<EventFormProps> = ({
             .eq('event_id', eventData.id);
           
           if (error) {
-            console.error('Error loading invitations:', error);
+            logger.error('Error loading invitations:', error);
             return;
           }
           
@@ -142,7 +143,7 @@ export const EventForm: React.FC<EventFormProps> = ({
             setInvitationType('everyone');
           }
         } catch (error) {
-          console.error('Error loading invitations:', error);
+          logger.error('Error loading invitations:', error);
         }
       }
     };
@@ -205,7 +206,7 @@ export const EventForm: React.FC<EventFormProps> = ({
       if (error) throw error;
       setPerformanceCategories(data || []);
     } catch (error) {
-      console.error('Error loading performance categories:', error);
+      logger.error('Error loading performance categories:', error);
     }
   };
 
@@ -232,7 +233,7 @@ export const EventForm: React.FC<EventFormProps> = ({
       if (error) throw error;
       setFacilities(data || []);
     } catch (error) {
-      console.error('Error loading facilities:', error);
+      logger.error('Error loading facilities:', error);
       setFacilities([]);
     }
   };
@@ -261,7 +262,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         setFormData(prev => ({ ...prev, num_teams: data.length }));
       }
     } catch (error) {
-      console.error('Error loading team times:', error);
+      logger.error('Error loading team times:', error);
     }
   };
 
@@ -514,7 +515,7 @@ export const EventForm: React.FC<EventFormProps> = ({
       }
 
     } catch (error: any) {
-      console.error('Error saving event:', error);
+      logger.error('Error saving event:', error);
       toast.error(error.message || 'Failed to save event');
     } finally {
       setLoading(false);

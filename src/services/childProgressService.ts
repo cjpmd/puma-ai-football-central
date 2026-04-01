@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { calculatePerformanceTrend, getPlayerMatchHistory } from '@/utils/performanceUtils';
 
@@ -98,7 +99,7 @@ export const childProgressService = {
         `)
         .eq('user_id', userId);
 
-      console.log('Child progress query result:', { userPlayers, playersError });
+      logger.log('Child progress query result:', { userPlayers, playersError });
 
       if (playersError) throw playersError;
 
@@ -253,14 +254,14 @@ export const childProgressService = {
 
         childrenData.push(childData);
         } catch (playerError) {
-          console.error(`Error processing player ${userPlayer.player_id}:`, playerError);
+          logger.error(`Error processing player ${userPlayer.player_id}:`, playerError);
           // Continue processing other players
         }
       }
 
       return childrenData;
     } catch (error) {
-      console.error('Error fetching child progress data:', error);
+      logger.error('Error fetching child progress data:', error);
       throw error;
     }
   },
@@ -302,7 +303,7 @@ export const childProgressService = {
         attributeHistory
       };
     } catch (error) {
-      console.error('Error fetching detailed child progress:', error);
+      logger.error('Error fetching detailed child progress:', error);
       throw error;
     }
   }

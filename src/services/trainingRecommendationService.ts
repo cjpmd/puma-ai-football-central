@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Drill {
@@ -125,7 +126,7 @@ export class TrainingRecommendationService {
         .sort((a, b) => b.score - a.score)
         .slice(0, maxResults);
     } catch (error) {
-      console.error('Error generating recommendations:', error);
+      logger.error('Error generating recommendations:', error);
       return [];
     }
   }

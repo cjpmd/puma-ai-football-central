@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface EventSelectionData {
@@ -29,7 +30,7 @@ export interface DataRecoveryResults {
 
 export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRecoveryResults> => {
   try {
-    console.log('Starting comprehensive data check for event:', eventTitle);
+    logger.log('Starting comprehensive data check for event:', eventTitle);
     
     // Find the event by title
     const { data: events, error: eventError } = await supabase
@@ -38,11 +39,11 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
       .ilike('title', `%${eventTitle}%`);
 
     if (eventError) {
-      console.error('Error finding event:', eventError);
+      logger.error('Error finding event:', eventError);
       throw eventError;
     }
 
-    console.log('Found events:', events);
+    logger.log('Found events:', events);
 
     if (!events || events.length === 0) {
       return { 
@@ -55,7 +56,7 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
     }
 
     const targetEvent = events[0];
-    console.log('Target event:', targetEvent);
+    logger.log('Target event:', targetEvent);
 
     // Check for existing event selections
     const { data: selections, error: selectionsError } = await supabase
@@ -65,11 +66,11 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
       .order('created_at', { ascending: false });
 
     if (selectionsError) {
-      console.error('Error finding selections:', selectionsError);
+      logger.error('Error finding selections:', selectionsError);
       throw selectionsError;
     }
 
-    console.log('Found selections:', selections);
+    logger.log('Found selections:', selections);
 
     // Check for existing player stats
     const { data: playerStats, error: statsError } = await supabase
@@ -78,11 +79,11 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
       .eq('event_id', targetEvent.id);
 
     if (statsError) {
-      console.error('Error finding player stats:', statsError);
+      logger.error('Error finding player stats:', statsError);
       throw statsError;
     }
 
-    console.log('Found player stats:', playerStats);
+    logger.log('Found player stats:', playerStats);
 
     // Check for any recent selections in the same team (last 7 days)
     const sevenDaysAgo = new Date();
@@ -100,10 +101,10 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
       .limit(20);
 
     if (recentError) {
-      console.error('Error finding recent selections:', recentError);
+      logger.error('Error finding recent selections:', recentError);
     }
 
-    console.log('Found recent selections:', recentSelections);
+    logger.log('Found recent selections:', recentSelections);
 
     // Try to find any deletion-related logs or patterns
     // Check if there are any event_teams entries that might indicate deletion
@@ -113,10 +114,10 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
       .eq('event_id', targetEvent.id);
 
     if (eventTeamsError) {
-      console.error('Error checking event teams:', eventTeamsError);
+      logger.error('Error checking event teams:', eventTeamsError);
     }
 
-    console.log('Event teams data:', eventTeams);
+    logger.log('Event teams data:', eventTeams);
 
     return {
       event: targetEvent,
@@ -127,7 +128,7 @@ export const comprehensiveDataCheck = async (eventTitle: string): Promise<DataRe
     };
 
   } catch (error) {
-    console.error('Error in comprehensive data check:', error);
+    logger.error('Error in comprehensive data check:', error);
     throw error;
   }
 };
@@ -147,8 +148,8 @@ export const checkEventSelections = async (eventTitle: string): Promise<{
 
 export const restoreEventSelections = async (eventId: string, selectionsData: EventSelectionData[]) => {
   try {
-    console.log('Restoring selections for event:', eventId);
-    console.log('Selections data:', selectionsData);
+    logger.log('Restoring selections for event:', eventId);
+    logger.log('Selections data:', selectionsData);
 
     // Don't delete existing selections, just insert new ones with conflict handling
     const restoreData = selectionsData.map(selection => ({
@@ -173,22 +174,22 @@ export const restoreEventSelections = async (eventId: string, selectionsData: Ev
       });
 
     if (insertError) {
-      console.error('Error restoring selections:', insertError);
+      logger.error('Error restoring selections:', insertError);
       throw insertError;
     }
 
-    console.log('Successfully restored selections:', data);
+    logger.log('Successfully restored selections:', data);
     return data;
 
   } catch (error) {
-    console.error('Error restoring event selections:', error);
+    logger.error('Error restoring event selections:', error);
     throw error;
   }
 };
 
 export const createSelectionsFromTemplate = async (eventId: string, templateSelections: any[]) => {
   try {
-    console.log('Creating selections from template for event:', eventId);
+    logger.log('Creating selections from template for event:', eventId);
     
     const newSelections = templateSelections.map(template => ({
       event_id: eventId,
@@ -210,15 +211,15 @@ export const createSelectionsFromTemplate = async (eventId: string, templateSele
       .insert(newSelections);
 
     if (error) {
-      console.error('Error creating selections from template:', error);
+      logger.error('Error creating selections from template:', error);
       throw error;
     }
 
-    console.log('Successfully created selections from template:', data);
+    logger.log('Successfully created selections from template:', data);
     return data;
 
   } catch (error) {
-    console.error('Error creating selections from template:', error);
+    logger.error('Error creating selections from template:', error);
     throw error;
   }
 };

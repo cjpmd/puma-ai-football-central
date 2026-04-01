@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,7 +47,7 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
       setLoading(true);
 
       if (!player.team_id) {
-        console.error('No team_id provided for player kit details');
+        logger.error('No team_id provided for player kit details');
         setKitItems([]);
         setLoading(false);
         return;
@@ -72,7 +73,7 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
 
       setKitItems(transformedKitItems);
     } catch (error: any) {
-      console.error('Error loading kit items:', error);
+      logger.error('Error loading kit items:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load kit items',
@@ -106,7 +107,7 @@ export const PlayerKitDetails: React.FC<PlayerKitDetailsProps> = ({
         description: 'Kit details updated successfully',
       });
     } catch (error: any) {
-      console.error('Error updating kit details:', error);
+      logger.error('Error updating kit details:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update kit details',

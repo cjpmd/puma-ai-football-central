@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -57,7 +58,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
       const events = await matchEventService.getPlayerMatchEvents(eventId, playerId);
       setExistingEvents(events);
     } catch (error) {
-      console.error('Error loading player events:', error);
+      logger.error('Error loading player events:', error);
     }
   };
 
@@ -84,7 +85,7 @@ export const GameDayPlayerEventMenu: React.FC<GameDayPlayerEventMenuProps> = ({
       onEventDelete();
       await loadPlayerEvents();
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logger.error('Error deleting event:', error);
     }
   };
 

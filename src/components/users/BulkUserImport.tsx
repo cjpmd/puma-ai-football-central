@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -116,7 +117,7 @@ export const BulkUserImport: React.FC = () => {
               }
             });
           } catch (emailError) {
-            console.error('Failed to send email:', emailError);
+            logger.error('Failed to send email:', emailError);
             // Don't fail the import if email fails
           }
 
@@ -130,7 +131,7 @@ export const BulkUserImport: React.FC = () => {
       setImportResult(results);
       toast.success(`Import completed: ${results.success} successful, ${results.failed} failed`);
     } catch (error: any) {
-      console.error('Error during bulk import:', error);
+      logger.error('Error during bulk import:', error);
       toast.error(error.message || 'Failed to import users');
     } finally {
       setIsImporting(false);

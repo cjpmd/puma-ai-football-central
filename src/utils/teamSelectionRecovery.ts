@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PlayerStatsData {
@@ -14,7 +15,7 @@ export interface PlayerStatsData {
 
 export const recoverTeamSelectionFromStats = async (eventId: string) => {
   try {
-    console.log('Starting team selection recovery for event:', eventId);
+    logger.log('Starting team selection recovery for event:', eventId);
     
     // Get event details first
     const { data: event, error: eventError } = await supabase
@@ -51,20 +52,20 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       throw new Error('No player stats found for this event');
     }
 
-    console.log(`Found ${playerStats.length} player stats records`);
+    logger.log(`Found ${playerStats.length} player stats records`);
     
     // Debug: Log first few records to see actual data structure
-    console.log('Sample player stats data:', playerStats.slice(0, 3));
+    logger.log('Sample player stats data:', playerStats.slice(0, 3));
 
     // Delete existing selections for this event first to avoid conflicts
-    console.log('Clearing existing selections...');
+    logger.log('Clearing existing selections...');
     const { error: deleteError } = await supabase
       .from('event_selections')
       .delete()
       .eq('event_id', eventId);
 
     if (deleteError) {
-      console.warn('Warning deleting existing selections:', deleteError);
+      logger.warn('Warning deleting existing selections:', deleteError);
     }
 
     // Group by team_number and period_number
@@ -77,7 +78,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       return acc;
     }, {} as Record<string, PlayerStatsData[]>);
 
-    console.log(`Processing ${Object.keys(groupedStats).length} team/period combinations`);
+    logger.log(`Processing ${Object.keys(groupedStats).length} team/period combinations`);
 
     // Process each group and create selections
     const selectionsToCreate = [];
@@ -85,10 +86,10 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
     for (const [key, stats] of Object.entries(groupedStats)) {
       const [teamNumber, periodNumber] = key.split('-').map(Number);
       
-      console.log(`Processing team ${teamNumber}, period ${periodNumber} with ${stats.length} players`);
+      logger.log(`Processing team ${teamNumber}, period ${periodNumber} with ${stats.length} players`);
       
       // Debug: Log positions for this group
-      console.log('Positions in this group:', stats.map(s => ({ 
+      logger.log('Positions in this group:', stats.map(s => ({ 
         player_id: s.player_id, 
         position: s.position, 
         is_substitute: s.is_substitute 
@@ -101,7 +102,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       const startingPlayers = stats.filter(s => !s.is_substitute);
       const substitutePlayers = stats.filter(s => s.is_substitute);
       
-      console.log(`Starting players: ${startingPlayers.length}, Substitutes: ${substitutePlayers.length}`);
+      logger.log(`Starting players: ${startingPlayers.length}, Substitutes: ${substitutePlayers.length}`);
       
       // Create player positions array for starting players - use exact position from database
       const playerPositions = startingPlayers.map(stat => ({
@@ -122,7 +123,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       // Determine formation based on starting positions only
       const formation = determineFormation(startingPlayers);
 
-      console.log(`Team ${teamNumber}: Formation ${formation}, Starting: ${playerPositions.length}, Subs: ${substitutePositions.length}`);
+      logger.log(`Team ${teamNumber}: Formation ${formation}, Starting: ${playerPositions.length}, Subs: ${substitutePositions.length}`);
 
       const selectionData = {
         event_id: eventId,
@@ -142,7 +143,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       selectionsToCreate.push(selectionData);
     }
 
-    console.log(`Creating ${selectionsToCreate.length} team selections...`);
+    logger.log(`Creating ${selectionsToCreate.length} team selections...`);
 
     // Insert all selections
     const { data: createdSelections, error: insertError } = await supabase
@@ -151,11 +152,11 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
       .select();
 
     if (insertError) {
-      console.error('Insert error:', insertError);
+      logger.error('Insert error:', insertError);
       throw insertError;
     }
 
-    console.log('Successfully recovered team selections:', createdSelections?.length || 0);
+    logger.log('Successfully recovered team selections:', createdSelections?.length || 0);
     
     return {
       success: true,
@@ -172,7 +173,7 @@ export const recoverTeamSelectionFromStats = async (eventId: string) => {
     };
 
   } catch (error) {
-    console.error('Error recovering team selection:', error);
+    logger.error('Error recovering team selection:', error);
     throw error;
   }
 };
@@ -183,7 +184,7 @@ const determineFormation = (startingPlayers: PlayerStatsData[]): string => {
     .map(p => p.position?.toLowerCase() || '')
     .filter(p => p && p !== 'unknown');
   
-  console.log('Determining formation from positions:', positions);
+  logger.log('Determining formation from positions:', positions);
   
   // Count position types based on actual position data
   const defenders = positions.filter(p => 
@@ -210,7 +211,7 @@ const determineFormation = (startingPlayers: PlayerStatsData[]): string => {
     p.includes('gk') || p.includes('goalkeeper')
   ).length;
 
-  console.log(`Formation analysis: ${goalkeepers} GK, ${defenders} defenders, ${midfielders} midfielders, ${forwards} forwards`);
+  logger.log(`Formation analysis: ${goalkeepers} GK, ${defenders} defenders, ${midfielders} midfielders, ${forwards} forwards`);
 
   // Determine formation based on outfield players
   const outfieldPlayers = startingPlayers.filter(p => {

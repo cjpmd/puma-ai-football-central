@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -43,13 +44,13 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
             );
             drillMap[recommendation.id] = filteredDrills;
           } catch (error) {
-            console.error('Error loading drills for recommendation:', error);
+            logger.error('Error loading drills for recommendation:', error);
           }
         }
       }
       setRecommendedDrills(drillMap);
     } catch (error) {
-      console.error('Error loading recommendations:', error);
+      logger.error('Error loading recommendations:', error);
       toast.error('Failed to load AI recommendations');
     } finally {
       setLoading(false);
@@ -72,7 +73,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       toast.success('New AI recommendations generated');
       loadRecommendations();
     } catch (error) {
-      console.error('Error generating recommendations:', error);
+      logger.error('Error generating recommendations:', error);
       toast.error('Failed to generate recommendations');
     } finally {
       setGeneratingRecommendations(false);
@@ -86,7 +87,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       loadRecommendations();
       onRecommendationApplied?.(recommendation);
     } catch (error) {
-      console.error('Error applying recommendation:', error);
+      logger.error('Error applying recommendation:', error);
       toast.error('Failed to apply recommendation');
     }
   };
@@ -97,7 +98,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       toast.success('Recommendation dismissed');
       loadRecommendations();
     } catch (error) {
-      console.error('Error dismissing recommendation:', error);
+      logger.error('Error dismissing recommendation:', error);
       toast.error('Failed to dismiss recommendation');
     }
   };

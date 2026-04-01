@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -34,7 +35,7 @@ export default function TrainingMobile() {
         mapped.forEach(p => map.set(p.id, p));
         setCoachPlayers(Array.from(map.values()));
       } catch (e) {
-        console.error('Failed to load team players for coach:', e);
+        logger.error('Failed to load team players for coach:', e);
         setCoachPlayers([]);
       }
     };

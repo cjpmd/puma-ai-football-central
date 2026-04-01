@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -127,7 +128,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
         .in('event_id', eventIds);
 
       if (selectionsError) {
-        console.error('Error loading performance categories:', selectionsError);
+        logger.error('Error loading performance categories:', selectionsError);
       }
 
       // Create category map
@@ -215,7 +216,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
 
       setResults(processedResults);
     } catch (error) {
-      console.error('Error loading results:', error);
+      logger.error('Error loading results:', error);
     } finally {
       setLoading(false);
     }
@@ -244,7 +245,7 @@ export const ResultsSummary: React.FC<ResultsSummaryProps> = ({ selectedTeamId }
       setTrainingRecommendations(recommendations);
 
     } catch (error) {
-      console.error('Error loading performance analytics:', error);
+      logger.error('Error loading performance analytics:', error);
     } finally {
       setAnalyticsLoading(false);
     }

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,7 +28,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
 
   const loadTeamPlayers = useCallback(async () => {
     if (!teamId) {
-      console.log(`[${contextId}] No teamId provided`);
+      logger.log(`[${contextId}] No teamId provided`);
       setAvailablePlayers([]);
       setSquadPlayers([]);
       setLoading(false);
@@ -36,7 +37,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
 
     try {
       setLoading(true);
-      console.log(`[${contextId}] Loading team players...`);
+      logger.log(`[${contextId}] Loading team players...`);
 
       // If eventId is provided, only load players who were invited to the event
       let teamPlayersData;
@@ -52,7 +53,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
           .not('player_id', 'is', null);
         
         if (invError) {
-          console.error(`[${contextId}] Error loading event invitations:`, invError);
+          logger.error(`[${contextId}] Error loading event invitations:`, invError);
           throw invError;
         }
         
@@ -67,12 +68,12 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             .limit(1);
           
           if (anyInvError) {
-            console.warn(`[${contextId}] Error checking for invitations:`, anyInvError);
+            logger.warn(`[${contextId}] Error checking for invitations:`, anyInvError);
           }
           
           // If no invitations exist at all, it's an "everyone" event - load all players
           if (!anyInvitations || anyInvitations.length === 0) {
-            console.log(`[${contextId}] No invitations found - loading all team players (everyone invited)`);
+            logger.log(`[${contextId}] No invitations found - loading all team players (everyone invited)`);
             const result = await supabase
               .from('players')
               .select('id, name, squad_number, type, photo_url')
@@ -84,13 +85,13 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             playersError = result.error;
           } else {
             // Invitations exist but none for players - no players to show
-            console.log(`[${contextId}] Event has invitations but no players invited`);
+            logger.log(`[${contextId}] Event has invitations but no players invited`);
             teamPlayersData = [];
             playersError = null;
           }
         } else {
           // Load only invited players
-          console.log(`[${contextId}] Loading ${invitedPlayerIds.length} invited players`);
+          logger.log(`[${contextId}] Loading ${invitedPlayerIds.length} invited players`);
           const result = await supabase
             .from('players')
             .select('id, name, squad_number, type, photo_url')
@@ -115,12 +116,12 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       }
 
       if (playersError) {
-        console.error(`[${contextId}] Error loading team players:`, playersError);
+        logger.error(`[${contextId}] Error loading team players:`, playersError);
         throw playersError;
       }
 
       if (!teamPlayersData || teamPlayersData.length === 0) {
-        console.log(`[${contextId}] No active players found for team`);
+        logger.log(`[${contextId}] No active players found for team`);
         setAvailablePlayers([]);
         setSquadPlayers([]);
         return;
@@ -149,9 +150,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             .eq('event_id', eventId);
 
           if (availabilityError) {
-            console.warn(`[${contextId}] Error loading event availability:`, availabilityError);
+            logger.warn(`[${contextId}] Error loading event availability:`, availabilityError);
           } else {
-            console.log(`[${contextId}] Loaded event availability for ${eventAvailability?.length || 0} user records`);
+            logger.log(`[${contextId}] Loaded event availability for ${eventAvailability?.length || 0} user records`);
             
             // Get user-player relationships for all players in this team
             const playerIds = allPlayers.map(p => p.id);
@@ -161,9 +162,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
               .in('player_id', playerIds);
 
             if (relationshipError) {
-              console.warn(`[${contextId}] Error loading user-player relationships:`, relationshipError);
+              logger.warn(`[${contextId}] Error loading user-player relationships:`, relationshipError);
             } else {
-              console.log(`[${contextId}] Loaded ${userPlayerRelationships?.length || 0} user-player relationships`);
+              logger.log(`[${contextId}] Loaded ${userPlayerRelationships?.length || 0} user-player relationships`);
               
               // Map availability to players
               playersWithAvailability = allPlayers.map(player => {
@@ -194,17 +195,17 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
             }
           }
         } catch (error) {
-          console.warn(`[${contextId}] Could not load availability data:`, error);
+          logger.warn(`[${contextId}] Could not load availability data:`, error);
         }
       }
 
-      console.log(`[${contextId}] Base players loaded - Available: ${playersWithAvailability.length}`);
+      logger.log(`[${contextId}] Base players loaded - Available: ${playersWithAvailability.length}`);
       
       setAvailablePlayers(playersWithAvailability);
       setSquadPlayers([]);
 
     } catch (error) {
-      console.error(`[${contextId}] Error loading data:`, error);
+      logger.error(`[${contextId}] Error loading data:`, error);
       setAvailablePlayers([]);
       setSquadPlayers([]);
     } finally {
@@ -222,7 +223,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
   // Apply recovered squad state after players are loaded
   useEffect(() => {
     if (!loading && !isRecovering && recoveredSquadPlayers.length > 0) {
-      console.log(`[${contextId}] Applying recovered squad state:`, recoveredSquadPlayers);
+      logger.log(`[${contextId}] Applying recovered squad state:`, recoveredSquadPlayers);
       
       setAvailablePlayers(prevAvailable => {
         const recoveredPlayerIds = new Set(recoveredSquadPlayers.map(p => p.id));
@@ -231,18 +232,18 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
       
       setSquadPlayers(recoveredSquadPlayers);
       
-      console.log(`[${contextId}] Applied recovered state - Squad: ${recoveredSquadPlayers.length}`);
+      logger.log(`[${contextId}] Applied recovered state - Squad: ${recoveredSquadPlayers.length}`);
     }
   }, [loading, isRecovering, recoveredSquadPlayers, contextId]);
 
   const assignPlayerToSquad = useCallback(async (playerId: string, squadRole: 'player' | 'captain' | 'vice_captain' = 'player') => {
     if (!user || !eventId) {
-      console.error(`[${contextId}] Cannot assign player - missing user or eventId`);
+      logger.error(`[${contextId}] Cannot assign player - missing user or eventId`);
       return;
     }
 
     try {
-      console.log(`[${contextId}] Assigning player ${playerId} to squad`);
+      logger.log(`[${contextId}] Assigning player ${playerId} to squad`);
 
       // Check if already assigned
       const { data: existingAssignment, error: checkError } = await supabase
@@ -255,7 +256,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         .maybeSingle();
 
       if (checkError) {
-        console.error(`[${contextId}] Error checking existing assignment:`, checkError);
+        logger.error(`[${contextId}] Error checking existing assignment:`, checkError);
         throw checkError;
       }
 
@@ -267,7 +268,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
           .eq('id', existingAssignment.id);
 
         if (updateError) {
-          console.error(`[${contextId}] Error updating assignment:`, updateError);
+          logger.error(`[${contextId}] Error updating assignment:`, updateError);
           throw updateError;
         }
       } else {
@@ -286,7 +287,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
           });
 
         if (insertError) {
-          console.error(`[${contextId}] Error inserting assignment:`, insertError);
+          logger.error(`[${contextId}] Error inserting assignment:`, insertError);
           throw insertError;
         }
       }
@@ -305,21 +306,21 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         return prev;
       });
 
-      console.log(`[${contextId}] Successfully assigned player ${playerId}`);
+      logger.log(`[${contextId}] Successfully assigned player ${playerId}`);
     } catch (error) {
-      console.error(`[${contextId}] Error assigning player:`, error);
+      logger.error(`[${contextId}] Error assigning player:`, error);
       throw error;
     }
   }, [user, eventId, teamId, contextId, currentTeamIndex, availablePlayers]);
 
   const removePlayerFromSquad = useCallback(async (playerId: string) => {
     if (!eventId) {
-      console.error(`[${contextId}] Cannot remove player - missing eventId`);
+      logger.error(`[${contextId}] Cannot remove player - missing eventId`);
       return;
     }
 
     try {
-      console.log(`[${contextId}] Removing player ${playerId} from squad`);
+      logger.log(`[${contextId}] Removing player ${playerId} from squad`);
 
       // Remove from database
       const { error } = await supabase
@@ -331,7 +332,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         .eq('team_number', (currentTeamIndex ?? 0) + 1);
 
       if (error) {
-        console.error(`[${contextId}] Error removing player from squad:`, error);
+        logger.error(`[${contextId}] Error removing player from squad:`, error);
         throw error;
       }
 
@@ -349,9 +350,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         return prev;
       });
 
-      console.log(`[${contextId}] Successfully removed player ${playerId}`);
+      logger.log(`[${contextId}] Successfully removed player ${playerId}`);
     } catch (error) {
-      console.error(`[${contextId}] Error removing player:`, error);
+      logger.error(`[${contextId}] Error removing player:`, error);
       throw error;
     }
   }, [eventId, teamId, contextId, currentTeamIndex]);
@@ -360,7 +361,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
     if (!eventId) return;
 
     try {
-      console.log(`[${contextId}] Updating squad role for player ${playerId} to ${squadRole}`);
+      logger.log(`[${contextId}] Updating squad role for player ${playerId} to ${squadRole}`);
 
       const { error } = await supabase
         .from('team_squads')
@@ -371,7 +372,7 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
         .eq('team_number', (currentTeamIndex ?? 0) + 1);
 
       if (error) {
-        console.error(`[${contextId}] Error updating squad role:`, error);
+        logger.error(`[${contextId}] Error updating squad role:`, error);
         throw error;
       }
 
@@ -382,9 +383,9 @@ export const useAvailabilityBasedSquad = (teamId: string, eventId?: string, curr
           : player
       ));
 
-      console.log(`[${contextId}] Successfully updated squad role`);
+      logger.log(`[${contextId}] Successfully updated squad role`);
     } catch (error) {
-      console.error(`[${contextId}] Error updating squad role:`, error);
+      logger.error(`[${contextId}] Error updating squad role:`, error);
       throw error;
     }
   }, [eventId, teamId, contextId, currentTeamIndex]);

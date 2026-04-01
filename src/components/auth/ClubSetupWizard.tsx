@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -123,7 +124,7 @@ export function ClubSetupWizard({ isOpen, onClose, onSuccess }: ClubSetupWizardP
         .single();
 
       if (clubError) {
-        console.error("Error creating club:", clubError);
+        logger.error("Error creating club:", clubError);
         toast.error("Failed to create club", {
           description: clubError.message
         });
@@ -140,7 +141,7 @@ export function ClubSetupWizard({ isOpen, onClose, onSuccess }: ClubSetupWizardP
         });
 
       if (officialError) {
-        console.error("Error adding club official:", officialError);
+        logger.error("Error adding club official:", officialError);
       }
 
       // Update profile with club_admin role
@@ -156,7 +157,7 @@ export function ClubSetupWizard({ isOpen, onClose, onSuccess }: ClubSetupWizardP
         onSuccess();
       }, 1500);
     } catch (error) {
-      console.error("Setup error:", error);
+      logger.error("Setup error:", error);
       toast.error("Something went wrong", {
         description: "Please try again later"
       });

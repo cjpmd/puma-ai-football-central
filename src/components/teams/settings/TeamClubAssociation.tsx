@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +52,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
       if (error) throw error;
       setLinkedClub(data);
     } catch (error) {
-      console.error('Error loading linked club:', error);
+      logger.error('Error loading linked club:', error);
     }
   };
 
@@ -83,7 +84,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
 
       setSearchResult(data);
     } catch (error: any) {
-      console.error('Error searching club:', error);
+      logger.error('Error searching club:', error);
       setSearchError(error.message || 'Failed to search for club');
     } finally {
       setIsSearching(false);
@@ -113,7 +114,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
         });
 
       if (linkError && !linkError.message.includes('duplicate')) {
-        console.warn('Club-team link may already exist:', linkError);
+        logger.warn('Club-team link may already exist:', linkError);
       }
 
       setLinkedClub(searchResult);
@@ -126,7 +127,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
         description: `Successfully linked to ${searchResult.name}`,
       });
     } catch (error: any) {
-      console.error('Error linking team to club:', error);
+      logger.error('Error linking team to club:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to link team to club',
@@ -169,7 +170,7 @@ export const TeamClubAssociation: React.FC<TeamClubAssociationProps> = ({ team, 
         description: `Successfully unlinked from ${clubName}`,
       });
     } catch (error: any) {
-      console.error('Error unlinking team from club:', error);
+      logger.error('Error unlinking team from club:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to unlink team from club',

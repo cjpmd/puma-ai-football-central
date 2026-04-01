@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MobileLayout } from '@/components/layout/MobileLayout';
@@ -178,14 +179,14 @@ export default function CalendarEventsMobile() {
 
       setPendingAvailability(pendingEvents);
     } catch (error) {
-      console.error('Error loading pending availability:', error);
+      logger.error('Error loading pending availability:', error);
     }
   };
 
   const loadUserAvailability = async () => {
     try {
       if (!user?.id) {
-        console.log('No user ID available for availability loading');
+        logger.log('No user ID available for availability loading');
         return;
       }
 
@@ -193,14 +194,14 @@ export default function CalendarEventsMobile() {
       const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
       setUserAvailability(availability);
     } catch (error) {
-      console.error('Error in loadUserAvailability:', error);
+      logger.error('Error in loadUserAvailability:', error);
     }
   };
 
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     const status = availability?.status || null;
-    console.log(`Availability status for event ${eventId.slice(-6)}:`, status);
+    logger.log(`Availability status for event ${eventId.slice(-6)}:`, status);
     return status;
   };
 
@@ -250,7 +251,7 @@ export default function CalendarEventsMobile() {
         .order('date', { ascending: false });
 
       if (error) throw error;
-      console.log('Loaded events:', data?.length, 'View mode:', viewMode);
+      logger.log('Loaded events:', data?.length, 'View mode:', viewMode);
       setEvents((data || []) as DatabaseEvent[]);
       
       // Load event selections to get proper performance category mappings
@@ -323,7 +324,7 @@ export default function CalendarEventsMobile() {
       setSelectedEvent(null);
       loadEvents();
     } catch (error: any) {
-      console.error('Error submitting event:', error);
+      logger.error('Error submitting event:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to save event',
@@ -382,7 +383,7 @@ export default function CalendarEventsMobile() {
       
       setInvitedEventIds(invitedIds);
     } catch (error) {
-      console.error('Error loading invited events:', error);
+      logger.error('Error loading invited events:', error);
     }
   };
 
@@ -406,7 +407,7 @@ export default function CalendarEventsMobile() {
       
       setEventTimeContexts(contexts);
     } catch (error) {
-      console.error('Error loading event time contexts:', error);
+      logger.error('Error loading event time contexts:', error);
     }
   };
 
@@ -463,7 +464,7 @@ export default function CalendarEventsMobile() {
       setTeamRefreshTrigger(prev => prev + 1);
       loadEvents();
     } catch (error) {
-      console.error('Error adding team:', error);
+      logger.error('Error adding team:', error);
       toast({ title: 'Failed to add team', variant: 'destructive' });
     }
   };
@@ -728,7 +729,7 @@ export default function CalendarEventsMobile() {
       setSelectedEvent(prev => prev ? { ...prev, kit_selection: kitSelection } : null);
       toast({ title: 'Kit updated' });
     } catch (error) {
-      console.error('Error updating kit:', error);
+      logger.error('Error updating kit:', error);
       toast({ title: 'Failed to update kit', variant: 'destructive' });
     }
   };
@@ -755,7 +756,7 @@ export default function CalendarEventsMobile() {
       if (error) throw error;
       return data || [];
     } catch (error) {
-      console.error('Error loading event team times:', error);
+      logger.error('Error loading event team times:', error);
       return [];
     }
   };
@@ -1369,7 +1370,7 @@ const EventTeamTimesDisplay = ({ eventId }: { eventId: string }) => {
         if (error) throw error;
         setTeamTimes(data || []);
       } catch (error) {
-        console.error('Error loading team times:', error);
+        logger.error('Error loading team times:', error);
       } finally {
         setLoading(false);
       }

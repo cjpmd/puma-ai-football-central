@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -121,7 +122,7 @@ export const RoleAwareCalendar: React.FC<RoleAwareCalendarProps> = ({
             .order('date', { ascending: true });
 
           if (error) {
-            console.error('Error loading events for role:', role, error);
+            logger.error('Error loading events for role:', role, error);
             continue;
           }
 
@@ -154,7 +155,7 @@ export const RoleAwareCalendar: React.FC<RoleAwareCalendarProps> = ({
 
       setEvents(uniqueEvents);
     } catch (error: any) {
-      console.error('Error loading calendar events:', error);
+      logger.error('Error loading calendar events:', error);
       toast({
         title: 'Error',
         description: 'Failed to load calendar events',

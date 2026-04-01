@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +30,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log('Starting logo upload for:', entityType, entityId, entityName);
+    logger.log('Starting logo upload for:', entityType, entityId, entityName);
 
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'];
@@ -106,7 +107,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
         description: `${entityName} logo has been updated.`,
       });
     } catch (error: any) {
-      console.error('Error uploading logo:', error);
+      logger.error('Error uploading logo:', error);
       toast({
         title: 'Upload failed',
         description: error.message || 'Failed to upload logo',
@@ -149,7 +150,7 @@ export const LogoUpload: React.FC<LogoUploadProps> = ({
         description: `${entityName} logo has been removed.`,
       });
     } catch (error: any) {
-      console.error('Error removing logo:', error);
+      logger.error('Error removing logo:', error);
       toast({
         title: 'Remove failed',
         description: error.message || 'Failed to remove logo',

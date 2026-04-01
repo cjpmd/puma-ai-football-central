@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -36,7 +37,7 @@ export const usePositionAbbreviations = (gameFormat: string) => {
 
         setPositions(formattedPositions);
       } catch (error) {
-        console.error('Error loading position abbreviations:', error);
+        logger.error('Error loading position abbreviations:', error);
       } finally {
         setLoading(false);
       }

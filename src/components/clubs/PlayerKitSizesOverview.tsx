@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -76,7 +77,7 @@ export const PlayerKitSizesOverview: React.FC<PlayerKitSizesOverviewProps> = ({ 
       setPlayers(transformedPlayers);
       setKitItems(items);
     } catch (error) {
-      console.error('Error loading kit sizes:', error);
+      logger.error('Error loading kit sizes:', error);
     } finally {
       setLoading(false);
     }

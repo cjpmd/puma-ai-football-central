@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -140,7 +141,7 @@ export const UnifiedLinkedAccounts: React.FC<UnifiedLinkedAccountsProps> = ({
 
       setLinkedEntities(entities);
     } catch (error: any) {
-      console.error('Error loading linked entities:', error);
+      logger.error('Error loading linked entities:', error);
       toast({
         title: 'Error',
         description: 'Failed to load linked accounts',

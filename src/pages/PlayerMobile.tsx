@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { childProgressService, type ChildProgressData } from '@/services/childProgressService';
@@ -60,7 +61,7 @@ const PlayerMobile = () => {
         mapped.forEach(p => map.set(p.id, p));
         setTeamPlayers(Array.from(map.values()));
       } catch (e) {
-        console.error('Failed to load team players:', e);
+        logger.error('Failed to load team players:', e);
         setTeamPlayers([]);
       }
     };
@@ -92,7 +93,7 @@ const PlayerMobile = () => {
         setSelectedChild(childrenData[0]);
       }
     } catch (error) {
-      console.error('Error loading children data:', error);
+      logger.error('Error loading children data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load player progress data',

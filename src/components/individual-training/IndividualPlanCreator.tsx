@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -77,7 +78,7 @@ export function IndividualPlanCreator({
     },
     onError: (error) => {
       toast.error('Failed to create training plan');
-      console.error('Error creating plan:', error);
+      logger.error('Error creating plan:', error);
     },
   });
 

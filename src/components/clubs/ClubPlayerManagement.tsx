@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,7 +64,7 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
   const loadClubPlayers = async () => {
     try {
       setLoading(true);
-      console.log('Loading players for club:', clubId);
+      logger.log('Loading players for club:', clubId);
 
       // Get all teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -106,7 +107,7 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
         .in('player_id', playerIds);
 
       if (userPlayersError) {
-        console.error('Error fetching user_players:', userPlayersError.code, userPlayersError.message);
+        logger.error('Error fetching user_players:', userPlayersError.code, userPlayersError.message);
       }
 
       // Step 2: Fetch profiles for linked user IDs
@@ -120,7 +121,7 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
           .in('id', userIds);
 
         if (profilesError) {
-          console.error('Error fetching profiles:', profilesError.code, profilesError.message);
+          logger.error('Error fetching profiles:', profilesError.code, profilesError.message);
         }
 
         profileMap = (profilesData || []).reduce((acc, profile) => {
@@ -201,7 +202,7 @@ export const ClubPlayerManagement: React.FC<ClubPlayerManagementProps> = ({
       setPlayers(playersWithTeams);
       setTeamSummaries(summaries);
     } catch (error: any) {
-      console.error('Error loading club players:', error);
+      logger.error('Error loading club players:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club players',

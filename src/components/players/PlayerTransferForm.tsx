@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -67,7 +68,7 @@ export const PlayerTransferForm: React.FC<PlayerTransferFormProps> = ({
         })));
         setIsLoading(false);
       } catch (error) {
-        console.error('Error fetching teams:', error);
+        logger.error('Error fetching teams:', error);
         setIsLoading(false);
       }
     };

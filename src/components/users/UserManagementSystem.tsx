@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,9 +79,9 @@ export const UserManagementSystem = () => {
     const targetEmail = 'dcjpm001@gmail.com';
     
     try {
-      console.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
-      console.log('Current user:', user);
-      console.log('Current profile:', profile);
+      logger.log('=== FIXING SPECIFIC USER:', targetUserId, '===');
+      logger.log('Current user:', user);
+      logger.log('Current profile:', profile);
       
       // Check if current user is global admin
       if (!profile?.roles?.includes('global_admin')) {
@@ -94,16 +95,16 @@ export const UserManagementSystem = () => {
         .eq('id', targetUserId)
         .maybeSingle();
 
-      console.log('Profile check result:', { existingProfile, profileCheckError });
+      logger.log('Profile check result:', { existingProfile, profileCheckError });
 
       if (profileCheckError) {
-        console.error('Error checking profile:', profileCheckError);
+        logger.error('Error checking profile:', profileCheckError);
         throw profileCheckError;
       }
 
       // If no profile exists, create one
       if (!existingProfile) {
-        console.log('No profile found, creating one...');
+        logger.log('No profile found, creating one...');
         
         // Get invitations to get user details
         const { data: invitations, error: invitationError } = await supabase
@@ -113,7 +114,7 @@ export const UserManagementSystem = () => {
           .order('created_at', { ascending: true });
 
         if (invitationError) {
-          console.error('Error fetching invitations:', invitationError);
+          logger.error('Error fetching invitations:', invitationError);
           throw invitationError;
         }
 
@@ -121,11 +122,11 @@ export const UserManagementSystem = () => {
           throw new Error('No invitations found for this email');
         }
 
-        console.log('Found invitations:', invitations);
+        logger.log('Found invitations:', invitations);
         const firstInvitation = invitations[0];
         
         // Create the missing profile using insert (since upsert might have issues with RLS)
-        console.log('Creating missing profile for user:', targetUserId);
+        logger.log('Creating missing profile for user:', targetUserId);
         
         // First try with direct insert
         const { data: newProfile, error: createProfileError } = await supabase
@@ -140,12 +141,12 @@ export const UserManagementSystem = () => {
           .single();
 
         if (createProfileError) {
-          console.error('Error creating profile with direct insert:', createProfileError);
+          logger.error('Error creating profile with direct insert:', createProfileError);
           
           // If direct insert fails, try with RPC call as backup
-          console.log('Attempting alternative profile creation method...');
+          logger.log('Attempting alternative profile creation method...');
           const { data: rpcResult, error: rpcError } = await supabase.rpc('user_is_global_admin');
-          console.log('Global admin check result:', rpcResult);
+          logger.log('Global admin check result:', rpcResult);
           
           if (rpcError || !rpcResult) {
             throw new Error('Global admin verification failed. Please ensure you have proper permissions.');
@@ -164,20 +165,20 @@ export const UserManagementSystem = () => {
             });
             
           if (upsertError) {
-            console.error('Error with upsert:', upsertError);
+            logger.error('Error with upsert:', upsertError);
             throw new Error(`Failed to create profile: ${upsertError.message}`);
           }
         }
         
-        console.log('Profile created successfully');
+        logger.log('Profile created successfully');
       } else {
-        console.log('Profile already exists:', existingProfile);
+        logger.log('Profile already exists:', existingProfile);
       }
 
       // Process all pending invitations for this email
-      console.log('Processing all pending invitations for:', targetEmail);
+      logger.log('Processing all pending invitations for:', targetEmail);
       const result = await userInvitationService.processUserInvitation(targetEmail);
-      console.log('Processing result:', result);
+      logger.log('Processing result:', result);
 
       // Reload users to see the changes
       await loadUsers();
@@ -188,7 +189,7 @@ export const UserManagementSystem = () => {
       });
       
     } catch (error: any) {
-      console.error('Fix user error:', error);
+      logger.error('Fix user error:', error);
       toast({
         title: 'Fix User Error',
         description: error.message || 'An unexpected error occurred',
@@ -201,44 +202,44 @@ export const UserManagementSystem = () => {
     const targetUserId = '9eb48f9d-a697-4863-80e1-9a648ede7836';
     
     try {
-      console.log('=== DEBUGGING SPECIFIC USER:', targetUserId, '===');
+      logger.log('=== DEBUGGING SPECIFIC USER:', targetUserId, '===');
       
       // Check profiles table directly
-      console.log('1. Checking profiles table for user ID...');
+      logger.log('1. Checking profiles table for user ID...');
       const { data: profileById, error: profileIdError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', targetUserId);
       
-      console.log('Profile by ID query result:', { profileById, profileIdError });
+      logger.log('Profile by ID query result:', { profileById, profileIdError });
 
       // Check invitations for this user
-      console.log('2. Checking user_invitations for user ID...');
+      logger.log('2. Checking user_invitations for user ID...');
       const { data: invitationsByUserId, error: invitationUserError } = await supabase
         .from('user_invitations')
         .select('*')
         .eq('accepted_by', targetUserId);
       
-      console.log('Invitations by user ID query result:', { invitationsByUserId, invitationUserError });
+      logger.log('Invitations by user ID query result:', { invitationsByUserId, invitationUserError });
 
       // Check all profiles to see what we get
-      console.log('3. Checking all profiles...');
+      logger.log('3. Checking all profiles...');
       const { data: allProfiles, error: allProfilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
       
-      console.log('Recent profiles:', { allProfiles, allProfilesError });
+      logger.log('Recent profiles:', { allProfiles, allProfilesError });
 
       // Check for the specific email in invitations
-      console.log('4. Checking user_invitations by email...');
+      logger.log('4. Checking user_invitations by email...');
       const { data: invitationsByEmail, error: invitationEmailError } = await supabase
         .from('user_invitations')
         .select('*')
         .eq('email', 'dcjpm001@gmail.com');
       
-      console.log('Invitations by email query result:', { invitationsByEmail, invitationEmailError });
+      logger.log('Invitations by email query result:', { invitationsByEmail, invitationEmailError });
 
       toast({
         title: 'Debug Complete for ' + targetUserId,
@@ -246,7 +247,7 @@ export const UserManagementSystem = () => {
       });
       
     } catch (error: any) {
-      console.error('Debug error:', error);
+      logger.error('Debug error:', error);
       toast({
         title: 'Debug Error',
         description: error.message,
@@ -257,7 +258,7 @@ export const UserManagementSystem = () => {
 
   const processPendingInvitations = async () => {
     try {
-      console.log('Processing pending invitations...');
+      logger.log('Processing pending invitations...');
       
       // Get all pending invitations
       const { data: pendingInvitations, error: invitationError } = await supabase
@@ -269,7 +270,7 @@ export const UserManagementSystem = () => {
         throw invitationError;
       }
 
-      console.log('Found pending invitations:', pendingInvitations);
+      logger.log('Found pending invitations:', pendingInvitations);
 
       let processedCount = 0;
 
@@ -281,7 +282,7 @@ export const UserManagementSystem = () => {
             processedCount++;
           }
         } catch (error) {
-          console.error(`Error processing invitation for ${invitation.email}:`, error);
+          logger.error(`Error processing invitation for ${invitation.email}:`, error);
         }
       }
 
@@ -294,7 +295,7 @@ export const UserManagementSystem = () => {
       });
 
     } catch (error: any) {
-      console.error('Error processing pending invitations:', error);
+      logger.error('Error processing pending invitations:', error);
       toast({
         title: 'Processing Error',
         description: error.message || 'Failed to process pending invitations',
@@ -305,7 +306,7 @@ export const UserManagementSystem = () => {
 
   const syncMissingProfiles = async () => {
     try {
-      console.log('Syncing missing profiles from auth users...');
+      logger.log('Syncing missing profiles from auth users...');
       
       // Get current user (must be admin to do this)
       const { data: { user: currentUser } } = await supabase.auth.getUser();
@@ -320,11 +321,11 @@ export const UserManagementSystem = () => {
         .eq('status', 'accepted');
 
       if (invError) {
-        console.error('Error fetching invitations:', invError);
+        logger.error('Error fetching invitations:', invError);
         throw invError;
       }
 
-      console.log('Found accepted invitations:', invitations);
+      logger.log('Found accepted invitations:', invitations);
 
       let profilesCreated = 0;
 
@@ -339,7 +340,7 @@ export const UserManagementSystem = () => {
 
           if (profileError && profileError.code === 'PGRST116') {
             // Profile doesn't exist, create it
-            console.log('Creating missing profile for user:', invitation.accepted_by);
+            logger.log('Creating missing profile for user:', invitation.accepted_by);
             
             const { error: createError } = await supabase
               .from('profiles')
@@ -351,13 +352,13 @@ export const UserManagementSystem = () => {
               }]);
 
             if (createError) {
-              console.error('Error creating profile:', createError);
+              logger.error('Error creating profile:', createError);
             } else {
-              console.log('Profile created successfully for:', invitation.email);
+              logger.log('Profile created successfully for:', invitation.email);
               profilesCreated++;
             }
           } else if (existingProfile) {
-            console.log('Profile already exists for:', invitation.email);
+            logger.log('Profile already exists for:', invitation.email);
           }
         }
       }
@@ -370,7 +371,7 @@ export const UserManagementSystem = () => {
         description: `${profilesCreated} missing user profiles have been synchronized.`,
       });
     } catch (error: any) {
-      console.error('Error syncing profiles:', error);
+      logger.error('Error syncing profiles:', error);
       toast({
         title: 'Sync Error',
         description: error.message || 'Failed to sync user profiles',
@@ -382,7 +383,7 @@ export const UserManagementSystem = () => {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      console.log('Loading users...');
+      logger.log('Loading users...');
 
       // Get all profiles with basic info
       const { data: profiles, error: profilesError } = await supabase
@@ -391,15 +392,15 @@ export const UserManagementSystem = () => {
         .order('created_at', { ascending: false });
 
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
+        logger.error('Error fetching profiles:', profilesError);
         throw profilesError;
       }
 
-      console.log('Profiles found:', profiles?.length || 0);
-      console.log('All profiles:', profiles);
+      logger.log('Profiles found:', profiles?.length || 0);
+      logger.log('All profiles:', profiles);
 
       if (!profiles || profiles.length === 0) {
-        console.log('No profiles found');
+        logger.log('No profiles found');
         setUsers([]);
         return;
       }
@@ -409,56 +410,56 @@ export const UserManagementSystem = () => {
         .from('user_teams')
         .select('user_id, role, team_id');
 
-      if (userTeamsError) console.error('Error fetching user teams:', userTeamsError);
+      if (userTeamsError) logger.error('Error fetching user teams:', userTeamsError);
 
       // Get teams data using the correct foreign key
       const { data: teamsData, error: teamsError } = await supabase
         .from('teams')
         .select('id, name');
 
-      if (teamsError) console.error('Error fetching teams:', teamsError);
+      if (teamsError) logger.error('Error fetching teams:', teamsError);
 
       // Get user-club relationships
       const { data: userClubsData, error: userClubsError } = await supabase
         .from('user_clubs')
         .select('user_id, role, club_id');
 
-      if (userClubsError) console.error('Error fetching user clubs:', userClubsError);
+      if (userClubsError) logger.error('Error fetching user clubs:', userClubsError);
 
       // Get clubs data
       const { data: clubsData, error: clubsError } = await supabase
         .from('clubs')
         .select('id, name');
 
-      if (clubsError) console.error('Error fetching clubs:', clubsError);
+      if (clubsError) logger.error('Error fetching clubs:', clubsError);
 
       // Get user-player relationships
       const { data: userPlayersData, error: userPlayersError } = await supabase
         .from('user_players')
         .select('user_id, relationship, player_id');
 
-      if (userPlayersError) console.error('Error fetching user players:', userPlayersError);
+      if (userPlayersError) logger.error('Error fetching user players:', userPlayersError);
 
       // Get players data
       const { data: playersData, error: playersError } = await supabase
         .from('players')
         .select('id, name, team_id');
 
-      if (playersError) console.error('Error fetching players:', playersError);
+      if (playersError) logger.error('Error fetching players:', playersError);
 
       // Get user-staff relationships
       const { data: userStaffData, error: userStaffError } = await supabase
         .from('user_staff')
         .select('user_id, relationship, staff_id');
 
-      if (userStaffError) console.error('Error fetching user staff:', userStaffError);
+      if (userStaffError) logger.error('Error fetching user staff:', userStaffError);
 
       // Get staff data
       const { data: staffData, error: staffError } = await supabase
         .from('team_staff')
         .select('id, name, role, team_id');
 
-      if (staffError) console.error('Error fetching staff:', staffError);
+      if (staffError) logger.error('Error fetching staff:', staffError);
 
       // Process and combine all data
       const processedUsers: UserProfile[] = profiles.map(profile => {
@@ -529,10 +530,10 @@ export const UserManagementSystem = () => {
         };
       });
 
-      console.log('Processed users:', processedUsers);
+      logger.log('Processed users:', processedUsers);
       setUsers(processedUsers);
     } catch (error: any) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
       toast({
         title: 'Error Loading Users',
         description: error.message || 'Failed to load user data',
@@ -587,7 +588,7 @@ export const UserManagementSystem = () => {
   };
 
   const handleEditUser = (userToEdit: UserProfile) => {
-    console.log('Opening edit modal for user:', userToEdit);
+    logger.log('Opening edit modal for user:', userToEdit);
     setEditingUser(userToEdit);
     setShowEditModal(true);
   };
@@ -617,7 +618,7 @@ export const UserManagementSystem = () => {
 
       await loadUsers();
     } catch (error: any) {
-      console.error('Error deleting user:', error);
+      logger.error('Error deleting user:', error);
       toast({
         title: 'Delete Error',
         description: error.message || 'Failed to delete user',

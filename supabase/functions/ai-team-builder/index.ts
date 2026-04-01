@@ -6,14 +6,28 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/** Stable hash of an array of player IDs so the cache key is order-independent. */
+function hashSquad(playerIds: string[]): string {
+  return [...playerIds].sort().join(",");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { prompt, teamId, eventId, gameFormat, gameDuration, teamNumber, squadPlayerIds, currentFormation } = await req.json();
-    
+    const {
+      prompt,
+      teamId,
+      eventId,
+      gameFormat,
+      gameDuration,
+      teamNumber,
+      squadPlayerIds,
+      currentFormation,
+    } = await req.json();
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
@@ -24,23 +38,47 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch squad players - filter by squad if squadPlayerIds provided
+    // ----------------------------------------------------------
+    // Cache lookup: avoid duplicate Gemini calls for the same
+    // event + squad + prompt within the last hour.
+    // ----------------------------------------------------------
+    const squadHash = hashSquad(squadPlayerIds ?? []);
+    const cacheKey = `${eventId ?? teamId}|${squadHash}|${prompt}`;
+
+    const { data: cached } = await supabase
+      .from("ai_result_cache")
+      .select("result")
+      .eq("cache_key", cacheKey)
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+
+    if (cached?.result) {
+      console.log("ai-team-builder: cache hit for key", cacheKey);
+      return new Response(JSON.stringify(cached.result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ----------------------------------------------------------
+    // Fetch squad players
+    // ----------------------------------------------------------
     let playersQuery = supabase
       .from("players")
       .select("id, name, match_stats")
       .eq("team_id", teamId)
       .eq("status", "active");
-    
+
     if (squadPlayerIds && squadPlayerIds.length > 0) {
       playersQuery = playersQuery.in("id", squadPlayerIds);
     }
-    
-    const { data: squadPlayers, error: squadError } = await playersQuery;
 
+    const { data: squadPlayers, error: squadError } = await playersQuery;
     if (squadError) throw squadError;
 
+    // ----------------------------------------------------------
     // Fetch historic position data from event_player_stats
-    const playerIds = squadPlayers?.map((p) => p.id) || [];
+    // ----------------------------------------------------------
+    const playerIds = squadPlayers?.map((p) => p.id) ?? [];
     const { data: historicStats, error: statsError } = await supabase
       .from("event_player_stats")
       .select("player_id, position, minutes_played, is_captain")
@@ -50,35 +88,42 @@ serve(async (req) => {
 
     if (statsError) throw statsError;
 
+    // ----------------------------------------------------------
     // Build context for AI
+    // ----------------------------------------------------------
     const playersContext = squadPlayers?.map((player) => {
-      const stats = player.match_stats as any;
-      const historicPositions = historicStats
-        ?.filter((s) => s.player_id === player.id)
-        .map((s) => ({ position: s.position, minutes: s.minutes_played })) || [];
+      const stats = player.match_stats as Record<string, unknown>;
+      const historicPositions =
+        historicStats
+          ?.filter((s) => s.player_id === player.id)
+          .map((s) => ({ position: s.position, minutes: s.minutes_played })) ?? [];
 
       return {
         id: player.id,
         name: player.name,
-        totalGames: stats?.totalGames || 0,
-        totalMinutes: stats?.totalMinutes || 0,
-        captainGames: stats?.captainGames || 0,
-        minutesByPosition: stats?.minutesByPosition || {},
+        totalGames: (stats?.totalGames as number) || 0,
+        totalMinutes: (stats?.totalMinutes as number) || 0,
+        captainGames: (stats?.captainGames as number) || 0,
+        minutesByPosition: (stats?.minutesByPosition as Record<string, number>) || {},
         recentPositions: historicPositions.slice(0, 10),
       };
-    }) || [];
+    }) ?? [];
 
     const systemPrompt = `You are an AI football coach assistant. Your job is to create line-ups and substitution plans.
 
-Available Squad (${playersContext.length} players)${teamNumber ? ` for Team ${teamNumber}` : ''}:
+Available Squad (${playersContext.length} players)${teamNumber ? ` for Team ${teamNumber}` : ""}:
 ${JSON.stringify(playersContext, null, 2)}
 
 Game Format: ${gameFormat}
 Game Duration: ${gameDuration} minutes
-${currentFormation ? `Current Formation: ${currentFormation} (use this formation unless the user prompt specifies a different one)` : ''}
+${currentFormation ? `Current Formation: ${currentFormation} (use this formation unless the user prompt specifies a different one)` : ""}
 
 Guidelines:
-- ${currentFormation ? `Use the ${currentFormation} formation unless the user prompt explicitly requests a different formation` : `Use valid formations for ${gameFormat} (e.g., 4-3-3, 3-5-2, 4-4-2 for 11-a-side; 2-3-1, 1-3-1 for 7-a-side)`}
+- ${
+      currentFormation
+        ? `Use the ${currentFormation} formation unless the user prompt explicitly requests a different formation`
+        : `Use valid formations for ${gameFormat} (e.g., 4-3-3, 3-5-2, 4-4-2 for 11-a-side; 2-3-1, 1-3-1 for 7-a-side)`
+    }
 - ONLY use players from the provided squad (${playersContext.length} players available)
 - Position players based on their historic positions when available
 - Ensure fair playing time distribution unless instructed otherwise
@@ -86,7 +131,9 @@ Guidelines:
 - Create realistic substitution plans
 - Return valid position names (Goalkeeper, Left Back, Centre Back, Right Back, Left Midfielder, Central Midfielder, Right Midfielder, Left Forward, Centre Forward, Right Forward)`;
 
-    // Call Lovable AI with tool calling for structured output
+    // ----------------------------------------------------------
+    // Call Lovable AI with structured tool output
+    // ----------------------------------------------------------
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -104,7 +151,8 @@ Guidelines:
             type: "function",
             function: {
               name: "create_team_selection",
-              description: "Create a structured team selection with periods, formations, and player positions",
+              description:
+                "Create a structured team selection with periods, formations, and player positions",
               parameters: {
                 type: "object",
                 properties: {
@@ -127,10 +175,7 @@ Guidelines:
                             required: ["positionName", "playerId"],
                           },
                         },
-                        substitutes: {
-                          type: "array",
-                          items: { type: "string" },
-                        },
+                        substitutes: { type: "array", items: { type: "string" } },
                         captainId: { type: "string" },
                       },
                       required: ["periodNumber", "formation", "duration", "positions"],
@@ -174,7 +219,15 @@ Guidelines:
 
     const selectionData = JSON.parse(toolCall.function.arguments);
 
-    console.log("AI generated selection:", selectionData);
+    // ----------------------------------------------------------
+    // Store result in cache (1-hour TTL)
+    // ----------------------------------------------------------
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    await supabase
+      .from("ai_result_cache")
+      .upsert({ cache_key: cacheKey, result: selectionData, expires_at: expiresAt });
+
+    console.log("ai-team-builder: generated and cached selection for key", cacheKey);
 
     return new Response(JSON.stringify(selectionData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -182,9 +235,9 @@ Guidelines:
   } catch (error) {
     console.error("Error in ai-team-builder:", error);
     const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

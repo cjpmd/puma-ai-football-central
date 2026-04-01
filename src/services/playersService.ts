@@ -1,10 +1,11 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { Player, Parent, PlayerTransfer, AttributeHistory } from '@/types';
 import { prepareImageForUpload, isHeicFormat, isSupportedImageFormat, formatFileSize } from '@/utils/imageUtils';
 
 // Helper to transform DB player to frontend Player
-const transformPlayer = (dbPlayer: any): Player => {
-  if (!dbPlayer) return null as unknown as Player; // Should ideally throw or handle gracefully
+const transformPlayer = (dbPlayer: Record<string, unknown>): Player | null => {
+  if (!dbPlayer) return null;
   return {
     ...dbPlayer,
     teamId: dbPlayer.team_id,
@@ -33,7 +34,7 @@ const transformPlayer = (dbPlayer: any): Player => {
 
 export const playersService = {
   async getActivePlayersByTeamId(teamId: string): Promise<Player[]> {
-    console.log('Fetching active players for team:', teamId);
+    logger.log('Fetching active players for team:', teamId);
     
     const { data, error } = await supabase
       .from('players')
@@ -43,17 +44,17 @@ export const playersService = {
       .order('squad_number', { ascending: true });
 
     if (error) {
-      console.error('Error fetching players:', error);
+      logger.error('Error fetching players:', error);
       throw error;
     }
     
-    const players = (data || []).map(transformPlayer);
-    console.log('Players fetched successfully:', players);
+    const players = (data || []).map(transformPlayer).filter((p): p is Player => p !== null);
+    logger.log('Players fetched successfully:', players);
     return players;
   },
 
   async createPlayer(playerData: Partial<Player>): Promise<Player> {
-    console.log('Creating player:', playerData);
+    logger.log('Creating player:', playerData);
     
     const dbData: any = {
       name: playerData.name,
@@ -81,17 +82,17 @@ export const playersService = {
       .single();
 
     if (error) {
-      console.error('Error creating player:', error);
+      logger.error('Error creating player:', error);
       throw error;
     }
 
     const player = transformPlayer(data);
-    console.log('Player created successfully:', player);
+    logger.log('Player created successfully:', player);
     return player;
   },
 
   async updatePlayer(id: string, playerData: Partial<Player>): Promise<Player> {
-    console.log('Updating player:', id, playerData);
+    logger.log('Updating player:', id, playerData);
     
     const dbData: any = {};
     
@@ -124,33 +125,42 @@ export const playersService = {
       .single();
 
     if (error) {
-      console.error('Error updating player:', error);
+      logger.error('Error updating player:', error);
       throw error;
     }
 
     const player = transformPlayer(data);
-    console.log('Player updated successfully:', player);
+    logger.log('Player updated successfully:', player);
     return player;
   },
 
   async deletePlayer(id: string): Promise<void> {
-    console.log('Deleting player:', id);
-    
+    logger.log('Soft-deleting player:', id);
+
     const { error } = await supabase
       .from('players')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting player:', error);
-      throw error;
+      // Fall back to hard delete if deleted_at column doesn't exist yet
+      if (error.message?.includes('deleted_at')) {
+        const { error: hardDeleteError } = await supabase
+          .from('players')
+          .delete()
+          .eq('id', id);
+        if (hardDeleteError) throw hardDeleteError;
+      } else {
+        logger.error('Error deleting player:', error);
+        throw error;
+      }
     }
 
-    console.log('Player deleted successfully');
+    logger.log('Player deleted successfully');
   },
 
   async getPlayerById(id: string): Promise<Player | null> {
-    console.log('Fetching player by ID:', id);
+    logger.log('Fetching player by ID:', id);
     
     const { data, error } = await supabase
       .from('players')
@@ -159,22 +169,22 @@ export const playersService = {
       .maybeSingle();
 
     if (error) {
-      console.error('Error fetching player:', error);
+      logger.error('Error fetching player:', error);
       throw error;
     }
 
     if (!data) {
-      console.log('Player not found');
+      logger.log('Player not found');
       return null;
     }
     
     const player = transformPlayer(data);
-    console.log('Player fetched by ID:', player);
+    logger.log('Player fetched by ID:', player);
     return player;
   },
 
   async uploadPlayerPhoto(playerId: string, file: File): Promise<string> {
-    console.log(`[playersService] Uploading photo for player ${playerId}:`, {
+    logger.log(`[playersService] Uploading photo for player ${playerId}:`, {
       name: file.name,
       type: file.type,
       size: formatFileSize(file.size),
@@ -197,9 +207,9 @@ export const playersService = {
         quality: 0.85,
         outputFormat: 'image/jpeg',
       });
-      console.log(`[playersService] Image processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
+      logger.log(`[playersService] Image processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
     } catch (processingError: any) {
-      console.error('[playersService] Image processing failed:', processingError);
+      logger.error('[playersService] Image processing failed:', processingError);
       throw new Error(`Image processing failed: ${processingError.message}`);
     }
     
@@ -216,7 +226,7 @@ export const playersService = {
       });
 
     if (error) {
-      console.error('[playersService] Error uploading player photo:', error);
+      logger.error('[playersService] Error uploading player photo:', error);
       // Provide more helpful error message
       if (error.message?.includes('size') || error.message?.includes('exceeded')) {
         throw new Error(`Upload failed: Image too large (${formatFileSize(processedBlob.size)}). Please try a smaller image.`);
@@ -230,16 +240,16 @@ export const playersService = {
       .getPublicUrl(data.path);
 
     if (!publicUrlData || !publicUrlData.publicUrl) {
-      console.error('[playersService] Error getting public URL for player photo');
+      logger.error('[playersService] Error getting public URL for player photo');
       throw new Error('Could not retrieve public URL for the uploaded photo.');
     }
     
-    console.log('[playersService] Photo uploaded successfully. Public URL:', publicUrlData.publicUrl);
+    logger.log('[playersService] Photo uploaded successfully. Public URL:', publicUrlData.publicUrl);
     return publicUrlData.publicUrl;
   },
 
   async getParentsByPlayerId(playerId: string): Promise<Parent[]> {
-    console.log('Fetching parents for player:', playerId);
+    logger.log('Fetching parents for player:', playerId);
     
     // Get parents from the parents table
     const { data: parentsData, error: parentsError } = await supabase
@@ -248,7 +258,7 @@ export const playersService = {
       .eq('player_id', playerId);
 
     if (parentsError) {
-      console.error('Error fetching parents:', parentsError);
+      logger.error('Error fetching parents:', parentsError);
       throw parentsError;
     }
 
@@ -260,7 +270,7 @@ export const playersService = {
       .eq('relationship', 'parent');
 
     if (linkedParentsError) {
-      console.error('Error fetching linked parents:', linkedParentsError);
+      logger.error('Error fetching linked parents:', linkedParentsError);
       throw linkedParentsError;
     }
 
@@ -273,7 +283,7 @@ export const playersService = {
         .in('id', linkedParentsData.map(lp => lp.user_id));
 
       if (profilesError) {
-        console.error('Error fetching profiles for linked parents:', profilesError);
+        logger.error('Error fetching profiles for linked parents:', profilesError);
       } else {
         for (const link of linkedParentsData) {
           const profile = profilesData?.find(p => p.id === link.user_id);
@@ -316,12 +326,12 @@ export const playersService = {
     }));
 
     const allParents = [...parents, ...linkedParents];
-    console.log('All parents fetched successfully:', allParents);
+    logger.log('All parents fetched successfully:', allParents);
     return allParents;
   },
 
   async removeLinkedParent(playerId: string, userId: string): Promise<void> {
-    console.log('Removing linked parent:', userId, 'from player:', playerId);
+    logger.log('Removing linked parent:', userId, 'from player:', playerId);
     
     const { error } = await supabase
       .from('user_players')
@@ -331,15 +341,15 @@ export const playersService = {
       .eq('relationship', 'parent');
 
     if (error) {
-      console.error('Error removing linked parent:', error);
+      logger.error('Error removing linked parent:', error);
       throw error;
     }
 
-    console.log('Linked parent removed successfully');
+    logger.log('Linked parent removed successfully');
   },
 
   async createParent(parentData: Partial<Parent>): Promise<Parent> {
-    console.log('Creating parent:', parentData);
+    logger.log('Creating parent:', parentData);
     
     const dbData = {
       name: parentData.name,
@@ -357,7 +367,7 @@ export const playersService = {
       .single();
 
     if (error) {
-      console.error('Error creating parent:', error);
+      logger.error('Error creating parent:', error);
       throw error;
     }
 
@@ -371,12 +381,12 @@ export const playersService = {
       updatedAt: data.updated_at
     };
 
-    console.log('Parent created successfully:', parent);
+    logger.log('Parent created successfully:', parent);
     return parent;
   },
 
   async updateParent(id: string, parentData: Partial<Parent>): Promise<Parent> {
-    console.log('Updating parent:', id, parentData);
+    logger.log('Updating parent:', id, parentData);
     
     const dbData: any = {};
     if (parentData.name !== undefined) dbData.name = parentData.name;
@@ -393,7 +403,7 @@ export const playersService = {
       .single();
 
     if (error) {
-      console.error('Error updating parent:', error);
+      logger.error('Error updating parent:', error);
       throw error;
     }
 
@@ -407,12 +417,12 @@ export const playersService = {
       updatedAt: data.updated_at
     };
 
-    console.log('Parent updated successfully:', parent);
+    logger.log('Parent updated successfully:', parent);
     return parent;
   },
 
   async deleteParent(id: string): Promise<void> {
-    console.log('Deleting parent:', id);
+    logger.log('Deleting parent:', id);
     
     const { error } = await supabase
       .from('parents')
@@ -420,15 +430,15 @@ export const playersService = {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting parent:', error);
+      logger.error('Error deleting parent:', error);
       throw error;
     }
 
-    console.log('Parent deleted successfully');
+    logger.log('Parent deleted successfully');
   },
 
   async regenerateParentLinkCode(id: string): Promise<string> {
-    console.log('Regenerating link code for parent:', id);
+    logger.log('Regenerating link code for parent:', id);
     
     // Generate new link code (8 random bytes as hex)
     const newLinkCode = Array.from(crypto.getRandomValues(new Uint8Array(8)))
@@ -443,16 +453,16 @@ export const playersService = {
       .single();
 
     if (error) {
-      console.error('Error regenerating link code:', error);
+      logger.error('Error regenerating link code:', error);
       throw error;
     }
 
-    console.log('Link code regenerated successfully:', data.link_code);
+    logger.log('Link code regenerated successfully:', data.link_code);
     return data.link_code;
   },
 
   async getTransferHistory(playerId: string): Promise<PlayerTransfer[]> {
-    console.log('Fetching transfer history for player:', playerId);
+    logger.log('Fetching transfer history for player:', playerId);
     
     const { data, error } = await supabase
       .from('player_transfers')
@@ -461,7 +471,7 @@ export const playersService = {
       .order('transfer_date', { ascending: false });
 
     if (error) {
-      console.error('Error fetching transfer history:', error);
+      logger.error('Error fetching transfer history:', error);
       throw error;
     }
 
@@ -485,12 +495,12 @@ export const playersService = {
       status: transfer.status as 'pending' | 'accepted' | 'rejected'
     }));
 
-    console.log('Transfer history fetched successfully:', transfers);
+    logger.log('Transfer history fetched successfully:', transfers);
     return transfers;
   },
 
   async getAttributeHistory(playerId: string, attributeName: string): Promise<AttributeHistory[]> {
-    console.log('Fetching attribute history for player:', playerId, 'attribute:', attributeName);
+    logger.log('Fetching attribute history for player:', playerId, 'attribute:', attributeName);
     
     const { data, error } = await supabase
       .from('player_attribute_history')
@@ -500,7 +510,7 @@ export const playersService = {
       .order('recorded_date', { ascending: false });
 
     if (error) {
-      console.error('Error fetching attribute history:', error);
+      logger.error('Error fetching attribute history:', error);
       throw error;
     }
 
@@ -514,14 +524,14 @@ export const playersService = {
       createdAt: record.created_at
     }));
 
-    console.log('Attribute history fetched successfully:', history);
+    logger.log('Attribute history fetched successfully:', history);
     return history;
   },
 
   async deletePlayerPhoto(player: Player): Promise<Player> {
-    console.log(`Deleting photo for player ${player.id}`);
+    logger.log(`Deleting photo for player ${player.id}`);
     if (!player.photoUrl) {
-        console.log('Player has no photo to delete.');
+        logger.log('Player has no photo to delete.');
         return player;
     }
 
@@ -537,7 +547,7 @@ export const playersService = {
         const filePath = pathParts.slice(bucketIndex + 1).join('/');
 
         if (filePath) {
-            console.log('File path to delete from storage:', filePath);
+            logger.log('File path to delete from storage:', filePath);
             // Delete from storage
             const { error: storageError } = await supabase.storage
                 .from(bucketName)
@@ -546,11 +556,11 @@ export const playersService = {
             if (storageError) {
                 // This could happen if the file was manually deleted from storage but the URL remains on the player.
                 // We can still proceed to clear the URL from the player record.
-                console.warn('Error deleting photo from storage, but proceeding to clear URL:', storageError);
+                logger.warn('Error deleting photo from storage, but proceeding to clear URL:', storageError);
             }
         }
     } catch(e) {
-        console.error('Error parsing or deleting photo from storage, proceeding to clear URL from player record', e);
+        logger.error('Error parsing or deleting photo from storage, proceeding to clear URL from player record', e);
     }
 
     // Update player record to remove photoUrl. This is the main goal.
@@ -562,17 +572,17 @@ export const playersService = {
         .single();
 
     if (error) {
-        console.error('Error updating player to remove photo URL:', error);
+        logger.error('Error updating player to remove photo URL:', error);
         throw error;
     }
     
     const updatedPlayer = transformPlayer(data);
-    console.log('Player photo URL cleared successfully:', updatedPlayer);
+    logger.log('Player photo URL cleared successfully:', updatedPlayer);
     return updatedPlayer;
   },
 
   async removePlayerFromSquad(playerId: string): Promise<void> {
-    console.log('Removing player from squad:', playerId);
+    logger.log('Removing player from squad:', playerId);
     
     const { error } = await supabase
       .from('players')
@@ -580,10 +590,10 @@ export const playersService = {
       .eq('id', playerId);
 
     if (error) {
-      console.error('Error removing player from squad:', error);
+      logger.error('Error removing player from squad:', error);
       throw error;
     }
 
-    console.log('Player removed from squad successfully');
+    logger.log('Player removed from squad successfully');
   }
 };

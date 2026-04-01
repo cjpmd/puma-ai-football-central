@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -35,12 +36,12 @@ export const useTrainingSession = () => {
     drills: TrainingSessionDrill[],
     equipment: Equipment[]
   ) => {
-    console.log('🔥 SAVE TRAINING SESSION CALLED:', { eventId, teamId, drillsCount: drills.length, equipmentCount: equipment.length });
+    logger.log('🔥 SAVE TRAINING SESSION CALLED:', { eventId, teamId, drillsCount: drills.length, equipmentCount: equipment.length });
     setSaving(true);
     
     try {
       // First, ensure a training session record exists
-      console.log('🔍 Checking for existing training session...');
+      logger.log('🔍 Checking for existing training session...');
       const { data: existingSession, error: sessionCheckError } = await supabase
         .from('training_sessions')
         .select('id')
@@ -48,10 +49,10 @@ export const useTrainingSession = () => {
         .eq('team_id', teamId)
         .maybeSingle();
 
-      console.log('📊 Session check result:', { existingSession, sessionCheckError });
+      logger.log('📊 Session check result:', { existingSession, sessionCheckError });
 
       if (sessionCheckError) {
-        console.error('❌ Session check error:', sessionCheckError);
+        logger.error('❌ Session check error:', sessionCheckError);
         throw sessionCheckError;
       }
 
@@ -59,7 +60,7 @@ export const useTrainingSession = () => {
 
       if (!sessionId) {
         // Create new training session
-        console.log('🆕 Creating new training session...');
+        logger.log('🆕 Creating new training session...');
         const { data: newSession, error: createError } = await supabase
           .from('training_sessions')
           .insert({
@@ -70,9 +71,9 @@ export const useTrainingSession = () => {
           .select('id')
           .single();
 
-        console.log('✨ New session created:', { newSession, createError });
+        logger.log('✨ New session created:', { newSession, createError });
         if (createError) {
-          console.error('❌ Create session error:', createError);
+          logger.error('❌ Create session error:', createError);
           throw createError;
         }
         sessionId = newSession.id;
@@ -184,11 +185,11 @@ export const useTrainingSession = () => {
         }
       }
 
-      console.log('✅ Training plan saved successfully!');
+      logger.log('✅ Training plan saved successfully!');
       toast.success('Training plan saved successfully!');
       return true;
     } catch (error) {
-      console.error('❌ Error saving training session:', error);
+      logger.error('❌ Error saving training session:', error);
       toast.error('Failed to save training plan');
       return false;
     } finally {

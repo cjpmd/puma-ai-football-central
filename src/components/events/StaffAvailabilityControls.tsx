@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -85,7 +86,7 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
                 availabilityStatus = availability.status as 'pending' | 'available' | 'unavailable';
               }
             } catch (error) {
-              console.error('Error loading availability for staff:', staff.name, error);
+              logger.error('Error loading availability for staff:', staff.name, error);
             }
           }
 
@@ -102,7 +103,7 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
 
       setStaffMembers(staffWithAvailability);
     } catch (error) {
-      console.error('Error loading staff members:', error);
+      logger.error('Error loading staff members:', error);
       toast.error('Failed to load staff members');
     } finally {
       setLoading(false);
@@ -134,7 +135,7 @@ export const StaffAvailabilityControls: React.FC<StaffAvailabilityControlsProps>
 
       toast.success(`${staffMember.name} availability set to ${status}`);
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       toast.error(`Failed to update ${staffMember.name}'s availability`);
     } finally {
       setUpdating(prev => {

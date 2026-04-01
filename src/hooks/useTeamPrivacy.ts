@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -71,7 +72,7 @@ export const useTeamPrivacy = (teamId: string) => {
         });
       }
     } catch (error) {
-      console.error('Error loading team privacy settings:', error);
+      logger.error('Error loading team privacy settings:', error);
     } finally {
       setLoading(false);
     }

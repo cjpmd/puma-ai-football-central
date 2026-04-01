@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -89,7 +90,7 @@ export const ManualReminderPanel: React.FC<ManualReminderPanelProps> = ({
         .eq('players.team_id', event.team_id);
 
       if (playerError) {
-        console.error('Error loading player users:', playerError);
+        logger.error('Error loading player users:', playerError);
       }
 
       // Get staff users
@@ -107,7 +108,7 @@ export const ManualReminderPanel: React.FC<ManualReminderPanelProps> = ({
         .eq('team_staff.team_id', event.team_id);
 
       if (staffError) {
-        console.error('Error loading staff users:', staffError);
+        logger.error('Error loading staff users:', staffError);
       }
 
       // Get existing RSVP statuses
@@ -117,7 +118,7 @@ export const ManualReminderPanel: React.FC<ManualReminderPanelProps> = ({
         .eq('event_id', eventId);
 
       if (rsvpError) {
-        console.error('Error loading RSVP data:', rsvpError);
+        logger.error('Error loading RSVP data:', rsvpError);
       }
 
       // Combine all users
@@ -181,7 +182,7 @@ export const ManualReminderPanel: React.FC<ManualReminderPanelProps> = ({
       setTitle(`Reminder: ${event.title}`);
 
     } catch (error) {
-      console.error('Error loading available users:', error);
+      logger.error('Error loading available users:', error);
       toast({
         title: "Error",
         description: "Failed to load available users",
@@ -259,7 +260,7 @@ export const ManualReminderPanel: React.FC<ManualReminderPanelProps> = ({
       }
 
     } catch (error) {
-      console.error('Error sending manual reminder:', error);
+      logger.error('Error sending manual reminder:', error);
       toast({
         title: "Error",
         description: "Failed to send manual reminder",

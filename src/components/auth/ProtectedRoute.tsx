@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -10,7 +11,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   const { session, loading, user } = useAuth();
   const location = useLocation();
 
-  console.log('ProtectedRoute - loading:', loading, 'session:', !!session, 'user:', !!user);
+  logger.log('ProtectedRoute - loading:', loading, 'session:', !!session, 'user:', !!user);
 
   if (loading) {
     return (
@@ -22,7 +23,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   if (!session || !user) {
-    console.log('No session or user, redirecting to auth');
+    logger.log('No session or user, redirecting to auth');
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 

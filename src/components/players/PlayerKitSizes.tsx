@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,7 +64,7 @@ export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
 
       setKitItems(transformedKitItems);
     } catch (error: any) {
-      console.error('Error loading kit items:', error);
+      logger.error('Error loading kit items:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load kit items',
@@ -97,7 +98,7 @@ export const PlayerKitSizes: React.FC<PlayerKitSizesProps> = ({
         description: 'Kit sizes updated successfully',
       });
     } catch (error: any) {
-      console.error('Error updating kit sizes:', error);
+      logger.error('Error updating kit sizes:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to update kit sizes',

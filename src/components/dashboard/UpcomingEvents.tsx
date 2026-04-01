@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ export function UpcomingEvents() {
         .eq('user_id', user.user.id);
 
       if (error) {
-        console.error('Error loading user availability:', error);
+        logger.error('Error loading user availability:', error);
         return;
       }
 
@@ -75,7 +76,7 @@ export function UpcomingEvents() {
 
       setUserAvailability(availability);
     } catch (error) {
-      console.error('Error in loadUserAvailability:', error);
+      logger.error('Error in loadUserAvailability:', error);
     }
   };
 
@@ -125,7 +126,7 @@ export function UpcomingEvents() {
         .limit(5);
 
       if (error) {
-        console.error('Error loading upcoming events:', error);
+        logger.error('Error loading upcoming events:', error);
         setEvents([]);
         return;
       }
@@ -147,7 +148,7 @@ export function UpcomingEvents() {
 
       setEvents(eventsWithTeams);
     } catch (error) {
-      console.error('Error in loadUpcomingEvents:', error);
+      logger.error('Error in loadUpcomingEvents:', error);
       setEvents([]);
     } finally {
       setLoading(false);

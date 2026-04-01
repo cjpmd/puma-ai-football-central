@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ export const CoachTrainingDashboard: React.FC<CoachTrainingDashboardProps> = ({
       const coachPlans = await IndividualTrainingService.getUserPlans(userId);
       setPlans(coachPlans);
     } catch (error) {
-      console.error('Error loading coach plans:', error);
+      logger.error('Error loading coach plans:', error);
       toast.error('Failed to load training plans');
     } finally {
       setLoading(false);

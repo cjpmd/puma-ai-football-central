@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,7 +84,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
       // Check battery optimization status
       checkBatteryOptimizations();
     } catch (error) {
-      console.error('Error initializing mobile optimizations:', error);
+      logger.error('Error initializing mobile optimizations:', error);
     }
   };
 
@@ -91,7 +92,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
     try {
       // Register notification categories for iOS
       await PushNotifications.addListener('registration', async (token) => {
-        console.log('iOS Push registration success:', token.value);
+        logger.log('iOS Push registration success:', token.value);
         
         // Configure iOS-specific notification categories
         const categories = [
@@ -123,12 +124,12 @@ export const MobileNotificationOptimizations: React.FC = () => {
         ];
 
         // Note: Categories would be set via native iOS code
-        console.log('iOS notification categories configured');
+        logger.log('iOS notification categories configured');
       });
 
       // Handle notification actions
       await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('iOS notification action performed:', notification);
+        logger.log('iOS notification action performed:', notification);
         
         const action = notification.actionId;
         const data = notification.notification.data;
@@ -139,7 +140,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
       });
 
     } catch (error) {
-      console.error('Error configuring iOS notifications:', error);
+      logger.error('Error configuring iOS notifications:', error);
     }
   };
 
@@ -147,11 +148,11 @@ export const MobileNotificationOptimizations: React.FC = () => {
     try {
       // Android notification channels would be configured in native code
       // but we can handle the response here
-      console.log('Configuring Android notification channels');
+      logger.log('Configuring Android notification channels');
       
       // Handle notification tap
       await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-        console.log('Android notification action performed:', notification);
+        logger.log('Android notification action performed:', notification);
         
         const data = notification.notification.data;
         
@@ -163,7 +164,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
       });
 
     } catch (error) {
-      console.error('Error configuring Android notifications:', error);
+      logger.error('Error configuring Android notifications:', error);
     }
   };
 
@@ -181,7 +182,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
   const setupNotificationListeners = () => {
     // Listen for foreground notifications
     PushNotifications.addListener('pushNotificationReceived', (notification) => {
-      console.log('Foreground notification received:', notification);
+      logger.log('Foreground notification received:', notification);
       
       // Show in-app notification for foreground messages
       toast.info(notification.title || 'New notification', {
@@ -193,14 +194,14 @@ export const MobileNotificationOptimizations: React.FC = () => {
   const handleAvailabilityResponse = async (eventId: string, status: 'available' | 'unavailable') => {
     try {
       // This would update the availability status directly from the notification action
-      console.log(`Handling availability response: ${status} for event ${eventId}`);
+      logger.log(`Handling availability response: ${status} for event ${eventId}`);
       
       // Navigate to confirmation page to complete the action
       window.location.href = `/availability-confirmation?eventId=${eventId}&quickResponse=${status}`;
       
       toast.success(`Marked as ${status}`);
     } catch (error) {
-      console.error('Error handling availability response:', error);
+      logger.error('Error handling availability response:', error);
       toast.error('Failed to update availability');
     }
   };
@@ -212,7 +213,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
         setNotificationSettings(prev => ({ ...prev, badgeCount: 0 }));
       }
     } catch (error) {
-      console.error('Error clearing notification badge:', error);
+      logger.error('Error clearing notification badge:', error);
     }
   };
 
@@ -241,7 +242,7 @@ export const MobileNotificationOptimizations: React.FC = () => {
       if (error) throw error;
       toast.success('Test notification sent - check if you received it');
     } catch (error) {
-      console.error('Error testing notification delivery:', error);
+      logger.error('Error testing notification delivery:', error);
       toast.error('Error testing notifications');
     }
   };

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 /**
  * Image preprocessing utilities for resizing and compressing images
  * before uploading to Supabase Storage (which has a 5MB limit on player_photos bucket).
@@ -130,7 +131,7 @@ export async function prepareImageForUpload(
     canvas.toBlob(
       (blob) => {
         if (blob) {
-          console.log('[imageUtils] Processed image:', {
+          logger.log('[imageUtils] Processed image:', {
             originalSize: `${(file.size / 1024 / 1024).toFixed(2)}MB`,
             newSize: `${(blob.size / 1024 / 1024).toFixed(2)}MB`,
             dimensions: `${width}x${height}`,

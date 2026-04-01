@@ -1,9 +1,10 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export const updatePlayerStatsFromEvent = async (eventId: string) => {
   try {
-    console.log('Updating player stats for event with performance category support:', eventId);
+    logger.log('Updating player stats for event with performance category support:', eventId);
     
     // The database now handles this automatically via triggers and includes performance category tracking
     // We just need to call the database function to update player stats
@@ -14,13 +15,13 @@ export const updatePlayerStatsFromEvent = async (eventId: string) => {
     });
 
     if (error) {
-      console.error('Error updating player stats:', error);
+      logger.error('Error updating player stats:', error);
       return;
     }
 
-    console.log('Successfully updated player stats with performance categories for event:', eventId);
+    logger.log('Successfully updated player stats with performance categories for event:', eventId);
 
   } catch (error) {
-    console.error('Error updating player stats from event:', error);
+    logger.error('Error updating player stats from event:', error);
   }
 };

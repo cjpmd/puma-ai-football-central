@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export const dataRegenerationService = {
@@ -6,30 +7,30 @@ export const dataRegenerationService = {
    * Complete data regeneration using the improved database functions
    */
   async regenerateAllPlayerStats(): Promise<void> {
-    console.log('🔄 Starting complete data regeneration with improved functions...');
+    logger.log('🔄 Starting complete data regeneration with improved functions...');
     
     try {
       // Step 1: Regenerate event_player_stats from event_selections using FIXED function
-      console.log('Step 1: Regenerating event_player_stats from selections...');
+      logger.log('Step 1: Regenerating event_player_stats from selections...');
       const { error: regenerateError } = await supabase.rpc('regenerate_all_event_player_stats');
       
       if (regenerateError) {
-        console.error('Error in regenerate function:', regenerateError);
+        logger.error('Error in regenerate function:', regenerateError);
         throw regenerateError;
       }
       
-      console.log('✅ Successfully regenerated event_player_stats');
+      logger.log('✅ Successfully regenerated event_player_stats');
       
       // Step 2: Update all player match stats using FIXED function
-      console.log('Step 2: Updating all player match statistics...');
+      logger.log('Step 2: Updating all player match statistics...');
       const { error: updateError } = await supabase.rpc('update_all_completed_events_stats');
       
       if (updateError) {
-        console.error('Error updating match stats:', updateError);
+        logger.error('Error updating match stats:', updateError);
         throw updateError;
       }
       
-      console.log('✅ Successfully updated all player match statistics');
+      logger.log('✅ Successfully updated all player match statistics');
       
       // Verify the results
       const { data: statsCount } = await supabase
@@ -37,11 +38,11 @@ export const dataRegenerationService = {
         .select('id', { count: 'exact' })
         .limit(1);
         
-      console.log(`📊 Final event_player_stats count: ${statsCount?.length || 0}`);
-      console.log('🎉 COMPLETE DATA REGENERATION SUCCESSFUL');
+      logger.log(`📊 Final event_player_stats count: ${statsCount?.length || 0}`);
+      logger.log('🎉 COMPLETE DATA REGENERATION SUCCESSFUL');
       
     } catch (error) {
-      console.error('❌ Error in complete regeneration:', error);
+      logger.error('❌ Error in complete regeneration:', error);
       throw error;
     }
   },
@@ -50,32 +51,32 @@ export const dataRegenerationService = {
    * Debug and regenerate for a specific player using improved functions
    */
   async debugAndRegenerateForPlayer(playerId: string, playerName: string): Promise<void> {
-    console.log(`🎯 Starting debug and regeneration for player: ${playerName} (${playerId})`);
+    logger.log(`🎯 Starting debug and regeneration for player: ${playerName} (${playerId})`);
     
     try {
       // Debug the player first
       await this.debugPlayerPositions(playerId, playerName);
       
       // Regenerate all data (affects this player too)
-      console.log('🔄 Running full regeneration to ensure data consistency...');
+      logger.log('🔄 Running full regeneration to ensure data consistency...');
       await this.regenerateAllPlayerStats();
       
       // Update specific player stats
-      console.log(`📊 Updating match stats for ${playerName}...`);
+      logger.log(`📊 Updating match stats for ${playerName}...`);
       const { error: playerUpdateError } = await supabase.rpc('update_player_match_stats', {
         player_uuid: playerId
       });
       
       if (playerUpdateError) {
-        console.error(`Error updating ${playerName} stats:`, playerUpdateError);
+        logger.error(`Error updating ${playerName} stats:`, playerUpdateError);
         throw playerUpdateError;
       }
       
-      console.log(`✅ Successfully updated ${playerName} stats`);
-      console.log(`🎉 COMPLETE DEBUG AND REGENERATION FOR ${playerName} SUCCESSFUL`);
+      logger.log(`✅ Successfully updated ${playerName} stats`);
+      logger.log(`🎉 COMPLETE DEBUG AND REGENERATION FOR ${playerName} SUCCESSFUL`);
       
     } catch (error) {
-      console.error(`❌ Error in debug and regeneration for ${playerName}:`, error);
+      logger.error(`❌ Error in debug and regeneration for ${playerName}:`, error);
       throw error;
     }
   },
@@ -85,7 +86,7 @@ export const dataRegenerationService = {
    */
   async debugPlayerPositions(playerId: string, playerName: string): Promise<void> {
     try {
-      console.log(`🔍 Debugging positions for ${playerName} (${playerId})`);
+      logger.log(`🔍 Debugging positions for ${playerName} (${playerId})`);
       
       const { error } = await supabase.rpc('debug_player_positions', {
         p_player_id: playerId,
@@ -93,13 +94,13 @@ export const dataRegenerationService = {
       });
       
       if (error) {
-        console.error('Error running debug function:', error);
+        logger.error('Error running debug function:', error);
         throw error;
       }
       
-      console.log(`✅ Debug complete for ${playerName}`);
+      logger.log(`✅ Debug complete for ${playerName}`);
     } catch (error) {
-      console.error(`Error debugging player positions for ${playerName}:`, error);
+      logger.error(`Error debugging player positions for ${playerName}:`, error);
       throw error;
     }
   }

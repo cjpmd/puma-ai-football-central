@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface PlayStyle {
@@ -35,7 +36,7 @@ export const playStylesService = {
       .order('label', { ascending: true });
 
     if (error) {
-      console.error('Error fetching play styles:', error);
+      logger.error('Error fetching play styles:', error);
       return [];
     }
 
@@ -52,7 +53,7 @@ export const playStylesService = {
       .order('label', { ascending: true });
 
     if (error) {
-      console.error('Error fetching play styles:', error);
+      logger.error('Error fetching play styles:', error);
       return [];
     }
 
@@ -78,7 +79,7 @@ export const playStylesService = {
       .single();
 
     if (error) {
-      console.error('Error creating play style:', error);
+      logger.error('Error creating play style:', error);
       return null;
     }
 
@@ -99,7 +100,7 @@ export const playStylesService = {
       .single();
 
     if (error) {
-      console.error('Error updating play style:', error);
+      logger.error('Error updating play style:', error);
       return null;
     }
 
@@ -118,7 +119,7 @@ export const playStylesService = {
       .eq('id', id);
 
     if (error) {
-      console.error('Error deleting play style:', error);
+      logger.error('Error deleting play style:', error);
       return false;
     }
 
@@ -136,7 +137,7 @@ export const playStylesService = {
       .upload(filePath, file, { upsert: true });
 
     if (uploadError) {
-      console.error('Error uploading image:', uploadError);
+      logger.error('Error uploading image:', uploadError);
       return null;
     }
 
@@ -162,7 +163,7 @@ export const playStylesService = {
       .remove([matchingFile.name]);
 
     if (error) {
-      console.error('Error deleting image:', error);
+      logger.error('Error deleting image:', error);
       return false;
     }
 

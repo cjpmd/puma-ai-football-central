@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -127,7 +128,7 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
       setKitIssues(issuesMap);
       setKitItems(itemsMap);
     } catch (error: any) {
-      console.error('Error loading staff kit data:', error);
+      logger.error('Error loading staff kit data:', error);
       toast({
         title: 'Error',
         description: 'Failed to load coaching kit data',
@@ -171,7 +172,7 @@ export const StaffKitSection: React.FC<StaffKitSectionProps> = ({ userId, onUpda
 
       onUpdate?.();
     } catch (error: any) {
-      console.error('Error saving kit sizes:', error);
+      logger.error('Error saving kit sizes:', error);
       toast({
         title: 'Error',
         description: 'Failed to save kit sizes',

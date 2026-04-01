@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 
 export type PerformanceTrend = 'improving' | 'maintaining' | 'needs-work';
@@ -27,7 +28,7 @@ export const calculatePerformanceTrend = async (playerId: string): Promise<Perfo
       .limit(10);
 
     if (error) {
-      console.error('Error fetching recent stats:', error);
+      logger.error('Error fetching recent stats:', error);
       return 'maintaining';
     }
 
@@ -74,15 +75,15 @@ export const calculatePerformanceTrend = async (playerId: string): Promise<Perfo
     return 'maintaining';
 
   } catch (error) {
-    console.error('Error calculating performance trend:', error);
+    logger.error('Error calculating performance trend:', error);
     return 'maintaining';
   }
 };
 
 export const getPlayerMatchHistory = async (playerId: string) => {
   try {
-    console.log('=== FETCHING MATCH HISTORY FROM AUTHORITATIVE SOURCE ===');
-    console.log('Player ID:', playerId);
+    logger.log('=== FETCHING MATCH HISTORY FROM AUTHORITATIVE SOURCE ===');
+    logger.log('Player ID:', playerId);
 
     // Fetch event_selections and match_events in parallel
     const [selectionsResult, matchEventsResult] = await Promise.all([
@@ -115,21 +116,21 @@ export const getPlayerMatchHistory = async (playerId: string) => {
     const { data: matchEvents, error: matchEventsError } = matchEventsResult;
 
     if (selectionsError) {
-      console.error('Error fetching event selections:', selectionsError);
+      logger.error('Error fetching event selections:', selectionsError);
       return [];
     }
 
     if (matchEventsError) {
-      console.error('Error fetching match events:', matchEventsError);
+      logger.error('Error fetching match events:', matchEventsError);
     }
 
     if (!eventSelections || eventSelections.length === 0) {
-      console.log('No event selections found');
+      logger.log('No event selections found');
       return [];
     }
 
-    console.log(`Found ${eventSelections.length} event selections to process`);
-    console.log(`Found ${matchEvents?.length || 0} match events for player`);
+    logger.log(`Found ${eventSelections.length} event selections to process`);
+    logger.log(`Found ${matchEvents?.length || 0} match events for player`);
 
     // Group match events by event_id for quick lookup
     const matchEventsByEventId = new Map<string, { goals: number; assists: number; saves: number; yellowCards: number; redCards: number }>();
@@ -208,12 +209,12 @@ export const getPlayerMatchHistory = async (playerId: string) => {
       return dateB.getTime() - dateA.getTime();
     });
 
-    console.log(`✅ Found ${playerEvents.length} unique events for player`);
+    logger.log(`✅ Found ${playerEvents.length} unique events for player`);
     
     return playerEvents.slice(0, 20); // Limit to recent 20 events
 
   } catch (error) {
-    console.error('Error fetching player match history:', error);
+    logger.error('Error fetching player match history:', error);
     return [];
   }
 };

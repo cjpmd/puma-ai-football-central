@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -198,7 +199,7 @@ export const MobileEventForm: React.FC<MobileEventFormProps> = ({
       onEventCreated();
       onClose();
     } catch (error: any) {
-      console.error('Error creating event:', error);
+      logger.error('Error creating event:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to create event',

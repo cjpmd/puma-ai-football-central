@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -117,7 +118,7 @@ export function UserSignupModal({ isOpen, onClose, onSignup, onSwitchToLogin }: 
         onClose();
       }
     } catch (error) {
-      console.error('Signup error:', error);
+      logger.error('Signup error:', error);
       
       await securityService.logSecurityEvent({
         eventType: 'SIGNUP_ERROR',

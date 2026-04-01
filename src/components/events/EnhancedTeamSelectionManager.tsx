@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -149,7 +150,7 @@ const { data: teamData } = useQuery({
     if (!isOpen) return;
 
     const initializeData = async () => {
-      console.log('Initializing team selection data...');
+      logger.log('Initializing team selection data...');
       
       // Determine number of teams from event data
       let teamCount = 1;
@@ -162,7 +163,7 @@ const { data: teamData } = useQuery({
             teamCount = Math.max(parsedTeams.length, 1);
           }
         } catch (e) {
-          console.warn('Could not parse teams data:', event.teams);
+          logger.warn('Could not parse teams data:', event.teams);
         }
       }
 
@@ -197,7 +198,7 @@ const { data: teamData } = useQuery({
 
         if (error) throw error;
 
-        console.log('Loaded existing selections:', existingSelections);
+        logger.log('Loaded existing selections:', existingSelections);
 
         if (existingSelections && existingSelections.length > 0) {
           // Group selections by team number
@@ -309,10 +310,10 @@ const { data: teamData } = useQuery({
           }
         }
 
-        console.log('Final initialized team selections:', initialTeamSelections);
+        logger.log('Final initialized team selections:', initialTeamSelections);
         setTeamSelections(initialTeamSelections);
       } catch (error) {
-        console.error('Error loading existing selections:', error);
+        logger.error('Error loading existing selections:', error);
         toast.error('Failed to load existing team selections');
         setTeamSelections(initialTeamSelections);
       }
@@ -336,7 +337,7 @@ const { data: teamData } = useQuery({
           filter: `event_id=eq.${event.id}`
         },
         (payload) => {
-          console.log('Availability changed, reloading selections');
+          logger.log('Availability changed, reloading selections');
           // Trigger a reload of team selections
           const initializeData = async () => {
             try {
@@ -355,7 +356,7 @@ const { data: teamData } = useQuery({
                 window.location.reload(); // Simple reload for now
               }
             } catch (error) {
-              console.error('Error reloading after availability change:', error);
+              logger.error('Error reloading after availability change:', error);
             }
           };
           initializeData();
@@ -376,7 +377,7 @@ const { data: teamData } = useQuery({
     const currentTeam = teamSelections[currentTeamIndex];
     if (!currentTeam || currentTeam.periods.length === 0) return;
     
-    console.log('Auto-syncing formation layouts on tab open');
+    logger.log('Auto-syncing formation layouts on tab open');
     
     // Helper function for consistent position abbreviations
     const getPositionAbbreviation = (positionName: string): string => {
@@ -469,7 +470,7 @@ const { data: teamData } = useQuery({
     });
     
     if (needsUpdate) {
-      console.log('Applied auto-sync to formation coordinates');
+      logger.log('Applied auto-sync to formation coordinates');
       updateCurrentTeam({ periods: updatedPeriods });
     }
     
@@ -493,7 +494,7 @@ const { data: teamData } = useQuery({
       selectedStaff: []
     };
     
-    console.log('Adding new team:', newTeam);
+    logger.log('Adding new team:', newTeam);
     
     try {
       // First update the event's teams data
@@ -505,7 +506,7 @@ const { data: teamData } = useQuery({
         .eq('id', event.id);
 
       if (updateEventError) {
-        console.error('Error updating event teams:', updateEventError);
+        logger.error('Error updating event teams:', updateEventError);
         throw updateEventError;
       }
 
@@ -528,11 +529,11 @@ const { data: teamData } = useQuery({
         .single();
 
       if (selectionError) {
-        console.error('Error creating initial selection record:', selectionError);
+        logger.error('Error creating initial selection record:', selectionError);
         throw selectionError;
       }
 
-      console.log('Successfully saved new team to database:', insertedSelection);
+      logger.log('Successfully saved new team to database:', insertedSelection);
       
       // Update local state
       const updatedTeamSelections = [...teamSelections, newTeam];
@@ -542,7 +543,7 @@ const { data: teamData } = useQuery({
       
       toast.success('New team added and saved successfully');
     } catch (error) {
-      console.error('Error saving new team:', error);
+      logger.error('Error saving new team:', error);
       toast.error('Failed to save new team');
     }
   };
@@ -556,7 +557,7 @@ const { data: teamData } = useQuery({
     const teamToDelete = teamSelections[teamIndex];
     if (!teamToDelete) return;
 
-    console.log('Deleting team:', teamToDelete.teamNumber);
+    logger.log('Deleting team:', teamToDelete.teamNumber);
     
     try {
       // Delete from database
@@ -568,7 +569,7 @@ const { data: teamData } = useQuery({
         .eq('team_number', teamToDelete.teamNumber);
 
       if (deleteError) {
-        console.error('Error deleting team from database:', deleteError);
+        logger.error('Error deleting team from database:', deleteError);
         throw deleteError;
       }
 
@@ -597,12 +598,12 @@ const { data: teamData } = useQuery({
         .eq('id', event.id);
 
       if (updateEventError) {
-        console.error('Error updating event teams:', updateEventError);
+        logger.error('Error updating event teams:', updateEventError);
       }
       
       toast.success('Team deleted successfully');
     } catch (error) {
-      console.error('Error deleting team:', error);
+      logger.error('Error deleting team:', error);
       toast.error('Failed to delete team');
     }
   };
@@ -627,7 +628,7 @@ const { data: teamData } = useQuery({
       const updatedSelections = prevSelections.map((team, index) => 
         index === currentTeamIndex ? { ...team, ...updates } : team
       );
-      console.log('Updated current team:', updatedSelections[currentTeamIndex]);
+      logger.log('Updated current team:', updatedSelections[currentTeamIndex]);
       return updatedSelections;
     });
   };
@@ -651,7 +652,7 @@ const { data: teamData } = useQuery({
   };
 
   const handleSquadChange = (newSquadPlayers: SquadPlayer[]) => {
-    console.log('Squad changed for team', currentTeamIndex + 1, ':', newSquadPlayers);
+    logger.log('Squad changed for team', currentTeamIndex + 1, ':', newSquadPlayers);
     
     // Get current periods or create default if none exist
     const existingPeriods = currentTeam?.periods || [];
@@ -688,7 +689,7 @@ const { data: teamData } = useQuery({
   };
 
   const handleStaffChange = (staffIds: string[]) => {
-    console.log('Staff changed for team', currentTeamIndex + 1, ':', staffIds);
+    logger.log('Staff changed for team', currentTeamIndex + 1, ':', staffIds);
     updateCurrentTeam({ selectedStaff: staffIds });
   };
 
@@ -699,7 +700,7 @@ const { data: teamData } = useQuery({
     // Update local state immediately (optimistic update)
     updateCurrentTeam({ performanceCategory: categoryId });
     
-    console.log('Saving performance category:', { 
+    logger.log('Saving performance category:', { 
       categoryId: actualCategoryId, 
       teamId, 
       eventId: event.id, 
@@ -716,7 +717,7 @@ const { data: teamData } = useQuery({
           .eq('team_number', teamNumber);
 
         if (checkError) {
-          console.error('Error checking existing selection:', checkError);
+          logger.error('Error checking existing selection:', checkError);
           throw checkError;
         }
 
@@ -735,7 +736,7 @@ const { data: teamData } = useQuery({
           .eq('id', existingSelection.id);
 
         if (updateError) {
-          console.error('Error updating performance category:', updateError);
+          logger.error('Error updating performance category:', updateError);
           throw updateError;
         }
       } else {
@@ -756,7 +757,7 @@ const { data: teamData } = useQuery({
           });
 
         if (insertError) {
-          console.error('Error creating new selection:', insertError);
+          logger.error('Error creating new selection:', insertError);
           throw insertError;
         }
       }
@@ -767,7 +768,7 @@ const { data: teamData } = useQuery({
       toast.success(`Performance category saved: ${categoryName}`);
       
     } catch (error: any) {
-      console.error('Error saving performance category:', error);
+      logger.error('Error saving performance category:', error);
       toast.error(`Failed to save performance category: ${error.message}`);
       
       // Revert local state on error
@@ -776,7 +777,7 @@ const { data: teamData } = useQuery({
   };
 
   const handleApplyAISelection = (periods: FormationPeriod[], captainId?: string, reasoning?: string) => {
-    console.log('Applying AI selection:', { periods, captainId, reasoning });
+    logger.log('Applying AI selection:', { periods, captainId, reasoning });
     updateCurrentTeam({ 
       periods,
       globalCaptainId: captainId
@@ -792,7 +793,7 @@ const { data: teamData } = useQuery({
       return;
     }
 
-    console.log('Saving team selections:', teamSelections);
+    logger.log('Saving team selections:', teamSelections);
     setSaving(true);
     
     try {
@@ -809,7 +810,7 @@ const { data: teamData } = useQuery({
       const selectionsToInsert = [];
       
       for (const team of teamSelections) {
-        console.log(`Processing team ${team.teamNumber} with ${team.periods.length} periods and ${team.squadPlayers.length} squad players`);
+        logger.log(`Processing team ${team.teamNumber} with ${team.periods.length} periods and ${team.squadPlayers.length} squad players`);
         
         // Create a default period if no periods exist but squad players are present
         const periodsToSave = team.periods.length > 0 ? team.periods : 
@@ -871,13 +872,13 @@ const { data: teamData } = useQuery({
         .eq('id', event.id);
 
       if (updateEventError) {
-        console.error('Error updating event teams:', updateEventError);
+        logger.error('Error updating event teams:', updateEventError);
       }
 
       toast.success('Team selections saved successfully!');
       
     } catch (error) {
-      console.error('Error saving selections:', error);
+      logger.error('Error saving selections:', error);
       toast.error('Failed to save team selections');
     } finally {
       setSaving(false);
@@ -907,7 +908,7 @@ const { data: teamData } = useQuery({
       await navigator.clipboard.writeText(copyText);
       toast.success('Team lists copied to clipboard!');
     } catch (error) {
-      console.error('Error copying teams:', error);
+      logger.error('Error copying teams:', error);
       toast.error('Failed to copy team lists');
     }
   };

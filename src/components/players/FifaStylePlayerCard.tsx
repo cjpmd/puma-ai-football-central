@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Player, Team } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -419,7 +420,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
       });
 
       const objectUrl = URL.createObjectURL(file);
-      console.log('[FifaStylePlayerCard] Opening editor with blob URL:', objectUrl, 'file:', file.name, file.type, file.size);
+      logger.log('[FifaStylePlayerCard] Opening editor with blob URL:', objectUrl, 'file:', file.name, file.type, file.size);
       setSelectedImageUrl(objectUrl);
       setShowImageEditor(true);
     }
@@ -501,14 +502,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
     handler?: (player: Player) => void,
     actionName?: string
   ) => {
-    console.log(`[FifaCard] handleButtonAction: Action "${actionName}" for player "${player.name}". Flipped: ${flipped}`);
+    logger.log(`[FifaCard] handleButtonAction: Action "${actionName}" for player "${player.name}". Flipped: ${flipped}`);
     e.preventDefault();
     e.stopPropagation();
     if (handler) {
-      console.log(`[FifaCard] Handler found for "${actionName}". Executing handler.`);
+      logger.log(`[FifaCard] Handler found for "${actionName}". Executing handler.`);
       handler(player);
     } else {
-      console.warn(`[FifaCard] No handler provided for action "${actionName}".`);
+      logger.warn(`[FifaCard] No handler provided for action "${actionName}".`);
       if (toast) {
         toast({
           title: "Action Not Implemented",
@@ -516,7 +517,7 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
           variant: "destructive",
         });
       } else {
-        console.error("[FifaCard] Toast function is not available to report unimplemented action.");
+        logger.error("[FifaCard] Toast function is not available to report unimplemented action.");
       }
     }
   };
@@ -627,14 +628,14 @@ export const FifaStylePlayerCard: React.FC<FifaStylePlayerCardProps> = ({
                       className="h-full w-full object-cover object-center"
                       onLoad={(e) => {
                         const img = e.currentTarget;
-                        console.log('[FifaCard] Photo loaded:', {
+                        logger.log('[FifaCard] Photo loaded:', {
                           url: player.photoUrl,
                           naturalWidth: img.naturalWidth,
                           naturalHeight: img.naturalHeight
                         });
                       }}
                       onError={(e) => {
-                        console.error('[FifaCard] Photo failed to load:', player.photoUrl, e);
+                        logger.error('[FifaCard] Photo failed to load:', player.photoUrl, e);
                       }}
                     />
                   ) : (

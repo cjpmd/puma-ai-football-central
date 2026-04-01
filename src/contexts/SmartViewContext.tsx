@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useAuthorization } from './AuthorizationContext';
@@ -44,16 +45,16 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!profile) return;
 
     const views: ViewRole[] = [];
-    console.log('SmartView determining views for user:', profile.id);
-    console.log('Connected players:', connectedPlayers?.length);
-    console.log('Teams:', teams?.length);
-    console.log('Clubs:', clubs?.length);
-    console.log('Is global admin:', isGlobalAdmin);
+    logger.log('SmartView determining views for user:', profile.id);
+    logger.log('Connected players:', connectedPlayers?.length);
+    logger.log('Teams:', teams?.length);
+    logger.log('Clubs:', clubs?.length);
+    logger.log('Is global admin:', isGlobalAdmin);
     
     // Check for parent role (has connected players)
     if (connectedPlayers && connectedPlayers.length > 0) {
       views.push('parent');
-      console.log('Added parent view');
+      logger.log('Added parent view');
     }
     
     // Check for coach role (only if user has an actual staff role, not just team_parent)
@@ -64,25 +65,25 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     if (hasStaffRole) {
       views.push('coach');
-      console.log('Added coach view - user has staff role:', teams?.map(t => t.userRole) || []);
+      logger.log('Added coach view - user has staff role:', teams?.map(t => t.userRole) || []);
     }
     
     // Check for team manager role
     if (isTeamManager()) {
       views.push('team_manager');
-      console.log('Added team_manager view');
+      logger.log('Added team_manager view');
     }
     
     // Check for club admin role
     if (isClubAdmin()) {
       views.push('club_admin');
-      console.log('Added club_admin view');
+      logger.log('Added club_admin view');
     }
     
     // Check for global admin role
     if (isGlobalAdmin) {
       views.push('global_admin');
-      console.log('Added global_admin view');
+      logger.log('Added global_admin view');
     }
 
     // Determine primary role based on activity and hierarchy
@@ -100,8 +101,8 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       primary = 'parent';
     }
 
-    console.log('Available views:', views);
-    console.log('Primary role:', primary);
+    logger.log('Available views:', views);
+    logger.log('Primary role:', primary);
     
     setAvailableViews(views);
     setPrimaryRole(primary);
@@ -109,7 +110,7 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     // Only auto-set view if user hasn't manually chosen one and current view is invalid
     if (!hasManuallySetView && !views.includes(currentView)) {
       setCurrentView(primary);
-      console.log('Auto-set current view to:', primary);
+      logger.log('Auto-set current view to:', primary);
     }
   }, [profile, connectedPlayers, teams, clubs, isGlobalAdmin, isClubAdmin, isTeamManager, hasManuallySetView]);
 
@@ -133,7 +134,7 @@ export const SmartViewProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setHasManuallySetView(true);
     if (profile) {
       localStorage.setItem(`smartview-${profile.id}`, view);
-      console.log('Manually set view to:', view);
+      logger.log('Manually set view to:', view);
     }
   };
 

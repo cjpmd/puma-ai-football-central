@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +39,7 @@ export const ClubEquipmentOverview: React.FC<ClubEquipmentOverviewProps> = ({
   const loadClubEquipment = async () => {
     try {
       setLoading(true);
-      console.log('Loading equipment for club:', clubId);
+      logger.log('Loading equipment for club:', clubId);
 
       // First get teams linked to this club
       const { data: clubTeams, error: clubTeamsError } = await supabase
@@ -47,7 +48,7 @@ export const ClubEquipmentOverview: React.FC<ClubEquipmentOverviewProps> = ({
         .eq('club_id', clubId);
 
       if (clubTeamsError) {
-        console.error('Error fetching club teams:', clubTeamsError);
+        logger.error('Error fetching club teams:', clubTeamsError);
         throw clubTeamsError;
       }
 
@@ -72,7 +73,7 @@ export const ClubEquipmentOverview: React.FC<ClubEquipmentOverviewProps> = ({
         .in('team_id', teamIds);
 
       if (equipmentError) {
-        console.error('Error fetching team equipment:', equipmentError);
+        logger.error('Error fetching team equipment:', equipmentError);
         throw equipmentError;
       }
 
@@ -83,7 +84,7 @@ export const ClubEquipmentOverview: React.FC<ClubEquipmentOverviewProps> = ({
         .in('id', teamIds);
 
       if (teamsError) {
-        console.error('Error fetching teams data:', teamsError);
+        logger.error('Error fetching teams data:', teamsError);
         throw teamsError;
       }
 
@@ -106,7 +107,7 @@ export const ClubEquipmentOverview: React.FC<ClubEquipmentOverviewProps> = ({
         setEquipment([]);
       }
     } catch (error: any) {
-      console.error('Error loading club equipment:', error);
+      logger.error('Error loading club equipment:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to load club equipment',

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +59,7 @@ export const FacilityForm = ({ clubId, onSuccess, onCancel, facility }: Facility
 
       onSuccess();
     } catch (error: any) {
-      console.error('Error managing facility:', error);
+      logger.error('Error managing facility:', error);
       toast.error(error.message || 'Failed to manage facility');
     } finally {
       setIsSubmitting(false);

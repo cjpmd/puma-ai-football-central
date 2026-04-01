@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,7 @@ export default function AvailabilityConfirmation() {
         setAvailabilityRecord(availabilityData);
       }
     } catch (error) {
-      console.error('Error loading event data:', error);
+      logger.error('Error loading event data:', error);
       toast.error('Failed to load event information');
     } finally {
       setLoading(false);
@@ -139,7 +140,7 @@ export default function AvailabilityConfirmation() {
         navigate('/dashboard');
       }, 2000);
     } catch (error) {
-      console.error('Error updating availability:', error);
+      logger.error('Error updating availability:', error);
       toast.error('Failed to update availability');
     } finally {
       setUpdating(false);

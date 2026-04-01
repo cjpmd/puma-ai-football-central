@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -80,7 +81,7 @@ export const StaffManagementDashboard: React.FC = () => {
       setTeamSummaries(summaries);
 
     } catch (error: any) {
-      console.error('Error loading staff data:', error);
+      logger.error('Error loading staff data:', error);
       toast.error('Failed to load staff data');
     } finally {
       setLoading(false);
@@ -173,7 +174,7 @@ export const StaffManagementDashboard: React.FC = () => {
       await loadStaffData();
 
     } catch (error: any) {
-      console.error('Error adding staff:', error);
+      logger.error('Error adding staff:', error);
       toast.error('Failed to add staff member');
     }
   };
@@ -197,7 +198,7 @@ export const StaffManagementDashboard: React.FC = () => {
       await loadStaffData();
 
     } catch (error: any) {
-      console.error('Error removing staff:', error);
+      logger.error('Error removing staff:', error);
       toast.error('Failed to remove staff member');
     }
   };

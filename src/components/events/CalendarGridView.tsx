@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -76,37 +77,37 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
   const loadUserAvailability = async () => {
     try {
       if (!user?.id) {
-        console.log('No user ID available for availability loading');
+        logger.log('No user ID available for availability loading');
         return;
       }
 
-      console.log('=== CALENDAR GRID VIEW DEBUG ===');
-      console.log('Loading availability for user:', user.id);
-      console.log('User object:', user);
+      logger.log('=== CALENDAR GRID VIEW DEBUG ===');
+      logger.log('Loading availability for user:', user.id);
+      logger.log('User object:', user);
 
       const eventIds = events.map(event => event.id);
-      console.log('Event IDs to check:', eventIds.map(id => `${id.slice(-6)} (${id})`));
+      logger.log('Event IDs to check:', eventIds.map(id => `${id.slice(-6)} (${id})`));
       
       const availability = await userAvailabilityService.getUserAvailabilityForEvents(user.id, eventIds);
-      console.log('Received availability in calendar:', availability);
+      logger.log('Received availability in calendar:', availability);
       
       setUserAvailability(availability);
-      console.log('=== END CALENDAR GRID VIEW DEBUG ===');
+      logger.log('=== END CALENDAR GRID VIEW DEBUG ===');
     } catch (error) {
-      console.error('Error in loadUserAvailability:', error);
+      logger.error('Error in loadUserAvailability:', error);
     }
   };
 
   const getAvailabilityStatus = (eventId: string): 'pending' | 'available' | 'unavailable' | null => {
     const availability = userAvailability.find(a => a.eventId === eventId);
     const status = availability?.status || null;
-    console.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
+    logger.log(`Availability status for event ${eventId.slice(-6)}:`, status, 'from source:', availability?.source);
     return status;
   };
 
   const getEventBorderClass = (eventId: string): string => {
     const status = getAvailabilityStatus(eventId);
-    console.log(`Border class for event ${eventId.slice(-6)}:`, status);
+    logger.log(`Border class for event ${eventId.slice(-6)}:`, status);
     
     switch (status) {
       case 'available':
@@ -140,7 +141,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
             };
           }
         } catch (error) {
-          console.log(`Failed to load weather for event ${event.id}:`, error);
+          logger.log(`Failed to load weather for event ${event.id}:`, error);
         }
       }
     }
@@ -165,7 +166,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       });
       setPerformanceCategories(categoryMap);
     } catch (error) {
-      console.log('Failed to load performance categories:', error);
+      logger.log('Failed to load performance categories:', error);
     }
   };
 
@@ -182,7 +183,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       
       setEventTimeContexts(contexts);
     } catch (error) {
-      console.error('Error loading event time contexts:', error);
+      logger.error('Error loading event time contexts:', error);
     }
   };
 
@@ -208,7 +209,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
     const scores = [];
     const scoresData = event.scores as any;
     
-    console.log('Desktop calendar - getTeamScores for event:', event.id, 'scores:', scoresData);
+    logger.log('Desktop calendar - getTeamScores for event:', event.id, 'scores:', scoresData);
     
     // Check for team_1, team_2, etc. (performance category teams)
     let teamNumber = 1;
@@ -229,7 +230,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         outcomeIcon = '❌';
       }
       
-      console.log(`Team ${teamNumber}: ${ourScore}-${opponentScore}, outcome: ${outcome}, icon: ${outcomeIcon}`);
+      logger.log(`Team ${teamNumber}: ${ourScore}-${opponentScore}, outcome: ${outcome}, icon: ${outcomeIcon}`);
       
       scores.push({
         teamNumber,
@@ -259,7 +260,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
         outcomeIcon = '❌';
       }
       
-      console.log(`Home/Away: ${ourScore}-${opponentScore}, outcome: ${outcome}, icon: ${outcomeIcon}`);
+      logger.log(`Home/Away: ${ourScore}-${opponentScore}, outcome: ${outcome}, icon: ${outcomeIcon}`);
       
       scores.push({
         teamNumber: 1,
@@ -271,7 +272,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       });
     }
     
-    console.log('Final scores array:', scores);
+    logger.log('Final scores array:', scores);
     return scores;
   };
 
@@ -307,7 +308,7 @@ export const CalendarGridView: React.FC<CalendarGridViewProps> = ({
       
       setInvitedEventIds(invitedIds);
     } catch (error) {
-      console.error('Error loading invited events:', error);
+      logger.error('Error loading invited events:', error);
     }
   };
 

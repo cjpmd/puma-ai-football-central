@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { validateEmail, validatePasswordStrength, isRateLimited } from '@/utils/inputValidation';
 
@@ -65,7 +66,7 @@ export const securityService = {
       });
 
       if (error) {
-        console.error('Database validation error:', error);
+        logger.error('Database validation error:', error);
         
         // Fallback to client-side validation
         const errors: string[] = [];
@@ -102,7 +103,7 @@ export const securityService = {
       };
 
     } catch (error) {
-      console.error('Auth validation error:', error);
+      logger.error('Auth validation error:', error);
       
       await this.logSecurityEvent({
         eventType: 'AUTH_VALIDATION_ERROR',
@@ -133,7 +134,7 @@ export const securityService = {
       });
 
       if (error) {
-        console.error('Enhanced security logging failed, using fallback:', error);
+        logger.error('Enhanced security logging failed, using fallback:', error);
         
         // Fallback to direct insertion
         await supabase.from('security_audit_logs').insert([{
@@ -145,7 +146,7 @@ export const securityService = {
         }]);
       }
     } catch (error) {
-      console.error('Security event logging failed:', error);
+      logger.error('Security event logging failed:', error);
       // Don't throw - we don't want security logging failures to break the application
     }
   },
@@ -165,7 +166,7 @@ export const securityService = {
         .limit(1);
 
       if (error) {
-        console.error('Error checking account lock status:', error);
+        logger.error('Error checking account lock status:', error);
         return { isLocked: false };
       }
 
@@ -180,7 +181,7 @@ export const securityService = {
 
       return { isLocked: false };
     } catch (error) {
-      console.error('Account lock check failed:', error);
+      logger.error('Account lock check failed:', error);
       return { isLocked: false };
     }
   },
@@ -206,13 +207,13 @@ export const securityService = {
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching security audit logs:', error);
+        logger.error('Error fetching security audit logs:', error);
         return [];
       }
 
       return data || [];
     } catch (error) {
-      console.error('Failed to fetch security audit logs:', error);
+      logger.error('Failed to fetch security audit logs:', error);
       return [];
     }
   },
@@ -259,7 +260,7 @@ export const securityService = {
         riskLevel
       };
     } catch (error) {
-      console.error('Error detecting suspicious activity:', error);
+      logger.error('Error detecting suspicious activity:', error);
       return {
         suspicious: false,
         patterns: [],
@@ -281,7 +282,7 @@ export const securityService = {
       });
 
       if (error) {
-        console.warn('Server rate limit check failed:', error);
+        logger.warn('Server rate limit check failed:', error);
         return { isBlocked: false, violationCount: 0, maxAttempts: 5 };
       }
 
@@ -293,7 +294,7 @@ export const securityService = {
         maxAttempts: result?.max_attempts || 5
       };
     } catch (error) {
-      console.error('Rate limit check error:', error);
+      logger.error('Rate limit check error:', error);
       return { isBlocked: false, violationCount: 0, maxAttempts: 5 };
     }
   },
@@ -316,7 +317,7 @@ export const securityService = {
       });
 
       if (error) {
-        console.warn('Server role validation failed:', error);
+        logger.warn('Server role validation failed:', error);
         return { hasAccess: false, userRoles: [] };
       }
 
@@ -326,7 +327,7 @@ export const securityService = {
         userRoles: result?.user_roles || []
       };
     } catch (error) {
-      console.error('Role validation error:', error);
+      logger.error('Role validation error:', error);
       return { hasAccess: false, userRoles: [] };
     }
   },
@@ -349,7 +350,7 @@ export const securityService = {
       });
 
       if (error) {
-        console.warn('Session validation failed:', error);
+        logger.warn('Session validation failed:', error);
         return { isValid: true, suspicious: false, sessionCount: 1, maxSessions: 5 };
       }
 
@@ -361,7 +362,7 @@ export const securityService = {
         maxSessions: result?.max_sessions || 5
       };
     } catch (error) {
-      console.error('Session validation error:', error);
+      logger.error('Session validation error:', error);
       return { isValid: true, suspicious: false, sessionCount: 1, maxSessions: 5 };
     }
   },
@@ -383,7 +384,7 @@ export const securityService = {
         });
       }
     } catch (error) {
-      console.error('Session tracking error:', error);
+      logger.error('Session tracking error:', error);
     }
   },
 

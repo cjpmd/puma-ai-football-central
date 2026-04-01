@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -83,7 +84,7 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
         });
       }
     } catch (error: any) {
-      console.error('Error loading privacy settings:', error);
+      logger.error('Error loading privacy settings:', error);
       toast.error('Failed to load privacy settings');
     }
   };
@@ -118,7 +119,7 @@ export const TeamPrivacySettings: React.FC<TeamPrivacySettingsProps> = ({ team, 
 
       toast.success('Privacy settings updated successfully');
     } catch (error: any) {
-      console.error('Error saving privacy settings:', error);
+      logger.error('Error saving privacy settings:', error);
       toast.error('Failed to save privacy settings');
     } finally {
       setLoading(false);

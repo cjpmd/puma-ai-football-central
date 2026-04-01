@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,7 +36,7 @@ export const InvitationResendPanel: React.FC = () => {
       deletedIds.add(id);
       localStorage.setItem(DELETED_INVITATIONS_KEY, JSON.stringify(Array.from(deletedIds)));
     } catch (error) {
-      console.error('Error saving deleted invitation ID:', error);
+      logger.error('Error saving deleted invitation ID:', error);
     }
   };
 
@@ -48,7 +49,7 @@ export const InvitationResendPanel: React.FC = () => {
       const filteredData = data.filter(inv => !deletedIds.has(inv.id));
       setInvitations(filteredData);
     } catch (error) {
-      console.error('Error loading invitations:', error);
+      logger.error('Error loading invitations:', error);
       toast.error('Failed to load invitations');
     } finally {
       setIsLoading(false);
@@ -58,11 +59,11 @@ export const InvitationResendPanel: React.FC = () => {
   const resendInvitation = async (invitation: UserInvitation) => {
     setResendingId(invitation.id);
     try {
-      console.log('Resending invitation:', invitation);
+      logger.log('Resending invitation:', invitation);
       await userInvitationService.sendInvitationEmail(invitation);
       toast.success(`Invitation resent to ${invitation.email}`);
     } catch (error) {
-      console.error('Error resending invitation:', error);
+      logger.error('Error resending invitation:', error);
       toast.error('Failed to resend invitation');
     } finally {
       setResendingId(null);
@@ -97,7 +98,7 @@ export const InvitationResendPanel: React.FC = () => {
       
       toast.success(`Invitation for ${invitation.email} permanently deleted`);
     } catch (error) {
-      console.error('Error deleting invitation:', error);
+      logger.error('Error deleting invitation:', error);
       toast.error('Failed to delete invitation');
     } finally {
       setDeletingId(null);

@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -63,7 +64,7 @@ export const TeamHeaderSettings: React.FC<TeamHeaderSettingsProps> = ({
       
       toast.success('Header image uploaded successfully');
     } catch (error) {
-      console.error('Error uploading header image:', error);
+      logger.error('Error uploading header image:', error);
       toast.error('Failed to upload header image');
     }
   };
@@ -80,7 +81,7 @@ export const TeamHeaderSettings: React.FC<TeamHeaderSettingsProps> = ({
         .eq('id', team.id);
 
       if (error) {
-        console.error('Error saving header settings:', error);
+        logger.error('Error saving header settings:', error);
         toast.error('Failed to save header settings');
         return;
       }
@@ -88,7 +89,7 @@ export const TeamHeaderSettings: React.FC<TeamHeaderSettingsProps> = ({
       toast.success('Header settings saved successfully');
       onSave();
     } catch (error) {
-      console.error('Error saving header settings:', error);
+      logger.error('Error saving header settings:', error);
       toast.error('Failed to save header settings');
     }
   };

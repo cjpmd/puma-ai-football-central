@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { MobileLayout } from '@/components/layout/MobileLayout';
 import { Button } from '@/components/ui/button';
@@ -290,7 +291,7 @@ export default function PlayerManagementMobile() {
         outputFormat: 'image/jpeg',
       });
       
-      console.log(`[PlayerManagementMobile] Photo processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
+      logger.log(`[PlayerManagementMobile] Photo processed: ${formatFileSize(file.size)} -> ${formatFileSize(processedBlob.size)}`);
       
       const fileName = `${player.id}/${Date.now()}.jpg`;
       
@@ -327,7 +328,7 @@ export default function PlayerManagementMobile() {
       
       loadPlayers();
     } catch (error: any) {
-      console.error('[PlayerManagementMobile] Photo upload error:', error);
+      logger.error('[PlayerManagementMobile] Photo upload error:', error);
       toast({
         title: 'Upload Failed',
         description: error.message || 'Failed to update photo. Please try again.',

@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { type ClassValue, clsx } from "clsx"
 import { format, differenceInYears } from "date-fns";
 import { twMerge } from "tailwind-merge"
@@ -13,7 +14,7 @@ export function formatDate(date: Date | string, formatString: string = 'PPP'): s
   
   // Check if date is valid
   if (isNaN(dateObject.getTime())) {
-    console.error('Invalid date:', date);
+    logger.error('Invalid date:', date);
     return 'Invalid date';
   }
   

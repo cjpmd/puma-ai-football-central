@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,7 @@ export const CoachAssignmentManager: React.FC<CoachAssignmentManagerProps> = ({
       const data = await IndividualTrainingService.getPlanAssignments(plan.id);
       setAssignments(data);
     } catch (error) {
-      console.error('Error loading assignments:', error);
+      logger.error('Error loading assignments:', error);
       toast.error('Failed to load plan assignments');
     } finally {
       setLoading(false);
@@ -70,7 +71,7 @@ export const CoachAssignmentManager: React.FC<CoachAssignmentManagerProps> = ({
       if (error) throw error;
       setAvailableCoaches(teamStaff || []);
     } catch (error) {
-      console.error('Error loading coaches:', error);
+      logger.error('Error loading coaches:', error);
     }
   };
 
@@ -95,7 +96,7 @@ export const CoachAssignmentManager: React.FC<CoachAssignmentManagerProps> = ({
       setCoachNotes('');
       onAssignmentUpdate?.();
     } catch (error) {
-      console.error('Error assigning coach:', error);
+      logger.error('Error assigning coach:', error);
       toast.error('Failed to assign coach');
     } finally {
       setIsAssigning(false);
@@ -111,7 +112,7 @@ export const CoachAssignmentManager: React.FC<CoachAssignmentManagerProps> = ({
       setPlayerFeedback('');
       onAssignmentUpdate?.();
     } catch (error) {
-      console.error('Error updating assignment status:', error);
+      logger.error('Error updating assignment status:', error);
       toast.error('Failed to update assignment status');
     }
   };

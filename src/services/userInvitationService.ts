@@ -1,4 +1,5 @@
 
+import { logger } from '@/lib/logger';
 import { supabase } from '@/integrations/supabase/client';
 import { validateEmail, validateName, sanitizeText } from '@/utils/inputValidation';
 
@@ -35,7 +36,7 @@ export const userInvitationService = {
       const { data, error } = await supabase.rpc('generate_secure_invitation_code');
       
       if (error) {
-        console.error('Error generating secure code:', error);
+        logger.error('Error generating secure code:', error);
         // Fallback to client-side generation with improved security
         const array = new Uint8Array(12);
         crypto.getRandomValues(array);
@@ -46,7 +47,7 @@ export const userInvitationService = {
       
       return data;
     } catch (error) {
-      console.error('Failed to generate secure code:', error);
+      logger.error('Failed to generate secure code:', error);
       // Enhanced fallback
       const array = new Uint8Array(12);
       crypto.getRandomValues(array);
@@ -56,7 +57,7 @@ export const userInvitationService = {
     }
   },
   async inviteUser(inviteData: InviteUserData): Promise<UserInvitation> {
-    console.log('Inviting user:', inviteData);
+    logger.log('Inviting user:', inviteData);
 
     // Validate input data
     const emailValidation = validateEmail(inviteData.email);
@@ -110,7 +111,7 @@ export const userInvitationService = {
       .single();
 
     if (error) {
-      console.error('Error creating invitation:', error);
+      logger.error('Error creating invitation:', error);
       throw error;
     }
 
@@ -132,11 +133,11 @@ export const userInvitationService = {
       });
 
       if (error) {
-        console.error('Error sending invitation email:', error);
+        logger.error('Error sending invitation email:', error);
         throw error;
       }
     } catch (error) {
-      console.error('Failed to send invitation email:', error);
+      logger.error('Failed to send invitation email:', error);
       // Don't throw here, invitation was created successfully
     }
   },
@@ -163,14 +164,14 @@ export const userInvitationService = {
       .eq('status', 'pending');
 
     if (error) {
-      console.error('Error accepting invitation:', error);
+      logger.error('Error accepting invitation:', error);
       throw error;
     }
   },
 
   async processUserInvitation(email: string): Promise<{ processed: boolean; message: string }> {
     try {
-      console.log('Processing invitation for email:', email);
+      logger.log('Processing invitation for email:', email);
       
       // First, check if there's a user with this email in the profiles table
       const { data: userProfile, error: profileError } = await supabase
@@ -180,14 +181,14 @@ export const userInvitationService = {
         .maybeSingle();
 
       if (profileError) {
-        console.error('Error fetching user profile:', profileError);
+        logger.error('Error fetching user profile:', profileError);
         throw profileError;
       }
 
       let userId: string;
 
       if (!userProfile) {
-        console.log('No profile found, checking auth users and creating profile...');
+        logger.log('No profile found, checking auth users and creating profile...');
         
         // Check if user exists in auth but doesn't have a profile
         const { data: invitations } = await supabase
@@ -208,7 +209,7 @@ export const userInvitationService = {
         userId = acceptedInvitation.accepted_by;
 
         // Create the missing profile
-        console.log('Creating profile for user:', userId);
+        logger.log('Creating profile for user:', userId);
         const { error: createProfileError } = await supabase
           .from('profiles')
           .insert([{
@@ -219,14 +220,14 @@ export const userInvitationService = {
           }]);
 
         if (createProfileError) {
-          console.error('Error creating profile:', createProfileError);
+          logger.error('Error creating profile:', createProfileError);
           throw createProfileError;
         }
 
-        console.log('Profile created successfully');
+        logger.log('Profile created successfully');
       } else {
         userId = userProfile.id;
-        console.log('Found existing profile for user:', userId);
+        logger.log('Found existing profile for user:', userId);
       }
 
       // Get all invitations for this email (both pending and accepted)
@@ -243,17 +244,17 @@ export const userInvitationService = {
         return { processed: false, message: 'No invitations found for this email' };
       }
 
-      console.log('Found invitations:', allInvitations);
+      logger.log('Found invitations:', allInvitations);
 
       let processedCount = 0;
 
       // Process each invitation
       for (const invitation of allInvitations) {
-        console.log('Processing invitation:', invitation);
+        logger.log('Processing invitation:', invitation);
 
         // If invitation is pending, mark it as accepted
         if (invitation.status === 'pending') {
-          console.log('Updating invitation status to accepted');
+          logger.log('Updating invitation status to accepted');
           const { error: updateError } = await supabase
             .from('user_invitations')
             .update({ 
@@ -264,7 +265,7 @@ export const userInvitationService = {
             .eq('id', invitation.id);
 
           if (updateError) {
-            console.error('Error updating invitation status:', updateError);
+            logger.error('Error updating invitation status:', updateError);
             continue;
           }
         }
@@ -277,11 +278,11 @@ export const userInvitationService = {
           .single();
 
         if (currentProfileError) {
-          console.error('Error fetching current profile:', currentProfileError);
+          logger.error('Error fetching current profile:', currentProfileError);
           continue;
         }
 
-        console.log('Current profile:', currentProfile);
+        logger.log('Current profile:', currentProfile);
 
         // Update user's profile with the role if not already present
         const currentRoles = Array.isArray(currentProfile.roles) ? currentProfile.roles : [];
@@ -294,15 +295,15 @@ export const userInvitationService = {
             .eq('id', userId);
 
           if (profileUpdateError) {
-            console.error('Error updating profile roles:', profileUpdateError);
+            logger.error('Error updating profile roles:', profileUpdateError);
           } else {
-            console.log('Updated user roles to:', updatedRoles);
+            logger.log('Updated user roles to:', updatedRoles);
           }
         }
 
         // Create team association if team_id exists
         if (invitation.team_id) {
-          console.log('Creating team association for user:', userId, 'team:', invitation.team_id);
+          logger.log('Creating team association for user:', userId, 'team:', invitation.team_id);
           
           const { error: teamError } = await supabase
             .from('user_teams')
@@ -313,15 +314,15 @@ export const userInvitationService = {
             }]);
 
           if (teamError && teamError.code !== '23505') { // Ignore duplicate key errors
-            console.error('Error creating team association:', teamError);
+            logger.error('Error creating team association:', teamError);
           } else {
-            console.log('Team association created successfully');
+            logger.log('Team association created successfully');
           }
         }
 
         // Create player association if player_id exists
         if (invitation.player_id) {
-          console.log('Creating player association for user:', userId, 'player:', invitation.player_id);
+          logger.log('Creating player association for user:', userId, 'player:', invitation.player_id);
           
           const { error: playerError } = await supabase
             .from('user_players')
@@ -332,15 +333,15 @@ export const userInvitationService = {
             }]);
 
           if (playerError && playerError.code !== '23505') { // Ignore duplicate key errors
-            console.error('Error creating player association:', playerError);
+            logger.error('Error creating player association:', playerError);
           } else {
-            console.log('Player association created successfully');
+            logger.log('Player association created successfully');
           }
         }
 
         // Create staff association if staff_id exists
         if (invitation.staff_id) {
-          console.log('Creating staff association for user:', userId, 'staff:', invitation.staff_id);
+          logger.log('Creating staff association for user:', userId, 'staff:', invitation.staff_id);
           
           const { error: staffError } = await supabase
             .from('user_staff')
@@ -351,9 +352,9 @@ export const userInvitationService = {
             }]);
 
           if (staffError && staffError.code !== '23505') { // Ignore duplicate key errors
-            console.error('Error creating staff association:', staffError);
+            logger.error('Error creating staff association:', staffError);
           } else {
-            console.log('Staff association created successfully');
+            logger.log('Staff association created successfully');
           }
         }
 
@@ -365,7 +366,7 @@ export const userInvitationService = {
         message: `Processed ${processedCount} invitation(s) for ${email}` 
       };
     } catch (error: any) {
-      console.error('Error processing user invitation:', error);
+      logger.error('Error processing user invitation:', error);
       return { processed: false, message: error.message };
     }
   },
@@ -392,7 +393,7 @@ export const userInvitationService = {
       }]);
 
     if (linkError) {
-      console.error('Error linking player account:', linkError);
+      logger.error('Error linking player account:', linkError);
       throw linkError;
     }
   },
@@ -419,7 +420,7 @@ export const userInvitationService = {
       }]);
 
     if (linkError) {
-      console.error('Error linking staff account:', linkError);
+      logger.error('Error linking staff account:', linkError);
       throw linkError;
     }
   }

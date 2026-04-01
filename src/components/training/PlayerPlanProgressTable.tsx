@@ -1,3 +1,4 @@
+import { logger } from '@/lib/logger';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -78,7 +79,7 @@ export const PlayerPlanProgressTable: React.FC<PlayerPlanProgressTableProps> = (
               }
             }
           } catch (error) {
-            console.error(`Error loading sessions for plan ${plan.id}:`, error);
+            logger.error(`Error loading sessions for plan ${plan.id}:`, error);
           }
         }
 
@@ -111,7 +112,7 @@ export const PlayerPlanProgressTable: React.FC<PlayerPlanProgressTableProps> = (
 
       setPlayerProgress(progressData);
     } catch (error) {
-      console.error('Error calculating player progress:', error);
+      logger.error('Error calculating player progress:', error);
       toast.error('Failed to load player progress data');
     } finally {
       setLoading(false);
