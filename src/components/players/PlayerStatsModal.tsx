@@ -35,7 +35,6 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
-import { debugPlayerPositions } from '@/utils/debugPlayerPositions';
 import { positionDebuggingService } from '@/services/positionDebuggingService';
 import { useAuthorization } from '@/contexts/AuthorizationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -154,7 +153,7 @@ export const PlayerStatsModal: React.FC<PlayerStatsModalProps> = ({
     setIsRegenerating(true);
     try {
       // Use the correct debug function available in the service
-      await debugPlayerPositions(player.id, player.name);
+      await playerStatsService.debugPlayerPositions(player.id, player.name);
       queryClient.invalidateQueries({ queryKey: ['players'] });
       toast.success('Debug completed for Andrew McDonald');
     } catch (error) {
